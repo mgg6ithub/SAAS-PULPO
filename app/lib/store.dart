@@ -1,0 +1,355 @@
+import 'dart:math';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'models.dart';
+
+/// Datos del prototipo. Se guardan en el navegador; más adelante, Supabase.
+class Store extends ChangeNotifier {
+  static const _clave = 'pulpo_v2';
+  static const _respaldo = 'pulpo_v2_respaldo';
+
+  /// Hay datos de ejemplo cargados; los reales esperan en el respaldo.
+  bool demo = false;
+
+  List<Cliente> clientes = [];
+  List<Trabajador> trabajadores = [];
+  List<Tarea> tareas = [];
+  SharedPreferences? _prefs;
+
+  Future<void> cargar() async {
+    _prefs = await SharedPreferences.getInstance();
+    final s = _prefs!.getString(_clave);
+    if (s == null) {
+      _inicial();
+      _guardar();
+    } else {
+      final j = jsonDecode(s) as Map<String, dynamic>;
+      clientes = [for (final x in j['clientes'] as List) Cliente.fromJson(x)];
+      trabajadores = [for (final x in j['trabajadores'] as List) Trabajador.fromJson(x)];
+      tareas = [for (final x in j['tareas'] as List) Tarea.fromJson(x)];
+      // Datos de ejemplo cargados antes de existir la marca: se reconocen por sus ids.
+      demo = (j['demo'] as bool? ?? false) || _hayDemo;
+    }
+    notifyListeners();
+  }
+
+  void _guardar() => _prefs?.setString(
+    _clave,
+    jsonEncode({
+      'clientes': [for (final x in clientes) x.toJson()],
+      'trabajadores': [for (final x in trabajadores) x.toJson()],
+      'tareas': [for (final x in tareas) x.toJson()],
+      'demo': demo,
+    }),
+  );
+
+  void _cambio() {
+    _guardar();
+    notifyListeners();
+  }
+
+  String nuevoId() => DateTime.now().microsecondsSinceEpoch.toString();
+
+  // ── Clientes ──
+  Cliente? cliente(String? id) {
+    for (final c in clientes) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  void guardarCliente(Cliente c) {
+    _poner(clientes, c, (x) => x.id == c.id);
+    _cambio();
+  }
+
+  void borrarCliente(String id) {
+    clientes.removeWhere((c) => c.id == id);
+    tareas.removeWhere((t) => t.clienteId == id);
+    _cambio();
+  }
+
+  List<Tarea> tareasDe(String clienteId) => tareas.where((t) => t.clienteId == clienteId).toList();
+
+  // ── Trabajadores ──
+  Trabajador? trabajador(String id) {
+    for (final w in trabajadores) {
+      if (w.id == id) return w;
+    }
+    return null;
+  }
+
+  void guardarTrabajador(Trabajador w) {
+    _poner(trabajadores, w, (x) => x.id == w.id);
+    _cambio();
+  }
+
+  void borrarTrabajador(String id) {
+    trabajadores.removeWhere((w) => w.id == id);
+    for (final t in tareas) {
+      t.trabajadorIds.remove(id);
+    }
+    _cambio();
+  }
+
+  // ── Tareas ──
+  List<Tarea> get plantillas => tareas.where((t) => t.esPlantilla).toList();
+
+  void guardarTarea(Tarea t) {
+    _poner(tareas, t, (x) => x.id == t.id);
+    _cambio();
+  }
+
+  void borrarTarea(String id) {
+    tareas.removeWhere((t) => t.id == id);
+    _cambio();
+  }
+
+  /// El mantenimiento se ha hecho hoy: se calcula el siguiente.
+  void marcarHecha(Tarea t) {
+    t.ultimo = hoy();
+    t.proximo = masDias(hoy(), t.periodicidad.dias);
+    if (t.estadoMaquina == EstadoMaquina.revision) t.estadoMaquina = EstadoMaquina.operativa;
+    _cambio();
+  }
+
+  /// Tareas de un día. Pasado: lo que se hizo ese día. Hoy: lo hecho hoy, lo que toca
+  /// y lo vencido. Futuro: lo que toca ese día.
+  List<Tarea> tareasDelDia(DateTime dia) {
+    final n = diasHasta(dia);
+    bool mismo(DateTime? d) => d != null && DateUtils.isSameDay(d, dia);
+    return tareas.where((t) {
+      if (t.esPlantilla || !t.activa) return false;
+      if (n < 0) return mismo(t.ultimo);
+      if (n == 0) return mismo(t.ultimo) || (t.proximo != null && diasHasta(t.proximo!) <= 0);
+      return mismo(t.proximo);
+    }).toList();
+  }
+
+  /// Tareas de [trabajadorId] que chocan con [t]: mismo día y horas que se pisan,
+  /// contando el retraso medio de cada una. Sin día u hora no se puede saber: no choca.
+  List<Tarea> solapes(Tarea t, String trabajadorId) {
+    if (t.proximo == null || t.inicioMin == null) return [];
+    return tareas.where((o) {
+      if (o.id == t.id || o.esPlantilla || !o.activa || !o.trabajadorIds.contains(trabajadorId)) return false;
+      if (o.proximo == null || o.inicioMin == null || !DateUtils.isSameDay(o.proximo, t.proximo)) return false;
+      return t.inicioMin! < o.finConMargenMin! && o.inicioMin! < t.finConMargenMin!;
+    }).toList();
+  }
+
+  void asignar(Tarea t, String trabajadorId) {
+    if (!t.trabajadorIds.contains(trabajadorId)) t.trabajadorIds.add(trabajadorId);
+    _cambio();
+  }
+
+  void desasignar(Tarea t, String trabajadorId) {
+    t.trabajadorIds.remove(trabajadorId);
+    _cambio();
+  }
+
+  /// El "pulpo mágico": asigna el mejor trabajador a las tareas que no tienen.
+  /// Devuelve cuántas ha organizado.
+  int automatizar(List<Tarea> lista) {
+    var n = 0;
+    for (final t in lista) {
+      if (t.trabajadorIds.isNotEmpty) continue;
+      final m = mejorPara(t);
+      if (m == null) continue;
+      t.trabajadorIds = [m.id];
+      n++;
+    }
+    if (n > 0) _cambio();
+    return n;
+  }
+
+  /// Competencias de la tarea que le faltan al trabajador.
+  List<String> faltan(Trabajador w, Tarea t) => t.competencias.where((c) => !w.competencias.contains(c)).toList();
+
+  bool esApto(Trabajador w, Tarea t) => w.activo && faltan(w, t).isEmpty;
+
+  /// Apto y disponible hoy con menos tareas asignadas. Primer paso de la automatización.
+  Trabajador? mejorPara(Tarea t) {
+    final aptos = trabajadores.where((w) => esApto(w, t)).toList();
+    if (aptos.isEmpty) return null;
+    int carga(Trabajador w) => tareas.where((x) => x.trabajadorIds.contains(w.id)).length;
+    aptos.sort((a, b) {
+      final d = (a.estadoHoy == EstadoHoy.disponible ? 0 : 1) - (b.estadoHoy == EstadoHoy.disponible ? 0 : 1);
+      return d != 0 ? d : carga(a) - carga(b);
+    });
+    return aptos.first;
+  }
+
+  void _poner<T>(List<T> lista, T x, bool Function(T) igual) {
+    final i = lista.indexWhere(igual);
+    if (i < 0) {
+      lista.add(x);
+    } else {
+      lista[i] = x;
+    }
+  }
+
+  void restablecer() {
+    _inicial();
+    _cambio();
+  }
+
+  /// Rellena la cuenta con una empresa de ejemplo (clientes, equipo y mantenimientos
+  /// repartidos alrededor de hoy) para ver la app funcionando.
+  void cargarDemo() {
+    // Guarda lo que hay para poder volver a ello con quitarDemo().
+    if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
+    demo = true;
+    _inicial();
+    final r = Random(7);
+    trabajadores = [
+      for (final (i, (n, a, comp, est)) in [
+        ('Lucía', 'Martín', ['Calderas (RITE)', 'Fontanería', 'PRL'], EstadoHoy.disponible),
+        ('Javier', 'Ortega', ['Ascensores', 'Electricidad', 'Trabajo en altura'], EstadoHoy.ocupado),
+        ('Marta', 'Ruiz', ['Jardinería', 'Piscinas'], EstadoHoy.disponible),
+        ('Iker', 'Etxeberria', ['Contra incendios', 'Electricidad', 'PRL'], EstadoHoy.disponible),
+        ('Ana', 'Gómez', ['Limpieza'], EstadoHoy.ausente),
+        ('Pablo', 'Santos', ['Climatización', 'Electricidad', 'Calderas (RITE)'], EstadoHoy.disponible),
+      ].indexed)
+        Trabajador(
+          id: 'w$i',
+          nombre: n,
+          apellidos: a,
+          competencias: comp,
+          estadoHoy: est,
+          color: i,
+          telefono: '6${(10000000 + r.nextInt(89999999))}',
+          email: '${n.toLowerCase()}@pulpo-demo.es',
+          titulos: comp.first,
+        ),
+    ];
+    clientes = [
+      for (final (i, (n, ciudad, contacto)) in [
+        ('Comunidad Santa María 11', 'Bilbao', 'Begoña Uriarte'),
+        ('Colegio San Ignacio', 'Getxo', 'Mikel Arana'),
+        ('Hospital Basurto · Pabellón B', 'Bilbao', 'Dra. Elena Pérez'),
+        ('Hotel Ercilla', 'Bilbao', 'Recepción'),
+        ('Polideportivo Lezama', 'Lezama', 'Unai Goikoetxea'),
+        ('Oficinas Torre Iberdrola', 'Bilbao', 'Facility Manager'),
+        ('Residencia Los Robles', 'Barakaldo', 'Carmen Ibáñez'),
+        ('Comunidad Gran Vía 45', 'Bilbao', 'Administración Larrea'),
+      ].indexed)
+        Cliente(
+          id: 'c$i',
+          nombre: n,
+          ciudad: ciudad,
+          provincia: 'Bizkaia',
+          contacto: contacto,
+          telefonoContacto: '94${4000000 + r.nextInt(999999)}',
+          cif: 'B${48000000 + r.nextInt(999999)}',
+          email: 'mantenimiento@cliente$i.es',
+          color: i,
+          activa: i != 7,
+          fechaAlta: masDias(hoy(), -400 + i * 30),
+        ),
+    ];
+    final equipos = [
+      ('Caldera', 'Caldera de gas comunitaria', Periodicidad.anual, ['Calderas (RITE)']),
+      ('Ascensor', 'Ascensor portal', Periodicidad.mensual, ['Ascensores', 'Electricidad']),
+      ('Jardinería', 'Zonas verdes', Periodicidad.mensual, ['Jardinería']),
+      ('Limpieza', 'Limpieza de zonas comunes', Periodicidad.semanal, ['Limpieza']),
+      ('Contra incendios', 'Extintores y BIEs', Periodicidad.trimestral, ['Contra incendios']),
+      ('Climatización', 'Climatizadora cubierta', Periodicidad.semestral, ['Climatización']),
+      ('Piscina', 'Depuradora piscina', Periodicidad.mensual, ['Piscinas']),
+      ('Electricidad', 'Cuadro general BT', Periodicidad.anual, ['Electricidad']),
+    ];
+    var n = 0;
+    for (final c in clientes) {
+      for (var k = 0; k < 3 + r.nextInt(3); k++) {
+        final (tipo, nombre, per, comp) = equipos[r.nextInt(equipos.length)];
+        final desfase = r.nextInt(30) - 6; // algunas vencidas, la mayoría en las próximas semanas
+        final proximo = masDias(hoy(), desfase);
+        final aptos = trabajadores.where((w) => comp.every(w.competencias.contains)).toList();
+        tareas.add(
+          Tarea(
+            id: 'd${n++}',
+            clienteId: c.id,
+            nombre: nombre,
+            tipo: tipo,
+            periodicidad: per,
+            competencias: [...comp],
+            proximo: proximo,
+            ultimo: r.nextInt(4) == 0 ? masDias(hoy(), -r.nextInt(25)) : masDias(proximo, -per.dias),
+            inicioMin: (8 + r.nextInt(9)) * 60 + (r.nextBool() ? 30 : 0),
+            duracionMin: [45, 60, 90, 120][r.nextInt(4)],
+            ubicacion: ['Sala de máquinas', 'Cubierta', 'Sótano -1', 'Portal A', 'Jardín'][r.nextInt(5)],
+            trabajadorIds: aptos.isNotEmpty && r.nextInt(5) > 0 ? [aptos[r.nextInt(aptos.length)].id] : [],
+            estadoMaquina: r.nextInt(9) == 0 ? EstadoMaquina.revision : EstadoMaquina.operativa,
+          ),
+        );
+      }
+    }
+    _cambio();
+  }
+
+  /// Los ids de ejemplo son cortos (c0, w3, d17); los reales son marcas de tiempo largas.
+  static final _idDemo = RegExp(r'^[cwd]\d{1,3}$');
+  bool get _hayDemo => clientes.any((c) => _idDemo.hasMatch(c.id)) || trabajadores.any((w) => _idDemo.hasMatch(w.id));
+
+  /// Quita los datos de ejemplo y deja la cuenta como estaba antes de cargarlos.
+  /// Sin respaldo, borra solo lo que es de ejemplo y conserva lo que hayas creado tú.
+  Future<void> quitarDemo() async {
+    final r = _prefs?.getString(_respaldo);
+    _prefs?.remove(_respaldo);
+    demo = false;
+    if (r != null && r.isNotEmpty) {
+      await _prefs?.setString(_clave, r);
+      await cargar();
+      return;
+    }
+    clientes.removeWhere((c) => _idDemo.hasMatch(c.id));
+    trabajadores.removeWhere((w) => _idDemo.hasMatch(w.id));
+    tareas.removeWhere((t) => _idDemo.hasMatch(t.id) || (t.clienteId != null && cliente(t.clienteId) == null));
+    for (final t in tareas) {
+      t.trabajadorIds.removeWhere((id) => trabajador(id) == null);
+    }
+    _cambio();
+  }
+
+  /// Estado inicial de una cuenta nueva: vacía salvo las plantillas.
+  void _inicial() {
+    clientes = [];
+    trabajadores = [];
+    tareas = [
+      Tarea(
+        id: 'p1',
+        nombre: 'Revisión caldera de gas',
+        tipo: 'Caldera',
+        periodicidad: Periodicidad.anual,
+        competencias: ['Calderas (RITE)'],
+        notas: 'Comprobar presión, quemador, salida de humos y CO.',
+      ),
+      Tarea(
+        id: 'p2',
+        nombre: 'Mantenimiento de ascensor',
+        tipo: 'Ascensor',
+        periodicidad: Periodicidad.mensual,
+        competencias: ['Ascensores', 'Electricidad'],
+        notas: 'Revisión de cables, frenos, puertas y foso.',
+      ),
+      Tarea(
+        id: 'p3',
+        nombre: 'Poda y riego de zonas verdes',
+        tipo: 'Jardinería',
+        periodicidad: Periodicidad.mensual,
+        competencias: ['Jardinería'],
+      ),
+      Tarea(
+        id: 'p4',
+        nombre: 'Limpieza de rellanos y portal',
+        tipo: 'Limpieza',
+        periodicidad: Periodicidad.semanal,
+        competencias: ['Limpieza'],
+      ),
+    ];
+  }
+}
+
+final store = Store();

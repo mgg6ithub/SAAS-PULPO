@@ -1,0 +1,10 @@
+# Vídeos pesados (GitHub no admite >100 MB); las capturas sí se suben
+*.mp4
+*.mov
+
+# Obsidian: estado local del espacio de trabajo
+.obsidian/workspace*.json
+
+# Sistema
+Thumbs.db
+.DS_Store
