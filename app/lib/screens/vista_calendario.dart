@@ -1,22 +1,30 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'agenda_herramientas.dart';
+import 'agenda_vistas.dart';
 import 'vista_dias.dart';
 
 /// Calendario de mes por bloques: en cada día, los clientes que tienen mantenimiento.
 class VistaCalendario extends StatefulWidget {
   final ValueChanged<DateTime> onDia;
-  const VistaCalendario({super.key, required this.onDia});
+  final DateTime? inicial;
+
+  /// Sin cabecera propia (mes y flechas) cuando la pone la Agenda.
+  final bool conCabecera;
+  const VistaCalendario({super.key, required this.onDia, this.inicial, this.conCabecera = true});
 
   @override
   State<VistaCalendario> createState() => _VistaCalendarioState();
 }
 
 class _VistaCalendarioState extends State<VistaCalendario> {
-  DateTime mes = DateTime(hoy().year, hoy().month);
+  late DateTime mes = DateTime((widget.inicial ?? hoy()).year, (widget.inicial ?? hoy()).month);
 
   void mover(int n) => setState(() => mes = DateTime(mes.year, mes.month + n));
 
@@ -25,23 +33,25 @@ class _VistaCalendarioState extends State<VistaCalendario> {
     final primero = masDias(mes, -(mes.weekday - 1)); // lunes de la primera semana
     return Column(
       children: [
-        Row(
-          children: [
-            Text(
-              '${meses[mes.month - 1]} ${mes.year}',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const Spacer(),
-            NavegadorFecha(
-              anterior: 'Mes anterior',
-              siguiente: 'Mes siguiente',
-              onAnterior: () => mover(-1),
-              onHoy: () => setState(() => mes = DateTime(hoy().year, hoy().month)),
-              onSiguiente: () => mover(1),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+        if (widget.conCabecera) ...[
+          Row(
+            children: [
+              Text(
+                '${meses[mes.month - 1]} ${mes.year}',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              NavegadorFecha(
+                anterior: 'Mes anterior',
+                siguiente: 'Mes siguiente',
+                onAnterior: () => mover(-1),
+                onHoy: () => setState(() => mes = DateTime(hoy().year, hoy().month)),
+                onSiguiente: () => mover(1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         Row(
           children: [
             for (final d in diasSemana)
@@ -57,25 +67,41 @@ class _VistaCalendarioState extends State<VistaCalendario> {
           ],
         ),
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: P.superficie,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: P.borde),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (var semana = 0; semana < 6; semana++)
-                  Expanded(
-                    child: Row(
-                      children: [
-                        for (var d = 0; d < 7; d++)
-                          Expanded(child: _celda(masDias(primero, semana * 7 + d), semana, d)),
-                      ],
+          child: LayoutBuilder(
+            builder: (context, box) => ValueListenableBuilder(
+              valueListenable: altoFilaMes,
+              builder: (context, zoom, _) {
+                final ajustado = box.maxHeight / 6;
+                final fila = zoom == null ? ajustado : max(ajustado, zoom);
+                return ConZoom(
+                  onZoom: (f) => zoomMes(f, ajustado),
+                  child: SingleChildScrollView(
+                    key: const PageStorageKey('itinerario-mes'),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: P.superficie,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: P.borde),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: [
+                          for (var semana = 0; semana < 6; semana++)
+                            SizedBox(
+                              height: fila,
+                              child: Row(
+                                children: [
+                                  for (var d = 0; d < 7; d++)
+                                    Expanded(child: _celda(masDias(primero, semana * 7 + d), semana, d)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-              ],
+                );
+              },
             ),
           ),
         ),
@@ -87,7 +113,8 @@ class _VistaCalendarioState extends State<VistaCalendario> {
     final delMes = dia.month == mes.month;
     final n = diasHasta(dia);
     final porCliente = <String, int>{};
-    for (final t in store.tareasDelDia(dia)) {
+    for (final t in store.tareasDelDia(dia).where((t) => filtroAgenda.pasa(t, dia))) {
+      if (t.clienteId == null) continue;
       porCliente[t.clienteId!] = (porCliente[t.clienteId!] ?? 0) + 1;
     }
     final clientes = porCliente.keys.map(store.cliente).whereType<Cliente>().toList();

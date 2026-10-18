@@ -43,7 +43,7 @@ class TareaCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BarraTipo(t.tipo, alto: 34),
+            BarraTipo(t.tipo, alto: 34, color: t.colorBloque),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

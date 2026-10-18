@@ -270,7 +270,7 @@ class _Pendientes extends StatelessWidget {
         FilaLista(
           lider: _punto(P.rojo),
           titulo: '${vencidas.length} ${vencidas.length == 1 ? 'mantenimiento vencido' : 'mantenimientos vencidos'}',
-          derecha: _cat('Planificación'),
+          derecha: _cat('Itinerario'),
           onTap: () => onIr(Seccion.planificacion),
         ),
       if (sinTrabajador.isNotEmpty)
@@ -566,7 +566,7 @@ class _Proximos extends StatelessWidget {
     final ts = lista.take(8).toList();
     return SeccionTarjeta(
       titulo: 'Próximos mantenimientos',
-      accion: Enlace('Ir a Planificación', onTap: () => onIr(Seccion.planificacion)),
+      accion: Enlace('Ir al itinerario', onTap: () => onIr(Seccion.planificacion)),
       sinFilas: true,
       children: [
         if (ts.isEmpty)
@@ -622,7 +622,7 @@ class _Proximos extends StatelessWidget {
                     Expanded(
                       flex: 3,
                       child: InkWell(
-                        onTap: () => onCliente(t.clienteId!),
+                        onTap: t.clienteId == null ? null : () => onCliente(t.clienteId!),
                         child: Text(
                           store.cliente(t.clienteId)?.nombre ?? '—',
                           maxLines: 1,
@@ -707,7 +707,8 @@ class _Hero extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   saludo,
-                  style: const TextStyle(
+                  style: TextStyle(
+                    fontFamily: P.titulos,
                     color: Colors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -724,7 +725,7 @@ class _Hero extends StatelessWidget {
                     _BotonHero('Nueva tarea', () => abrirTareaForm(context, null), solido: true),
                     _BotonHero('Cliente', () => abrirClienteForm(context)),
                     _BotonHero('Trabajador', () => abrirTrabajadorForm(context)),
-                    _BotonHero('Planificación', () => onIr(Seccion.planificacion)),
+                    _BotonHero('Itinerario', () => onIr(Seccion.planificacion)),
                     if (sinTrabajador.isNotEmpty)
                       _BotonHero('Automatizar ${sinTrabajador.length}', () {
                         final n = store.automatizar(sinTrabajador);
@@ -871,6 +872,7 @@ class _Kpis extends StatelessWidget {
                                   builder: (_, v, _) => Text(
                                     '${v.round()}',
                                     style: TextStyle(
+                                      fontFamily: P.titulos,
                                       fontSize: 26,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: -.8,

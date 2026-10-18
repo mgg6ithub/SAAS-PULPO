@@ -3,11 +3,11 @@ import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'agenda_herramientas.dart';
 
 const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const meses = [
@@ -191,12 +191,15 @@ String rangoSemana(DateTime lunes) {
 /// Clientes con tareas ese día, ordenados, cada uno con las suyas.
 List<(Cliente, List<Tarea>)> clientesDelDia(DateTime dia) {
   final porCliente = <String, List<Tarea>>{};
-  for (final t in store.tareasDelDia(dia)) {
-    porCliente.putIfAbsent(t.clienteId!, () => []).add(t);
+  for (final t in store.tareasDelDia(dia).where((t) => filtroAgenda.pasa(t, dia))) {
+    porCliente.putIfAbsent(t.clienteId ?? '', () => []).add(t);
   }
   return [
     for (final id in porCliente.keys)
-      if (store.cliente(id) case final c?) (c, porCliente[id]!),
+      if (id.isEmpty)
+        (Cliente(id: '', nombre: 'Sin cliente', color: 7), porCliente[id]!)
+      else if (store.cliente(id) case final c?)
+        (c, porCliente[id]!),
   ]..sort((a, b) => a.$1.nombre.compareTo(b.$1.nombre));
 }
 
@@ -579,12 +582,12 @@ class _BloqueCliente extends StatelessWidget {
     final vencida = !hecha && t.proximo != null && diasHasta(t.proximo!) < 0;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: () => abrirTareaForm(context, t),
+      onTap: () => abrirFichaRapida(context, t),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           children: [
-            BarraTipo(t.tipo, alto: 24),
+            BarraTipo(t.tipo, alto: 24, color: t.colorBloque),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

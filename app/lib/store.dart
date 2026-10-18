@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models.dart';
+import 'theme.dart' show competencias;
 
 /// Datos del prototipo. Se guardan en el navegador; más adelante, Supabase.
 class Store extends ChangeNotifier {
@@ -32,6 +33,16 @@ class Store extends ChangeNotifier {
       tareas = [for (final x in j['tareas'] as List) Tarea.fromJson(x)];
       // Datos de ejemplo cargados antes de existir la marca: se reconocen por sus ids.
       demo = (j['demo'] as bool? ?? false) || _hayDemo;
+      usoPlantillas = List<String>.from(j['usoPlantillas'] as List? ?? []);
+      // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
+      for (final c in clientes) {
+        final g = _coordsDemo[c.id];
+        if (g != null && !c.ubicado) {
+          c
+            ..lat = g.$1
+            ..lng = g.$2;
+        }
+      }
     }
     notifyListeners();
   }
@@ -43,6 +54,7 @@ class Store extends ChangeNotifier {
       'trabajadores': [for (final x in trabajadores) x.toJson()],
       'tareas': [for (final x in tareas) x.toJson()],
       'demo': demo,
+      'usoPlantillas': usoPlantillas,
     }),
   );
 
@@ -98,7 +110,39 @@ class Store extends ChangeNotifier {
   // ── Tareas ──
   List<Tarea> get plantillas => tareas.where((t) => t.esPlantilla).toList();
 
+  /// Plantillas usadas, de la más reciente a la más antigua (lista LRU).
+  List<String> usoPlantillas = [];
+
+  /// Plantillas ordenadas por uso reciente; las nunca usadas, después, en su orden.
+  List<Tarea> get plantillasPorUso {
+    final ps = plantillas;
+    int pos(Tarea p) {
+      final i = usoPlantillas.indexOf(p.id);
+      return i < 0 ? 1000 + ps.indexOf(p) : i;
+    }
+
+    return ps..sort((a, b) => pos(a) - pos(b));
+  }
+
+  /// Marca la plantilla como la última usada: pasa a ser la primera de la lista.
+  void usarPlantilla(String id) {
+    usoPlantillas
+      ..remove(id)
+      ..insert(0, id);
+    _cambio();
+  }
+
+  /// Última tarea creada (id y momento), para animar su aparición en el itinerario.
+  String? recienId;
+  DateTime? recienEn;
+  bool esRecien(String id) =>
+      id == recienId && recienEn != null && DateTime.now().difference(recienEn!).inMilliseconds < 2500;
+
   void guardarTarea(Tarea t) {
+    if (!tareas.any((x) => x.id == t.id)) {
+      recienId = t.id;
+      recienEn = DateTime.now();
+    }
     _poner(tareas, t, (x) => x.id == t.id);
     _cambio();
   }
@@ -111,7 +155,8 @@ class Store extends ChangeNotifier {
   /// El mantenimiento se ha hecho hoy: se calcula el siguiente.
   void marcarHecha(Tarea t) {
     t.ultimo = hoy();
-    t.proximo = masDias(hoy(), t.periodicidad.dias);
+    // Una tarea única, al hacerse, ya no tiene próxima.
+    t.proximo = t.periodicidad.repite ? masDias(hoy(), t.periodicidad.dias) : null;
     if (t.estadoMaquina == EstadoMaquina.revision) t.estadoMaquina = EstadoMaquina.operativa;
     _cambio();
   }
@@ -198,6 +243,90 @@ class Store extends ChangeNotifier {
 
   /// Rellena la cuenta con una empresa de ejemplo (clientes, equipo y mantenimientos
   /// repartidos alrededor de hoy) para ver la app funcionando.
+  /// Datos para probar rutas: 2 trabajadores (azul y verde) y 10 tareas de hoy por Bilbao
+  /// y alrededores, 5 para cada uno, todas a las 9:00 para que el planificador las ordene.
+  void cargarDemoRutas() {
+    if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
+    demo = true;
+    _inicial();
+    trabajadores = [
+      Trabajador(id: 'w10', nombre: 'Trabajador', apellidos: '1', color: 1, competencias: [...competencias]),
+      Trabajador(id: 'w11', nombre: 'Trabajador', apellidos: '2', color: 2, competencias: [...competencias]),
+    ];
+    // Tareas largas y algunas con franja de tarde: el día queda repartido de 8:00 a ~18:00.
+    const sitios = [
+      ('Casco Viejo', 'Calle Somera 12', 43.2590, -2.9230, 'Ascensor', Criticidad.critica, 90, null),
+      ('Indautxu', 'Alameda Urquijo 40', 43.2615, -2.9395, 'Caldera', Criticidad.media, 120, null),
+      (
+        'Deusto',
+        'Avenida Lehendakari Aguirre 20',
+        43.2710,
+        -2.9460,
+        'Contra incendios',
+        Criticidad.alta,
+        60,
+        (15 * 60, 17 * 60),
+      ),
+      ('Santutxu', 'Calle Santutxu 30', 43.2545, -2.9135, 'Limpieza', Criticidad.rutinaria, 90, (16 * 60, 18 * 60)),
+      ('Basurto', 'Avenida Montevideo 18', 43.2620, -2.9575, 'Climatización', Criticidad.alta, 120, null),
+      ('Zorrotza', 'Calle Fuente 5', 43.2770, -2.9710, 'Electricidad', Criticidad.media, 90, (13 * 60, 15 * 60)),
+      ('Barakaldo', 'Calle Elcano 4', 43.2960, -2.9900, 'Ascensor', Criticidad.critica, 90, null),
+      (
+        'Leioa',
+        'Avenida Iparraguirre 50',
+        43.3270,
+        -2.9870,
+        'Jardinería',
+        Criticidad.rutinaria,
+        120,
+        (8 * 60, 11 * 60),
+      ),
+      (
+        'Galdakao',
+        'Calle Juan Bautista Uriarte 10',
+        43.2310,
+        -2.8430,
+        'Caldera',
+        Criticidad.media,
+        90,
+        (14 * 60, 17 * 60),
+      ),
+      ('Etxebarri', 'Calle Doctor Fleming 2', 43.2470, -2.8920, 'Fontanería', Criticidad.alta, 60, null),
+    ];
+    clientes = [
+      for (final (i, (n, dir, lat, lng, _, _, _, _)) in sitios.indexed)
+        Cliente(
+          id: 'c${20 + i}',
+          nombre: 'Cliente $n',
+          direccion: dir,
+          ciudad: n,
+          provincia: 'Bizkaia',
+          lat: lat,
+          lng: lng,
+          color: i,
+        ),
+    ];
+    tareas.addAll([
+      for (final (i, (n, _, _, _, tipo, crit, dur, ventana)) in sitios.indexed)
+        Tarea(
+          id: 'd${100 + i}',
+          clienteId: 'c${20 + i}',
+          nombre: '$tipo · $n',
+          tipo: tipo,
+          criticidad: crit,
+          duracionMin: dur,
+          proximo: hoy(),
+          inicioMin: (8 + i) * 60, // repartidas de 8:00 a 17:00 antes de planificar
+          ventanaDesdeMin: ventana?.$1,
+          ventanaHastaMin: ventana?.$2,
+          // 5 y 5, mezcladas a propósito (no por cercanía): el planificador las ordena.
+          trabajadorIds: [i.isEven ? 'w10' : 'w11'],
+          color: i.isEven ? 0xFF2563EB : 0xFF16A34A,
+        ),
+    ]);
+    _cambio();
+  }
+
   void cargarDemo() {
     // Guarda lo que hay para poder volver a ello con quitarDemo().
     if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
@@ -226,20 +355,23 @@ class Store extends ChangeNotifier {
         ),
     ];
     clientes = [
-      for (final (i, (n, ciudad, contacto)) in [
-        ('Comunidad Santa María 11', 'Bilbao', 'Begoña Uriarte'),
-        ('Colegio San Ignacio', 'Getxo', 'Mikel Arana'),
-        ('Hospital Basurto · Pabellón B', 'Bilbao', 'Dra. Elena Pérez'),
-        ('Hotel Ercilla', 'Bilbao', 'Recepción'),
-        ('Polideportivo Lezama', 'Lezama', 'Unai Goikoetxea'),
-        ('Oficinas Torre Iberdrola', 'Bilbao', 'Facility Manager'),
-        ('Residencia Los Robles', 'Barakaldo', 'Carmen Ibáñez'),
-        ('Comunidad Gran Vía 45', 'Bilbao', 'Administración Larrea'),
+      for (final (i, (n, ciudad, contacto, dir, lat, lng)) in [
+        ('Comunidad Santa María 11', 'Bilbao', 'Begoña Uriarte', 'Calle Santa María 11', 43.2571, -2.9246),
+        ('Colegio San Ignacio', 'Getxo', 'Mikel Arana', 'Avenida Algorta 32', 43.3505, -3.0085),
+        ('Hospital Basurto · Pabellón B', 'Bilbao', 'Dra. Elena Pérez', 'Avenida Montevideo 18', 43.2617, -2.9573),
+        ('Hotel Ercilla', 'Bilbao', 'Recepción', 'Calle Ercilla 37', 43.2627, -2.9405),
+        ('Polideportivo Lezama', 'Lezama', 'Unai Goikoetxea', 'Calle Garaioltza 1', 43.2737, -2.8335),
+        ('Oficinas Torre Iberdrola', 'Bilbao', 'Facility Manager', 'Plaza Euskadi 5', 43.2675, -2.9395),
+        ('Residencia Los Robles', 'Barakaldo', 'Carmen Ibáñez', 'Calle Elcano 4', 43.2965, -2.9873),
+        ('Comunidad Gran Vía 45', 'Bilbao', 'Administración Larrea', 'Gran Vía 45', 43.2632, -2.9353),
       ].indexed)
         Cliente(
           id: 'c$i',
           nombre: n,
           ciudad: ciudad,
+          direccion: dir,
+          lat: lat,
+          lng: lng,
           provincia: 'Bizkaia',
           contacto: contacto,
           telefonoContacto: '94${4000000 + r.nextInt(999999)}',
@@ -288,6 +420,17 @@ class Store extends ChangeNotifier {
     }
     _cambio();
   }
+
+  static const _coordsDemo = {
+    'c0': (43.2571, -2.9246),
+    'c1': (43.3505, -3.0085),
+    'c2': (43.2617, -2.9573),
+    'c3': (43.2627, -2.9405),
+    'c4': (43.2737, -2.8335),
+    'c5': (43.2675, -2.9395),
+    'c6': (43.2965, -2.9873),
+    'c7': (43.2632, -2.9353),
+  };
 
   /// Los ids de ejemplo son cortos (c0, w3, d17); los reales son marcas de tiempo largas.
   static final _idDemo = RegExp(r'^[cwd]\d{1,3}$');

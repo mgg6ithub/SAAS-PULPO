@@ -49,7 +49,7 @@ class _TrabajadoresState extends State<Trabajadores> {
     return Stack(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
+          padding: const EdgeInsets.fromLTRB(40, 32, 40, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -66,6 +66,16 @@ class _TrabajadoresState extends State<Trabajadores> {
                         BotonPrimario('Nuevo trabajador', tecla: 'N', onPressed: () => abrirTrabajadorForm(context)),
                       ],
                     ),
+                    const SizedBox(height: 22),
+                    ResumenLista([
+                      for (final e in EstadoHoy.values)
+                        (
+                          '${e.etiqueta}s',
+                          store.trabajadores.where((w) => w.activo && w.estadoHoy == e).length,
+                          'hoy',
+                          e.color,
+                        ),
+                    ], onTap: (i) => setState(() => estado = i + 1)),
                     const SizedBox(height: 20),
                     BarraFiltros(
                       izquierda: [

@@ -127,7 +127,10 @@ class TipoIcono extends StatelessWidget {
 class BarraTipo extends StatelessWidget {
   final String tipo;
   final double alto;
-  const BarraTipo(this.tipo, {super.key, this.alto = 28});
+
+  /// Color propio (el elegido en la tarea); si no, el de su tipo.
+  final Color? color;
+  const BarraTipo(this.tipo, {super.key, this.alto = 28, this.color});
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -135,7 +138,7 @@ class BarraTipo extends StatelessWidget {
     child: Container(
       width: 3,
       height: alto,
-      decoration: BoxDecoration(color: tipoDe(tipo).color, borderRadius: BorderRadius.circular(2)),
+      decoration: BoxDecoration(color: color ?? tipoDe(tipo).color, borderRadius: BorderRadius.circular(2)),
     ),
   );
 }
@@ -187,7 +190,7 @@ class _HoverCardState extends State<HoverCard> {
           padding: widget.padding,
           decoration: BoxDecoration(
             color: P.superficie,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: activo ? P.textoSuave.withValues(alpha: .4) : P.borde),
             boxShadow: [
               BoxShadow(
@@ -215,9 +218,11 @@ class Tarjeta extends StatelessWidget {
     padding: padding,
     decoration: BoxDecoration(
       color: color ?? P.superficie,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: color == null ? P.borde : Colors.transparent),
-      boxShadow: color == null ? [BoxShadow(color: Colors.black.withValues(alpha: .02), blurRadius: 3)] : null,
+      boxShadow: color == null
+          ? [BoxShadow(color: P.morado.withValues(alpha: .04), blurRadius: 8, offset: const Offset(0, 2))]
+          : null,
     ),
     child: child,
   );
@@ -258,7 +263,7 @@ class SeccionTarjeta extends StatelessWidget {
       color: P.superficie,
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: P.borde),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .02), blurRadius: 3)],
+      boxShadow: [BoxShadow(color: P.morado.withValues(alpha: .04), blurRadius: 8, offset: const Offset(0, 2))],
     ),
     clipBehavior: Clip.antiAlias,
     child: Column(
@@ -273,7 +278,15 @@ class SeccionTarjeta extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(titulo, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text(
+                      titulo,
+                      style: TextStyle(
+                        fontFamily: P.titulos,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -.2,
+                      ),
+                    ),
                     if (subtitulo != null) Text(subtitulo!, style: TextStyle(fontSize: 12, color: P.textoSuave)),
                   ],
                 ),
@@ -395,7 +408,13 @@ class Cifra extends StatelessWidget {
         curve: Curves.easeOutCubic,
         builder: (_, v, _) => Text(
           '${v.round()}',
-          style: TextStyle(fontSize: tamano, fontWeight: FontWeight.w700, letterSpacing: -.8, color: color),
+          style: TextStyle(
+            fontFamily: P.titulos,
+            fontSize: tamano,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.8,
+            color: color,
+          ),
         ),
       ),
       if (nota != null)
@@ -427,7 +446,7 @@ class BannerOscuro extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       gradient: LinearGradient(colors: [P.tinta, Color.lerp(P.tinta, P.morado, .5)!]),
     ),
     child: Row(
@@ -494,7 +513,15 @@ class Cabecera extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(titulo, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -.6)),
+                  Text(
+                    titulo,
+                    style: TextStyle(
+                      fontFamily: P.titulos,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -.7,
+                    ),
+                  ),
                   if (subtitulo != null) ...[
                     const SizedBox(height: 2),
                     Text(subtitulo!, style: TextStyle(color: P.textoSuave, fontSize: 13)),
@@ -504,12 +531,7 @@ class Cabecera extends StatelessWidget {
             ),
           ],
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final (i, a) in acciones.indexed) ...[if (i > 0) const SizedBox(width: 8), a],
-          ],
-        ),
+        Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: acciones),
       ],
     ),
   );
@@ -752,7 +774,7 @@ class Tabla extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
       color: P.superficie,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: P.borde),
     ),
     clipBehavior: Clip.antiAlias,
@@ -787,7 +809,7 @@ class Tabla extends StatelessWidget {
                 hoverColor: P.columna,
                 onTap: onTap == null ? null : () => onTap!(i),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 50),
+                  constraints: const BoxConstraints(minHeight: 56),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(children: [for (final (j, c) in columnas.indexed) _celda(c, cs[j])]),
@@ -1095,7 +1117,7 @@ class MarcaSeleccion extends StatelessWidget {
       AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         foregroundDecoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: activo && seleccionado ? P.morado : Colors.transparent, width: 2),
         ),
         child: child,
@@ -1187,5 +1209,50 @@ class BarraSeleccion extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+/// Tres (o más) cifras encima de una lista, como las de Jobber: etiqueta, número grande y nota.
+/// La primera lleva el punto de color de su estado.
+class ResumenLista extends StatelessWidget {
+  final List<(String, int, String, Color)> cifras;
+  final void Function(int i)? onTap;
+  const ResumenLista(this.cifras, {super.key, this.onTap});
+
+  Widget _tarjeta(int i) {
+    final (etiqueta, valor, nota, color) = cifras[i];
+    return HoverCard(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      onTap: onTap == null ? null : () => onTap!(i),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 7),
+              Text(etiqueta, style: TextStyle(fontSize: 13, color: P.textoSuave)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$valor',
+            style: TextStyle(fontFamily: P.titulos, fontSize: 28, fontWeight: FontWeight.w800, height: 1.1),
+          ),
+          Text(nota, style: TextStyle(fontSize: 12, color: P.textoSuave)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      for (var i = 0; i < cifras.length; i++) ...[if (i > 0) const SizedBox(width: 14), Expanded(child: _tarjeta(i))],
+    ],
   );
 }

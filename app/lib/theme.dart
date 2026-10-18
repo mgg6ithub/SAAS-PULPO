@@ -13,25 +13,28 @@ class P {
   static Color get moradoOscuro => Color.lerp(morado, _o ? Colors.white : Colors.black, _o ? .5 : .3)!;
   static Color get moradoSuave => Color.lerp(_o ? superficie : Colors.white, morado, _o ? .22 : .1)!;
 
-  /// Fondo del contenido: blanco, como Holded.
-  static Color get fondo => _o ? const Color(0xFF111114) : Colors.white;
+  /// Fondo del contenido: blanco con un tinte lavanda muy leve (seña de Pulpo); las tarjetas, blancas.
+  static Color get fondo => _o ? const Color(0xFF111114) : const Color(0xFFFBFAFE);
   static Color get superficie => _o ? const Color(0xFF1A1A1F) : Colors.white;
 
   /// Barra lateral y zonas secundarias: gris muy claro.
-  static Color get barra => _o ? const Color(0xFF16161A) : const Color(0xFFF7F7F8);
-  static Color get columna => _o ? const Color(0xFF17171C) : const Color(0xFFF5F5F7);
+  static Color get barra => _o ? const Color(0xFF16161A) : const Color(0xFFF4F2FA);
+  static Color get columna => _o ? const Color(0xFF17171C) : const Color(0xFFF5F3FA);
 
   /// Fondo al pasar el ratón o elemento activo de la barra.
-  static Color get hover => _o ? const Color(0xFF24242B) : const Color(0xFFEDEDF0);
+  static Color get hover => _o ? const Color(0xFF24242B) : const Color(0xFFECE9F5);
 
   /// Cabecera de tabla.
-  static Color get cabeceraTabla => _o ? const Color(0xFF1E1E24) : const Color(0xFFFAFAFB);
-  static Color get borde => _o ? const Color(0xFF2B2B33) : const Color(0xFFE9E9EE);
+  static Color get cabeceraTabla => _o ? const Color(0xFF1E1E24) : const Color(0xFFFAF9FD);
+  static Color get borde => _o ? const Color(0xFF2B2B33) : const Color(0xFFE7E4EF);
   static Color get texto => _o ? const Color(0xFFEDEDF2) : const Color(0xFF1B1B21);
   static Color get textoSuave => _o ? const Color(0xFF9A9AAA) : const Color(0xFF71717C);
 
   /// Banners y tooltips oscuros (destacan sobre tanto blanco).
   static const tinta = Color(0xFF16152B);
+
+  /// Fuente de los títulos (Plus Jakarta Sans); null en tests, que no descargan fuentes.
+  static String? titulos;
   static const verde = Color(0xFF16A34A);
   static const rojo = Color(0xFFE5484D);
   static const ambar = Color(0xFFD97706);
@@ -122,6 +125,7 @@ ThemeData temaPulpo() {
     scaffoldBackgroundColor: P.fondo,
     fontFamily: GoogleFonts.inter().fontFamily,
   );
+  P.titulos = GoogleFonts.plusJakartaSans().fontFamily;
   final radio = BorderRadius.circular(8);
   OutlineInputBorder borde(Color c, [double w = 1]) => OutlineInputBorder(
     borderRadius: radio,

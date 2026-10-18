@@ -82,10 +82,10 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
               ),
               _Fila(
                 icono: Icons.space_dashboard_outlined,
-                titulo: 'Vista de planificación',
-                subtitulo: 'Con la que se abre Planificación',
+                titulo: 'Vista de la agenda',
+                subtitulo: 'Con la que se abre la Agenda',
                 child: Pestanas(
-                  opciones: const ['Días', 'Calendario', 'Tablero'],
+                  opciones: const ['Día', 'Semana', 'Mes', 'Tablero', 'Línea'],
                   seleccion: ajustes.vistaInicio,
                   onChanged: ajustes.ponerVistaInicio,
                 ),

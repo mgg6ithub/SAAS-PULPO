@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'geo.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -79,7 +80,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             const Divider(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+                padding: const EdgeInsets.fromLTRB(36, 24, 36, 36),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
               ),
             ),
@@ -90,8 +91,9 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
       );
     }
     final pantalla = MediaQuery.sizeOf(context);
-    final ancho = min(acoplada ? 580.0 : 620.0, pantalla.width);
-    final alto = acoplada ? pantalla.height : min(pantalla.height - 48, 720.0);
+    // Ventana amplia (sin llegar a pantalla completa): más aire para los formularios.
+    final ancho = min(acoplada ? 680.0 : 860.0, pantalla.width - (acoplada ? 0 : 48));
+    final alto = acoplada ? pantalla.height : min(pantalla.height * .9, 900.0);
     var left = pantalla.width - ancho;
     var top = 0.0;
     if (!acoplada) {
@@ -120,7 +122,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 const Divider(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+                    padding: const EdgeInsets.fromLTRB(36, 24, 36, 36),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
                   ),
                 ),
@@ -142,7 +144,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
       onPanUpdate: acoplada || widget.incrustada ? null : (d) => setState(() => desplazamiento += d.delta),
       onPanEnd: acoplada || widget.incrustada ? null : (_) => setState(() => arrastrando = false),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(28, acoplada || widget.incrustada ? 24 : 10, 12, 18),
+        padding: EdgeInsets.fromLTRB(36, acoplada || widget.incrustada ? 28 : 12, 16, 20),
         child: Column(
           children: [
             if (!acoplada && !widget.incrustada)
@@ -170,7 +172,12 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                         ),
                       Text(
                         widget.titulo,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.4),
+                        style: TextStyle(
+                          fontFamily: P.titulos,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -.4,
+                        ),
                       ),
                       if (widget.subtitulo != null)
                         Padding(
@@ -288,14 +295,15 @@ Widget etiqueta(String t) => Padding(
   ),
 );
 
-Widget seccion(String t) => Padding(
-  padding: const EdgeInsets.only(top: 12, bottom: 12),
-  child: Row(
-    children: [
-      Text(t, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
-      const SizedBox(width: 12),
-      Expanded(child: Divider(color: P.borde)),
-    ],
+Widget seccion(String t) => Container(
+  margin: const EdgeInsets.only(top: 14, bottom: 14),
+  padding: const EdgeInsets.only(top: 20),
+  decoration: BoxDecoration(
+    border: Border(top: BorderSide(color: P.borde)),
+  ),
+  child: Text(
+    t,
+    style: TextStyle(fontFamily: P.titulos, fontSize: 15.5, fontWeight: FontWeight.w700),
   ),
 );
 
@@ -313,6 +321,58 @@ Widget campo(String label, TextEditingController c, {String? hint, int lineas = 
     ],
   ),
 );
+
+/// Bloque de formulario estilo Jobber: título y explicación a la izquierda, campos a la derecha.
+/// En ventanas estrechas se apila.
+class Bloque extends StatelessWidget {
+  final String titulo;
+  final String? descripcion;
+  final List<Widget> children;
+  const Bloque(this.titulo, this.children, {super.key, this.descripcion});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: LayoutBuilder(
+      builder: (context, box) {
+        final cabeza = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              titulo,
+              style: TextStyle(fontFamily: P.titulos, fontSize: 15.5, fontWeight: FontWeight.w700),
+            ),
+            if (descripcion != null) ...[
+              const SizedBox(height: 4),
+              Text(descripcion!, style: TextStyle(fontSize: 12.5, color: P.textoSuave, height: 1.4)),
+            ],
+          ],
+        );
+        final campos = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+        final contenido = box.maxWidth < 640
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [cabeza, const SizedBox(height: 14), campos],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 210, child: cabeza),
+                  const SizedBox(width: 32),
+                  Expanded(child: campos),
+                ],
+              );
+        return Container(
+          padding: const EdgeInsets.only(top: 22, bottom: 10),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: P.borde)),
+          ),
+          child: contenido,
+        );
+      },
+    ),
+  );
+}
 
 Widget dos(Widget a, Widget b) => Row(
   crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,6 +663,22 @@ class _ClienteFormState extends State<ClienteForm> {
       ..contacto = contacto.text.trim()
       ..telefonoContacto = telContacto.text.trim()
       ..notas = notas.text.trim();
+    // Si la dirección es nueva o ha cambiado, se ubica en el mapa en segundo plano.
+    final cambio = c.direccionCompleta != (widget.original?.direccionCompleta ?? '');
+    if (cambio || !c.ubicado) {
+      c
+        ..lat = null
+        ..lng = null;
+      final copia = c.copia();
+      ubicar(copia).then((ok) {
+        if (ok && store.cliente(copia.id) != null) {
+          store.cliente(copia.id)!
+            ..lat = copia.lat
+            ..lng = copia.lng;
+          store.guardarCliente(store.cliente(copia.id)!);
+        }
+      });
+    }
     store.guardarCliente(c);
     Navigator.pop(context);
   }
@@ -630,20 +706,28 @@ class _ClienteFormState extends State<ClienteForm> {
         cuadrado: true,
         pie: 'Su color le identifica en el calendario y las listas',
       ),
-      seccion('Datos básicos'),
-      campo('Nombre', nombre, hint: 'Colegio San José', error: error),
-      dos(campo('Teléfono', telefono), campo('Email', email)),
-      seccion('Persona de contacto'),
-      dos(campo('Nombre', contacto, hint: 'Administrador, conserje…'), campo('Teléfono', telContacto)),
-      MasDetalles('Datos fiscales y notas', [
-        dos(campo('CIF/NIF', cif), CampoFecha('Fecha de alta', c.fechaAlta, (d) => setState(() => c.fechaAlta = d))),
-        campo('Dirección fiscal', direccion),
+      const SizedBox(height: 22),
+      Bloque('Datos del cliente', descripcion: 'Cómo se llama y cómo contactar con él.', [
+        campo('Nombre', nombre, hint: 'Colegio San José', error: error),
+        dos(campo('Teléfono', telefono), campo('Email', email)),
+      ]),
+      Bloque('Persona de contacto', descripcion: 'Con quién hablas para coordinar las visitas.', [
+        dos(campo('Nombre', contacto, hint: 'Administrador, conserje…'), campo('Teléfono', telContacto)),
+      ]),
+      Bloque('Dirección', descripcion: 'Dónde está. Con ella se sitúa en el mapa de la agenda.', [
+        campo('Calle y número', direccion),
         dos(campo('Ciudad', ciudad), campo('Código postal', cp)),
         campo('Provincia', provincia),
-        campo('Notas', notas, lineas: 3),
+      ]),
+      Bloque('Datos fiscales', descripcion: 'Para facturar más adelante.', [
+        dos(campo('CIF/NIF', cif), CampoFecha('Cliente desde', c.fechaAlta, (d) => setState(() => c.fechaAlta = d))),
+      ]),
+      Bloque('Notas', [
+        campo('Notas internas', notas, lineas: 3),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Activo'),
+          subtitle: const Text('Un cliente inactivo no aparece en la planificación.'),
           value: c.activa,
           onChanged: (v) => setState(() => c.activa = v),
         ),
@@ -725,28 +809,31 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         (i) => setState(() => w.color = i),
         pie: w.competencias.isEmpty ? 'Sin competencias todavía' : '${w.competencias.length} competencias',
       ),
-      seccion('Datos básicos'),
-      dos(campo('Nombre', nombre, error: error), campo('Apellidos', apellidos)),
-      seccion('Competencias'),
-      chipsCompetencias(w.competencias, () => setState(() => errorCompetencias = null)),
-      const SizedBox(height: 8),
-      if (errorCompetencias != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(errorCompetencias!, style: const TextStyle(color: P.rojo, fontSize: 12)),
-        ),
-      const SizedBox(height: 8),
-      seccion('Estado de hoy'),
-      conMargen(
-        SelectorEstado<EstadoHoy>(
-          opciones: [for (final e in EstadoHoy.values) (e, e.etiqueta, e.color)],
-          valor: w.estadoHoy,
-          onChanged: (e) => setState(() => w.estadoHoy = e),
-        ),
-      ),
-      MasDetalles('Contacto y más', [
+      const SizedBox(height: 22),
+      Bloque('Datos personales', descripcion: 'Nombre y forma de contacto.', [
+        dos(campo('Nombre', nombre, error: error), campo('Apellidos', apellidos)),
         dos(campo('Teléfono', telefono), campo('Email', email)),
-        campo('Títulos y capacidades', titulos, hint: 'Carné RITE, PRL 60 h…'),
+      ]),
+      Bloque('Competencias', descripcion: 'Qué sabe hacer. Pulpo solo le asigna tareas que puede hacer.', [
+        chipsCompetencias(w.competencias, () => setState(() => errorCompetencias = null)),
+        if (errorCompetencias != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(errorCompetencias!, style: const TextStyle(color: P.rojo, fontSize: 12)),
+          ),
+        const SizedBox(height: 12),
+        campo('Títulos y carnés', titulos, hint: 'Carné RITE, PRL 60 h…'),
+      ]),
+      Bloque('Disponibilidad', descripcion: 'Cómo está hoy. Los ausentes no reciben tareas.', [
+        conMargen(
+          SelectorEstado<EstadoHoy>(
+            opciones: [for (final e in EstadoHoy.values) (e, e.etiqueta, e.color)],
+            valor: w.estadoHoy,
+            onChanged: (e) => setState(() => w.estadoHoy = e),
+          ),
+        ),
+      ]),
+      Bloque('Notas', [
         campo('Información básica', info, lineas: 2),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -762,20 +849,63 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
 
 // ── Tarea ──
 
-Future<void> abrirTareaForm(BuildContext context, Tarea? t, {String? clienteId}) =>
-    abrirPanel(context, TareaForm(original: t, clienteId: clienteId));
+/// [fecha], [horaMin] y [trabajadorId] rellenan la tarea nueva (p. ej. al crearla desde un hueco de la agenda).
+Future<void> abrirTareaForm(
+  BuildContext context,
+  Tarea? t, {
+  String? clienteId,
+  bool plantilla = false,
+  DateTime? fecha,
+  int? horaMin,
+  String? trabajadorId,
+}) => abrirPanel(
+  context,
+  TareaForm(
+    original: t,
+    clienteId: clienteId,
+    plantilla: plantilla,
+    fecha: fecha,
+    horaMin: horaMin,
+    trabajadorId: trabajadorId,
+  ),
+);
 
 class TareaForm extends StatefulWidget {
   final Tarea? original;
   final String? clienteId;
-  const TareaForm({super.key, this.original, this.clienteId});
+  final DateTime? fecha;
+  final int? horaMin;
+  final String? trabajadorId;
+
+  /// Crear una plantilla (sin cliente) en vez de una tarea.
+  final bool plantilla;
+  const TareaForm({
+    super.key,
+    this.original,
+    this.clienteId,
+    this.plantilla = false,
+    this.fecha,
+    this.horaMin,
+    this.trabajadorId,
+  });
 
   @override
   State<TareaForm> createState() => _TareaFormState();
 }
 
 class _TareaFormState extends State<TareaForm> {
-  late final Tarea t = widget.original?.copia() ?? Tarea(id: store.nuevoId(), clienteId: widget.clienteId);
+  late final Tarea t =
+      widget.original?.copia() ??
+      Tarea(
+        id: store.nuevoId(),
+        // Desde la agenda (con fecha o técnico) es una tarea real, no una plantilla: se propone el primer cliente.
+        // Una tarea nueva es de un cliente (se propone el primero); solo es plantilla si se pide.
+        clienteId: widget.clienteId ?? (widget.plantilla ? null : store.clientes.firstOrNull?.id),
+        plantilla: widget.plantilla,
+        proximo: widget.fecha,
+        inicioMin: widget.horaMin,
+        trabajadorIds: [?widget.trabajadorId],
+      );
   late final nombre = TextEditingController(text: t.nombre);
   late final marca = TextEditingController(text: t.marca);
   late final modelo = TextEditingController(text: t.modelo);
@@ -786,23 +916,21 @@ class _TareaFormState extends State<TareaForm> {
 
   bool get nueva => widget.original == null;
 
-  /// Solo al crear desde la vista de Tareas se elige cliente; desde un cliente va fija a él.
-  bool get eligeCliente => nueva && widget.clienteId == null;
-
   /// Rellena la tarea con los datos de una plantilla.
   void aplicar(Tarea p) => setState(() {
+    store.usarPlantilla(p.id);
     t
       ..plantillaId = p.id
       ..tipo = p.tipo
       ..periodicidad = p.periodicidad
       ..competencias = [...p.competencias]
-      ..proximo = masDias(hoy(), p.periodicidad.dias);
+      ..proximo = widget.fecha ?? (p.periodicidad.repite ? masDias(hoy(), p.periodicidad.dias) : hoy());
     nombre.text = p.nombre;
     marca.text = p.marca;
     modelo.text = p.modelo;
     notas.text = p.notas;
     final mejor = store.mejorPara(t);
-    t.trabajadorIds = mejor == null ? [] : [mejor.id];
+    t.trabajadorIds = widget.trabajadorId != null ? [widget.trabajadorId!] : (mejor == null ? [] : [mejor.id]);
   });
 
   void guardar() {
@@ -823,10 +951,8 @@ class _TareaFormState extends State<TareaForm> {
 
   @override
   Widget build(BuildContext context) {
-    final trabajadores = [...store.trabajadores]
-      ..sort((a, b) => (store.esApto(a, t) ? 0 : 1) - (store.esApto(b, t) ? 0 : 1));
-    final aptos = trabajadores.where((w) => store.esApto(w, t)).length;
-    final plantillas = store.plantillas.where((p) => p.id != t.id).toList();
+    final aptos = store.trabajadores.where((w) => store.esApto(w, t)).length;
+    final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
       etiqueta: t.esPlantilla ? 'Plantilla' : 'Mantenimiento',
@@ -845,151 +971,84 @@ class _TareaFormState extends State<TareaForm> {
               }
             },
       campos: [
-        if (nueva && !t.esPlantilla && plantillas.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: P.moradoSuave.withValues(alpha: .6),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: P.morado.withValues(alpha: .2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.auto_awesome_rounded, color: P.morado, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Partir de una plantilla',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: P.moradoOscuro),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Se rellena casi todo y se propone el trabajador más adecuado.',
-                  style: TextStyle(color: P.textoSuave, fontSize: 13),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final p in plantillas)
-                      ActionChip(
-                        avatar: Icon(tipoDe(p.tipo).icono, size: 16, color: tipoDe(p.tipo).color),
-                        label: Text(p.nombre),
-                        backgroundColor: t.plantillaId == p.id ? Colors.white : null,
-                        side: BorderSide(color: t.plantillaId == p.id ? P.morado : P.borde),
-                        onPressed: () => aplicar(p),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (eligeCliente) ...[
-          seccion('Cliente'),
-          conMargen(
-            DropdownButtonFormField<String?>(
-              isExpanded: true,
-              initialValue: t.clienteId,
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Sin cliente (plantilla)')),
-                for (final c in store.clientes) DropdownMenuItem(value: c.id, child: Text(c.nombre)),
-              ],
-              onChanged: (v) => setState(() => t.clienteId = v),
-            ),
-          ),
-        ],
-        seccion('Qué hay que mantener'),
-        etiqueta('Tipo'),
-        conMargen(
-          SelectorTipo(
-            t.tipo,
-            (v) => setState(() {
-              t.tipo = v;
-              final c = tipoDe(v).competencia;
-              if (c != null && !t.competencias.contains(c)) t.competencias.add(c);
-            }),
-          ),
+        // 1. Nombre, grande: lo primero.
+        campoGrande(
+          t.esPlantilla ? 'Nombre de la plantilla' : 'Nombre de la tarea',
+          nombre,
+          hint: t.esPlantilla
+              ? 'Revisión de ascensor, corte de césped…'
+              : 'Ascensor portal A, centralita de incendios…',
+          error: error,
         ),
-        campo('Nombre', nombre, hint: 'Ascensor portal A, centralita de incendios…', error: error),
-        conMargen(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              etiqueta('Periodicidad'),
-              SegmentedButton<Periodicidad>(
-                showSelectedIcon: false,
-                style: SegmentedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  selectedBackgroundColor: P.moradoSuave,
-                  selectedForegroundColor: P.moradoOscuro,
-                  side: BorderSide(color: P.borde),
-                  textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                ),
-                segments: [for (final p in Periodicidad.values) ButtonSegment(value: p, label: Text(p.etiqueta))],
-                selected: {t.periodicidad},
-                onSelectionChanged: (s) => setState(() {
-                  t.periodicidad = s.first;
-                  if (t.ultimo != null) t.proximo = masDias(t.ultimo!, s.first.dias);
-                }),
-              ),
-            ],
-          ),
-        ),
-        if (!t.esPlantilla)
-          dos(
-            CampoFecha(
-              'Último mantenimiento',
-              t.ultimo,
-              (d) => setState(() {
-                t.ultimo = d;
-                t.proximo = masDias(d, t.periodicidad.dias);
+        if (!t.esPlantilla) SelectorColorTarea(t, () => setState(() {})),
+        // 3. Tipo, en un recuadro de color: plantillas (tarea nueva) o tipos (plantilla).
+        if (t.esPlantilla)
+          _Recuadro(
+            'Tipo',
+            SelectorTipo(
+              t.tipo,
+              (v) => setState(() {
+                t.tipo = v;
+                final c = tipoDe(v).competencia;
+                if (c != null && !t.competencias.contains(c)) t.competencias.add(c);
               }),
-              hasta: hoy(), // lo que ya se hizo no puede ser futuro
             ),
-            CampoFecha('Próximo mantenimiento', t.proximo, (d) => setState(() => t.proximo = d)),
+          )
+        else if (nueva)
+          _Recuadro(
+            'Tipo · a partir de una plantilla',
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final p in plantillas) _CuadroPlantilla(p, t.plantillaId == p.id, () => aplicar(p)),
+                _CuadroOtro(() async {
+                  final p = await crearPlantillaRapida(context);
+                  if (p != null) aplicar(p);
+                }),
+              ],
+            ),
           ),
+        // 4. Cuándo: calendario a la vista, hora exacta o franja.
+        SelectorCuando(t, () => setState(() {})),
+        etiqueta('Criticidad'),
+        conMargen(
+          SelectorEstado<Criticidad>(
+            opciones: [for (final c in Criticidad.values) (c, c.etiqueta, c.color)],
+            valor: t.criticidad,
+            onChanged: (c) => setState(() => t.criticidad = c),
+          ),
+        ),
+        // 5. Para quién y quién la hace: menús desplegables.
         if (!t.esPlantilla) ...[
-          seccion('Horario'),
-          dos(
-            CampoFecha('Solicitado el', t.solicitud, (d) => setState(() => t.solicitud = d)),
-            CampoHora('Hora de inicio', t.inicioMin, (m) => setState(() => t.inicioMin = m)),
-          ),
           dos(
             conMargen(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  etiqueta('Tiempo estimado'),
-                  DropdownButtonFormField<int>(
-                    isExpanded: true,
-                    initialValue: duraciones.contains(t.duracionMin) ? t.duracionMin : 60,
-                    items: [for (final d in duraciones) DropdownMenuItem(value: d, child: Text(duracion(d)))],
-                    onChanged: (v) => setState(() => t.duracionMin = v!),
-                  ),
-                ],
+                children: [etiqueta('Cliente'), SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id))],
               ),
             ),
             conMargen(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  etiqueta('Fin previsto'),
-                  InputDecorator(
-                    decoration: const InputDecoration(),
-                    child: Text(
-                      t.finMin == null
-                          ? '—'
-                          : '${hhmm(t.finMin!)}  (+${tipoDe(t.tipo).retrasoMin} min de margen habitual)',
-                      style: TextStyle(color: t.finMin == null ? P.textoSuave : P.texto),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(child: etiqueta('Trabajadores')),
+                      if (aptos > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Enlace(
+                            'Asignar el más adecuado',
+                            onTap: () => setState(() {
+                              final m = store.mejorPara(t);
+                              if (m != null) t.trabajadorIds = [m.id];
+                            }),
+                          ),
+                        ),
+                    ],
                   ),
+                  SelectorTrabajadores(t, () => setState(() {})),
                 ],
               ),
             ),
@@ -997,49 +1056,33 @@ class _TareaFormState extends State<TareaForm> {
         ],
         seccion('Competencias mínimas'),
         Padding(
-          padding: EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 10),
           child: Text(
             'Qué tiene que saber hacer el trabajador. Con esto Pulpo sabe a quién puede asignarla.',
             style: TextStyle(color: P.textoSuave, fontSize: 13),
           ),
         ),
         chipsCompetencias(t.competencias, () => setState(() {})),
-        if (!t.esPlantilla) ...[
-          const SizedBox(height: 8),
-          seccion('Trabajadores'),
-          Row(
-            children: [
-              Pill('$aptos aptos', aptos > 0 ? P.verde : P.rojo, punto: true),
-              const Spacer(),
-              TextButton(
-                onPressed: aptos == 0
-                    ? null
-                    : () => setState(() {
-                        final m = store.mejorPara(t);
-                        if (m != null) t.trabajadorIds = [m.id];
-                      }),
-                child: const Text('Asignar automáticamente'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          for (final w in trabajadores) _filaTrabajador(w),
-        ],
         const SizedBox(height: 8),
         MasDetalles('Detalles del equipo y notas', [
+          if (!t.esPlantilla)
+            dos(
+              CampoFecha(
+                'Último mantenimiento',
+                t.ultimo,
+                (d) => setState(() {
+                  t.ultimo = d;
+                  if (t.periodicidad.repite) t.proximo = masDias(d, t.periodicidad.dias);
+                }),
+                hasta: hoy(), // lo que ya se hizo no puede ser futuro
+              ),
+              CampoFecha('Solicitado el', t.solicitud, (d) => setState(() => t.solicitud = d)),
+            ),
           campo('Ubicación', ubicacion, hint: 'Sala de máquinas, planta 2…'),
           dos(campo('Marca', marca), campo('Modelo', modelo)),
           dos(
             campo('Número de serie', serie),
             CampoFecha('Fecha de instalación', t.instalacion, (d) => setState(() => t.instalacion = d)),
-          ),
-          etiqueta('Estado de la máquina'),
-          conMargen(
-            SelectorEstado<EstadoMaquina>(
-              opciones: [for (final e in EstadoMaquina.values) (e, e.etiqueta, e.color)],
-              valor: t.estadoMaquina,
-              onChanged: (e) => setState(() => t.estadoMaquina = e),
-            ),
           ),
           campo('Notas / observaciones', notas, lineas: 3),
           SwitchListTile(
@@ -1050,47 +1093,6 @@ class _TareaFormState extends State<TareaForm> {
           ),
         ]),
       ],
-    );
-  }
-
-  Widget _filaTrabajador(Trabajador w) {
-    final apto = store.esApto(w, t);
-    final faltan = store.faltan(w, t);
-    final marcado = t.trabajadorIds.contains(w.id);
-    return Opacity(
-      opacity: apto ? 1 : .55,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () => setState(() => marcado ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              Checkbox(
-                value: marcado,
-                onChanged: (_) => setState(() => marcado ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id)),
-              ),
-              Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 30),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(w.nombreCompleto, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    Text(w.estadoHoy.etiqueta, style: TextStyle(color: w.estadoHoy.color, fontSize: 12)),
-                  ],
-                ),
-              ),
-              if (!w.activo)
-                const Pill('Inactivo', P.gris, solido: true)
-              else if (apto)
-                const Pill('Apto', P.verde, solido: true)
-              else
-                Pill('Le falta: ${faltan.join(', ')}', P.gris),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1147,4 +1149,755 @@ class SelectorTipo extends StatelessWidget {
       );
     },
   );
+}
+
+/// Cuadradito de plantilla: barrita del color de su tipo, nombre y periodicidad.
+class _CuadroPlantilla extends StatelessWidget {
+  final Tarea p;
+  final bool elegida;
+  final VoidCallback onTap;
+  const _CuadroPlantilla(this.p, this.elegida, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    final color = tipoDe(p.tipo).color;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 132,
+        height: 96,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: elegida ? color.withValues(alpha: .1) : P.superficie,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: elegida ? color : P.borde, width: elegida ? 2 : 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(tipoDe(p.tipo).icono, size: 20, color: color),
+            const Spacer(),
+            Text(
+              p.nombre,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.2),
+            ),
+            Text(p.periodicidad.etiqueta, style: TextStyle(fontSize: 11, color: P.textoSuave)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cuadradito "Otro": crea una plantilla nueva sin salir de la tarea.
+class _CuadroOtro extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CuadroOtro(this.onTap);
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(12),
+    onTap: onTap,
+    child: Container(
+      width: 132,
+      height: 96,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: P.morado.withValues(alpha: .5), width: 1.5),
+        color: P.moradoSuave.withValues(alpha: .5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.add_rounded, color: P.morado),
+          const SizedBox(height: 4),
+          Text(
+            'Otro',
+            style: TextStyle(fontWeight: FontWeight.w700, color: P.moradoOscuro),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Ventanita para crear una plantilla rápida (nombre y tipo). Devuelve la plantilla creada.
+Future<Tarea?> crearPlantillaRapida(BuildContext context) {
+  final nombre = TextEditingController();
+  var tipo = tipos.first.nombre;
+  return showDialog<Tarea>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, set) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Nueva plantilla',
+                  style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 14),
+                etiqueta('Nombre'),
+                TextField(
+                  controller: nombre,
+                  autofocus: true,
+                  decoration: const InputDecoration(hintText: 'Corte de césped, revisión de puertas…'),
+                ),
+                const SizedBox(height: 12),
+                etiqueta('Tipo'),
+                DropdownButtonFormField<String>(
+                  initialValue: tipo,
+                  items: [
+                    for (final x in tipos)
+                      DropdownMenuItem(
+                        value: x.nombre,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(color: x.color, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(x.nombre),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) => set(() => tipo = v!),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        if (nombre.text.trim().isEmpty) return;
+                        final p = Tarea(
+                          id: store.nuevoId(),
+                          nombre: nombre.text.trim(),
+                          tipo: tipo,
+                          competencias: [?tipoDe(tipo).competencia],
+                        );
+                        store.guardarTarea(p);
+                        Navigator.pop(c, p);
+                      },
+                      child: const Text('Crear y usar'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Nombre en grande: el primer campo, más vistoso.
+Widget campoGrande(String label, TextEditingController c, {String? hint, String? error}) => Padding(
+  padding: const EdgeInsets.only(bottom: 18),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      etiqueta(label),
+      TextField(
+        controller: c,
+        style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(
+            fontFamily: P.titulos,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: P.textoSuave.withValues(alpha: .6),
+          ),
+          errorText: error,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          fillColor: P.superficie,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: P.borde, width: 1.5),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: P.morado, width: 2),
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+
+/// Recuadro tintado con título, para agrupar (el tipo de la tarea).
+class _Recuadro extends StatelessWidget {
+  final String titulo;
+  final Widget child;
+  const _Recuadro(this.titulo, this.child);
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 18),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: P.moradoSuave.withValues(alpha: .55),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: P.morado.withValues(alpha: .2)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titulo,
+          style: TextStyle(fontFamily: P.titulos, fontSize: 14, fontWeight: FontWeight.w700, color: P.moradoOscuro),
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    ),
+  );
+}
+
+/// Caja que parece un campo con flechas ⇕ (indica que es un menú).
+class _CajaMenu extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final bool abierto;
+  const _CajaMenu({required this.child, required this.onTap, required this.abierto});
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(8),
+    onTap: onTap,
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 46),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: P.superficie,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: abierto ? P.morado : P.borde, width: abierto ? 1.6 : 1),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: child),
+          Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Menú de clientes: todos los clientes y, abajo, "Crear nuevo cliente" (abre la misma ventana
+/// que en Clientes; el cliente creado queda elegido).
+class SelectorCliente extends StatelessWidget {
+  final String? valor;
+  final ValueChanged<String> onChanged;
+  const SelectorCliente(this.valor, this.onChanged, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = store.cliente(valor);
+    final clientes = [...store.clientes]..sort((a, b) => a.nombre.compareTo(b.nombre));
+    return MenuAnchor(
+      alignmentOffset: const Offset(0, 4),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(P.superficie),
+        maximumSize: const WidgetStatePropertyAll(Size(460, 380)),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+      ),
+      menuChildren: [
+        if (clientes.isEmpty)
+          const MenuItemButton(child: Text('Aún no tienes clientes'))
+        else
+          for (final x in clientes)
+            MenuItemButton(
+              leadingIcon: Avatar(x.iniciales, colorPaleta(x.color), size: 22, cuadrado: true),
+              trailingIcon: x.id == valor ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
+              onPressed: () => onChanged(x.id),
+              child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 260), child: Text(x.nombre)),
+            ),
+        const Divider(height: 8),
+        MenuItemButton(
+          leadingIcon: Icon(Icons.add_rounded, color: P.morado),
+          onPressed: () async {
+            final antes = {for (final x in store.clientes) x.id};
+            await abrirClienteForm(context);
+            final nuevo = store.clientes.where((x) => !antes.contains(x.id)).firstOrNull;
+            if (nuevo != null) onChanged(nuevo.id);
+          },
+          child: Text(
+            'Crear nuevo cliente',
+            style: TextStyle(color: P.morado, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+      builder: (context, menu, _) => _CajaMenu(
+        abierto: menu.isOpen,
+        onTap: () => menu.isOpen ? menu.close() : menu.open(),
+        child: c == null
+            ? Text('Elegir cliente', style: TextStyle(color: P.textoSuave))
+            : Row(
+                children: [
+                  Avatar(c.iniciales, colorPaleta(c.color), size: 24, cuadrado: true),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      c.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// Menú de trabajadores: se marcan uno o varios (no se cierra al marcar). Los que no son aptos
+/// salen apagados con lo que les falta. Los equipos llegarán con la fase de grupos.
+class SelectorTrabajadores extends StatelessWidget {
+  final Tarea t;
+  final VoidCallback onCambio;
+  const SelectorTrabajadores(this.t, this.onCambio, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final ws = store.trabajadores.where((w) => w.activo).toList()
+      ..sort((a, b) => (store.esApto(a, t) ? 0 : 1) - (store.esApto(b, t) ? 0 : 1));
+    final elegidos = t.trabajadorIds.map(store.trabajador).whereType<Trabajador>().toList();
+    return MenuAnchor(
+      alignmentOffset: const Offset(0, 4),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(P.superficie),
+        maximumSize: const WidgetStatePropertyAll(Size(460, 420)),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+      ),
+      menuChildren: [
+        if (ws.isEmpty) const MenuItemButton(child: Text('Aún no tienes trabajadores')),
+        for (final w in ws)
+          MenuItemButton(
+            closeOnActivate: false,
+            leadingIcon: Icon(
+              t.trabajadorIds.contains(w.id) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+              size: 20,
+              color: t.trabajadorIds.contains(w.id) ? P.morado : P.textoSuave,
+            ),
+            trailingIcon: store.esApto(w, t)
+                ? const Pill('Apto', P.verde, solido: true)
+                : Pill('Le falta: ${store.faltan(w, t).join(', ')}', P.gris),
+            onPressed: () {
+              t.trabajadorIds.contains(w.id) ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id);
+              onCambio();
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 180),
+              child: Row(
+                children: [
+                  Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
+                  const SizedBox(width: 8),
+                  Opacity(opacity: store.esApto(w, t) ? 1 : .55, child: Text(w.nombreCompleto)),
+                ],
+              ),
+            ),
+          ),
+        const Divider(height: 8),
+        MenuItemButton(
+          onPressed: null,
+          child: Text('Equipos · próximamente', style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
+        ),
+      ],
+      builder: (context, menu, _) => _CajaMenu(
+        abierto: menu.isOpen,
+        onTap: () => menu.isOpen ? menu.close() : menu.open(),
+        child: elegidos.isEmpty
+            ? Text('Sin asignar', style: TextStyle(color: P.textoSuave))
+            : Row(
+                children: [
+                  AvataresTrabajadores(t.trabajadorIds, size: 24),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      elegidos.map((w) => w.nombre).join(', '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// Cuándo, sencillo: el día (abre el calendario) con la repetición al lado, y debajo la hora
+/// o, con "Franja horaria", dos horas: de tal a tal.
+class SelectorCuando extends StatefulWidget {
+  final Tarea t;
+  final VoidCallback onCambio;
+  const SelectorCuando(this.t, this.onCambio, {super.key});
+
+  @override
+  State<SelectorCuando> createState() => _SelectorCuandoState();
+}
+
+class _SelectorCuandoState extends State<SelectorCuando> {
+  late bool franja = widget.t.conFranja;
+  Tarea get t => widget.t;
+
+  void cambiar(void Function() f) {
+    setState(f);
+    widget.onCambio();
+  }
+
+  static const _dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+  static const _meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+  /// Campo que abre un selector al pulsarlo (día u hora).
+  Widget _campo(
+    String label,
+    String? valor,
+    String vacio,
+    IconData icono,
+    VoidCallback onTap, {
+    bool destacado = false,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      etiqueta(label),
+      InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: destacado ? P.moradoSuave.withValues(alpha: .6) : P.superficie,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: destacado ? P.morado.withValues(alpha: .45) : P.borde),
+          ),
+          child: Row(
+            children: [
+              Icon(icono, size: 18, color: destacado ? P.morado : P.textoSuave),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  valor ?? vacio,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: valor == null ? FontWeight.w400 : FontWeight.w600,
+                    color: valor == null ? P.textoSuave : (destacado ? P.moradoOscuro : P.texto),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Future<int?> _pedirHora(int? actual) async {
+    final h = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: (actual ?? 540) ~/ 60, minute: (actual ?? 540) % 60),
+    );
+    return h == null ? null : h.hour * 60 + h.minute;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = t.proximo;
+    final opciones = {
+      Periodicidad.unica,
+      Periodicidad.semanal,
+      Periodicidad.mensual,
+      Periodicidad.anual,
+      t.periodicidad,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Día + repetición.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: _campo(
+                  t.esPlantilla ? 'Primer día' : 'Día',
+                  d == null
+                      ? null
+                      : '${_dias[d.weekday - 1]} ${d.day} ${_meses[d.month - 1]} · ${relativo(d).toLowerCase()}',
+                  'Elegir día',
+                  Icons.calendar_month_rounded,
+                  () async {
+                    final x = await showDatePicker(
+                      context: context,
+                      initialDate: d ?? hoy(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (x != null) cambiar(() => t.proximo = x);
+                  },
+                  destacado: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    etiqueta('Se repite'),
+                    DropdownButtonFormField<Periodicidad>(
+                      isExpanded: true,
+                      initialValue: t.periodicidad,
+                      items: [
+                        for (final p in Periodicidad.values.where(opciones.contains))
+                          DropdownMenuItem(value: p, child: Text(p.etiqueta)),
+                      ],
+                      onChanged: (v) => cambiar(() => t.periodicidad = v!),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Hora exacta, o franja (de tal a tal).
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!franja)
+                Expanded(
+                  child: _campo(
+                    'Hora',
+                    t.inicioMin == null ? null : hhmm(t.inicioMin!),
+                    'Elegir hora',
+                    Icons.schedule_rounded,
+                    () async {
+                      final m = await _pedirHora(t.inicioMin);
+                      if (m != null) cambiar(() => t.inicioMin = m);
+                    },
+                  ),
+                )
+              else ...[
+                Expanded(
+                  child: _campo(
+                    'Desde',
+                    t.ventanaDesdeMin == null ? null : hhmm(t.ventanaDesdeMin!),
+                    'Hora de inicio',
+                    Icons.schedule_rounded,
+                    () async {
+                      final m = await _pedirHora(t.ventanaDesdeMin);
+                      if (m != null) {
+                        cambiar(() {
+                          t.ventanaDesdeMin = m;
+                          t.inicioMin = m;
+                          if ((t.ventanaHastaMin ?? 0) <= m) t.ventanaHastaMin = m + 60;
+                        });
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _campo(
+                    'Hasta',
+                    t.ventanaHastaMin == null ? null : hhmm(t.ventanaHastaMin!),
+                    'Hora de fin',
+                    Icons.schedule_rounded,
+                    () async {
+                      final m = await _pedirHora(t.ventanaHastaMin);
+                      if (m != null) cambiar(() => t.ventanaHastaMin = m);
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 46,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: franja ? P.moradoSuave : null,
+                    side: BorderSide(color: franja ? P.morado.withValues(alpha: .5) : P.borde),
+                  ),
+                  onPressed: () => cambiar(() {
+                    franja = !franja;
+                    if (franja) {
+                      t.ventanaDesdeMin = t.inicioMin ?? 8 * 60;
+                      t.ventanaHastaMin = t.ventanaDesdeMin! + 4 * 60;
+                      t.inicioMin = t.ventanaDesdeMin;
+                    } else {
+                      t.ventanaDesdeMin = null;
+                      t.ventanaHastaMin = null;
+                    }
+                  }),
+                  child: Text(franja ? 'Hora exacta' : 'Franja horaria'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Color del bloque en el calendario: circulitos con colores habituales y "+" para cualquier otro.
+/// El primero es "Automático": el color de su tipo.
+class SelectorColorTarea extends StatelessWidget {
+  final Tarea t;
+  final VoidCallback onCambio;
+  const SelectorColorTarea(this.t, this.onCambio, {super.key});
+
+  static const colores = [
+    0xFF7C3AED,
+    0xFF2563EB,
+    0xFF0EA5E9,
+    0xFF0D9488,
+    0xFF16A34A,
+    0xFF84CC16,
+    0xFFCA8A04,
+    0xFFEA580C,
+    0xFFDC2626,
+    0xFFDB2777,
+    0xFF64748B,
+  ];
+
+  Widget _circulo(Color c, bool sel, VoidCallback onTap, {Widget? dentro, String? tip}) => Tooltip(
+    message: tip ?? '',
+    child: InkWell(
+      customBorder: const CircleBorder(),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: c,
+          shape: BoxShape.circle,
+          border: Border.all(color: sel ? P.superficie : Colors.transparent, width: 2),
+          boxShadow: sel ? [BoxShadow(color: c, spreadRadius: 2)] : null,
+        ),
+        child: dentro ?? (sel ? const Icon(Icons.check_rounded, size: 15, color: Colors.white) : null),
+      ),
+    ),
+  );
+
+  Future<void> _otro(BuildContext context) async {
+    // Paleta amplia: 12 tonos × 4 luminosidades.
+    final todos = [
+      for (final l in [.35, .45, .55, .7])
+        for (var h = 0; h < 360; h += 30) HSLColor.fromAHSL(1, h.toDouble(), .7, l).toColor(),
+    ];
+    final elegido = await showDialog<Color>(
+      context: context,
+      builder: (c) => Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Otro color',
+                style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: 12 * 34,
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [for (final x in todos) _circulo(x, false, () => Navigator.pop(c, x))],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (elegido != null) {
+      t.color = elegido.toARGB32();
+      onCambio();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final propio = t.color != null && !colores.contains(t.color);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          etiqueta('Color en el calendario'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _circulo(
+                tipoDe(t.tipo).color,
+                t.color == null,
+                () {
+                  t.color = null;
+                  onCambio();
+                },
+                tip: 'Automático (color del tipo)',
+                dentro: t.color == null
+                    ? const Icon(Icons.check_rounded, size: 15, color: Colors.white)
+                    : const Text(
+                        'A',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                      ),
+              ),
+              for (final c in colores)
+                _circulo(Color(c), t.color == c, () {
+                  t.color = c;
+                  onCambio();
+                }),
+              if (propio) _circulo(Color(t.color!), true, () {}),
+              Tooltip(
+                message: 'Otro color',
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => _otro(context),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: P.borde, width: 1.5),
+                    ),
+                    child: Icon(Icons.add_rounded, size: 16, color: P.textoSuave),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

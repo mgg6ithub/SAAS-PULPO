@@ -58,17 +58,15 @@ void main() {
     expect(store.automatizar(actual), 0); // lo que queda no lo puede hacer nadie
   });
 
-  for (final (i, nombre) in ['Días', 'Calendario', 'Tablero'].indexed) {
-    testWidgets('Planificación se pinta en la vista $nombre', (tester) async {
+  for (final (i, nombre) in ['Día', 'Semana', 'Mes', 'Tablero', 'Línea'].indexed) {
+    testWidgets('La agenda se pinta en la vista $nombre', (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Planificacion())));
-      if (i > 0) {
-        await tester.tap(find.text(nombre));
-      }
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Planificacion(mapa: false))));
+      await tester.tap(find.text(nombre));
       await tester.pumpAndSettle();
-      expect(find.text(i == 2 ? 'Actual' : 'Hoy'), findsWidgets);
+      expect(find.text(i == 3 ? 'Actual' : 'Hoy'), findsWidgets);
     });
   }
 

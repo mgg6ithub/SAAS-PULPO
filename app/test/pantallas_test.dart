@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/screens/cliente_detalle.dart';
 import 'package:pulpo/screens/clientes.dart';
+import 'package:pulpo/screens/planificacion.dart';
 import 'package:pulpo/screens/resumen.dart';
 import 'package:pulpo/screens/tareas.dart';
 import 'package:pulpo/screens/trabajador_detalle.dart';
@@ -22,6 +23,7 @@ void main() {
     'Clientes': () => Clientes(onAbrir: (_) {}),
     'Trabajadores': () => Trabajadores(onAbrir: (_) {}),
     'Tareas': () => const TareasPagina(),
+    'Agenda': () => const Planificacion(mapa: false),
     'Ficha de cliente': () => ClienteDetalle(clienteId: 'c1', onVolver: () {}),
     'Ficha de trabajador': () => TrabajadorDetalle(trabajadorId: 'w1', onVolver: () {}),
   };

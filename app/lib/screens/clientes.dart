@@ -52,7 +52,7 @@ class _ClientesState extends State<Clientes> {
     return Stack(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
+          padding: const EdgeInsets.fromLTRB(40, 32, 40, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -69,6 +69,28 @@ class _ClientesState extends State<Clientes> {
                         BotonPrimario('Nuevo cliente', tecla: 'N', onPressed: () => abrirClienteForm(context)),
                       ],
                     ),
+                    const SizedBox(height: 22),
+                    ResumenLista([
+                      ('Activos', store.clientes.where((c) => c.activa).length, 'reciben mantenimiento', P.verde),
+                      (
+                        'Con vencidas',
+                        store.clientes
+                            .where(
+                              (c) => store
+                                  .tareasDe(c.id)
+                                  .any((t) => t.activa && t.proximo != null && diasHasta(t.proximo!) < 0),
+                            )
+                            .length,
+                        'necesitan una visita',
+                        P.rojo,
+                      ),
+                      (
+                        'Nuevos',
+                        store.clientes.where((c) => DateTime.now().difference(c.fechaAlta).inDays <= 30).length,
+                        'últimos 30 días',
+                        P.morado,
+                      ),
+                    ]),
                     const SizedBox(height: 20),
                     BarraFiltros(
                       izquierda: [
@@ -249,7 +271,7 @@ class _Tabla extends StatelessWidget {
             if (ancho) const Col('CIF/NIF', flex: 2),
             const Col('Población', flex: 2),
             if (ancho) const Col('Contacto', flex: 3),
-            const Col('Mantenimientos', flex: 2),
+            const Col('Tareas', flex: 2),
             const Col('Próximo', flex: 2),
             const Col('Estado', ancho: 80, derecha: true),
           ],

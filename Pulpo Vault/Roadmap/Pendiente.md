@@ -3,6 +3,8 @@ tags: [roadmap, pulpo]
 ---
 # Pendiente
 
+> Plan vigente: [[Plan del prototipo]] (fases 1–6). Esta lista queda como histórico y para detalles sueltos.
+
 - [ ] Resolver las preguntas clave de [[03 - Preguntas abiertas]] (quién usa la app y qué se automatiza primero).
 - [x] Elegir el framework del prototipo → Flutter (web primero).
 - [x] Pasar a la bóveda los croquis (wireframes y campos del modelo) → [[MOC - Prototipo]].

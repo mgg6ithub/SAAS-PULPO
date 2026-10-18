@@ -43,12 +43,28 @@ void main() {
     await tester.tap(find.text('Mantenimiento de ascensor'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'Mantenimiento de ascensor'), findsOneWidget);
-    expect(find.text('Apto'), findsWidgets);
+    // La plantilla propone al trabajador apto.
+    expect(find.text('Javier'), findsOneWidget);
   });
 
   testWidgets('desde Tareas se puede elegir cliente', (tester) async {
     await pintar(tester, const TareaForm());
-    expect(find.text('Sin cliente (plantilla)'), findsOneWidget);
+    // Una tarea nueva propone el primer cliente y se puede cambiar.
+    expect(find.text('Ascensores Altura'), findsWidgets);
+    expect(find.text('Sin fecha'), findsOneWidget);
+    // Atajo de fecha y hora exacta con un toque.
+    await tester.tap(find.text('Mañana'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('9:00'));
+    await tester.tap(find.text('9:00'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining(fecha(masDias(hoy(), 1))), findsOneWidget);
+    expect(find.textContaining('De 09:00'), findsOneWidget);
+
+    // El menú de clientes lista los clientes y ofrece crear uno nuevo.
+    await tester.tap(find.text('Ascensores Altura').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Crear nuevo cliente'), findsOneWidget);
   });
 
   testWidgets('la ventana se acopla a la derecha y vuelve', (tester) async {
@@ -59,5 +75,16 @@ void main() {
     await tester.tap(find.byTooltip('Volver a ventana'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Acoplar a la derecha'), findsOneWidget);
+  });
+
+  test('las plantillas se ordenan por uso reciente (LRU)', () async {
+    final ids = store.plantillasPorUso.map((p) => p.id).toList();
+    store.usarPlantilla(ids.last);
+    expect(store.plantillasPorUso.first.id, ids.last);
+    store.usarPlantilla(ids[1]);
+    expect(store.plantillasPorUso.take(2).map((p) => p.id), [ids[1], ids.last]);
+    // Se guarda al recargar.
+    await store.cargar();
+    expect(store.plantillasPorUso.first.id, ids[1]);
   });
 }

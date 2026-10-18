@@ -22,7 +22,10 @@ Prototipo v0.1 en Flutter web (datos en el navegador).
 
 ## Topics
 
+- [[Plan del prototipo]] — **las fases acordadas del prototipo (empezar por aquí)**
 - [[MOC - Prototipo]] — pantallas, modelo y automatización de la primera versión
+- [[Reestructuración (iteración Jobber)]] — flujo cliente → mantenimiento → visita, agenda con mapa y checklist de lo que aplicamos; capturas en `Interfaz UI/capturas-jobber/`
+- [[Rutas y planificador (iteración OptimoRoute)]] — optimizador de rutas, criticidad, ventanas horarias, rutas por técnico en el mapa; capturas en `Interfaz UI/capturas-optimoroute/`
 - [[Guía visual (referencia Holded)]] — reglas de interfaz; referencia en `Interfaz UI/capturas/`, nuestra app en `Interfaz UI/capturas-pulpo/`
 - [[MOC - Visión]] — qué es, funcionalidades, preguntas abiertas
 - [[MOC - Arquitectura]] — stack y decisiones técnicas

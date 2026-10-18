@@ -32,7 +32,7 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 20, 32, 24),
+      padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -63,7 +63,7 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
-            opciones: const ['Resumen', 'Mantenimientos', 'Datos'],
+            opciones: const ['Resumen', 'Tareas', 'Datos'],
             contadores: [null, tareas.length, null],
             seleccion: pestana,
             onChanged: (i) => setState(() => pestana = i),
@@ -120,7 +120,7 @@ class _Resumen extends StatelessWidget {
                 spacing: 48,
                 runSpacing: 16,
                 children: [
-                  Cifra('Mantenimientos', tareas.length, nota: '${{for (final t in tareas) t.tipo}.length} tipos'),
+                  Cifra('Tareas', tareas.length, nota: '${{for (final t in tareas) t.tipo}.length} tipos'),
                   Cifra(
                     'Vencidos',
                     vencidas,
@@ -168,7 +168,7 @@ class _Resumen extends StatelessWidget {
                   : [
                       for (final t in proximos)
                         FilaLista(
-                          lider: BarraTipo(t.tipo, alto: 32),
+                          lider: BarraTipo(t.tipo, alto: 32, color: t.colorBloque),
                           titulo: t.nombre,
                           subtitulo: [
                             fecha(t.proximo),
@@ -244,7 +244,7 @@ class _Mantenimientos extends StatelessWidget {
           return [
             Row(
               children: [
-                BarraTipo(t.tipo, alto: 28),
+                BarraTipo(t.tipo, alto: 28, color: t.colorBloque),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Column(

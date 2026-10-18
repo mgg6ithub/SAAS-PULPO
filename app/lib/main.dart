@@ -11,6 +11,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ajustes.cargar();
   // ?oscuro=1 / ?oscuro=0 fuerza el tema sin guardarlo (útil para capturas).
+  // ?barra=64 / ?barra=600 fija el ancho de la barra lateral (capturas).
+  final barra = double.tryParse(Uri.base.queryParameters['barra'] ?? '');
+  if (barra != null) ajustes.anchoBarra = barra;
   final oscuro = Uri.base.queryParameters['oscuro'];
   if (oscuro != null) ajustes.tema = oscuro == '1' ? ThemeMode.dark : ThemeMode.light;
   await store.cargar();

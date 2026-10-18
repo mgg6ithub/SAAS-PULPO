@@ -41,7 +41,7 @@ class _TareasPaginaState extends State<TareasPagina> {
     final tiposUsados = {for (final t in store.tareas) t.tipo};
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+      padding: const EdgeInsets.fromLTRB(40, 32, 40, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -52,10 +52,42 @@ class _TareasPaginaState extends State<TareasPagina> {
               BotonPrimario(
                 pestana == 1 ? 'Nueva plantilla' : 'Nueva tarea',
                 tecla: 'N',
-                onPressed: () => abrirTareaForm(context, null),
+                onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
               ),
             ],
           ),
+          const SizedBox(height: 22),
+          ResumenLista([
+            (
+              'Vencidas',
+              store.tareas
+                  .where((t) => !t.esPlantilla && t.activa && t.proximo != null && diasHasta(t.proximo!) < 0)
+                  .length,
+              'pendientes de hacer',
+              P.rojo,
+            ),
+            (
+              'Esta semana',
+              store.tareas
+                  .where(
+                    (t) =>
+                        !t.esPlantilla &&
+                        t.activa &&
+                        t.proximo != null &&
+                        diasHasta(t.proximo!) >= 0 &&
+                        diasHasta(t.proximo!) <= 7,
+                  )
+                  .length,
+              'próximos 7 días',
+              P.ambar,
+            ),
+            (
+              'Sin asignar',
+              store.tareas.where((t) => !t.esPlantilla && t.activa && t.trabajadorIds.isEmpty).length,
+              'sin técnico',
+              P.morado,
+            ),
+          ]),
           const SizedBox(height: 20),
           BarraFiltros(
             izquierda: [
@@ -154,7 +186,7 @@ class _TareasPaginaState extends State<TareasPagina> {
             return [
               Row(
                 children: [
-                  BarraTipo(t.tipo, alto: 28),
+                  BarraTipo(t.tipo, alto: 28, color: t.colorBloque),
                   const SizedBox(width: 10),
                   Flexible(
                     child: Column(
@@ -173,7 +205,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ],
               ),
               c == null
-                  ? Etiqueta('Plantilla', P.morado)
+                  ? (t.esPlantilla ? Etiqueta('Plantilla', P.morado) : celdaTexto('Sin cliente', suave: true))
                   : Row(
                       children: [
                         Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),

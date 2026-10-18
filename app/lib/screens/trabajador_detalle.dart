@@ -53,7 +53,7 @@ class TrabajadorDetalle extends StatelessWidget {
         // Con sitio, la ficha completa va fija a la derecha; si no, se abre con "Editar ficha".
         final conFicha = box.maxWidth > 1000;
         final principal = Padding(
-          padding: const EdgeInsets.fromLTRB(32, 20, 32, 24),
+          padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -121,7 +121,7 @@ class _TareaAsignada extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = store.cliente(t.clienteId);
     return FilaLista(
-      lider: BarraTipo(t.tipo, alto: 32),
+      lider: BarraTipo(t.tipo, alto: 32, color: t.colorBloque),
       titulo: t.nombre,
       subtitulo: [c?.nombre ?? '—', if (t.proximo != null) fecha(t.proximo), ?t.horario].join(' · '),
       onTap: () => abrirTareaForm(context, t),
@@ -306,7 +306,7 @@ class _AsignarState extends State<_Asignar> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             children: [
-              BarraTipo(t.tipo, alto: 30),
+              BarraTipo(t.tipo, alto: 30, color: t.colorBloque),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

@@ -20,6 +20,17 @@ extension EstadoHoyX on EstadoHoy {
   Color get color => const [P.verde, P.ambar, P.rojo][index];
 }
 
+/// Lo urgente que es una tarea. El planificador hace antes las más críticas.
+enum Criticidad { critica, alta, media, rutinaria }
+
+extension CriticidadX on Criticidad {
+  String get etiqueta => const ['Crítica', 'Alta', 'Media', 'Rutinaria'][index];
+  Color get color => const [P.rojo, P.ambar, P.azul, P.gris][index];
+
+  /// Peso para el planificador (cuanto más, antes en el día).
+  int get peso => const [8, 4, 2, 1][index];
+}
+
 enum EstadoMaquina { operativa, revision, averiada }
 
 extension EstadoMaquinaX on EstadoMaquina {
@@ -27,11 +38,15 @@ extension EstadoMaquinaX on EstadoMaquina {
   Color get color => const [P.verde, P.ambar, P.rojo][index];
 }
 
-enum Periodicidad { semanal, mensual, trimestral, semestral, anual }
+/// `unica` va al final para no cambiar los índices ya guardados.
+enum Periodicidad { semanal, mensual, trimestral, semestral, anual, unica }
 
 extension PeriodicidadX on Periodicidad {
-  String get etiqueta => const ['Semanal', 'Mensual', 'Trimestral', 'Semestral', 'Anual'][index];
-  int get dias => const [7, 30, 91, 182, 365][index];
+  String get etiqueta => const ['Semanal', 'Mensual', 'Trimestral', 'Semestral', 'Anual', 'Única'][index];
+
+  /// Días hasta la siguiente; 0 = no se repite.
+  int get dias => const [7, 30, 91, 182, 365, 0][index];
+  bool get repite => this != Periodicidad.unica;
 }
 
 /// Cliente al que se le da mantenimiento: comunidad, colegio, hospital, empresa...
@@ -40,6 +55,9 @@ class Cliente {
   bool activa;
   DateTime fechaAlta;
   int color;
+
+  /// Coordenadas de su dirección, para el mapa de la agenda (null = sin ubicar).
+  double? lat, lng;
 
   Cliente({
     required this.id,
@@ -57,7 +75,18 @@ class Cliente {
     this.activa = true,
     DateTime? fechaAlta,
     this.color = 0,
+    this.lat,
+    this.lng,
   }) : fechaAlta = fechaAlta ?? DateTime.now();
+
+  bool get ubicado => lat != null && lng != null;
+
+  /// Dirección completa en una línea, para buscarla en el mapa.
+  String get direccionCompleta => [
+    direccion,
+    [cp, ciudad].where((x) => x.isNotEmpty).join(' '),
+    provincia,
+  ].where((x) => x.isNotEmpty).join(', ');
 
   String get iniciales => inicialesDe(nombre);
 
@@ -77,6 +106,8 @@ class Cliente {
     'activa': activa,
     'fechaAlta': _f(fechaAlta),
     'color': color,
+    'lat': lat,
+    'lng': lng,
   };
 
   factory Cliente.fromJson(Map<String, dynamic> j) => Cliente(
@@ -95,6 +126,8 @@ class Cliente {
     activa: j['activa'] as bool? ?? true,
     fechaAlta: _d(j, 'fechaAlta'),
     color: j['color'] as int? ?? 0,
+    lat: (j['lat'] as num?)?.toDouble(),
+    lng: (j['lng'] as num?)?.toDouble(),
   );
 
   Cliente copia() => Cliente.fromJson(toJson());
@@ -166,9 +199,15 @@ class Tarea {
   /// Hora de inicio el día del próximo mantenimiento, en minutos desde las 00:00 (null = sin hora).
   int? inicioMin;
 
+  /// Franja horaria en la que se puede hacer (minutos desde las 00:00); null = hora exacta o sin hora.
+  int? ventanaDesdeMin, ventanaHastaMin;
+
+  bool get conFranja => ventanaDesdeMin != null && ventanaHastaMin != null;
+
   /// Lo que se calcula que dura, en minutos.
   int duracionMin;
   EstadoMaquina estadoMaquina;
+  Criticidad criticidad;
   Periodicidad periodicidad;
   bool activa;
   List<String> competencias, trabajadorIds;
@@ -176,6 +215,8 @@ class Tarea {
   Tarea({
     required this.id,
     this.clienteId,
+    bool? plantilla,
+    this.color,
     this.plantillaId,
     this.nombre = '',
     this.tipo = 'Otro',
@@ -189,16 +230,27 @@ class Tarea {
     this.proximo,
     this.solicitud,
     this.inicioMin,
+    this.ventanaDesdeMin,
+    this.ventanaHastaMin,
     this.duracionMin = 60,
     this.estadoMaquina = EstadoMaquina.operativa,
+    this.criticidad = Criticidad.media,
     this.periodicidad = Periodicidad.mensual,
     this.activa = true,
     List<String>? competencias,
     List<String>? trabajadorIds,
-  }) : competencias = competencias ?? [],
+  }) : plantilla = plantilla ?? clienteId == null,
+       competencias = competencias ?? [],
        trabajadorIds = trabajadorIds ?? [];
 
-  bool get esPlantilla => clienteId == null;
+  /// Es una plantilla (modelo para crear tareas). Antes se deducía de no tener cliente;
+  /// ahora es un dato propio, así una tarea puede existir sin cliente.
+  bool plantilla;
+  bool get esPlantilla => plantilla;
+
+  /// Color elegido para su bloque en el calendario (ARGB); null = el de su tipo.
+  int? color;
+  Color get colorBloque => color != null ? Color(color!) : tipoDe(tipo).color;
 
   /// Completada ese día: se hizo ese día y no es un día futuro (lo futuro siempre está pendiente).
   bool hechaEl(DateTime dia) => ultimo != null && DateUtils.isSameDay(ultimo, dia) && diasHasta(dia) <= 0;
@@ -214,6 +266,8 @@ class Tarea {
   Map<String, dynamic> toJson() => {
     'id': id,
     'clienteId': clienteId,
+    'plantilla': plantilla,
+    'color': color,
     'plantillaId': plantillaId,
     'nombre': nombre,
     'tipo': tipo,
@@ -227,8 +281,11 @@ class Tarea {
     'proximo': _f(proximo),
     'solicitud': _f(solicitud),
     'inicioMin': inicioMin,
+    'ventanaDesdeMin': ventanaDesdeMin,
+    'ventanaHastaMin': ventanaHastaMin,
     'duracionMin': duracionMin,
     'estadoMaquina': estadoMaquina.index,
+    'criticidad': criticidad.index,
     'periodicidad': periodicidad.index,
     'activa': activa,
     'competencias': competencias,
@@ -238,6 +295,8 @@ class Tarea {
   factory Tarea.fromJson(Map<String, dynamic> j) => Tarea(
     id: _s(j, 'id'),
     clienteId: j['clienteId'] as String?,
+    plantilla: j['plantilla'] as bool?,
+    color: j['color'] as int?,
     plantillaId: j['plantillaId'] as String?,
     nombre: _s(j, 'nombre'),
     tipo: _s(j, 'tipo'),
@@ -251,8 +310,11 @@ class Tarea {
     proximo: _d(j, 'proximo'),
     solicitud: _d(j, 'solicitud'),
     inicioMin: j['inicioMin'] as int?,
+    ventanaDesdeMin: j['ventanaDesdeMin'] as int?,
+    ventanaHastaMin: j['ventanaHastaMin'] as int?,
     duracionMin: j['duracionMin'] as int? ?? 60,
     estadoMaquina: EstadoMaquina.values[j['estadoMaquina'] as int? ?? 0],
+    criticidad: Criticidad.values[j['criticidad'] as int? ?? 2],
     periodicidad: Periodicidad.values[j['periodicidad'] as int? ?? 1],
     activa: j['activa'] as bool? ?? true,
     competencias: List<String>.from(j['competencias'] as List? ?? []),
