@@ -28,6 +28,7 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter build web --release --base-href /SAAS-PULPO/
+      - run: cp -R ../landing build/web/landing
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/build/web

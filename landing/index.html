@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pulpo · Organiza las tareas y rutas de tu equipo con un botón</title>
+  <meta name="description" content="Pulpo reparte las tareas de tus clientes entre tu equipo y traza las rutas más cortas, teniendo en cuenta fechas, horarios, requisitos y dónde vive cada trabajador.">
+  <meta name="theme-color" content="#6A2FF6">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:title" content="Pulpo · Tu semana organizada con un botón">
+  <meta property="og:description" content="Tareas, equipo y rutas optimizadas en un solo calendario.">
+  <meta property="og:image" content="assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+
+  <header class="nav">
+    <div class="wrap nav__inner">
+      <a class="brand" href="#" aria-label="Pulpo, inicio">
+        <img src="assets/pulpo.png" alt="" width="32" height="32">
+        <span>Pulpo</span>
+      </a>
+      <nav class="nav__links" aria-label="Principal">
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#que-tiene-en-cuenta">Qué tiene en cuenta</a>
+        <a href="#ventajas">Ventajas</a>
+      </nav>
+      <!-- Lleva a la app (raíz de GitHub Pages) -->
+      <a class="btn btn--small" href="../">Probar Pulpo</a>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <section class="hero">
+      <div class="wrap hero__text">
+        <p class="eyebrow">Planificación automática para equipos de mantenimiento</p>
+        <h1>Pulsa un botón.<br><span>Tu semana, organizada.</span></h1>
+        <p class="lead">Pulpo reparte las tareas de tus clientes entre tu equipo y traza las rutas más cortas, teniendo en cuenta fechas, horarios, requisitos y dónde vive cada trabajador.</p>
+        <div class="hero__ctas">
+          <!-- Lleva a la app (raíz de GitHub Pages) -->
+          <a class="btn" href="../">Probar Pulpo</a>
+          <a class="link" href="#como-funciona">Ver cómo funciona</a>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <figure class="demo" aria-label="Ilustración: Pulpo asigna tareas a dos trabajadores y traza sus rutas en el mapa">
+          <div class="demo__bar" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="demo__title">Martes · 6 tareas · 2 trabajadores</span>
+            <span class="demo__go">✦ Organizar</span>
+          </div>
+          <div class="demo__body" aria-hidden="true">
+            <ul class="tasks">
+              <li><b>Revisión de caldera</b><small>09:00 · Calle Mayor · Gas</small><em class="who who--a">Laura</em></li>
+              <li><b>Cambio de filtros</b><small>10:30 · Av. del Puerto · Clima</small><em class="who who--a">Laura</em></li>
+              <li><b>Cuadro eléctrico</b><small>09:30 · Pol. Norte · Electricidad</small><em class="who who--b">Dani</em></li>
+              <li><b>Revisión ascensor</b><small>12:00 · Plaza Sol · Ascensores</small><em class="who who--b">Dani</em></li>
+            </ul>
+            <svg class="map" viewBox="0 0 600 380" role="presentation">
+              <g class="streets">
+                <path d="M0 90H600M0 200H600M0 300H600M110 0V380M260 0V380M410 0V380M520 0V380"/>
+                <path d="M0 360L600 20" class="streets__diag"/>
+              </g>
+              <path class="route route--a" d="M70 330 H110 V300 H260 V200 H300"/>
+              <path class="route route--b" d="M545 55 H520 V90 H410 V200 H470 V300"/>
+              <g class="home home--a"><rect x="56" y="316" width="28" height="28" rx="8"/><path d="M63 333l7-7 7 7v5h-14z"/></g>
+              <g class="home home--b"><rect x="531" y="41" width="28" height="28" rx="8"/><path d="M538 58l7-7 7 7v5h-14z"/></g>
+              <g class="pin pin--a"><circle cx="260" cy="300" r="11"/><text x="260" y="304">1</text></g>
+              <g class="pin pin--a"><circle cx="300" cy="200" r="11"/><text x="300" y="204">2</text></g>
+              <g class="pin pin--b"><circle cx="410" cy="90" r="11"/><text x="410" y="94">1</text></g>
+              <g class="pin pin--b"><circle cx="470" cy="300" r="11"/><text x="470" y="304">2</text></g>
+            </svg>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <section id="como-funciona" class="section">
+      <div class="wrap">
+        <p class="eyebrow">Cómo funciona</p>
+        <h2>Tú pones los datos.<br>Pulpo hace el resto.</h2>
+        <ol class="steps">
+          <li>
+            <span class="steps__n">1</span>
+            <h3>Crea clientes y tareas</h3>
+            <p>Cada tarea con su fecha, su hora, su lugar y lo que hace falta para hacerla.</p>
+          </li>
+          <li>
+            <span class="steps__n">2</span>
+            <h3>Añade a tu equipo</h3>
+            <p>Dónde vive cada trabajador y qué puede hacer.</p>
+          </li>
+          <li>
+            <span class="steps__n steps__n--go">✦</span>
+            <h3>Pulsa Organizar</h3>
+            <p>Pulpo reparte el trabajo, ordena los días en el calendario y traza la ruta de cada persona.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="que-tiene-en-cuenta" class="section section--tint">
+      <div class="wrap">
+        <p class="eyebrow">Qué tiene en cuenta</p>
+        <h2>Todo lo que antes cuadrabas a mano</h2>
+        <div class="flow">
+          <ul class="flow__in">
+            <li>Fecha y hora de cada tarea</li>
+            <li>Dirección del cliente</li>
+            <li>Requisitos de la tarea</li>
+            <li>Dónde vive cada trabajador</li>
+          </ul>
+          <div class="flow__core">
+            <img src="assets/pulpo.png" alt="" width="72" height="72" loading="lazy">
+            <span>Pulpo</span>
+          </div>
+          <ul class="flow__out">
+            <li><b>Calendario del equipo</b><small>Quién hace qué y cuándo</small></li>
+            <li><b>Rutas optimizadas</b><small>Menos kilómetros entre tarea y tarea</small></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="ventajas" class="section">
+      <div class="wrap">
+        <p class="eyebrow">Ventajas</p>
+        <h2>Más trabajo hecho,<br>menos tiempo en la carretera</h2>
+        <div class="cards">
+          <article class="card">
+            <h3>Rutas más cortas</h3>
+            <p>Cada trabajador sale de su casa hacia las tareas que le quedan cerca. Menos desplazamientos, más rentabilidad.</p>
+          </article>
+          <article class="card">
+            <h3>Una persona lo gestiona todo</h3>
+            <p>Lo que antes ocupaba horas de llamadas y hojas de cálculo se resuelve con un botón, aunque el equipo crezca.</p>
+          </article>
+          <article class="card">
+            <h3>Historial de cada cliente</h3>
+            <p>Todas las tareas hechas quedan guardadas: qué se hizo, cuándo y quién lo hizo.</p>
+          </article>
+          <article class="card">
+            <h3>Aprende cómo trabajas</h3>
+            <p>Con IA, Pulpo se adapta a tus preferencias y cada planificación necesita menos retoques.</p>
+          </article>
+        </div>
+        <p class="next"><span>Próximamente</span> Facturas automáticas y cuentas claras: qué clientes y qué tareas te salen más rentables.</p>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="wrap cta__inner">
+        <img src="assets/pulpo.png" alt="" width="96" height="96" loading="lazy">
+        <h2>Deja que Pulpo organice tu semana</h2>
+        <!-- Lleva a la app (raíz de GitHub Pages) -->
+        <a class="btn btn--light" href="../">Probar Pulpo</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot__inner">
+      <span class="brand brand--muted"><img src="assets/pulpo.png" alt="" width="24" height="24" loading="lazy">Pulpo</span>
+      <small>© 2026 Pulpo</small>
+    </div>
+  </footer>
+</body>
+</html>
