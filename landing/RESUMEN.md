@@ -20,7 +20,7 @@ Se centra en el núcleo: tareas, equipo, botón "Organizar" y rutas optimizadas,
 - `assets/favicon.png`, `assets/apple-touch-icon.png` y `assets/og.png`: generados a partir del icono.
 
 ## Verificaciones
-- Capturas (fuera del repo, en ~/Desktop/PULPO/landing/qa): escritorio a 1440 px y móvil a 390 px. No se ven desbordamientos ni recortes.
+- Capturas revisadas (no guardadas): escritorio a 1440 px y móvil a 390 px. No se ven desbordamientos ni recortes.
 - Accesibilidad: enlace para saltar al contenido, foco visible, la ilustración se describe con aria-label y el movimiento se reduce si el sistema lo pide.
 
 ## Pendiente
