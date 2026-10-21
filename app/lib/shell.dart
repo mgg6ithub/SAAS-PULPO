@@ -80,20 +80,13 @@ class _ShellState extends State<Shell> {
         autofocus: true,
         child: Scaffold(
           backgroundColor: P.fondo,
+          // La barra va a la izquierda o, si se elige en Ajustes, a la derecha.
           body: Row(
+            textDirection: ajustes.barraDerecha ? TextDirection.rtl : TextDirection.ltr,
             children: [
-              // Al ocultarla se pliega hasta desaparecer; queda un botón para volver a abrirla.
-              ClipRect(
-                child: AnimatedAlign(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment.centerRight,
-                  widthFactor: ajustes.barraOculta ? 0 : 1,
-                  child: ListenableBuilder(
-                    listenable: store,
-                    builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir, onNuevo: nuevo),
-                  ),
-                ),
+              ListenableBuilder(
+                listenable: store,
+                builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir),
               ),
               Expanded(
                 child: Stack(
@@ -119,16 +112,6 @@ class _ShellState extends State<Shell> {
                         ),
                       ),
                     ),
-                    if (ajustes.barraOculta)
-                      Positioned(
-                        left: 8,
-                        top: 8,
-                        child: IconButton(
-                          tooltip: 'Mostrar barra lateral',
-                          onPressed: ajustes.alternarBarra,
-                          icon: Icon(Icons.view_sidebar_outlined, color: P.textoSuave),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -148,11 +131,7 @@ class _ShellState extends State<Shell> {
     }
     // Sin const: si no, el ListenableBuilder del store no las repinta al cambiar los datos.
     return switch (seccion) {
-      Seccion.inicio => Resumen(
-        onIr: ir,
-        onCliente: (id) => setState(() => clienteId = id),
-        onTrabajador: (id) => setState(() => trabajadorId = id),
-      ),
+      Seccion.inicio => Resumen(onIr: ir, onTrabajador: (id) => setState(() => trabajadorId = id)),
       // ignore: prefer_const_constructors
       Seccion.planificacion => Planificacion(),
       Seccion.clientes => Clientes(onAbrir: (id) => setState(() => clienteId = id)),
@@ -170,8 +149,7 @@ class _Barra extends StatefulWidget {
   final Seccion seccion;
   final bool compacta;
   final ValueChanged<Seccion> onTap;
-  final VoidCallback onNuevo;
-  const _Barra({required this.seccion, required this.compacta, required this.onTap, required this.onNuevo});
+  const _Barra({required this.seccion, required this.compacta, required this.onTap});
 
   @override
   State<_Barra> createState() => _BarraState();
@@ -222,23 +200,30 @@ class _BarraState extends State<_Barra> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: P.barra,
-                      border: Border(right: BorderSide(color: P.borde)),
+                      border: ajustes.barraDerecha
+                          ? Border(left: BorderSide(color: P.borde))
+                          : Border(right: BorderSide(color: P.borde)),
                     ),
-                    padding: EdgeInsets.fromLTRB(iconos ? 8 : 12, 14, iconos ? 8 : 12, 12),
+                    padding: EdgeInsets.fromLTRB(iconos ? 10 : 14, 18, iconos ? 10 : 14, 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Logo + crear + contraer/expandir.
+                        // Logo y nombre, como en la landing; a la derecha, contraer/expandir.
                         if (iconos) ...[
-                          const Center(child: _Logo()),
-                          const SizedBox(height: 10),
-                          _Icono(Icons.keyboard_double_arrow_right_rounded, 'Expandir', ajustes.alternarContraida),
-                          _Icono(Icons.add_rounded, 'Crear (N)', widget.onNuevo),
+                          const Center(child: LogoPulpo(size: 32)),
+                          const SizedBox(height: 12),
+                          _Icono(
+                            ajustes.barraDerecha
+                                ? Icons.keyboard_double_arrow_left_rounded
+                                : Icons.keyboard_double_arrow_right_rounded,
+                            'Expandir',
+                            ajustes.alternarContraida,
+                          ),
                         ] else
                           Row(
                             children: [
-                              const SizedBox(width: 4),
-                              const _Logo(),
+                              const SizedBox(width: 2),
+                              const LogoPulpo(size: 32),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
@@ -247,24 +232,24 @@ class _BarraState extends State<_Barra> {
                                   overflow: TextOverflow.clip,
                                   style: TextStyle(
                                     fontFamily: P.titulos,
-                                    fontSize: 18 * escala,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -.4,
+                                    fontSize: 21 * escala,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -.6,
                                   ),
                                 ),
                               ),
-                              _Icono(Icons.add_rounded, 'Crear (N)', widget.onNuevo, pequeno: true),
                               if (!widget.compacta)
                                 _Icono(
-                                  Icons.keyboard_double_arrow_left_rounded,
+                                  ajustes.barraDerecha
+                                      ? Icons.keyboard_double_arrow_right_rounded
+                                      : Icons.keyboard_double_arrow_left_rounded,
                                   'Contraer',
                                   ajustes.alternarContraida,
                                   pequeno: true,
                                 ),
                             ],
                           ),
-                        const SizedBox(height: 14),
-                        if (!iconos) ...[_SelectorEmpresa(escala), const SizedBox(height: 14)],
+                        const SizedBox(height: 26),
                         _item(Icons.home_outlined, 'Inicio', Seccion.inicio),
                         _item(Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, aviso: vencidas),
                         _item(Icons.apartment_outlined, 'Clientes', Seccion.clientes),
@@ -273,39 +258,27 @@ class _BarraState extends State<_Barra> {
                         const SizedBox(height: 14),
                         const Spacer(),
                         // Provisional: rellenar con datos de ejemplo para ver la app llena, y volver a dejarla limpia.
-                        _BotonDemo(compacta: iconos, escala: escala),
-                        if (!store.demo) ...[
-                          const SizedBox(height: 6),
-                          _ConEtiqueta(
+                        // Discreto: es una herramienta de prueba, no parte del producto.
+                        _BotonDemo(
+                          texto: store.demo ? 'Quitar datos de ejemplo' : 'Rellenar con datos',
+                          icono: store.demo ? Icons.close_rounded : Icons.add_rounded,
+                          color: store.demo ? P.rojo : P.morado,
+                          compacta: iconos,
+                          escala: escala,
+                          onTap: store.demo ? store.quitarDemo : store.cargarDemo,
+                        ),
+                        if (!store.demo)
+                          _BotonDemo(
                             texto: 'Rellenar datos 2 (rutas)',
-                            activa: iconos,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(8),
-                              onTap: store.cargarDemoRutas,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: P.azul.withValues(alpha: .35)),
-                                  color: P.azul.withValues(alpha: .06),
-                                ),
-                                child: iconos
-                                    ? const Icon(Icons.route_rounded, size: 17, color: P.azul)
-                                    : Text(
-                                        'Rellenar datos 2 (rutas)',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 13 * escala,
-                                          fontWeight: FontWeight.w600,
-                                          color: P.azul,
-                                        ),
-                                      ),
-                              ),
-                            ),
+                            icono: Icons.route_rounded,
+                            color: P.teal,
+                            compacta: iconos,
+                            escala: escala,
+                            onTap: store.cargarDemoRutas,
                           ),
-                        ],
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
+                        Divider(height: 1, color: P.borde),
+                        const SizedBox(height: 8),
                         Builder(
                           builder: (context) => _fila(Icons.settings_outlined, 'Ajustes', () => abrirAjustes(context)),
                         ),
@@ -314,7 +287,7 @@ class _BarraState extends State<_Barra> {
                             null,
                             'Mi cuenta',
                             () => abrirAjustes(context),
-                            lider: Avatar('YO', P.morado, size: 22 * escala, cuadrado: true),
+                            lider: Avatar('YO', P.tinta, size: 22 * escala, cuadrado: true),
                           ),
                         ),
                       ],
@@ -329,7 +302,8 @@ class _BarraState extends State<_Barra> {
             Positioned(
               top: 0,
               bottom: 0,
-              right: 0,
+              left: ajustes.barraDerecha ? 0 : null,
+              right: ajustes.barraDerecha ? null : 0,
               width: 10,
               child: MouseRegion(
                 cursor: SystemMouseCursors.resizeColumn,
@@ -344,7 +318,8 @@ class _BarraState extends State<_Barra> {
                     setState(() => arrastrando = ancho);
                   },
                   onPointerMove: (e) => setState(
-                    () => arrastrando = (_inicioAncho + e.position.dx - _inicioX).clamp(Ajustes.anchoIconos, maximo),
+                    () => arrastrando = (_inicioAncho + (e.position.dx - _inicioX) * (ajustes.barraDerecha ? -1 : 1))
+                        .clamp(Ajustes.anchoIconos, maximo),
                   ),
                   onPointerUp: (_) {
                     ajustes.ponerAnchoBarra(arrastrando!, max: maximo);
@@ -352,7 +327,7 @@ class _BarraState extends State<_Barra> {
                   },
                   onPointerCancel: (_) => setState(() => arrastrando = null),
                   child: Align(
-                    alignment: Alignment.centerRight,
+                    alignment: ajustes.barraDerecha ? Alignment.centerLeft : Alignment.centerRight,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       width: sobreBorde || arrastrando != null ? 3 : 0,
@@ -371,23 +346,23 @@ class _BarraState extends State<_Barra> {
     texto: texto,
     activa: iconos,
     child: InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(P.radioControl),
       mouseCursor: SystemMouseCursors.click,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         child: Row(
           mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
-            lider ?? Icon(icono, size: 18 * escala, color: P.textoSuave),
+            lider ?? Icon(icono, size: 19 * escala, color: P.textoSuave),
             if (!iconos) ...[
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   texto,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13.5 * escala, color: P.texto),
+                  style: TextStyle(fontSize: 14.5 * escala, color: P.texto),
                 ),
               ),
             ],
@@ -400,21 +375,21 @@ class _BarraState extends State<_Barra> {
   Widget _item(IconData icono, String texto, Seccion s, {int aviso = 0}) {
     final sel = s == widget.seccion;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.only(bottom: 4),
       child: _ConEtiqueta(
         texto: aviso > 0 ? '$texto · $aviso vencidas' : texto,
         activa: iconos,
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(P.radioControl),
           mouseCursor: SystemMouseCursors.click,
-          hoverColor: P.hover.withValues(alpha: .6),
+          hoverColor: P.hover.withValues(alpha: .7),
           onTap: () => widget.onTap(s),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8 * escala),
+            padding: EdgeInsets.symmetric(horizontal: iconos ? 8 : 12, vertical: 10 * escala),
             decoration: BoxDecoration(
-              color: sel ? P.hover : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
+              color: sel ? P.moradoSuave : Colors.transparent,
+              borderRadius: BorderRadius.circular(P.radioControl),
             ),
             child: Row(
               mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
@@ -422,7 +397,7 @@ class _BarraState extends State<_Barra> {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Icon(icono, size: 19 * escala, color: sel ? P.morado : P.textoSuave),
+                    Icon(icono, size: 20 * escala, color: sel ? P.morado : P.textoSuave),
                     // Solo iconos: el aviso queda como un punto rojo sobre el icono.
                     if (iconos && aviso > 0)
                       Positioned(
@@ -441,26 +416,29 @@ class _BarraState extends State<_Barra> {
                   ],
                 ),
                 if (!iconos) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       texto,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 14 * escala,
+                        fontSize: 15 * escala,
                         fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
-                        color: P.texto,
+                        color: sel ? P.moradoOscuro : P.texto,
                       ),
                     ),
                   ),
                   if (aviso > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(color: P.rojo, borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: P.rojo.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
                       child: Text(
                         '$aviso',
-                        style: TextStyle(color: Colors.white, fontSize: 10.5 * escala, fontWeight: FontWeight.w700),
+                        style: TextStyle(color: P.rojo, fontSize: 11.5 * escala, fontWeight: FontWeight.w700),
                       ),
                     ),
                 ],
@@ -504,9 +482,9 @@ class _ConEtiquetaState extends State<_ConEtiqueta> {
         top: 0,
         child: CompositedTransformFollower(
           link: enlace,
-          targetAnchor: Alignment.centerRight,
-          followerAnchor: Alignment.centerLeft,
-          offset: const Offset(10, 0),
+          targetAnchor: ajustes.barraDerecha ? Alignment.centerLeft : Alignment.centerRight,
+          followerAnchor: ajustes.barraDerecha ? Alignment.centerRight : Alignment.centerLeft,
+          offset: Offset(ajustes.barraDerecha ? -10 : 10, 0),
           child: IgnorePointer(
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
@@ -539,26 +517,6 @@ class _ConEtiquetaState extends State<_ConEtiqueta> {
   );
 }
 
-class _Logo extends StatelessWidget {
-  const _Logo();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 30,
-    height: 30,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFC4B5FD), Color(0xFF7C3AED)],
-      ),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: const Text('🐙', style: TextStyle(fontSize: 16)),
-  );
-}
-
 /// Botón de icono de la barra, con su nombre en tooltip.
 class _Icono extends StatelessWidget {
   final IconData icono;
@@ -586,79 +544,57 @@ class _Icono extends StatelessWidget {
   );
 }
 
-/// Caja con la empresa activa. De momento solo hay una; prepara el multiempresa.
-class _SelectorEmpresa extends StatelessWidget {
-  final double escala;
-  const _SelectorEmpresa(this.escala);
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      color: P.superficie,
-      borderRadius: BorderRadius.circular(9),
-      border: Border.all(color: P.borde),
-    ),
-    child: Row(
-      children: [
-        Avatar('MP', P.morado, size: 24 * escala, cuadrado: true),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            'Mi empresa',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13.5 * escala, fontWeight: FontWeight.w600),
-          ),
-        ),
-        Icon(Icons.unfold_more_rounded, size: 16, color: P.textoSuave),
-      ],
-    ),
-  );
-}
-
-/// Botón provisional: rellena con la empresa de ejemplo o la quita y devuelve tus datos.
+/// Botón provisional de datos de ejemplo: una fila de texto discreta con su punto de color.
 class _BotonDemo extends StatelessWidget {
+  final String texto;
+  final IconData icono;
+  final Color color;
   final bool compacta;
   final double escala;
-  const _BotonDemo({required this.compacta, required this.escala});
+  final VoidCallback onTap;
+  const _BotonDemo({
+    required this.texto,
+    required this.icono,
+    required this.color,
+    required this.compacta,
+    required this.escala,
+    required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final demo = store.demo;
-    final color = demo ? P.rojo : P.morado;
-    final texto = demo ? 'Quitar datos de ejemplo' : 'Rellenar con datos';
-    return _ConEtiqueta(
-      texto: texto,
-      activa: compacta,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        mouseCursor: SystemMouseCursors.click,
-        onTap: demo ? store.quitarDemo : store.cargarDemo,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: .35)),
-            color: color.withValues(alpha: .06),
-          ),
-          child: Row(
-            mainAxisAlignment: compacta ? MainAxisAlignment.center : MainAxisAlignment.start,
-            children: [
-              if (compacta) Icon(demo ? Icons.close_rounded : Icons.add_rounded, size: 17, color: color),
-              if (!compacta)
-                Expanded(
-                  child: Text(
-                    texto,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13 * escala, fontWeight: FontWeight.w600, color: color),
-                  ),
+  Widget build(BuildContext context) => _ConEtiqueta(
+    texto: texto,
+    activa: compacta,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(P.radioControl),
+      mouseCursor: SystemMouseCursors.click,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisAlignment: compacta ? MainAxisAlignment.center : MainAxisAlignment.start,
+          children: [
+            if (compacta)
+              Icon(icono, size: 17, color: color)
+            else ...[
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  texto,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13 * escala, fontWeight: FontWeight.w500, color: P.textoSuave),
                 ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }

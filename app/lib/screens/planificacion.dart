@@ -46,9 +46,6 @@ class _PlanificacionState extends State<Planificacion> {
   /// Panel lateral con los trabajos sin técnico.
   bool sinAsignar = false;
 
-  /// Se pueden ocultar los filtros y el grupo de vistas para dejar más sitio.
-  bool verFiltros = true, verVistas = true;
-
   DateTime get lunes => lunesDe(dia);
 
   /// Periodo que se ve ahora (para el mapa y el título).
@@ -79,9 +76,6 @@ class _PlanificacionState extends State<Planificacion> {
       ListenableBuilder(listenable: filtroAgenda, builder: (context, _) => _build(context));
 
   Widget _build(BuildContext context) {
-    final semana = store.tareas
-        .where((t) => !t.esPlantilla && t.activa && t.proximo != null && diasHasta(t.proximo!) <= 7)
-        .length;
     final (desde, hasta, nombrePeriodo) = periodo;
     final contenido = switch (vista) {
       0 => VistaDiaTecnicos(dia, key: ValueKey('dia-$dia')),
@@ -99,171 +93,134 @@ class _PlanificacionState extends State<Planificacion> {
       // La línea de días original: scroll horizontal día a día con la línea de tiempo abajo.
       _ => const VistaDias(key: ValueKey('linea')),
     };
+    // Más alto para el calendario y el mapa: menos margen arriba y abajo, y una sola barra compacta.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 32, 40, 28),
+      padding: margenPagina.copyWith(top: 18, bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cabecera: título, y a su lado las acciones de crear (morado); a la derecha, las vistas.
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            runSpacing: 12,
-            spacing: 12,
-            children: [
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
+          // Fecha y vistas a la izquierda; a la derecha del todo, todo con el mismo alto (40):
+          // [Sin asignar] [+ Nueva tarea] [Organizar] [Mapa]. Técnico se filtra pulsando su fila en la vista Día.
+          LayoutBuilder(
+            builder: (context, box) {
+              final fecha = Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+                  if (vista < 3) ...[
+                    NavegadorFecha(
+                      anterior: const ['Día anterior', 'Semana anterior', 'Mes anterior'][vista],
+                      siguiente: const ['Día siguiente', 'Semana siguiente', 'Mes siguiente'][vista],
+                      onAnterior: () => mover(-1),
+                      onHoy: () => setState(() => dia = hoy()),
+                      onSiguiente: () => mover(1),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                  Text(
+                    vista < 3 ? titulo : (vista == 3 ? 'Próximos 7 días' : 'De ayer a pasado mañana'),
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: P.titulos,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.5,
+                    ),
+                  ),
+                  if (filtroAgenda.activo) ...[
+                    const SizedBox(width: 12),
+                    InputChip(
+                      label: const Text('Filtrado'),
+                      onDeleted: filtroAgenda.limpiar,
+                      deleteButtonTooltipMessage: 'Quitar filtro',
+                      backgroundColor: P.moradoSuave,
+                      side: BorderSide.none,
+                      labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.moradoOscuro),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
+                    ),
+                  ],
+                ],
+              );
+              final vistas = Pestanas(
+                opciones: const ['Día', 'Semana', 'Mes', 'Tablero', 'Línea'],
+                seleccion: vista,
+                onChanged: (i) => setState(() => vista = i),
+              );
+              final acciones = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // "Sin asignar" solo aparece cuando hay algo sin técnico (o con su panel abierto).
+                  if (sinAsignar || PanelSinAsignar.pendientes().isNotEmpty) ...[
+                    SizedBox(
+                      height: 40,
+                      child: _BotonSinAsignar(
+                        sinAsignar,
+                        PanelSinAsignar.pendientes().length,
+                        () => setState(() => sinAsignar = !sinAsignar),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  SizedBox(
+                    height: 40,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.fromLTRB(12, 0, 16, 0)),
+                      icon: const Icon(Icons.add_rounded, size: 19),
+                      onPressed: () async {
+                        final f = vista < 3 ? dia : hoy();
+                        // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
+                        final h = diasHasta(f) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
+                        await abrirTareaForm(context, null, fecha: f, horaMin: h);
+                        // Si se ha creado para otro día, el itinerario salta a ese día para verla aparecer.
+                        final t = store.tareas.where((x) => store.esRecien(x.id)).firstOrNull;
+                        if (t?.proximo != null && mounted) {
+                          final (d, h, _) = periodo;
+                          if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h)) setState(() => dia = t.proximo!);
+                        }
+                      },
+                      label: const Text('Nueva tarea'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // El pulpo: organiza el día que estás viendo.
+                  BotonPulpo(dia: vista < 3 ? dia : hoy(), onHecho: () => setState(() => mapa = true)),
+                  const SizedBox(width: 8),
+                  _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
+                ],
+              );
+              // Siempre una sola fila: ocupa todo el ancho (el hueco empuja los botones a la derecha)
+              // y, si en una pantalla estrecha no cabe, se desplaza en horizontal en vez de partirse.
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: box.maxWidth),
+                  child: IntrinsicWidth(
+                    child: Row(
                       children: [
-                        Text(
-                          'Itinerario',
-                          style: TextStyle(
-                            fontFamily: P.titulos,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -.8,
-                          ),
-                        ),
-                        Text(
-                          '$semana mantenimientos en los próximos 7 días',
-                          style: TextStyle(color: P.textoSuave, fontSize: 13),
-                        ),
+                        fecha,
+                        const SizedBox(width: 16),
+                        vistas,
+                        const Spacer(),
+                        const SizedBox(width: 16),
+                        acciones,
                       ],
                     ),
                   ),
-                  _BotonGrande(Icons.add_rounded, 'Nueva tarea', () async {
-                    final f = vista < 3 ? dia : hoy();
-                    // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
-                    final h = diasHasta(f) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
-                    await abrirTareaForm(context, null, fecha: f, horaMin: h);
-                    // Si se ha creado para otro día, el itinerario salta a ese día para verla aparecer.
-                    final t = store.tareas.where((x) => store.esRecien(x.id)).firstOrNull;
-                    if (t?.proximo != null && mounted) {
-                      final (d, h, _) = periodo;
-                      if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h)) setState(() => dia = t.proximo!);
-                    }
-                  }, principal: true),
-                ],
-              ),
-              // El pulpo, en el centro: planifica el día que estás viendo.
-              BotonPulpo(dia: vista < 3 ? dia : hoy(), onHecho: () => setState(() => mapa = true)),
-              Wrap(
-                spacing: 6,
-                children: [
-                  _Conmutador('Filtros', verFiltros, () => setState(() => verFiltros = !verFiltros)),
-                  _Conmutador('Vistas', verVistas, () => setState(() => verVistas = !verVistas)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          // Filtros a la izquierda; vistas, mapa y "Sin asignar" a la derecha (ocultables).
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: LayoutBuilder(
-              builder: (context, box) {
-                final derecha = Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Pestanas(
-                      opciones: const ['Día', 'Semana', 'Mes', 'Tablero', 'Línea'],
-                      seleccion: vista,
-                      onChanged: (i) => setState(() => vista = i),
-                    ),
-                    _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
-                    _BotonSinAsignar(
-                      sinAsignar,
-                      PanelSinAsignar.pendientes().length,
-                      () => setState(() => sinAsignar = !sinAsignar),
-                    ),
-                  ],
-                );
-                // Ancho de sobra: filtros a la izquierda y vistas a la derecha en la misma fila.
-                // Si no cabe, las vistas van arriba (a la derecha) y los filtros debajo.
-                if (!verFiltros && !verVistas) return const SizedBox(width: double.infinity);
-                if (!verFiltros) return Align(alignment: Alignment.centerRight, child: derecha);
-                if (!verVistas) return const BarraFiltrosAgenda();
-                if (box.maxWidth > 1400) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(child: BarraFiltrosAgenda()),
-                      const SizedBox(width: 12),
-                      derecha,
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(alignment: Alignment.centerRight, child: derecha),
-                    const SizedBox(height: 10),
-                    const BarraFiltrosAgenda(),
-                  ],
-                );
-              },
-            ),
-          ),
-          if (vista < 3) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Text(
-                  titulo,
-                  style: TextStyle(
-                    fontFamily: P.titulos,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.3,
-                  ),
                 ),
-                const Spacer(),
-                if (vista == 1 || vista == 2) ...[
-                  _Zoom(
-                    onMenos: () => vista == 1
-                        ? zoomSemana(1 / 1.25)
-                        : altoFilaMes.value = (altoFilaMes.value ?? 110) / 1.25 < 110
-                              ? null
-                              : (altoFilaMes.value ?? 110) / 1.25,
-                    onMas: () => vista == 1
-                        ? zoomSemana(1.25)
-                        : altoFilaMes.value = ((altoFilaMes.value ?? 110) * 1.25).clamp(110, 600),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                NavegadorFecha(
-                  anterior: const ['Día anterior', 'Semana anterior', 'Mes anterior'][vista],
-                  siguiente: const ['Día siguiente', 'Semana siguiente', 'Mes siguiente'][vista],
-                  onAnterior: () => mover(-1),
-                  onHoy: () => setState(() => dia = hoy()),
-                  onSiguiente: () => mover(1),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 12),
+              );
+            },
+          ),
+          const SizedBox(height: 14),
           Expanded(
             child: LayoutBuilder(
               builder: (context, box) {
                 final conMapa = mapa && box.maxWidth > 760;
                 final maxMapa = box.maxWidth - 360;
-                final ancho = (anchoMapa ?? (box.maxWidth * .36).clamp(300, 520)).clamp(260.0, maxMapa).toDouble();
+                final ancho = (anchoMapa ?? (box.maxWidth * .4).clamp(300, 640)).clamp(260.0, maxMapa).toDouble();
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (sinAsignar) ...[
-                      SizedBox(width: 260, child: PanelSinAsignar(onCerrar: () => setState(() => sinAsignar = false))),
+                      SizedBox(width: 290, child: PanelSinAsignar(onCerrar: () => setState(() => sinAsignar = false))),
                       const SizedBox(width: 14),
                     ],
                     Expanded(
@@ -291,14 +248,17 @@ class _PlanificacionState extends State<Planificacion> {
                           onHorizontalDragEnd: (_) => setState(() => arrastrando = false),
                           child: SizedBox(
                             width: 14,
-                            child: Center(
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 150),
-                                width: sobreSeparador || arrastrando ? 4 : 2,
-                                height: sobreSeparador || arrastrando ? double.infinity : 40,
-                                decoration: BoxDecoration(
-                                  color: sobreSeparador || arrastrando ? P.morado : P.borde,
-                                  borderRadius: BorderRadius.circular(2),
+                            // Alto real (no infinito): animar hasta infinito rompe el layout.
+                            child: LayoutBuilder(
+                              builder: (context, caja) => Center(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  width: sobreSeparador || arrastrando ? 4 : 2,
+                                  height: sobreSeparador || arrastrando ? caja.maxHeight : 40,
+                                  decoration: BoxDecoration(
+                                    color: sobreSeparador || arrastrando ? P.morado : P.borde,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
                                 ),
                               ),
                             ),
@@ -337,11 +297,11 @@ class _BotonMapa extends StatelessWidget {
     message: activo ? 'Ocultar mapa' : 'Mostrar mapa',
     child: IconButton(
       style: IconButton.styleFrom(
-        fixedSize: const Size(36, 36),
-        minimumSize: const Size(36, 36),
-        backgroundColor: activo ? P.morado : P.superficie,
-        side: BorderSide(color: activo ? P.morado : P.borde),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        fixedSize: const Size(40, 40),
+        minimumSize: const Size(40, 40),
+        backgroundColor: activo ? P.tinta : P.superficie,
+        side: BorderSide(color: activo ? P.tinta : P.borde),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
       ),
       onPressed: onTap,
       icon: Icon(
@@ -432,11 +392,7 @@ class _PulpoMagico extends StatelessWidget {
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [P.morado, Color.lerp(P.morado, const Color(0xFF1E1B4B), .45)!]),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: P.morado.withValues(alpha: .3), blurRadius: 10, offset: const Offset(0, 3))],
-          ),
+          decoration: BoxDecoration(color: P.morado, borderRadius: BorderRadius.circular(P.radioControl)),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -487,11 +443,7 @@ class _Columna extends StatelessWidget {
     width: width,
     height: height,
     padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: P.columna,
-      borderRadius: BorderRadius.circular(14),
-      border: Border(top: BorderSide(color: color, width: 3)),
-    ),
+    decoration: BoxDecoration(color: P.hover.withValues(alpha: .5), borderRadius: BorderRadius.circular(P.radio + 4)),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -551,149 +503,14 @@ class _BotonSinAsignar extends StatelessWidget {
         if (n > 0) ...[
           const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(color: P.ambar, borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+            decoration: BoxDecoration(color: P.ambar.withValues(alpha: .14), borderRadius: BorderRadius.circular(99)),
             child: Text(
               '$n',
-              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+              style: const TextStyle(color: P.ambar, fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
         ],
-      ],
-    ),
-  );
-}
-
-/// Botón morado del itinerario: icono + texto, compacto.
-class _BotonGrande extends StatefulWidget {
-  final IconData icono;
-  final String titulo;
-  final VoidCallback onTap;
-  final bool principal;
-  const _BotonGrande(this.icono, this.titulo, this.onTap, {this.principal = false});
-
-  @override
-  State<_BotonGrande> createState() => _BotonGrandeState();
-}
-
-class _BotonGrandeState extends State<_BotonGrande> {
-  bool hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final base = widget.principal ? P.morado : Color.lerp(P.morado, Colors.white, .12)!;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => hover = true),
-      onExit: (_) => setState(() => hover = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          transform: Matrix4.translationValues(0, hover ? -1.5 : 0, 0),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [base, Color.lerp(base, const Color(0xFF3B0764), .35)!],
-            ),
-            borderRadius: BorderRadius.circular(11),
-            boxShadow: [
-              BoxShadow(
-                color: P.morado.withValues(alpha: hover ? .38 : .2),
-                blurRadius: hover ? 16 : 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icono, size: 18, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                widget.titulo,
-                style: TextStyle(fontFamily: P.titulos, color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Interruptor de texto con flecha: muestra u oculta una zona del itinerario.
-class _Conmutador extends StatelessWidget {
-  final String texto;
-  final bool visible;
-  final VoidCallback onTap;
-  const _Conmutador(this.texto, this.visible, this.onTap);
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: visible ? 'Ocultar ${texto.toLowerCase()}' : 'Mostrar ${texto.toLowerCase()}',
-    child: TextButton(
-      style: TextButton.styleFrom(
-        foregroundColor: visible ? P.texto : P.textoSuave,
-        backgroundColor: visible ? P.hover : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-      ),
-      onPressed: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(texto),
-          const SizedBox(width: 4),
-          AnimatedRotation(
-            turns: visible ? .5 : 0,
-            duration: const Duration(milliseconds: 200),
-            child: const Icon(Icons.expand_more_rounded, size: 18),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-/// Zoom − / + del calendario (también con Ctrl + rueda o Ctrl + / Ctrl −).
-class _Zoom extends StatelessWidget {
-  final VoidCallback onMenos, onMas;
-  const _Zoom({required this.onMenos, required this.onMas});
-
-  Widget _b(String t, String tip, VoidCallback f) => Tooltip(
-    message: tip,
-    child: InkWell(
-      onTap: f,
-      child: SizedBox(
-        width: 34,
-        height: 34,
-        child: Center(
-          child: Text(
-            t,
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: P.textoSuave),
-          ),
-        ),
-      ),
-    ),
-  );
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 36,
-    decoration: BoxDecoration(
-      color: P.superficie,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: P.borde),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _b('−', 'Alejar (Ctrl + rueda)', onMenos),
-        VerticalDivider(width: 1, color: P.borde),
-        _b('+', 'Acercar (Ctrl + rueda)', onMas),
       ],
     ),
   );

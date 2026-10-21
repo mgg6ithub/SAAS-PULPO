@@ -75,6 +75,11 @@ class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
     scrollBehavior: const MaterialScrollBehavior().copyWith(
       dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
     ),
+    // Tamaño de letra de Ajustes (accesibilidad): escala todo el texto, ventanas incluidas.
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(ajustes.escalaTexto)),
+      child: child!,
+    ),
     home: const Shell(),
   );
 }

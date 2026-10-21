@@ -32,7 +32,7 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
+      padding: margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -55,7 +55,7 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
             titulo: c.nombre,
             subtitulo: [c.cif, c.ciudad].where((x) => x.isNotEmpty).join(' · '),
             acciones: [
-              c.activa ? const Pill('Activo', P.verde, solido: true) : const Pill('Inactivo', P.gris, solido: true),
+              c.activa ? const Pill('Activo', P.verde, punto: true) : const Pill('Inactivo', P.gris, punto: true),
               const SizedBox(width: 4),
               OutlinedButton(onPressed: () => abrirClienteForm(context, c), child: const Text('Editar')),
               BotonPrimario('Nueva tarea', onPressed: () => abrirTareaForm(context, null, clienteId: c.id)),

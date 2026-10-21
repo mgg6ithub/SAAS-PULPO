@@ -33,7 +33,7 @@ int _horaEn(double px, double porHora) {
 // ── Zoom (Semana y Mes): Ctrl + rueda, Ctrl + / Ctrl −, o los botones − / + ──
 
 /// Alto de una hora en la vista Semana y de una fila en la vista Mes (null = ajustado a la pantalla).
-final altoHora = ValueNotifier<double>(52);
+final altoHora = ValueNotifier<double>(64);
 final altoFilaMes = ValueNotifier<double?>(null);
 
 void zoomSemana(double factor) => altoHora.value = (altoHora.value * factor).clamp(30, 320);
@@ -100,7 +100,7 @@ class BloqueTarea extends StatelessWidget {
               feedback: Material(
                 color: Colors.transparent,
                 elevation: 8,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
                 child: SizedBox(
                   width: box.maxWidth,
                   height: box.maxHeight.isFinite ? box.maxHeight : 40,
@@ -138,8 +138,8 @@ class BloqueTarea extends StatelessWidget {
       message: [t.nombre, cliente?.nombre ?? '', ?t.horario].where((x) => x.isNotEmpty).join(' · '),
       waitDuration: const Duration(milliseconds: 400),
       child: Material(
-        color: Color.lerp(P.superficie, color, hecha ? .06 : .13),
-        borderRadius: BorderRadius.circular(6),
+        color: Color.lerp(P.superficie, color, hecha ? .06 : .12),
+        borderRadius: BorderRadius.circular(8),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => abrirFichaRapida(context, t),
@@ -147,7 +147,7 @@ class BloqueTarea extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(left: BorderSide(color: vencida ? P.rojo : color, width: 3)),
             ),
-            padding: EdgeInsets.fromLTRB(6, compacto ? 2 : 4, 4, 2),
+            padding: EdgeInsets.fromLTRB(8, compacto ? 2 : 6, 6, 2),
             child: Opacity(
               opacity: hecha ? .55 : 1,
               child: Column(
@@ -159,7 +159,7 @@ class BloqueTarea extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       decoration: hecha ? TextDecoration.lineThrough : null,
                     ),
@@ -169,7 +169,7 @@ class BloqueTarea extends StatelessWidget {
                       [?t.inicioMin == null ? null : hhmm(t.inicioMin!), cliente?.nombre ?? ''].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: vencida ? P.rojo : P.textoSuave),
+                      style: TextStyle(fontSize: 12, color: vencida ? P.rojo : P.textoSuave),
                     ),
                 ],
               ),
@@ -200,13 +200,13 @@ class VistaDiaTecnicos extends StatelessWidget {
     ];
     return LayoutBuilder(
       builder: (context, box) {
-        const izq = 190.0;
-        final porHora = max(64.0, (box.maxWidth - izq) / (_hasta - _desde));
+        const izq = 210.0;
+        final porHora = max(72.0, (box.maxWidth - izq) / (_hasta - _desde));
         final ancho = izq + porHora * (_hasta - _desde);
         return Container(
           decoration: BoxDecoration(
             color: P.superficie,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(P.radio),
             border: Border.all(color: P.borde),
           ),
           clipBehavior: Clip.antiAlias,
@@ -219,15 +219,15 @@ class VistaDiaTecnicos extends StatelessWidget {
                 children: [
                   // Cabecera de horas.
                   Container(
-                    height: 34,
+                    height: 42,
                     color: P.cabeceraTabla,
                     child: Row(
                       children: [
                         SizedBox(
                           width: izq,
                           child: Padding(
-                            padding: const EdgeInsets.only(left: 14),
-                            child: Text('Equipo', style: TextStyle(fontSize: 12, color: P.textoSuave)),
+                            padding: const EdgeInsets.only(left: 16),
+                            child: Text('Equipo', style: TextStyle(fontSize: 13, color: P.textoSuave)),
                           ),
                         ),
                         for (var h = _desde; h < _hasta; h++)
@@ -235,7 +235,7 @@ class VistaDiaTecnicos extends StatelessWidget {
                             width: porHora,
                             child: Padding(
                               padding: const EdgeInsets.only(left: 6),
-                              child: Text('$h:00', style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
+                              child: Text('$h:00', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
                             ),
                           ),
                       ],
@@ -243,10 +243,17 @@ class VistaDiaTecnicos extends StatelessWidget {
                   ),
                   Divider(height: 1, color: P.borde),
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: filas.length,
-                      separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
-                      itemBuilder: (_, i) => _filaTecnico(context, filas[i].$1, filas[i].$2, izq, porHora),
+                    child: LayoutBuilder(
+                      // Las filas reparten todo el alto (mínimo 80 px cada una).
+                      builder: (context, alto) {
+                        final altoFila = max(80.0, alto.maxHeight / max(1, filas.length) - 1);
+                        return ListView.separated(
+                          itemCount: filas.length,
+                          separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
+                          itemBuilder: (_, i) =>
+                              _filaTecnico(context, filas[i].$1, filas[i].$2, izq, porHora, altoFila),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -258,21 +265,28 @@ class VistaDiaTecnicos extends StatelessWidget {
     );
   }
 
-  Widget _filaTecnico(BuildContext context, Trabajador? w, List<Tarea> ts, double izq, double porHora) {
+  Widget _filaTecnico(
+    BuildContext context,
+    Trabajador? w,
+    List<Tarea> ts,
+    double izq,
+    double porHora,
+    double alto,
+  ) {
     final conHora = ts.where((t) => t.inicioMin != null).toList();
     final sinHora = ts.where((t) => t.inicioMin == null).toList();
     final ahora = TimeOfDay.now();
     final minAhora = ahora.hour * 60 + ahora.minute;
     return SizedBox(
-      height: 68,
+      height: alto,
       child: Row(
         children: [
           InkWell(
             onTap: w == null ? null : () => filtroAgenda.soloTecnico(w.id),
             child: Container(
               width: izq,
-              height: 68,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: alto,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: w != null && filtroAgenda.tecnicos.contains(w.id) ? P.moradoSuave.withValues(alpha: .6) : null,
                 border: Border(right: BorderSide(color: P.borde)),
@@ -281,15 +295,15 @@ class VistaDiaTecnicos extends StatelessWidget {
                 children: [
                   w == null
                       ? Container(
-                          width: 26,
-                          height: 26,
+                          width: 32,
+                          height: 32,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(color: P.borde, width: 1.5),
                           ),
                         )
-                      : Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 26),
-                  const SizedBox(width: 9),
+                      : Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 32),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -300,7 +314,7 @@ class VistaDiaTecnicos extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w600,
                             color: w == null ? P.textoSuave : P.texto,
                           ),
@@ -310,7 +324,7 @@ class VistaDiaTecnicos extends StatelessWidget {
                             '${ts.length} ${ts.length == 1 ? 'visita' : 'visitas'}',
                             if (sinHora.isNotEmpty) '${sinHora.length} sin hora',
                           ].join(' · '),
-                          style: TextStyle(fontSize: 11, color: P.textoSuave),
+                          style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                         ),
                       ],
                     ),
@@ -353,8 +367,8 @@ class VistaDiaTecnicos extends StatelessWidget {
                             36,
                             (min(t.finMin!, _hasta * 60) - max(t.inicioMin!, _desde * 60)) / 60 * porHora - 4,
                           ),
-                          top: 8,
-                          bottom: 8,
+                          top: 10,
+                          bottom: 10,
                           child: BloqueTarea(t, dia),
                         ),
                     // Ahora: línea roja si es hoy.
@@ -385,7 +399,13 @@ class VistaSemana extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: altoHora,
-    builder: (context, alto, _) => ConZoom(onZoom: zoomSemana, child: _construir(context, alto)),
+    builder: (context, alto, _) => ConZoom(
+      onZoom: zoomSemana,
+      // Por defecto las horas llenan todo el alto; el zoom solo las agranda a partir de ahí.
+      child: LayoutBuilder(
+        builder: (context, box) => _construir(context, max(alto, (box.maxHeight - 100) / (_hasta - _desde))),
+      ),
+    ),
   );
 
   Widget _construir(BuildContext context, double altoH) {
@@ -395,11 +415,11 @@ class VistaSemana extends StatelessWidget {
     bool arriba(Tarea t, DateTime d) =>
         t.inicioMin == null || (!t.hechaEl(d) && t.proximo != null && diasHasta(t.proximo!) < 0);
     final haySinHora = [for (final (i, ts) in porDia.indexed) ts.any((t) => arriba(t, dias[i]))].any((x) => x);
-    const izq = 66.0;
+    const izq = 50.0;
     return Container(
       decoration: BoxDecoration(
         color: P.superficie,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(P.radio),
         border: Border.all(color: P.borde),
       ),
       clipBehavior: Clip.antiAlias,
@@ -408,7 +428,7 @@ class VistaSemana extends StatelessWidget {
           // Cabecera de días.
           Container(
             color: P.cabeceraTabla,
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             child: Row(
               children: [
                 const SizedBox(width: izq),
@@ -419,24 +439,24 @@ class VistaSemana extends StatelessWidget {
                         Text(
                           diasSemana[d.weekday - 1].toUpperCase(),
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             letterSpacing: .6,
                             color: P.textoSuave,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Container(
-                          width: 28,
-                          height: 28,
+                          width: 36,
+                          height: 36,
                           alignment: Alignment.center,
                           decoration: diasHasta(d) == 0 ? BoxDecoration(color: P.morado, shape: BoxShape.circle) : null,
                           child: Text(
                             '${d.day}',
                             style: TextStyle(
                               fontFamily: P.titulos,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w600,
                               color: diasHasta(d) == 0 ? Colors.white : P.texto,
                             ),
                           ),
@@ -459,7 +479,7 @@ class VistaSemana extends StatelessWidget {
                     width: izq,
                     child: Padding(
                       padding: const EdgeInsets.only(left: 8, top: 4),
-                      child: Text('Pendiente', style: TextStyle(fontSize: 10.5, color: P.textoSuave)),
+                      child: Text('Pendiente', style: TextStyle(fontSize: 12, color: P.textoSuave)),
                     ),
                   ),
                   for (final (i, ts) in porDia.indexed)
@@ -471,12 +491,12 @@ class VistaSemana extends StatelessWidget {
                             for (final t in ts.where((t) => arriba(t, dias[i])).take(3))
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 3),
-                                child: SizedBox(height: 22, child: BloqueTarea(t, dias[i], compacto: true)),
+                                child: SizedBox(height: 26, child: BloqueTarea(t, dias[i], compacto: true)),
                               ),
                             if (ts.where((t) => arriba(t, dias[i])).length > 3)
                               Text(
                                 '+${ts.where((t) => arriba(t, dias[i])).length - 3} más',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: P.textoSuave),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: P.textoSuave),
                               ),
                           ],
                         ),
@@ -515,7 +535,7 @@ class VistaSemana extends StatelessWidget {
                                       child: Text(
                                         '$h:${m.toString().padLeft(2, '0')}',
                                         style: TextStyle(
-                                          fontSize: fuerte ? 11 : 10,
+                                          fontSize: fuerte ? 12.5 : 11,
                                           color: P.textoSuave.withValues(alpha: fuerte ? 1 : .7),
                                         ),
                                       ),
@@ -693,7 +713,7 @@ class _MapaAgendaState extends State<MapaAgenda> {
     return Container(
       decoration: BoxDecoration(
         color: P.superficie,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(P.radio),
         border: Border.all(color: P.borde),
       ),
       clipBehavior: Clip.antiAlias,
@@ -868,7 +888,7 @@ class _FichaMapa extends StatelessWidget {
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: P.superficie,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(P.radio),
       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 16)],
     ),
     child: Column(

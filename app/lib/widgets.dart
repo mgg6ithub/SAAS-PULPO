@@ -27,7 +27,7 @@ class Avatar extends StatelessWidget {
     ),
     child: Text(
       texto,
-      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: size * .38, letterSpacing: -.2),
+      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: size * .38, letterSpacing: -.2),
     ),
   );
 }
@@ -49,7 +49,7 @@ class Pill extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: solido ? 7 : 8, vertical: 3),
       decoration: BoxDecoration(
         color: solido ? color : color.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(solido ? 4 : 20),
+        borderRadius: BorderRadius.circular(solido ? 6 : 99),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -69,7 +69,7 @@ class Pill extends StatelessWidget {
                 texto,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: fg, fontSize: 11.5, fontWeight: FontWeight.w600),
+                style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -103,7 +103,7 @@ class Etiqueta extends StatelessWidget {
             texto,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: P.texto),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: P.texto),
           ),
         ),
       ],
@@ -188,17 +188,11 @@ class _HoverCardState extends State<HoverCard> {
           curve: Curves.easeOut,
           width: widget.width,
           padding: widget.padding,
+          // Como los cuadraditos de la landing: blanco, borde fino y sin sombra; al pasar, el borde se tiñe.
           decoration: BoxDecoration(
             color: P.superficie,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: activo ? P.textoSuave.withValues(alpha: .4) : P.borde),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: activo ? .06 : .02),
-                blurRadius: activo ? 14 : 3,
-                offset: Offset(0, activo ? 4 : 1),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(P.radio),
+            border: Border.all(color: activo ? P.morado.withValues(alpha: .45) : P.borde),
           ),
           child: widget.child,
         ),
@@ -218,11 +212,8 @@ class Tarjeta extends StatelessWidget {
     padding: padding,
     decoration: BoxDecoration(
       color: color ?? P.superficie,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(P.radio),
       border: Border.all(color: color == null ? P.borde : Colors.transparent),
-      boxShadow: color == null
-          ? [BoxShadow(color: P.morado.withValues(alpha: .04), blurRadius: 8, offset: const Offset(0, 2))]
-          : null,
     ),
     child: child,
   );
@@ -261,16 +252,15 @@ class SeccionTarjeta extends StatelessWidget {
     height: alto,
     decoration: BoxDecoration(
       color: P.superficie,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(P.radio),
       border: Border.all(color: P.borde),
-      boxShadow: [BoxShadow(color: P.morado.withValues(alpha: .04), blurRadius: 8, offset: const Offset(0, 2))],
     ),
     clipBehavior: Clip.antiAlias,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+          padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
           child: Row(
             children: [
               if (icono != null) ...[IconoCuadro(icono!, colorIcono ?? P.morado, size: 30), const SizedBox(width: 10)],
@@ -282,12 +272,12 @@ class SeccionTarjeta extends StatelessWidget {
                       titulo,
                       style: TextStyle(
                         fontFamily: P.titulos,
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: -.2,
+                        letterSpacing: -.3,
                       ),
                     ),
-                    if (subtitulo != null) Text(subtitulo!, style: TextStyle(fontSize: 12, color: P.textoSuave)),
+                    if (subtitulo != null) Text(subtitulo!, style: TextStyle(fontSize: 13, color: P.textoSuave)),
                   ],
                 ),
               ),
@@ -329,7 +319,7 @@ class Enlace extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Text(
         texto,
-        style: TextStyle(color: P.morado, fontSize: 12.5, fontWeight: FontWeight.w600),
+        style: TextStyle(color: P.morado, fontSize: 13.5, fontWeight: FontWeight.w600),
       ),
     ),
   );
@@ -349,7 +339,7 @@ class FilaLista extends StatelessWidget {
     onTap: onTap,
     hoverColor: P.columna,
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       child: Row(
         children: [
           lider,
@@ -362,14 +352,14 @@ class FilaLista extends StatelessWidget {
                   titulo,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
                 ),
                 if (subtitulo != null)
                   Text(
                     subtitulo!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: P.textoSuave),
+                    style: TextStyle(fontSize: 13, color: P.textoSuave),
                   ),
               ],
             ),
@@ -393,15 +383,40 @@ class Cifra extends StatelessWidget {
   final Color? colorNota;
   final Color? color;
   final double tamano;
-  const Cifra(this.etiqueta, this.valor, {super.key, this.nota, this.colorNota, this.color, this.tamano = 26});
+
+  /// Punto de color delante de la etiqueta.
+  final Color? punto;
+  const Cifra(
+    this.etiqueta,
+    this.valor, {
+    super.key,
+    this.nota,
+    this.colorNota,
+    this.color,
+    this.tamano = 26,
+    this.punto,
+  });
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     mainAxisSize: MainAxisSize.min,
     children: [
-      Text(etiqueta, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-      const SizedBox(height: 4),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (punto != null) ...[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: punto, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Text(etiqueta, style: TextStyle(fontSize: 13.5, color: P.textoSuave)),
+        ],
+      ),
+      const SizedBox(height: 6),
       TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: valor.toDouble()),
         duration: const Duration(milliseconds: 600),
@@ -411,8 +426,8 @@ class Cifra extends StatelessWidget {
           style: TextStyle(
             fontFamily: P.titulos,
             fontSize: tamano,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -.8,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1,
             color: color,
           ),
         ),
@@ -446,8 +461,8 @@ class BannerOscuro extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-      gradient: LinearGradient(colors: [P.tinta, Color.lerp(P.tinta, P.morado, .5)!]),
+      borderRadius: BorderRadius.circular(P.radio),
+      color: P.tinta,
     ),
     child: Row(
       children: [
@@ -517,14 +532,15 @@ class Cabecera extends StatelessWidget {
                     titulo,
                     style: TextStyle(
                       fontFamily: P.titulos,
-                      fontSize: 25,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -.7,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -1,
+                      height: 1.15,
                     ),
                   ),
                   if (subtitulo != null) ...[
-                    const SizedBox(height: 2),
-                    Text(subtitulo!, style: TextStyle(color: P.textoSuave, fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text(subtitulo!, style: TextStyle(color: P.textoSuave, fontSize: 14.5)),
                   ],
                 ],
               ),
@@ -577,13 +593,13 @@ class Buscador extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: width,
-    height: 36,
+    height: 40,
     child: TextField(
       onChanged: onChanged,
-      style: const TextStyle(fontSize: 13.5),
+      style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: P.textoSuave, fontSize: 13.5),
+        hintStyle: TextStyle(color: P.textoSuave, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         prefixIcon: Icon(Icons.search_rounded, size: 18, color: P.textoSuave),
         prefixIconConstraints: const BoxConstraints(minWidth: 34),
@@ -601,9 +617,9 @@ class Pestanas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 36,
+    height: 40,
     padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(8)),
+    decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -615,10 +631,10 @@ class Pestanas extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
                 alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   color: i == seleccion ? P.superficie : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(P.radioControl - 3),
                   boxShadow: i == seleccion
                       ? [
                           BoxShadow(
@@ -632,7 +648,7 @@ class Pestanas extends StatelessWidget {
                 child: Text(
                   o,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: i == seleccion ? P.texto : P.textoSuave,
                   ),
@@ -669,10 +685,10 @@ class PestanasOscuras extends StatelessWidget {
           onTap: () => onChanged(i),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: i == seleccion ? P.texto : Colors.transparent,
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(P.radioControl),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -680,7 +696,7 @@ class PestanasOscuras extends StatelessWidget {
                 Text(
                   o,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: i == seleccion ? P.superficie : P.textoSuave,
                   ),
@@ -720,23 +736,20 @@ class Vacio extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(color: P.columna, shape: BoxShape.circle),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [Icon(icono, color: P.textoSuave.withValues(alpha: .55), size: 36)],
-            ),
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(18)),
+            child: Icon(icono, color: P.textoSuave.withValues(alpha: .6), size: 28),
           ),
           const SizedBox(height: 14),
           if (titulo != null) ...[
-            Text(titulo!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text(titulo!, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -.3)),
             const SizedBox(height: 4),
           ],
           Text(
             texto,
             textAlign: TextAlign.center,
-            style: TextStyle(color: P.textoSuave, fontSize: 13),
+            style: TextStyle(color: P.textoSuave, fontSize: 14),
           ),
           if (accion != null) ...[const SizedBox(height: 16), accion!],
         ],
@@ -774,7 +787,7 @@ class Tabla extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
       color: P.superficie,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(P.radio),
       border: Border.all(color: P.borde),
     ),
     clipBehavior: Clip.antiAlias,
@@ -783,7 +796,7 @@ class Tabla extends StatelessWidget {
       children: [
         Container(
           color: P.cabeceraTabla,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
           child: Row(
             children: [
               for (final c in columnas)
@@ -791,7 +804,7 @@ class Tabla extends StatelessWidget {
                   c,
                   Text(
                     c.titulo,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: P.textoSuave),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: P.textoSuave),
                   ),
                 ),
             ],
@@ -811,7 +824,7 @@ class Tabla extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 56),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                     child: Row(children: [for (final (j, c) in columnas.indexed) _celda(c, cs[j])]),
                   ),
                 ),
@@ -834,14 +847,14 @@ Widget celdaTexto(String t, {bool suave = false, bool negrita = false}) => Text(
   maxLines: 1,
   overflow: TextOverflow.ellipsis,
   style: TextStyle(
-    fontSize: 13,
+    fontSize: 14,
     color: suave || t.isEmpty ? P.textoSuave : P.texto,
     fontWeight: negrita ? FontWeight.w600 : FontWeight.w400,
   ),
 );
 
 /// Pie de tabla: "1–12 (12)" a la izquierda, como la paginación de Holded.
-Widget pieTabla(int n, String nombre) => Text('1–$n ($n $nombre)', style: TextStyle(fontSize: 12, color: P.textoSuave));
+Widget pieTabla(int n, String nombre) => Text('1–$n ($n $nombre)', style: TextStyle(fontSize: 12.5, color: P.textoSuave));
 
 /// Barra de filtros: grupo izquierdo y derecho en los extremos; si no caben, el derecho baja de línea.
 class BarraFiltros extends StatelessWidget {
@@ -885,16 +898,16 @@ class NavegadorFecha extends StatelessWidget {
     message: tip,
     child: InkWell(
       onTap: f,
-      child: SizedBox(width: 34, height: 34, child: Icon(i, size: 18, color: P.textoSuave)),
+      child: SizedBox(width: 38, height: 38, child: Icon(i, size: 20, color: P.textoSuave)),
     ),
   );
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 36,
+    height: 40,
     decoration: BoxDecoration(
       color: P.superficie,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(P.radioControl),
       border: Border.all(color: P.borde),
     ),
     clipBehavior: Clip.antiAlias,
@@ -906,9 +919,9 @@ class NavegadorFecha extends StatelessWidget {
         InkWell(
           onTap: onHoy,
           child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14),
+            padding: EdgeInsets.symmetric(horizontal: 16),
             child: Center(
-              child: Text('Hoy', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              child: Text('Hoy', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             ),
           ),
         ),
@@ -927,9 +940,9 @@ class SelectorVista extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 36,
+    height: 40,
     padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(8)),
+    decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -944,11 +957,11 @@ class SelectorVista extends StatelessWidget {
               onTap: () => onChanged(v),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
-                width: 34,
+                width: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: lista == v ? P.superficie : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(P.radioControl - 3),
                   boxShadow: lista == v
                       ? [
                           BoxShadow(
@@ -1011,16 +1024,36 @@ class AvataresTrabajadores extends StatelessWidget {
   }
 }
 
-/// Estado de una tarea como pastilla sólida: vencida, toca hoy, pronto, al día, hecha.
+/// Quién lo hace, como en la landing: píldora suave con el nombre del trabajador en su color
+/// ("Laura"), "+N" si hay más, o "Sin asignar" en gris.
+class PillTrabajadores extends StatelessWidget {
+  final List<String> ids;
+  const PillTrabajadores(this.ids, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final ws = ids.map(store.trabajador).whereType<Trabajador>().toList();
+    if (ws.isEmpty) return Pill('Sin asignar', P.textoSuave);
+    return Tooltip(
+      message: ws.map((w) => w.nombreCompleto).join(', '),
+      child: Pill(
+        ws.length == 1 ? ws.first.nombre : '${ws.first.nombre} +${ws.length - 1}',
+        colorPaleta(ws.first.color),
+      ),
+    );
+  }
+}
+
+/// Estado de una tarea como pastilla suave con su punto: vencida, toca hoy, pronto, al día.
 Widget pillEstado(Tarea t) {
   if (t.esPlantilla) return Pill('Plantilla', P.morado, icono: Icons.content_copy_rounded);
-  if (!t.activa) return const Pill('Pausada', P.gris, solido: true);
-  if (t.proximo == null) return const Pill('Sin fecha', P.gris, solido: true);
+  if (!t.activa) return const Pill('Pausada', P.gris, punto: true);
+  if (t.proximo == null) return const Pill('Sin fecha', P.gris, punto: true);
   final n = diasHasta(t.proximo!);
-  if (n < 0) return const Pill('Vencida', P.rojo, solido: true);
-  if (n == 0) return Pill('Hoy', P.morado, solido: true);
-  if (n <= 7) return const Pill('Pronto', P.ambar, solido: true);
-  return const Pill('Al día', P.verde, solido: true);
+  if (n < 0) return const Pill('Vencida', P.rojo, punto: true);
+  if (n == 0) return Pill('Hoy', P.morado, punto: true);
+  if (n <= 7) return const Pill('Pronto', P.ambar, punto: true);
+  return const Pill('Al día', P.verde, punto: true);
 }
 
 /// Píldora con el estado del próximo mantenimiento.
@@ -1150,9 +1183,10 @@ class BotonSeleccionar extends StatelessWidget {
     tooltip: 'Seleccionar',
     style: IconButton.styleFrom(
       side: BorderSide(color: P.borde),
-      fixedSize: const Size(36, 36),
-      minimumSize: const Size(36, 36),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      backgroundColor: P.superficie,
+      fixedSize: const Size(40, 40),
+      minimumSize: const Size(40, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
     ),
     onPressed: onPressed,
     icon: Icon(Icons.checklist_rounded, size: 18, color: P.textoSuave),
@@ -1179,7 +1213,7 @@ class BarraSeleccion extends StatelessWidget {
     color: P.tinta,
     elevation: 8,
     shadowColor: Colors.black26,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radio)),
     child: Padding(
       padding: const EdgeInsets.fromLTRB(18, 6, 6, 6),
       child: Row(
@@ -1209,50 +1243,5 @@ class BarraSeleccion extends StatelessWidget {
         ],
       ),
     ),
-  );
-}
-
-/// Tres (o más) cifras encima de una lista, como las de Jobber: etiqueta, número grande y nota.
-/// La primera lleva el punto de color de su estado.
-class ResumenLista extends StatelessWidget {
-  final List<(String, int, String, Color)> cifras;
-  final void Function(int i)? onTap;
-  const ResumenLista(this.cifras, {super.key, this.onTap});
-
-  Widget _tarjeta(int i) {
-    final (etiqueta, valor, nota, color) = cifras[i];
-    return HoverCard(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-      onTap: onTap == null ? null : () => onTap!(i),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 7),
-              Text(etiqueta, style: TextStyle(fontSize: 13, color: P.textoSuave)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '$valor',
-            style: TextStyle(fontFamily: P.titulos, fontSize: 28, fontWeight: FontWeight.w800, height: 1.1),
-          ),
-          Text(nota, style: TextStyle(fontSize: 12, color: P.textoSuave)),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      for (var i = 0; i < cifras.length; i++) ...[if (i > 0) const SizedBox(width: 14), Expanded(child: _tarjeta(i))],
-    ],
   );
 }

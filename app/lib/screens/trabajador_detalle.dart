@@ -53,7 +53,7 @@ class TrabajadorDetalle extends StatelessWidget {
         // Con sitio, la ficha completa va fija a la derecha; si no, se abre con "Editar ficha".
         final conFicha = box.maxWidth > 1000;
         final principal = Padding(
-          padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
+          padding: margenPagina,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -74,8 +74,8 @@ class TrabajadorDetalle extends StatelessWidget {
                 subtitulo: w.competencias.isEmpty ? 'Sin competencias' : w.competencias.join(' · '),
                 acciones: [
                   w.activo
-                      ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, solido: true)
-                      : const Pill('Inactivo', P.gris, solido: true),
+                      ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)
+                      : const Pill('Inactivo', P.gris, punto: true),
                   if (!conFicha)
                     OutlinedButton(onPressed: () => abrirTrabajadorForm(context, w), child: const Text('Editar ficha')),
                   // Sin tareas, el botón está en el centro; arriba solo cuando ya hay alguna.
@@ -324,7 +324,7 @@ class _AsignarState extends State<_Asignar> {
               ),
               const SizedBox(width: 8),
               if (asignada)
-                const Pill('Asignada', P.verde, solido: true)
+                const Pill('Asignada', P.verde, punto: true)
               else if (choques.isNotEmpty)
                 const Icon(Icons.block_rounded, size: 20, color: P.rojo)
               else

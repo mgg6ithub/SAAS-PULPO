@@ -49,7 +49,7 @@ class _TrabajadoresState extends State<Trabajadores> {
     return Stack(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(40, 32, 40, 28),
+          padding: margenPagina,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -67,16 +67,6 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ],
                     ),
                     const SizedBox(height: 22),
-                    ResumenLista([
-                      for (final e in EstadoHoy.values)
-                        (
-                          '${e.etiqueta}s',
-                          store.trabajadores.where((w) => w.activo && w.estadoHoy == e).length,
-                          'hoy',
-                          e.color,
-                        ),
-                    ], onTap: (i) => setState(() => estado = i + 1)),
-                    const SizedBox(height: 20),
                     BarraFiltros(
                       izquierda: [
                         Pestanas(
@@ -200,8 +190,8 @@ class _TrabajadoresState extends State<Trabajadores> {
               if (ancho) celdaTexto(w.telefono, suave: true),
               celdaTexto('$asignadas'),
               w.activo
-                  ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, solido: true)
-                  : const Pill('Inactivo', P.gris, solido: true),
+                  ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)
+                  : const Pill('Inactivo', P.gris, punto: true),
             ];
           },
         ),

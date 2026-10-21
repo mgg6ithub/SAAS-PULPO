@@ -60,7 +60,7 @@ class _VistaCalendarioState extends State<VistaCalendario> {
                   padding: const EdgeInsets.only(left: 10, bottom: 6),
                   child: Text(
                     d.toUpperCase(),
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .6, color: P.textoSuave),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: .6, color: P.textoSuave),
                   ),
                 ),
               ),
@@ -80,7 +80,7 @@ class _VistaCalendarioState extends State<VistaCalendario> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: P.superficie,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(P.radio),
                         border: Border.all(color: P.borde),
                       ),
                       clipBehavior: Clip.antiAlias,
@@ -135,7 +135,7 @@ class _VistaCalendarioState extends State<VistaCalendario> {
           child: LayoutBuilder(
             builder: (context, box) {
               // Cuántos bloques caben; el resto se resume en "+N".
-              final caben = ((box.maxHeight - 30) / 22).floor().clamp(0, 99);
+              final caben = ((box.maxHeight - 34) / 25).floor().clamp(0, 99);
               final visibles = clientes.length > caben ? (caben - 1).clamp(0, 99) : clientes.length;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -143,14 +143,14 @@ class _VistaCalendarioState extends State<VistaCalendario> {
                   Align(
                     alignment: Alignment.topLeft,
                     child: Container(
-                      width: 26,
-                      height: 26,
+                      width: 30,
+                      height: 30,
                       alignment: Alignment.center,
                       decoration: n == 0 ? BoxDecoration(color: P.morado, shape: BoxShape.circle) : null,
                       child: Text(
                         '${dia.day}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14.5,
                           fontWeight: n == 0 ? FontWeight.w800 : FontWeight.w600,
                           color: n == 0 ? Colors.white : (delMes ? P.texto : P.textoSuave),
                         ),
@@ -164,7 +164,7 @@ class _VistaCalendarioState extends State<VistaCalendario> {
                       padding: const EdgeInsets.only(left: 4, top: 2),
                       child: Text(
                         '+${clientes.length - visibles} más',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: P.textoSuave),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: P.textoSuave),
                       ),
                     ),
                 ],
@@ -179,12 +179,12 @@ class _VistaCalendarioState extends State<VistaCalendario> {
   Widget _bloque(Cliente c, int n) {
     final color = colorPaleta(c.color);
     return Container(
-      height: 20,
-      margin: const EdgeInsets.only(bottom: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      height: 22,
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Row(
@@ -194,13 +194,13 @@ class _VistaCalendarioState extends State<VistaCalendario> {
               c.nombre,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: P.texto),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: P.texto),
             ),
           ),
           if (n > 1)
             Text(
               '$n',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
             ),
         ],
       ),

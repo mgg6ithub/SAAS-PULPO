@@ -25,78 +25,89 @@ class TareaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = tarea;
     final cliente = store.cliente(t.clienteId);
-    // Todo lo secundario en una sola línea gris; el color lo ponen la barrita del tipo y el estado.
+    // Como los cuadraditos de la landing: nombre en negrita, una línea gris con hora · cliente · tipo
+    // y, arriba a la derecha, quién lo hace. El punto del color del tipo es la única marca de color.
     final detalle = [
-      if (mostrarCliente && !t.esPlantilla) cliente?.nombre ?? '—',
       if (realizada && t.ultimo != null) 'hecha ${relativo(t.ultimo!).toLowerCase()}',
       if (!realizada && !t.esPlantilla && t.proximo != null) relativo(t.proximo!),
       if (!realizada) ?t.horario,
       if (t.esPlantilla) t.periodicidad.etiqueta,
+      if (mostrarCliente && !t.esPlantilla) cliente?.nombre ?? '—',
       if (t.ubicacion.isNotEmpty) t.ubicacion,
+      t.tipo,
     ];
+    final averiada = t.estadoMaquina != EstadoMaquina.operativa;
     return HoverCard(
       width: width,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
       onTap: () => abrirTareaForm(context, t),
       child: Opacity(
         opacity: t.activa ? 1 : .5,
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BarraTipo(t.tipo, alto: 34, color: t.colorBloque),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
                     t.nombre,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15.5, letterSpacing: -.2),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
+                ),
+                const SizedBox(width: 8),
+                if (!t.esPlantilla) PillTrabajadores(t.trabajadorIds),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(color: t.colorBloque, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
                     detalle.join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: P.textoSuave, fontSize: 12),
+                    style: TextStyle(color: P.textoSuave, fontSize: 13.5),
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      if (realizada) const Pill('Hecha', P.verde, solido: true) else pillEstado(t),
-                      if (t.estadoMaquina != EstadoMaquina.operativa)
-                        Pill(t.estadoMaquina.etiqueta, t.estadoMaquina.color),
+                      if (realizada) const Pill('Hecha', P.verde, punto: true) else pillEstado(t),
+                      if (averiada) Pill(t.estadoMaquina.etiqueta, t.estadoMaquina.color),
                       if (t.esPlantilla)
                         for (final c in t.competencias) Etiqueta(c, P.morado),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (!t.esPlantilla) AvataresTrabajadores(t.trabajadorIds),
-                if (botonHecha) ...[
-                  const SizedBox(height: 10),
+                ),
+                if (botonHecha)
                   Tooltip(
                     message: 'Marcar como hecha hoy',
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 28),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        minimumSize: const Size(0, 30),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                       ),
                       onPressed: () => store.marcarHecha(t),
                       child: const Text('Hecha'),
                     ),
                   ),
-                ],
               ],
             ),
           ],

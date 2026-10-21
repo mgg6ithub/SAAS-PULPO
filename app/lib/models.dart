@@ -52,6 +52,9 @@ extension PeriodicidadX on Periodicidad {
 /// Cliente al que se le da mantenimiento: comunidad, colegio, hospital, empresa...
 class Cliente {
   String id, nombre, cif, direccion, ciudad, cp, provincia, telefono, email, contacto, telefonoContacto, notas;
+
+  /// Foto o logotipo en PNG base64 (vacío = sin foto).
+  String foto;
   bool activa;
   DateTime fechaAlta;
   int color;
@@ -72,6 +75,7 @@ class Cliente {
     this.contacto = '',
     this.telefonoContacto = '',
     this.notas = '',
+    this.foto = '',
     this.activa = true,
     DateTime? fechaAlta,
     this.color = 0,
@@ -103,6 +107,7 @@ class Cliente {
     'contacto': contacto,
     'telefonoContacto': telefonoContacto,
     'notas': notas,
+    'foto': foto,
     'activa': activa,
     'fechaAlta': _f(fechaAlta),
     'color': color,
@@ -123,6 +128,7 @@ class Cliente {
     contacto: _s(j, 'contacto'),
     telefonoContacto: _s(j, 'telefonoContacto'),
     notas: _s(j, 'notas'),
+    foto: _s(j, 'foto'),
     activa: j['activa'] as bool? ?? true,
     fechaAlta: _d(j, 'fechaAlta'),
     color: j['color'] as int? ?? 0,
@@ -135,6 +141,9 @@ class Cliente {
 
 class Trabajador {
   String id, nombre, apellidos, telefono, email, info, titulos;
+
+  /// Foto en PNG base64 (vacío = sin foto).
+  String foto;
   List<String> competencias;
   bool activo;
   EstadoHoy estadoHoy;
@@ -148,6 +157,7 @@ class Trabajador {
     this.email = '',
     this.info = '',
     this.titulos = '',
+    this.foto = '',
     List<String>? competencias,
     this.activo = true,
     this.estadoHoy = EstadoHoy.disponible,
@@ -164,6 +174,7 @@ class Trabajador {
     'email': email,
     'info': info,
     'titulos': titulos,
+    'foto': foto,
     'competencias': competencias,
     'activo': activo,
     'estadoHoy': estadoHoy.index,
@@ -178,6 +189,7 @@ class Trabajador {
     email: _s(j, 'email'),
     info: _s(j, 'info'),
     titulos: _s(j, 'titulos'),
+    foto: _s(j, 'foto'),
     competencias: List<String>.from(j['competencias'] as List? ?? []),
     activo: j['activo'] as bool? ?? true,
     estadoHoy: EstadoHoy.values[j['estadoHoy'] as int? ?? 0],

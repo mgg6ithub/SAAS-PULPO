@@ -52,7 +52,7 @@ class _ClientesState extends State<Clientes> {
     return Stack(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(40, 32, 40, 28),
+          padding: margenPagina,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -70,28 +70,6 @@ class _ClientesState extends State<Clientes> {
                       ],
                     ),
                     const SizedBox(height: 22),
-                    ResumenLista([
-                      ('Activos', store.clientes.where((c) => c.activa).length, 'reciben mantenimiento', P.verde),
-                      (
-                        'Con vencidas',
-                        store.clientes
-                            .where(
-                              (c) => store
-                                  .tareasDe(c.id)
-                                  .any((t) => t.activa && t.proximo != null && diasHasta(t.proximo!) < 0),
-                            )
-                            .length,
-                        'necesitan una visita',
-                        P.rojo,
-                      ),
-                      (
-                        'Nuevos',
-                        store.clientes.where((c) => DateTime.now().difference(c.fechaAlta).inDays <= 30).length,
-                        'últimos 30 días',
-                        P.morado,
-                      ),
-                    ]),
-                    const SizedBox(height: 20),
                     BarraFiltros(
                       izquierda: [
                         Pestanas(
@@ -209,8 +187,8 @@ class _Bloques extends StatelessWidget {
                   const Spacer(),
                   if (seleccion == null)
                     c.activa
-                        ? const Pill('Activo', P.verde, solido: true)
-                        : const Pill('Inactivo', P.gris, solido: true),
+                        ? const Pill('Activo', P.verde, punto: true)
+                        : const Pill('Inactivo', P.gris, punto: true),
                 ],
               ),
               const SizedBox(height: 16),
@@ -323,7 +301,7 @@ class _Tabla extends StatelessWidget {
                         color: vencidas > 0 ? P.rojo : P.texto,
                       ),
                     ),
-              c.activa ? const Pill('Activo', P.verde, solido: true) : const Pill('Inactivo', P.gris, solido: true),
+              c.activa ? const Pill('Activo', P.verde, punto: true) : const Pill('Inactivo', P.gris, punto: true),
             ];
           },
         ),

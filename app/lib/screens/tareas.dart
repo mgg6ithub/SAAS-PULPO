@@ -41,7 +41,7 @@ class _TareasPaginaState extends State<TareasPagina> {
     final tiposUsados = {for (final t in store.tareas) t.tipo};
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 32, 40, 28),
+      padding: margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -57,38 +57,6 @@ class _TareasPaginaState extends State<TareasPagina> {
             ],
           ),
           const SizedBox(height: 22),
-          ResumenLista([
-            (
-              'Vencidas',
-              store.tareas
-                  .where((t) => !t.esPlantilla && t.activa && t.proximo != null && diasHasta(t.proximo!) < 0)
-                  .length,
-              'pendientes de hacer',
-              P.rojo,
-            ),
-            (
-              'Esta semana',
-              store.tareas
-                  .where(
-                    (t) =>
-                        !t.esPlantilla &&
-                        t.activa &&
-                        t.proximo != null &&
-                        diasHasta(t.proximo!) >= 0 &&
-                        diasHasta(t.proximo!) <= 7,
-                  )
-                  .length,
-              'próximos 7 días',
-              P.ambar,
-            ),
-            (
-              'Sin asignar',
-              store.tareas.where((t) => !t.esPlantilla && t.activa && t.trabajadorIds.isEmpty).length,
-              'sin técnico',
-              P.morado,
-            ),
-          ]),
-          const SizedBox(height: 20),
           BarraFiltros(
             izquierda: [
               Pestanas(

@@ -6,7 +6,17 @@ class Ajustes extends ChangeNotifier {
   SharedPreferences? _prefs;
 
   ThemeMode tema = ThemeMode.light;
-  bool barraOculta = false;
+
+  /// La barra lateral a la derecha en vez de a la izquierda.
+  bool barraDerecha = false;
+
+  /// Tamaño de la letra de toda la interfaz (accesibilidad): índice en [escalas].
+  static const escalas = [1.0, 1.12, 1.25, 1.4];
+  int tamanoLetra = 0;
+  double get escalaTexto => escalas[tamanoLetra.clamp(0, escalas.length - 1)];
+
+  /// Tipo de letra: índice en `fuentes` (theme.dart).
+  int fuente = 0;
 
   /// Vista con la que abre la Agenda: 0 Día, 1 Semana, 2 Mes, 3 Tablero.
   int vistaInicio = 1;
@@ -27,7 +37,9 @@ class Ajustes extends ChangeNotifier {
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     tema = ThemeMode.values[_prefs!.getInt('ajustes_tema') ?? ThemeMode.light.index];
-    barraOculta = _prefs!.getBool('ajustes_barra_oculta') ?? false;
+    barraDerecha = _prefs!.getBool('ajustes_barra_derecha') ?? false;
+    tamanoLetra = _prefs!.getInt('ajustes_tamano_letra') ?? 0;
+    fuente = _prefs!.getInt('ajustes_fuente') ?? 0;
     vistaInicio = _prefs!.getInt('ajustes_vista_agenda') ?? 1;
     acento = _prefs!.getInt('ajustes_acento') ?? 0;
     anchoBarra = _prefs!.getDouble('ajustes_ancho_barra') ?? 248;
@@ -47,9 +59,21 @@ class Ajustes extends ChangeNotifier {
     notifyListeners();
   }
 
-  void alternarBarra() {
-    barraOculta = !barraOculta;
-    _prefs?.setBool('ajustes_barra_oculta', barraOculta);
+  void ponerBarraDerecha(bool v) {
+    barraDerecha = v;
+    _prefs?.setBool('ajustes_barra_derecha', v);
+    notifyListeners();
+  }
+
+  void ponerTamanoLetra(int i) {
+    tamanoLetra = i;
+    _prefs?.setInt('ajustes_tamano_letra', i);
+    notifyListeners();
+  }
+
+  void ponerFuente(int i) {
+    fuente = i;
+    _prefs?.setInt('ajustes_fuente', i);
     notifyListeners();
   }
 

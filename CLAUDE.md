@@ -9,13 +9,12 @@ SaaS de automatización de mantenimiento para empresas pequeñas de mantenimient
 - UI: minimalista pero muy funcional, visual y con color.
 - Idioma de documentación: español.
 
-## Interfaz: referencia visual obligatoria
+## Interfaz: coherencia visual obligatoria
 Antes de implementar, cambiar o crear cualquier vista:
-- Lee `Pulpo Vault/Interfaz UI/Guía visual (referencia Holded).md` (reglas y patrones).
-- Mira las capturas de referencia del grupo que toque en `Pulpo Vault/Interfaz UI/capturas/` (`00-seleccion` primero; luego `01-bienvenida-inicio`, `02-dashboards-kpis`, `03-graficos-informes`, `04-listas-tablas`, `05-crear-editar-dialogos`, `06-fichas-detalle`, `07-kanban-calendario`, `08-catalogo-tarjetas`, `09-navegacion-menus`, `10-estados-vacios-banners`, `11-ajustes-configuracion`).
-- Para flujos de trabajo (agenda, clientes → trabajos → visitas) mira `Pulpo Vault/Interfaz UI/capturas-jobber/` y `Pulpo Vault/Roadmap/Reestructuración (iteración Jobber).md`.
-- Para el mapa, rutas y planificador mira `Pulpo Vault/Interfaz UI/capturas-optimoroute/` y `Pulpo Vault/Roadmap/Rutas y planificador (iteración OptimoRoute).md` (solo la funcionalidad, no su interfaz).
-- Mira también cómo está ya nuestra app en `Pulpo Vault/Interfaz UI/capturas-pulpo/` para mantener la coherencia.
-- **Cuantos menos iconos, mejor**: nada de emojis decorativos ni iconos en botones; el color (puntos, barritas) sustituye al icono. Ver regla 0 de la guía.
-- Holded es la musa, no una plantilla: cogemos su disciplina visual, con carácter propio (morado + color por tipo de mantenimiento).
-- Al terminar un cambio visual, actualiza `capturas-pulpo/` con capturas nuevas (ver la skill `documentar-pulpo`).
+- Lee `~/Desktop/CEREBRO/Proyectos/Pulpo/Apariencia/MOC - Apariencia.md` (sistema, componentes, vistas de referencia y reglas) con la skill `pulpo-coherencia-visual`.
+- Estilo = demo de la landing (`landing/`): tarjetas blancas de borde fino sin sombra, tinta + morado del logo, Geist, mucho aire, pocos botones.
+- Solo tokens de `app/lib/theme.dart` (`P`, `margenPagina`) y componentes de `app/lib/widgets.dart`; nada de valores sueltos. Formularios con `VentanaFormulario` + `Bloque`.
+- Pensado para portátil 1080p: lo importante (calendario, mapa) ocupa el alto.
+- **Cuantos menos iconos, mejor**: el color (puntos, barritas) sustituye al icono.
+- Probar en vivo: `cd app && python3 tool/vivo.py` (localhost:8080, recarga al guardar).
+- `Pulpo Vault/Interfaz UI/` (Holded, Jobber, OptimoRoute) queda solo como referencia de funcionalidad, no de estilo.

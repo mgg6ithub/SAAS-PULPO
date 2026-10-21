@@ -1,11 +1,11 @@
 {
-    "name": "pulpo",
-    "short_name": "pulpo",
+    "name": "Pulpo",
+    "short_name": "Pulpo",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7F6FB",
+    "theme_color": "#6A2FF6",
+    "description": "Organiza las tareas y rutas de tu empresa de mantenimiento.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

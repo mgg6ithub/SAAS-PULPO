@@ -311,7 +311,7 @@ class _FlujoRuta extends StatelessWidget {
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(width: 6),
-                            Pill(p.tarea.criticidad.etiqueta, p.tarea.criticidad.color, solido: true),
+                            Pill(p.tarea.criticidad.etiqueta, p.tarea.criticidad.color, punto: true),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -374,19 +374,19 @@ class _BotonPulpoState extends State<BotonPulpo> {
                   duration: const Duration(milliseconds: 1500),
                   builder: (_, v, _) => Transform.rotate(
                     angle: v * 6.28,
-                    child: const Text('🐙', style: TextStyle(fontSize: 46)),
+                    child: const LogoPulpo(size: 64),
                   ),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   'El pulpo está planificando…',
-                  style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w800),
+                  style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.4),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '${plan.rutas.fold(0, (s, r) => s + r.paradas.length) + plan.sinProgramar.length} tareas · '
                   '${plan.rutas.length} técnicos · calculando distancias y franjas',
-                  style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                  style: TextStyle(fontSize: 13.5, color: P.textoSuave),
                 ),
                 const SizedBox(height: 16),
                 const SizedBox(width: 220, child: LinearProgressIndicator()),
@@ -411,38 +411,44 @@ class _BotonPulpoState extends State<BotonPulpo> {
     );
   }
 
+  /// Como el "✦ Organizar" de la landing: morado del logo, plano; al pasar, sube un pelo y se ilumina.
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => hover = true),
-    onExit: (_) => setState(() => hover = false),
-    child: GestureDetector(
-      onTap: _planificar,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-        transform: Matrix4.translationValues(0, hover ? -1.5 : 0, 0),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [P.tinta, Color.lerp(P.tinta, P.morado, .6)!]),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: P.morado.withValues(alpha: hover ? .45 : .25),
-              blurRadius: 16,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🐙', style: TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
-            Text(
-              'Planificar el día',
-              style: TextStyle(fontFamily: P.titulos, color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ],
+  Widget build(BuildContext context) => Tooltip(
+    message: 'Pulpo reparte las tareas del día y traza las rutas',
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => hover = true),
+      onExit: (_) => setState(() => hover = false),
+      child: GestureDetector(
+        onTap: _planificar,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          transform: Matrix4.translationValues(0, hover ? -1 : 0, 0),
+          decoration: BoxDecoration(
+            color: P.morado,
+            borderRadius: BorderRadius.circular(P.radioControl),
+            boxShadow: [
+              if (hover) BoxShadow(color: P.morado.withValues(alpha: .45), blurRadius: 20, offset: const Offset(0, 8)),
+            ],
+          ),
+          // widthFactor 1: centrado sin estirarse a todo el ancho.
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // El pulpo del logo, en blanco sobre el morado (como en la landing).
+              ColorFiltered(
+                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                child: LogoPulpo(size: 20),
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Organizar',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -.1),
+              ),
+            ],
+          ),
         ),
       ),
     ),

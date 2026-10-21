@@ -19,7 +19,7 @@ void main() {
   });
 
   final pantallas = <String, Widget Function()>{
-    'Inicio': () => Resumen(onIr: (_) {}, onCliente: (_) {}, onTrabajador: (_) {}),
+    'Inicio': () => Resumen(onIr: (_) {}, onTrabajador: (_) {}),
     'Clientes': () => Clientes(onAbrir: (_) {}),
     'Trabajadores': () => Trabajadores(onAbrir: (_) {}),
     'Tareas': () => const TareasPagina(),

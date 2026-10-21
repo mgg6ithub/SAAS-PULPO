@@ -1,5 +1,11 @@
+import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import 'geo.dart';
@@ -13,7 +19,8 @@ import 'widgets.dart';
 // arrastrar. Con su botón se acopla a la derecha y vuelve a ser ventana.
 // El modo elegido se recuerda para la siguiente vez.
 
-bool _acoplada = false;
+/// Dónde va la ventana: 0 flotando en el centro, -1 acoplada a la izquierda, 1 a la derecha.
+int _lado = 0;
 
 Future<void> abrirPanel(BuildContext context, Widget panel) => showGeneralDialog(
   context: context,
@@ -35,8 +42,17 @@ class VentanaFormulario extends StatefulWidget {
   final String titulo;
   final String? subtitulo;
 
-  /// Texto pequeño en mayúsculas encima del título ("CLIENTE", "TAREA").
+  /// Texto pequeño en morado encima del título ("CLIENTE", "TAREA"), como "CONFIGURACIÓN" en Ajustes.
   final String? etiqueta;
+
+  /// A la izquierda del título (el avatar del cliente o del trabajador).
+  final Widget? lider;
+
+  /// Arriba a la derecha, antes de acoplar y cerrar (p. ej. los colores).
+  final Widget? extra;
+
+  /// Al bajar y dejar de ver el campo del nombre, el título pasa a ser este (el nombre escrito).
+  final String? tituloDesplazado;
   final List<Widget> campos;
   final VoidCallback onGuardar;
   final VoidCallback? onBorrar;
@@ -48,6 +64,9 @@ class VentanaFormulario extends StatefulWidget {
     required this.titulo,
     this.subtitulo,
     this.etiqueta,
+    this.lider,
+    this.extra,
+    this.tituloDesplazado,
     required this.campos,
     required this.onGuardar,
     this.onBorrar,
@@ -59,12 +78,28 @@ class VentanaFormulario extends StatefulWidget {
 }
 
 class _VentanaFormularioState extends State<VentanaFormulario> {
-  bool acoplada = _acoplada;
+  int lado = _lado;
+  bool get acoplada => lado != 0;
   Offset desplazamiento = Offset.zero;
   bool arrastrando = false;
 
-  void alternar() => setState(() {
-    acoplada = _acoplada = !acoplada;
+  /// Se ha bajado lo bastante como para no ver el campo del nombre.
+  bool desplazado = false;
+  late final ScrollController scroll = ScrollController()
+    ..addListener(() {
+      final d = scroll.offset > 140;
+      if (d != desplazado) setState(() => desplazado = d);
+    });
+
+  @override
+  void dispose() {
+    scroll.dispose();
+    super.dispose();
+  }
+
+  /// Acopla a ese lado; si ya estaba ahí, vuelve a ventana.
+  void acoplar(int l) => setState(() {
+    lado = _lado = lado == l ? 0 : l;
     desplazamiento = Offset.zero;
   });
 
@@ -80,7 +115,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             const Divider(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(36, 24, 36, 36),
+                controller: scroll,
+                padding: const EdgeInsets.fromLTRB(32, 6, 32, 32),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
               ),
             ),
@@ -94,7 +130,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     // Ventana amplia (sin llegar a pantalla completa): más aire para los formularios.
     final ancho = min(acoplada ? 680.0 : 860.0, pantalla.width - (acoplada ? 0 : 48));
     final alto = acoplada ? pantalla.height : min(pantalla.height * .9, 900.0);
-    var left = pantalla.width - ancho;
+    var left = lado < 0 ? 0.0 : pantalla.width - ancho;
     var top = 0.0;
     if (!acoplada) {
       // Que la cabecera nunca se salga de la pantalla al arrastrar.
@@ -122,7 +158,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 const Divider(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(36, 24, 36, 36),
+                    controller: scroll,
+                    padding: const EdgeInsets.fromLTRB(32, 6, 32, 32),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
                   ),
                 ),
@@ -136,6 +173,11 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     );
   }
 
+  String get _titulo {
+    final t = widget.tituloDesplazado?.trim() ?? '';
+    return desplazado && t.isNotEmpty ? t : widget.titulo;
+  }
+
   Widget _cabecera() => MouseRegion(
     cursor: acoplada || widget.incrustada ? MouseCursor.defer : SystemMouseCursors.move,
     child: GestureDetector(
@@ -144,18 +186,20 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
       onPanUpdate: acoplada || widget.incrustada ? null : (d) => setState(() => desplazamiento += d.delta),
       onPanEnd: acoplada || widget.incrustada ? null : (_) => setState(() => arrastrando = false),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(36, acoplada || widget.incrustada ? 28 : 12, 16, 20),
+        // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
+        padding: EdgeInsets.fromLTRB(32, acoplada || widget.incrustada ? 16 : 6, 12, 12),
         child: Column(
           children: [
             if (!acoplada && !widget.incrustada)
               Container(
-                width: 38,
-                height: 5,
-                margin: const EdgeInsets.only(bottom: 14),
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(color: P.borde, borderRadius: BorderRadius.circular(3)),
               ),
             Row(
               children: [
+                if (widget.lider != null) ...[widget.lider!, const SizedBox(width: 12)],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,34 +214,49 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                             color: P.morado,
                           ),
                         ),
-                      Text(
-                        widget.titulo,
-                        style: TextStyle(
-                          fontFamily: P.titulos,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -.4,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        layoutBuilder: (actual, anteriores) =>
+                            Stack(alignment: Alignment.centerLeft, children: [...anteriores, ?actual]),
+                        child: Text(
+                          _titulo,
+                          key: ValueKey(_titulo),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: P.titulos,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.5,
+                          ),
                         ),
                       ),
                       if (widget.subtitulo != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(widget.subtitulo!, style: TextStyle(color: P.textoSuave, fontSize: 13)),
+                        Text(
+                          widget.subtitulo!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: P.textoSuave, fontSize: 13),
                         ),
                     ],
                   ),
                 ),
+                if (widget.extra != null) ...[const SizedBox(width: 12), widget.extra!, const SizedBox(width: 8)],
                 if (!widget.incrustada) ...[
-                  IconButton(
-                    tooltip: acoplada ? 'Volver a ventana' : 'Acoplar a la derecha',
-                    onPressed: alternar,
-                    icon: Icon(acoplada ? Icons.web_asset_rounded : Icons.view_sidebar_outlined, color: P.textoSuave),
+                  _BotonVentana(
+                    CupertinoIcons.sidebar_left,
+                    lado < 0 ? 'Volver a ventana' : 'Acoplar a la izquierda',
+                    () => acoplar(-1),
+                    activo: lado < 0,
                   ),
-                  IconButton(
-                    tooltip: 'Cerrar',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
+                  _BotonVentana(
+                    CupertinoIcons.sidebar_right,
+                    lado > 0 ? 'Volver a ventana' : 'Acoplar a la derecha',
+                    () => acoplar(1),
+                    activo: lado > 0,
                   ),
+                  const SizedBox(width: 4),
+                  _BotonVentana(CupertinoIcons.xmark, 'Cerrar', () => Navigator.pop(context)),
                 ],
               ],
             ),
@@ -232,56 +291,26 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
   );
 }
 
-/// Sección plegable para lo que no hace falta rellenar al principio.
-class MasDetalles extends StatefulWidget {
-  final String titulo;
-  final List<Widget> children;
-  const MasDetalles(this.titulo, this.children, {super.key});
+/// Botón de la cabecera de la ventana: icono fino (SF Symbols), cuadrado de 34 y fondo suave al estar activo.
+class _BotonVentana extends StatelessWidget {
+  final IconData icono;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool activo;
+  const _BotonVentana(this.icono, this.tooltip, this.onTap, {this.activo = false});
 
   @override
-  State<MasDetalles> createState() => _MasDetallesState();
-}
-
-class _MasDetallesState extends State<MasDetalles> {
-  bool abierto = false;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => setState(() => abierto = !abierto),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              AnimatedRotation(
-                turns: abierto ? .25 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: Icon(Icons.chevron_right_rounded, color: P.morado),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                widget.titulo,
-                style: TextStyle(fontWeight: FontWeight.w600, color: P.morado),
-              ),
-            ],
-          ),
-        ),
-      ),
-      AnimatedSize(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: abierto
-            ? Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.children),
-              )
-            : const SizedBox(width: double.infinity),
-      ),
-    ],
+  Widget build(BuildContext context) => IconButton(
+    tooltip: tooltip,
+    onPressed: onTap,
+    style: IconButton.styleFrom(
+      fixedSize: const Size(34, 34),
+      minimumSize: const Size(34, 34),
+      padding: EdgeInsets.zero,
+      backgroundColor: activo ? P.moradoSuave : null,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl - 2)),
+    ),
+    icon: Icon(icono, size: 19, color: activo ? P.morado : P.textoSuave),
   );
 }
 
@@ -292,18 +321,6 @@ Widget etiqueta(String t) => Padding(
   child: Text(
     t,
     style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: P.textoSuave),
-  ),
-);
-
-Widget seccion(String t) => Container(
-  margin: const EdgeInsets.only(top: 14, bottom: 14),
-  padding: const EdgeInsets.only(top: 20),
-  decoration: BoxDecoration(
-    border: Border(top: BorderSide(color: P.borde)),
-  ),
-  child: Text(
-    t,
-    style: TextStyle(fontFamily: P.titulos, fontSize: 15.5, fontWeight: FontWeight.w700),
   ),
 );
 
@@ -328,7 +345,10 @@ class Bloque extends StatelessWidget {
   final String titulo;
   final String? descripcion;
   final List<Widget> children;
-  const Bloque(this.titulo, this.children, {super.key, this.descripcion});
+
+  /// El primero va pegado a la cabecera, que ya tiene su línea: sin línea encima.
+  final bool primero;
+  const Bloque(this.titulo, this.children, {super.key, this.descripcion, this.primero = false});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -363,9 +383,9 @@ class Bloque extends StatelessWidget {
                 ],
               );
         return Container(
-          padding: const EdgeInsets.only(top: 22, bottom: 10),
+          padding: EdgeInsets.only(top: primero ? 16 : 22, bottom: 10),
           decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: P.borde)),
+            border: primero ? null : Border(top: BorderSide(color: P.borde)),
           ),
           child: contenido,
         );
@@ -465,8 +485,8 @@ class CampoHora extends StatelessWidget {
   );
 }
 
-Widget selectorColor(int actual, ValueChanged<int> onChanged) => Wrap(
-  spacing: 8,
+Widget selectorColor(int actual, ValueChanged<int> onChanged, {double size = 26}) => Wrap(
+  spacing: size * .3,
   runSpacing: 8,
   children: [
     for (var i = 0; i < paleta.length; i++)
@@ -475,56 +495,222 @@ Widget selectorColor(int actual, ValueChanged<int> onChanged) => Wrap(
         onTap: () => onChanged(i),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          width: 26,
-          height: 26,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             color: paleta[i],
             shape: BoxShape.circle,
             border: Border.all(color: i == actual ? P.superficie : Colors.transparent, width: 2),
             boxShadow: i == actual ? [BoxShadow(color: paleta[i], spreadRadius: 2)] : null,
           ),
-          child: i == actual ? const Icon(Icons.check_rounded, size: 15, color: Colors.white) : null,
+          child: i == actual ? Icon(Icons.check_rounded, size: size * .58, color: Colors.white) : null,
         ),
       ),
   ],
 );
 
-/// Cabecera de identidad del formulario: avatar grande con el nombre y la paleta, sobre un panel tintado.
-Widget identidad(String nombre, int color, ValueChanged<int> onColor, {bool cuadrado = false, String? pie}) =>
-    Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorPaleta(color).withValues(alpha: .07),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorPaleta(color).withValues(alpha: .18)),
-      ),
-      child: Row(
-        children: [
-          Avatar(inicialesDe(nombre.trim().isEmpty ? '?' : nombre), colorPaleta(color), size: 52, cuadrado: cuadrado),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nombre.trim().isEmpty ? 'Sin nombre' : nombre,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: nombre.trim().isEmpty ? P.textoSuave : P.texto,
+/// Foto o logotipo de la cabecera del formulario. Sin foto: cuadro discontinuo con un icono de imagen;
+/// al pulsarlo se puede arrastrar una imagen o elegirla del ordenador.
+class FotoFormulario extends StatelessWidget {
+  final String foto; // PNG en base64; vacío = sin foto
+  final ValueChanged<String> onCambio;
+  final bool cuadrado;
+  const FotoFormulario({super.key, required this.foto, required this.onCambio, this.cuadrado = false});
+
+  static const _lado = 40.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final radio = BorderRadius.circular(cuadrado ? 10 : _lado / 2);
+    return Tooltip(
+      message: foto.isEmpty ? 'Añadir foto' : 'Cambiar foto',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () async {
+            final f = await _elegirFoto(context, foto);
+            if (f != null) onCambio(f);
+          },
+          child: foto.isEmpty
+              ? CustomPaint(
+                  painter: _BordeDiscontinuo(P.textoSuave.withValues(alpha: .6), radio),
+                  child: SizedBox(
+                    width: _lado,
+                    height: _lado,
+                    child: Icon(Icons.add_photo_alternate_outlined, size: 20, color: P.textoSuave),
                   ),
+                )
+              : ClipRRect(
+                  borderRadius: radio,
+                  child: Image.memory(base64Decode(foto), width: _lado, height: _lado, fit: BoxFit.cover),
                 ),
-                if (pie != null) Text(pie, style: TextStyle(fontSize: 12, color: P.textoSuave)),
-                const SizedBox(height: 8),
-                selectorColor(color, onColor),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
+  }
+}
+
+/// Borde de rayas alrededor de un rectángulo redondeado.
+class _BordeDiscontinuo extends CustomPainter {
+  final Color color;
+  final BorderRadius radio;
+  const _BordeDiscontinuo(this.color, this.radio);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pincel = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    final camino = Path()..addRRect(radio.toRRect(Offset.zero & size).deflate(.7));
+    for (final m in camino.computeMetrics()) {
+      for (var d = 0.0; d < m.length; d += 7) {
+        canvas.drawPath(m.extractPath(d, min(d + 4, m.length)), pincel);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BordeDiscontinuo old) => old.color != color || old.radio != radio;
+}
+
+/// Reduce la imagen a 256 px de ancho y la devuelve en PNG base64 (cabe de sobra en el guardado local).
+Future<String> _reducir(Uint8List bytes) async {
+  final codec = await ui.instantiateImageCodec(bytes, targetWidth: 256);
+  final imagen = (await codec.getNextFrame()).image;
+  final png = await imagen.toByteData(format: ui.ImageByteFormat.png);
+  return base64Encode(png!.buffer.asUint8List());
+}
+
+/// Ventanita para poner la foto: zona donde arrastrar una imagen o botón para elegirla.
+/// Devuelve la nueva foto, '' si se quita, o null si se cancela.
+Future<String?> _elegirFoto(BuildContext context, String actual) => showDialog<String>(
+  context: context,
+  builder: (c) => Dialog(
+    child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: _ZonaFoto(actual)),
+  ),
+);
+
+class _ZonaFoto extends StatefulWidget {
+  final String actual;
+  const _ZonaFoto(this.actual);
+
+  @override
+  State<_ZonaFoto> createState() => _ZonaFotoState();
+}
+
+class _ZonaFotoState extends State<_ZonaFoto> {
+  bool encima = false, cargando = false;
+  String? error;
+
+  Future<void> _usar(Future<Uint8List?> leer) async {
+    setState(() {
+      cargando = true;
+      error = null;
+    });
+    try {
+      final bytes = await leer;
+      if (bytes == null) return setState(() => cargando = false);
+      final foto = await _reducir(bytes);
+      if (mounted) Navigator.pop(context, foto);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          cargando = false;
+          error = 'No se ha podido leer esa imagen';
+        });
+      }
+    }
+  }
+
+  Future<Uint8List?> _desdeArchivo() async {
+    final r = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    return r?.files.firstOrNull?.bytes;
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Foto',
+          style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text('Una foto, el logotipo del cliente o lo que quieras.', style: TextStyle(color: P.textoSuave)),
+        const SizedBox(height: 16),
+        DropTarget(
+          onEnter: (_) => setState(() => encima = true),
+          onLeave: () => setState(() => encima = false),
+          // La imagen hay que leerla dentro de onDrop: después el navegador puede soltarla.
+          onDrop: (d) async {
+            setState(() => encima = false);
+            final f = d.items.whereType<DropFileItem>().firstOrNull;
+            if (f != null) await _usar(f.file.readAsBytes());
+          },
+          child: CustomPaint(
+            painter: _BordeDiscontinuo(
+              encima ? P.morado : P.textoSuave.withValues(alpha: .5),
+              BorderRadius.circular(P.radio),
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              height: 180,
+              decoration: BoxDecoration(
+                color: encima ? P.moradoSuave : P.fondo,
+                borderRadius: BorderRadius.circular(P.radio),
+              ),
+              child: Center(
+                child: cargando
+                    ? const CircularProgressIndicator()
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_photo_alternate_outlined, size: 34, color: encima ? P.morado : P.textoSuave),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Arrastra una imagen aquí',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: encima ? P.morado : P.texto),
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton(
+                            onPressed: () => _usar(_desdeArchivo()),
+                            child: const Text('Elegir del ordenador'),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ),
+        if (error != null) ...[
+          const SizedBox(height: 10),
+          Text(error!, style: const TextStyle(color: P.rojo, fontSize: 13)),
+        ],
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            if (widget.actual.isNotEmpty)
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: P.rojo),
+                onPressed: () => Navigator.pop(context, ''),
+                child: const Text('Quitar foto'),
+              ),
+            const Spacer(),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: P.textoSuave),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
 /// Elegir una opción entre pastillas de su color (estado de hoy, estado de la máquina…).
 class SelectorEstado<T> extends StatelessWidget {
@@ -687,7 +873,9 @@ class _ClienteFormState extends State<ClienteForm> {
   Widget build(BuildContext context) => VentanaFormulario(
     etiqueta: 'Cliente',
     titulo: widget.original == null ? 'Nuevo cliente' : 'Editar cliente',
-    subtitulo: 'A quien das mantenimiento: una comunidad, un colegio, un hospital, una empresa…',
+    tituloDesplazado: nombre.text,
+    lider: FotoFormulario(foto: c.foto, cuadrado: true, onCambio: (f) => setState(() => c.foto = f)),
+    extra: selectorColor(c.color, (i) => setState(() => c.color = i), size: 20),
     onGuardar: guardar,
     onBorrar: widget.original == null
         ? null
@@ -699,15 +887,7 @@ class _ClienteFormState extends State<ClienteForm> {
             }
           },
     campos: [
-      identidad(
-        nombre.text,
-        c.color,
-        (i) => setState(() => c.color = i),
-        cuadrado: true,
-        pie: 'Su color le identifica en el calendario y las listas',
-      ),
-      const SizedBox(height: 22),
-      Bloque('Datos del cliente', descripcion: 'Cómo se llama y cómo contactar con él.', [
+      Bloque('Datos del cliente', primero: true, descripcion: 'Cómo se llama y cómo contactar con él.', [
         campo('Nombre', nombre, hint: 'Colegio San José', error: error),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ]),
@@ -790,7 +970,9 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
   Widget build(BuildContext context) => VentanaFormulario(
     etiqueta: 'Trabajador',
     titulo: widget.original == null ? 'Nuevo trabajador' : (widget.incrustada ? 'Ficha' : 'Editar trabajador'),
-    subtitulo: 'Sus competencias deciden qué tareas puede hacer.',
+    tituloDesplazado: '${nombre.text} ${apellidos.text}',
+    lider: FotoFormulario(foto: w.foto, onCambio: (f) => setState(() => w.foto = f)),
+    extra: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20),
     incrustada: widget.incrustada,
     onGuardar: guardar,
     onBorrar: widget.original == null
@@ -803,14 +985,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
             }
           },
     campos: [
-      identidad(
-        '${nombre.text} ${apellidos.text}'.trim(),
-        w.color,
-        (i) => setState(() => w.color = i),
-        pie: w.competencias.isEmpty ? 'Sin competencias todavía' : '${w.competencias.length} competencias',
-      ),
-      const SizedBox(height: 22),
-      Bloque('Datos personales', descripcion: 'Nombre y forma de contacto.', [
+      Bloque('Datos personales', primero: true, descripcion: 'Nombre y forma de contacto.', [
         dos(campo('Nombre', nombre, error: error), campo('Apellidos', apellidos)),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ]),
@@ -906,7 +1081,7 @@ class _TareaFormState extends State<TareaForm> {
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
       );
-  late final nombre = TextEditingController(text: t.nombre);
+  late final nombre = TextEditingController(text: t.nombre)..addListener(() => setState(() {}));
   late final marca = TextEditingController(text: t.marca);
   late final modelo = TextEditingController(text: t.modelo);
   late final serie = TextEditingController(text: t.numeroSerie);
@@ -955,8 +1130,9 @@ class _TareaFormState extends State<TareaForm> {
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
-      etiqueta: t.esPlantilla ? 'Plantilla' : 'Mantenimiento',
+      etiqueta: t.esPlantilla ? 'Plantilla' : 'Tarea',
       titulo: nueva ? (t.esPlantilla ? 'Nueva plantilla' : 'Nueva tarea') : nombre.text,
+      tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
           ? 'Sin cliente: sirve de plantilla para crear tareas en tus clientes.'
           : store.cliente(t.clienteId)?.nombre,
@@ -970,101 +1146,106 @@ class _TareaFormState extends State<TareaForm> {
                 nav.pop();
               }
             },
+      // Mismo esquema que cliente y trabajador: bloques con su título a la izquierda y los campos a la derecha.
       campos: [
-        // 1. Nombre, grande: lo primero.
-        campoGrande(
-          t.esPlantilla ? 'Nombre de la plantilla' : 'Nombre de la tarea',
-          nombre,
-          hint: t.esPlantilla
-              ? 'Revisión de ascensor, corte de césped…'
-              : 'Ascensor portal A, centralita de incendios…',
-          error: error,
-        ),
-        if (!t.esPlantilla) SelectorColorTarea(t, () => setState(() {})),
-        // 3. Tipo, en un recuadro de color: plantillas (tarea nueva) o tipos (plantilla).
-        if (t.esPlantilla)
-          _Recuadro(
-            'Tipo',
-            SelectorTipo(
-              t.tipo,
-              (v) => setState(() {
-                t.tipo = v;
-                final c = tipoDe(v).competencia;
-                if (c != null && !t.competencias.contains(c)) t.competencias.add(c);
-              }),
+        Bloque(
+          t.esPlantilla ? 'Plantilla' : 'Tarea',
+          primero: true,
+          descripcion: t.esPlantilla ? 'Cómo se llama y de qué tipo es.' : 'Qué hay que hacer y de qué tipo es.',
+          [
+            campo(
+              'Nombre',
+              nombre,
+              hint: t.esPlantilla
+                  ? 'Revisión de ascensor, corte de césped…'
+                  : 'Ascensor portal A, centralita de incendios…',
+              error: error,
             ),
-          )
-        else if (nueva)
-          _Recuadro(
-            'Tipo · a partir de una plantilla',
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final p in plantillas) _CuadroPlantilla(p, t.plantillaId == p.id, () => aplicar(p)),
-                _CuadroOtro(() async {
-                  final p = await crearPlantillaRapida(context);
-                  if (p != null) aplicar(p);
-                }),
-              ],
-            ),
-          ),
-        // 4. Cuándo: calendario a la vista, hora exacta o franja.
-        SelectorCuando(t, () => setState(() {})),
-        etiqueta('Criticidad'),
-        conMargen(
-          SelectorEstado<Criticidad>(
-            opciones: [for (final c in Criticidad.values) (c, c.etiqueta, c.color)],
-            valor: t.criticidad,
-            onChanged: (c) => setState(() => t.criticidad = c),
-          ),
-        ),
-        // 5. Para quién y quién la hace: menús desplegables.
-        if (!t.esPlantilla) ...[
-          dos(
-            conMargen(
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [etiqueta('Cliente'), SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id))],
+            // Tipo: plantillas (tarea nueva) o tipos (plantilla).
+            if (t.esPlantilla) ...[
+              etiqueta('Tipo'),
+              conMargen(
+                SelectorTipo(
+                  t.tipo,
+                  (v) => setState(() {
+                    t.tipo = v;
+                    final c = tipoDe(v).competencia;
+                    if (c != null && !t.competencias.contains(c)) t.competencias.add(c);
+                  }),
+                ),
               ),
-            ),
-            conMargen(
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: etiqueta('Trabajadores')),
-                      if (aptos > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Enlace(
-                            'Asignar el más adecuado',
-                            onTap: () => setState(() {
-                              final m = store.mejorPara(t);
-                              if (m != null) t.trabajadorIds = [m.id];
-                            }),
+            ] else if (nueva) ...[
+              etiqueta('A partir de una plantilla'),
+              conMargen(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final p in plantillas) _CuadroPlantilla(p, t.plantillaId == p.id, () => aplicar(p)),
+                    _CuadroOtro(() async {
+                      final p = await crearPlantillaRapida(context);
+                      if (p != null) aplicar(p);
+                    }),
+                  ],
+                ),
+              ),
+            ],
+            if (!t.esPlantilla) SelectorColorTarea(t, () => setState(() {})),
+          ],
+        ),
+        if (!t.esPlantilla)
+          Bloque('Cliente y equipo', descripcion: 'Para quién es y quién la hace.', [
+            dos(
+              conMargen(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    etiqueta('Cliente'),
+                    SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id)),
+                  ],
+                ),
+              ),
+              conMargen(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: etiqueta('Trabajadores')),
+                        if (aptos > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Enlace(
+                              'El más adecuado',
+                              onTap: () => setState(() {
+                                final m = store.mejorPara(t);
+                                if (m != null) t.trabajadorIds = [m.id];
+                              }),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                  SelectorTrabajadores(t, () => setState(() {})),
-                ],
+                      ],
+                    ),
+                    SelectorTrabajadores(t, () => setState(() {})),
+                  ],
+                ),
               ),
             ),
+          ]),
+        Bloque('Cuándo', descripcion: 'Fecha, hora y cada cuánto se repite.', [
+          SelectorCuando(t, () => setState(() {})),
+          etiqueta('Criticidad'),
+          conMargen(
+            SelectorEstado<Criticidad>(
+              opciones: [for (final c in Criticidad.values) (c, c.etiqueta, c.color)],
+              valor: t.criticidad,
+              onChanged: (c) => setState(() => t.criticidad = c),
+            ),
           ),
-        ],
-        seccion('Competencias mínimas'),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Text(
-            'Qué tiene que saber hacer el trabajador. Con esto Pulpo sabe a quién puede asignarla.',
-            style: TextStyle(color: P.textoSuave, fontSize: 13),
-          ),
-        ),
-        chipsCompetencias(t.competencias, () => setState(() {})),
-        const SizedBox(height: 8),
-        MasDetalles('Detalles del equipo y notas', [
+        ]),
+        Bloque('Competencias', descripcion: 'Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.', [
+          conMargen(chipsCompetencias(t.competencias, () => setState(() {}))),
+        ]),
+        Bloque('Equipo y notas', descripcion: 'La máquina, dónde está y lo que haya que saber.', [
           if (!t.esPlantilla)
             dos(
               CampoFecha(
@@ -1123,9 +1304,6 @@ class SelectorTipo extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: x.nombre == valor ? x.color : P.columna,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: x.nombre == valor
-                      ? [BoxShadow(color: x.color.withValues(alpha: .35), blurRadius: 10, offset: const Offset(0, 3))]
-                      : null,
                 ),
                 child: Column(
                   children: [
@@ -1166,13 +1344,13 @@ class _CuadroPlantilla extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: 132,
+        width: 128,
         height: 96,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: elegida ? color.withValues(alpha: .1) : P.superficie,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: elegida ? color : P.borde, width: elegida ? 2 : 1),
+          borderRadius: BorderRadius.circular(P.radioControl + 2),
+          border: Border.all(color: elegida ? color : P.borde, width: elegida ? 1.6 : 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1203,11 +1381,11 @@ class _CuadroOtro extends StatelessWidget {
     borderRadius: BorderRadius.circular(12),
     onTap: onTap,
     child: Container(
-      width: 132,
+      width: 128,
       height: 96,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: P.morado.withValues(alpha: .5), width: 1.5),
+        borderRadius: BorderRadius.circular(P.radioControl + 2),
+        border: Border.all(color: P.morado.withValues(alpha: .4)),
         color: P.moradoSuave.withValues(alpha: .5),
       ),
       child: Column(
@@ -1302,70 +1480,6 @@ Future<Tarea?> crearPlantillaRapida(BuildContext context) {
           ),
         ),
       ),
-    ),
-  );
-}
-
-/// Nombre en grande: el primer campo, más vistoso.
-Widget campoGrande(String label, TextEditingController c, {String? hint, String? error}) => Padding(
-  padding: const EdgeInsets.only(bottom: 18),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      etiqueta(label),
-      TextField(
-        controller: c,
-        style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            fontFamily: P.titulos,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: P.textoSuave.withValues(alpha: .6),
-          ),
-          errorText: error,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          fillColor: P.superficie,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: P.borde, width: 1.5),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: P.morado, width: 2),
-          ),
-        ),
-      ),
-    ],
-  ),
-);
-
-/// Recuadro tintado con título, para agrupar (el tipo de la tarea).
-class _Recuadro extends StatelessWidget {
-  final String titulo;
-  final Widget child;
-  const _Recuadro(this.titulo, this.child);
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 18),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: P.moradoSuave.withValues(alpha: .55),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: P.morado.withValues(alpha: .2)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: TextStyle(fontFamily: P.titulos, fontSize: 14, fontWeight: FontWeight.w700, color: P.moradoOscuro),
-        ),
-        const SizedBox(height: 10),
-        child,
-      ],
     ),
   );
 }
@@ -1497,7 +1611,7 @@ class SelectorTrabajadores extends StatelessWidget {
               color: t.trabajadorIds.contains(w.id) ? P.morado : P.textoSuave,
             ),
             trailingIcon: store.esApto(w, t)
-                ? const Pill('Apto', P.verde, solido: true)
+                ? const Pill('Apto', P.verde, punto: true)
                 : Pill('Le falta: ${store.faltan(w, t).join(', ')}', P.gris),
             onPressed: () {
               t.trabajadorIds.contains(w.id) ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id);

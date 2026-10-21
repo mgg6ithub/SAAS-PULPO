@@ -10,10 +10,6 @@ import '../widgets.dart';
 
 enum EstadoFiltro { todas, pendientes, vencidas, sinAsignar }
 
-extension EstadoFiltroX on EstadoFiltro {
-  String get etiqueta => const ['Todas', 'Pendientes', 'Vencidas', 'Sin asignar'][index];
-}
-
 /// Qué se ve en la agenda y en su mapa. Global para que se mantenga al cambiar de vista.
 class FiltroAgenda extends ChangeNotifier {
   /// Técnicos visibles; vacío = todos.
@@ -89,150 +85,6 @@ class FiltroAgenda extends ChangeNotifier {
 
 final filtroAgenda = FiltroAgenda();
 
-/// Barra de filtros de la agenda: técnicos, tipo y estado.
-class BarraFiltrosAgenda extends StatelessWidget {
-  const BarraFiltrosAgenda({super.key});
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: filtroAgenda,
-    builder: (context, _) {
-      final f = filtroAgenda;
-      final ws = store.trabajadores.where((w) => w.activo).toList()
-        ..sort((a, b) => a.nombreCompleto.compareTo(b.nombreCompleto));
-      final tiposUsados = {for (final t in store.tareas.where((t) => !t.esPlantilla)) t.tipo};
-      return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Buscador(hint: 'Buscar tarea, cliente o técnico…', width: 280, onChanged: f.buscar),
-          // Técnicos: avatares que se encienden o apagan; con el ratón encima, su nombre.
-          Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              color: P.superficie,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: P.borde),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, right: 6),
-                  child: Text('Técnicos', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-                ),
-                for (final w in ws)
-                  Tooltip(
-                    message: w.nombreCompleto,
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => f.alternarTecnico(w.id),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: Opacity(
-                          opacity: f.tecnicos.isEmpty || f.tecnicos.contains(w.id) ? 1 : .3,
-                          child: Container(
-                            padding: const EdgeInsets.all(1.5),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: f.tecnicos.contains(w.id) ? P.morado : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                            child: Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          _Desplegable<String?>(
-            etiqueta: f.tipo ?? 'Tipo',
-            activo: f.tipo != null,
-            opciones: [
-              (null, 'Todos los tipos', null),
-              for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) (x.nombre, x.nombre, x.color),
-            ],
-            onChanged: f.ponerTipo,
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Tareas', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-              const SizedBox(width: 8),
-              Pestanas(
-                opciones: [for (final e in EstadoFiltro.values) e.etiqueta],
-                seleccion: f.estado.index,
-                onChanged: (i) => f.ponerEstado(EstadoFiltro.values[i]),
-              ),
-            ],
-          ),
-        ],
-      );
-    },
-  );
-}
-
-/// Botón con menú desplegable de opciones (con punto de color opcional).
-class _Desplegable<T> extends StatelessWidget {
-  final String etiqueta;
-  final bool activo;
-  final List<(T, String, Color?)> opciones;
-  final ValueChanged<T> onChanged;
-  const _Desplegable({required this.etiqueta, required this.activo, required this.opciones, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) => PopupMenuButton<int>(
-    tooltip: '',
-    onSelected: (i) => onChanged(opciones[i].$1),
-    itemBuilder: (_) => [
-      for (final (i, (_, texto, color)) in opciones.indexed)
-        PopupMenuItem(
-          value: i,
-          height: 36,
-          child: Row(
-            children: [
-              if (color != null) ...[
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Text(texto, style: const TextStyle(fontSize: 13.5)),
-            ],
-          ),
-        ),
-    ],
-    child: Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: activo ? P.moradoSuave : P.superficie,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: activo ? P.morado.withValues(alpha: .4) : P.borde),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            etiqueta,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: activo ? P.moradoOscuro : P.texto),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.expand_more_rounded, size: 16, color: P.textoSuave),
-        ],
-      ),
-    ),
-  );
-}
-
 // ── Ficha rápida de una tarea ────────────────────────────
 
 /// Ventanita para gestionar una tarea sin salir de la agenda: cliente, fecha, hora, técnicos,
@@ -264,7 +116,7 @@ class _FichaRapida extends StatelessWidget {
       final ws = store.trabajadores.where((w) => w.activo).toList()
         ..sort((a, b) => (store.esApto(a, t) ? 0 : 1) - (store.esApto(b, t) ? 0 : 1));
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 12, 16),
+        padding: const EdgeInsets.fromLTRB(24, 22, 16, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -279,11 +131,11 @@ class _FichaRapida extends StatelessWidget {
                     children: [
                       Text(
                         t.nombre,
-                        style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w800),
+                        style: TextStyle(fontFamily: P.titulos, fontSize: 19, fontWeight: FontWeight.w700, letterSpacing: -.4),
                       ),
                       Text(
                         [t.tipo, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
-                        style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                        style: TextStyle(fontSize: 13.5, color: P.textoSuave),
                       ),
                     ],
                   ),
@@ -428,7 +280,7 @@ class _ChipTecnico extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 w.nombre,
-                style: TextStyle(fontSize: 12.5, fontWeight: asignado ? FontWeight.w700 : FontWeight.w500),
+                style: TextStyle(fontSize: 13.5, fontWeight: asignado ? FontWeight.w700 : FontWeight.w500),
               ),
             ],
           ),
@@ -464,7 +316,7 @@ class PanelSinAsignar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: P.superficie,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(P.radio),
         border: Border.all(color: P.borde),
       ),
       clipBehavior: Clip.antiAlias,
@@ -472,7 +324,7 @@ class PanelSinAsignar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
+            padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
             child: Row(
               children: [
                 Expanded(
@@ -481,9 +333,9 @@ class PanelSinAsignar extends StatelessWidget {
                     children: [
                       Text(
                         'Sin asignar',
-                        style: TextStyle(fontFamily: P.titulos, fontSize: 14.5, fontWeight: FontWeight.w700),
+                        style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
                       ),
-                      Text('Pulsa una para asignarla', style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
+                      Text('Pulsa una para asignarla', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
                     ],
                   ),
                 ),
@@ -510,7 +362,7 @@ class PanelSinAsignar extends StatelessWidget {
                         onTap: () => abrirFichaRapida(context, t),
                         hoverColor: P.columna,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                           child: Row(
                             children: [
                               BarraTipo(t.tipo, alto: 30, color: t.colorBloque),
@@ -523,13 +375,13 @@ class PanelSinAsignar extends StatelessWidget {
                                       t.nombre,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                                     ),
                                     Text(
                                       [c?.nombre ?? '—', if (t.proximo != null) relativo(t.proximo!)].join(' · '),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 11.5, color: vencida ? P.rojo : P.textoSuave),
+                                      style: TextStyle(fontSize: 12.5, color: vencida ? P.rojo : P.textoSuave),
                                     ),
                                   ],
                                 ),
