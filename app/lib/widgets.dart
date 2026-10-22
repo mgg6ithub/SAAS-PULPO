@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'models.dart';
@@ -250,8 +252,9 @@ class SeccionTarjeta extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: alto,
-    decoration: BoxDecoration(
-      color: P.superficie,
+    decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+    // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+    foregroundDecoration: BoxDecoration(
       borderRadius: BorderRadius.circular(P.radio),
       border: Border.all(color: P.borde),
     ),
@@ -335,41 +338,44 @@ class FilaLista extends StatelessWidget {
   const FilaLista({super.key, required this.lider, required this.titulo, this.subtitulo, this.derecha, this.onTap});
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    hoverColor: P.columna,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      child: Row(
-        children: [
-          lider,
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  titulo,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
-                ),
-                if (subtitulo != null)
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      hoverColor: P.hoverFila,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Row(
+          children: [
+            lider,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    subtitulo!,
+                    titulo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13, color: P.textoSuave),
+                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
                   ),
-              ],
+                  if (subtitulo != null)
+                    Text(
+                      subtitulo!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: P.textoSuave),
+                    ),
+                ],
+              ),
             ),
-          ),
-          if (derecha != null) ...[const SizedBox(width: 12), derecha!],
-          if (onTap != null) ...[
-            const SizedBox(width: 6),
-            Icon(Icons.chevron_right_rounded, size: 18, color: P.textoSuave),
+            if (derecha != null) ...[const SizedBox(width: 12), derecha!],
+            if (onTap != null) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right_rounded, size: 18, color: P.textoSuave),
+            ],
           ],
-        ],
+        ),
       ),
     ),
   );
@@ -413,7 +419,14 @@ class Cifra extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-          Text(etiqueta, style: TextStyle(fontSize: 13.5, color: P.textoSuave)),
+          Flexible(
+            child: Text(
+              etiqueta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+            ),
+          ),
         ],
       ),
       const SizedBox(height: 6),
@@ -460,10 +473,7 @@ class BannerOscuro extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(P.radio),
-      color: P.tinta,
-    ),
+    decoration: BoxDecoration(borderRadius: BorderRadius.circular(P.radio), color: P.tinta),
     child: Row(
       children: [
         Container(
@@ -584,6 +594,43 @@ class BotonPrimario extends StatelessWidget {
   );
 }
 
+/// Botón de acción de las cabeceras: siempre 40 de alto, borde fino (o relleno de [color]),
+/// icono opcional delante y, al pasar el ratón, fondo más oscuro y cursor de mano.
+class BotonAccion extends StatelessWidget {
+  final String texto;
+  final VoidCallback onPressed;
+  final IconData? icono;
+  final String? tooltip;
+
+  /// Relleno (tinta, morado…); null = blanco con borde.
+  final Color? color;
+  const BotonAccion(this.texto, {super.key, required this.onPressed, this.icono, this.tooltip, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final fondo = color ?? P.superficie;
+    final hover = color == null ? P.hover : Color.lerp(color, Colors.white, .14)!;
+    final style =
+        OutlinedButton.styleFrom(
+          foregroundColor: color == null ? P.texto : Colors.white,
+          padding: EdgeInsets.fromLTRB(icono == null ? 16 : 12, 0, 16, 0),
+          side: BorderSide(color: color ?? P.borde),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+        ).copyWith(
+          backgroundColor: WidgetStateProperty.resolveWith((e) => e.contains(WidgetState.hovered) ? hover : fondo),
+          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+          mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.click),
+        );
+    final boton = SizedBox(
+      height: 40,
+      child: icono == null
+          ? OutlinedButton(style: style, onPressed: onPressed, child: Text(texto))
+          : OutlinedButton.icon(style: style, onPressed: onPressed, icon: Icon(icono, size: 19), label: Text(texto)),
+    );
+    return tooltip == null ? boton : Tooltip(message: tooltip!, child: boton);
+  }
+}
+
 class Buscador extends StatelessWidget {
   final String hint;
   final ValueChanged<String> onChanged;
@@ -594,13 +641,17 @@ class Buscador extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     width: width,
     height: 40,
+    // expands: el campo llena los 40 de alto, igual que botones y pestañas.
     child: TextField(
       onChanged: onChanged,
+      expands: true,
+      maxLines: null,
+      textAlignVertical: TextAlignVertical.center,
       style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: P.textoSuave, fontSize: 14),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
         prefixIcon: Icon(Icons.search_rounded, size: 18, color: P.textoSuave),
         prefixIconConstraints: const BoxConstraints(minWidth: 34),
       ),
@@ -608,7 +659,47 @@ class Buscador extends StatelessWidget {
   );
 }
 
-/// Selector segmentado gris: la opción activa en blanco (Resumen | Tableros en Holded).
+/// Barra única de arriba de cada vista (como la del Itinerario): a la izquierda título y filtros; a la
+/// derecha buscador y acciones, todo de 40 de alto. Nunca se parte en dos filas: si no cabe, se desplaza.
+class BarraVista extends StatelessWidget {
+  final List<Widget> izquierda, derecha;
+  const BarraVista({super.key, required this.izquierda, required this.derecha});
+
+  List<Widget> _con(List<Widget> ws, double hueco) => [
+    for (final (i, w) in ws.indexed) ...[if (i > 0) SizedBox(width: hueco), w],
+  ];
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: box.maxWidth),
+        child: IntrinsicWidth(
+          child: Row(
+            children: [..._con(izquierda, 14), const Spacer(), const SizedBox(width: 16), ..._con(derecha, 8)],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Título de vista dentro de la [BarraVista].
+class TituloVista extends StatelessWidget {
+  final String texto;
+  const TituloVista(this.texto, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Text(
+    texto,
+    maxLines: 1,
+    style: TextStyle(fontFamily: P.titulos, fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -.6),
+  );
+}
+
+/// Selector segmentado (como el de iOS): opciones de igual ancho y una pastilla blanca que se desliza
+/// hasta la elegida. Siempre 40 de alto, como el resto de controles.
 class Pestanas extends StatelessWidget {
   final List<String> opciones;
   final int seleccion;
@@ -616,49 +707,75 @@ class Pestanas extends StatelessWidget {
   const Pestanas({super.key, required this.opciones, required this.seleccion, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 40,
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final (i, o) in opciones.indexed)
-          GestureDetector(
-            onTap: () => onChanged(i),
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: i == seleccion ? P.superficie : Colors.transparent,
-                  borderRadius: BorderRadius.circular(P.radioControl - 3),
-                  boxShadow: i == seleccion
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: .08),
-                            blurRadius: 3,
-                            offset: const Offset(0, 1),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  o,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: i == seleccion ? P.texto : P.textoSuave,
+  Widget build(BuildContext context) {
+    final estilo = DefaultTextStyle.of(context).style.merge(const TextStyle(fontSize: 14, fontWeight: FontWeight.w600));
+    final escala = MediaQuery.textScalerOf(context);
+    // Ancho de cada opción: el del texto más largo (mismo ancho para todas, así la pastilla solo se desplaza).
+    var mayor = 0.0;
+    for (final o in opciones) {
+      final tp = TextPainter(
+        text: TextSpan(text: o, style: estilo),
+        textDirection: TextDirection.ltr,
+        textScaler: escala,
+        maxLines: 1,
+      )..layout();
+      mayor = max(mayor, tp.width);
+    }
+    final w = mayor.ceilToDouble() + 28;
+    final valida = seleccion >= 0 && seleccion < opciones.length;
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
+      child: SizedBox(
+        width: w * opciones.length,
+        child: Stack(
+          children: [
+            if (valida)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                left: seleccion * w,
+                top: 0,
+                bottom: 0,
+                width: w,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: P.superficie,
+                    borderRadius: BorderRadius.circular(P.radioControl - 3),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: .08), blurRadius: 4, offset: const Offset(0, 1)),
+                    ],
                   ),
                 ),
               ),
+            Row(
+              children: [
+                for (final (i, o) in opciones.indexed)
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => onChanged(i),
+                      child: SizedBox(
+                        width: w,
+                        child: Center(
+                          child: AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 200),
+                            style: estilo.copyWith(color: i == seleccion ? P.texto : P.textoSuave),
+                            child: Text(o, maxLines: 1),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ),
-      ],
-    ),
-  );
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Pestañas de subvista: la activa en negro relleno; el resto, texto (Resumen | Proyectos en Holded).
@@ -766,77 +883,379 @@ class Col {
   final int flex;
   final double? ancho;
   final bool derecha;
-  const Col(this.titulo, {this.flex = 1, this.ancho, this.derecha = false});
+
+  /// Contenido propio de la cabecera en vez del título (p. ej. el botón de seleccionar).
+  final Widget? cabecera;
+  const Col(this.titulo, {this.flex = 1, this.ancho, this.derecha = false, this.cabecera});
 }
 
-/// Tabla densa de Holded: cabecera gris pequeña, filas de ~50 px, sin rejilla y con hover.
-class Tabla extends StatelessWidget {
+/// Tabla densa: cabecera gris pequeña, filas de ~56 px, sin rejilla y con la fila resaltada al pasar
+/// el ratón. Las columnas se ensanchan o estrechan arrastrando su borde en la cabecera (como en Windows).
+class Tabla extends StatefulWidget {
   final List<Col> columnas;
   final int filas;
   final List<Widget> Function(int i) celdas;
   final void Function(int i)? onTap;
   final Widget? pie;
-  const Tabla({super.key, required this.columnas, required this.filas, required this.celdas, this.onTap, this.pie});
+  final Widget? seleccionCabecera;
+  const Tabla({
+    super.key,
+    required this.columnas,
+    required this.filas,
+    required this.celdas,
+    this.onTap,
+    this.pie,
+    this.seleccionCabecera,
+  });
 
-  Widget _celda(Col c, Widget w) {
-    final hijo = Align(alignment: c.derecha ? Alignment.centerRight : Alignment.centerLeft, child: w);
-    return c.ancho != null ? SizedBox(width: c.ancho, child: hijo) : Expanded(flex: c.flex, child: hijo);
+  @override
+  State<Tabla> createState() => _TablaState();
+}
+
+class _TablaState extends State<Tabla> {
+  /// Anchos elegidos arrastrando, por título de columna (las columnas pueden aparecer o no según el ancho).
+  final anchos = <String, double>{};
+  final _claves = <String, GlobalKey>{};
+  final _lienzo = GlobalKey();
+  int? _columnaArrastrando;
+  final _orden = <String>[];
+
+  Widget _celda(Col c, Widget w, {GlobalKey? clave, bool inicio = false}) {
+    final contenido = clave == null && (c.titulo.isEmpty || inicio) && widget.seleccionCabecera != null
+        ? Transform.translate(offset: const Offset(-4, 0), child: w)
+        : w;
+    final hijo = Align(
+      key: clave,
+      alignment: c.derecha ? Alignment.centerRight : Alignment.centerLeft,
+      child: contenido,
+    );
+    final fijo = anchos[c.titulo] ?? c.ancho;
+    return fijo != null ? SizedBox(width: fijo, child: hijo) : Expanded(flex: c.flex, child: hijo);
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: P.superficie,
-      borderRadius: BorderRadius.circular(P.radio),
-      border: Border.all(color: P.borde),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          color: P.cabeceraTabla,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-          child: Row(
-            children: [
-              for (final c in columnas)
-                _celda(
-                  c,
-                  Text(
-                    c.titulo,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: P.textoSuave),
+  Widget build(BuildContext context) {
+    for (final (i, c) in widget.columnas.indexed) {
+      if (_orden.contains(c.titulo)) continue;
+      final siguiente = widget.columnas.skip(i + 1).where((c) => _orden.contains(c.titulo)).firstOrNull;
+      if (siguiente == null) {
+        _orden.add(c.titulo);
+      } else {
+        _orden.insert(_orden.indexOf(siguiente.titulo), c.titulo);
+      }
+    }
+    final columnas = [...widget.columnas]
+      ..sort((a, b) {
+        if (a.titulo.isEmpty) return b.titulo.isEmpty ? 0 : -1;
+        if (b.titulo.isEmpty) return 1;
+        return _orden.indexOf(a.titulo).compareTo(_orden.indexOf(b.titulo));
+      });
+    return Container(
+      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+      // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(P.radio),
+        border: Border.all(color: P.borde),
+      ),
+      clipBehavior: Clip.antiAlias,
+      // Pocas filas: la tabla mide lo que su contenido. Muchas: ocupa el alto y solo construye las visibles.
+      child: CustomPaint(
+        key: _lienzo,
+        foregroundPainter: _columnaArrastrando == null
+            ? null
+            : _GuiasColumna(
+                columna: _claves[columnas[_columnaArrastrando!].titulo]!,
+                lienzo: _lienzo,
+                primera: _columnaArrastrando == 0,
+                color: P.morado,
+              ),
+        child: Column(
+          mainAxisSize: widget.filas > 15 ? MainAxisSize.max : MainAxisSize.min,
+          children: [
+            Stack(
+              children: [
+                Container(
+                  color: P.cabeceraTabla,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  height: 42,
+                  child: Row(
+                    children: [
+                      for (final (j, c) in columnas.indexed)
+                        _celda(
+                          c,
+                          clave: _claves.putIfAbsent(c.titulo, GlobalKey.new),
+                          c.cabecera ??
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        left: j == 0 && widget.seleccionCabecera != null ? 36 : 0,
+                                      ),
+                                      child: _TituloColumna(
+                                        titulo: c.titulo,
+                                        derecha: c.derecha,
+                                        onIntercambiar: (origen) => setState(() {
+                                          final desde = _orden.indexOf(origen);
+                                          final hasta = _orden.indexOf(c.titulo);
+                                          _orden[desde] = c.titulo;
+                                          _orden[hasta] = origen;
+                                        }),
+                                      ),
+                                    ),
+                                  ),
+                                  // Asa para redimensionar (no en la última ni en las columnas sin título).
+                                  if (j < columnas.length - 1 && c.titulo.isNotEmpty)
+                                    _AsaColumna(
+                                      onInicio: () {
+                                        final siguiente = columnas[j + 1];
+                                        final izquierda =
+                                            _claves[c.titulo]?.currentContext?.findRenderObject() as RenderBox?;
+                                        final derecha =
+                                            _claves[siguiente.titulo]?.currentContext?.findRenderObject() as RenderBox?;
+                                        if (izquierda != null && derecha != null) {
+                                          setState(() {
+                                            anchos[c.titulo] = izquierda.size.width;
+                                            anchos[siguiente.titulo] = derecha.size.width;
+                                            _columnaArrastrando = j + 1;
+                                          });
+                                        }
+                                      },
+                                      onFin: () => setState(() => _columnaArrastrando = null),
+                                      onMover: (dx) {
+                                        final siguiente = columnas[j + 1];
+                                        final izquierda = anchos[c.titulo]!;
+                                        final derecha = anchos[siguiente.titulo]!;
+                                        final minimoIzquierda = c.ancho == null ? 56.0 : c.ancho!.clamp(0.0, 56.0);
+                                        final minimoDerecha = siguiente.ancho == null
+                                            ? 56.0
+                                            : siguiente.ancho!.clamp(0.0, 56.0);
+                                        final cambio = dx.clamp(minimoIzquierda - izquierda, derecha - minimoDerecha);
+                                        setState(() {
+                                          anchos[c.titulo] = izquierda + cambio;
+                                          anchos[siguiente.titulo] = derecha - cambio;
+                                        });
+                                      },
+                                    ),
+                                ],
+                              ),
+                        ),
+                    ],
                   ),
                 ),
+                if (widget.seleccionCabecera != null)
+                  Positioned(
+                    left: 8,
+                    top: 0,
+                    width: 32,
+                    height: 42,
+                    child: Align(alignment: Alignment.centerLeft, child: widget.seleccionCabecera!),
+                  ),
+              ],
+            ),
+            Divider(height: 1, color: P.borde),
+            Flexible(
+              fit: widget.filas > 15 ? FlexFit.tight : FlexFit.loose,
+              child: ListView.separated(
+                shrinkWrap: widget.filas <= 15,
+                itemCount: widget.filas,
+                separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
+                itemBuilder: (_, i) {
+                  final cs = widget.celdas(i);
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      hoverColor: P.hoverFila,
+                      onTap: widget.onTap == null ? null : () => widget.onTap!(i),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 56),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                          child: Row(
+                            children: [
+                              for (final c in columnas)
+                                _celda(c, cs[widget.columnas.indexOf(c)], inicio: c == columnas.first),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (widget.pie != null) ...[
+              Divider(height: 1, color: P.borde),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: widget.pie),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Título arrastrable; el separador de anchura queda fuera de su zona de arrastre.
+class _TituloColumna extends StatefulWidget {
+  final String titulo;
+  final bool derecha;
+  final ValueChanged<String> onIntercambiar;
+  const _TituloColumna({required this.titulo, required this.derecha, required this.onIntercambiar});
+
+  @override
+  State<_TituloColumna> createState() => _TituloColumnaState();
+}
+
+class _TituloColumnaState extends State<_TituloColumna> {
+  bool _encima = false;
+
+  @override
+  Widget build(BuildContext context) => DragTarget<String>(
+    onWillAcceptWithDetails: (d) => d.data != widget.titulo,
+    onAcceptWithDetails: (d) => widget.onIntercambiar(d.data),
+    builder: (context, candidatos, rechazados) => MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      onEnter: (_) => setState(() => _encima = true),
+      onExit: (_) => setState(() => _encima = false),
+      child: Draggable<String>(
+        data: widget.titulo,
+        axis: Axis.horizontal,
+        feedback: Material(
+          color: P.superficie,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(P.radioControl),
+            side: BorderSide(color: P.morado),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Text(
+              widget.titulo,
+              style: TextStyle(color: P.morado, fontSize: 12.5, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
-        Divider(height: 1, color: P.borde),
-        Flexible(
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: filas,
-            separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
-            itemBuilder: (_, i) {
-              final cs = celdas(i);
-              return InkWell(
-                hoverColor: P.columna,
-                onTap: onTap == null ? null : () => onTap!(i),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 56),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                    child: Row(children: [for (final (j, c) in columnas.indexed) _celda(c, cs[j])]),
-                  ),
-                ),
-              );
-            },
+        childWhenDragging: Opacity(opacity: .35, child: _contenido(false)),
+        child: Tooltip(
+          message: 'Arrastrar para intercambiar ${widget.titulo}',
+          child: Semantics(
+            label: 'Columna ${widget.titulo}, arrastrar para intercambiar',
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              color: candidatos.isEmpty ? Colors.transparent : P.hoverFila,
+              child: _contenido(_encima || candidatos.isNotEmpty),
+            ),
           ),
         ),
-        if (pie != null) ...[
-          Divider(height: 1, color: P.borde),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: pie),
-        ],
+      ),
+    ),
+  );
+
+  Widget _contenido(bool mostrarAsa) => SizedBox(
+    height: 42,
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            widget.titulo,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: widget.derecha ? TextAlign.right : TextAlign.left,
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: P.textoSuave),
+          ),
+        ),
+        AnimatedOpacity(
+          opacity: mostrarAsa ? 1 : 0,
+          duration: const Duration(milliseconds: 150),
+          child: Icon(Icons.drag_indicator_rounded, size: 16, color: P.textoSuave),
+        ),
       ],
+    ),
+  );
+}
+
+/// Guías superpuestas: no interceptan el ratón ni crean widgets por cada tramo.
+class _GuiasColumna extends CustomPainter {
+  final GlobalKey columna, lienzo;
+  final bool primera;
+  final Color color;
+  _GuiasColumna({required this.columna, required this.lienzo, required this.primera, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final celda = columna.currentContext?.findRenderObject() as RenderBox?;
+    final tabla = lienzo.currentContext?.findRenderObject() as RenderBox?;
+    if (celda == null || tabla == null || !celda.hasSize) return;
+    final origen = celda.localToGlobal(Offset.zero, ancestor: tabla);
+    final pintura = Paint()
+      ..color = color.withValues(alpha: .65)
+      ..strokeWidth = 1;
+    // Las guías coinciden con el centro del asa de cada límite.
+    final izquierda = primera ? 1.0 : origen.dx - 7;
+    final derecha = origen.dx + celda.size.width - 7;
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.drawRect(Rect.fromLTRB(izquierda, 0, derecha, size.height), Paint()..color = color.withValues(alpha: .07));
+    for (final x in [izquierda, derecha]) {
+      for (double y = 0; y < size.height; y += 10) {
+        canvas.drawLine(Offset(x, y), Offset(x, (y + 5).clamp(0, size.height)), pintura);
+      }
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _GuiasColumna oldDelegate) => true;
+}
+
+/// Borde arrastrable de una columna en la cabecera: raya fina que se pone morada al pasar el ratón.
+class _AsaColumna extends StatefulWidget {
+  final VoidCallback onInicio;
+  final ValueChanged<double> onMover;
+  final VoidCallback onFin;
+  const _AsaColumna({required this.onInicio, required this.onMover, required this.onFin});
+
+  @override
+  State<_AsaColumna> createState() => _AsaColumnaState();
+}
+
+class _AsaColumnaState extends State<_AsaColumna> {
+  bool activa = false, arrastrando = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.resizeColumn,
+    onEnter: (_) => setState(() => activa = true),
+    onExit: (_) => setState(() => activa = false),
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragStart: (_) {
+        setState(() => arrastrando = true);
+        widget.onInicio();
+      },
+      onHorizontalDragUpdate: (d) => widget.onMover(d.delta.dx),
+      onHorizontalDragEnd: (_) {
+        setState(() => arrastrando = false);
+        widget.onFin();
+      },
+      onHorizontalDragCancel: () {
+        setState(() => arrastrando = false);
+        widget.onFin();
+      },
+      child: SizedBox(
+        width: 14,
+        height: 42,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: activa || arrastrando ? 3 : 1,
+            height: activa || arrastrando ? 26 : 16,
+            decoration: BoxDecoration(
+              color: activa || arrastrando ? P.morado : P.borde,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ),
     ),
   );
 }
@@ -854,32 +1273,8 @@ Widget celdaTexto(String t, {bool suave = false, bool negrita = false}) => Text(
 );
 
 /// Pie de tabla: "1–12 (12)" a la izquierda, como la paginación de Holded.
-Widget pieTabla(int n, String nombre) => Text('1–$n ($n $nombre)', style: TextStyle(fontSize: 12.5, color: P.textoSuave));
-
-/// Barra de filtros: grupo izquierdo y derecho en los extremos; si no caben, el derecho baja de línea.
-class BarraFiltros extends StatelessWidget {
-  final List<Widget> izquierda, derecha;
-  const BarraFiltros({super.key, required this.izquierda, required this.derecha});
-
-  Widget _grupo(List<Widget> ws) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      for (final (i, w) in ws.indexed) ...[if (i > 0) const SizedBox(width: 8), w],
-    ],
-  );
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: [_grupo(izquierda), _grupo(derecha)],
-    ),
-  );
-}
+Widget pieTabla(int n, String nombre) =>
+    Text('1–$n ($n $nombre)', style: TextStyle(fontSize: 12.5, color: P.textoSuave));
 
 /// Navegación de fechas en un solo bloque con borde: ‹  Hoy  › (como el calendario de Holded).
 class NavegadorFecha extends StatelessWidget {
@@ -905,8 +1300,9 @@ class NavegadorFecha extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 40,
-    decoration: BoxDecoration(
-      color: P.superficie,
+    decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radioControl)),
+    // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+    foregroundDecoration: BoxDecoration(
       borderRadius: BorderRadius.circular(P.radioControl),
       border: Border.all(color: P.borde),
     ),
@@ -1139,24 +1535,95 @@ class CirculoSeleccion extends StatelessWidget {
 }
 
 /// Bloque en modo selección: tick arriba a la derecha y borde de color si está elegido.
-class MarcaSeleccion extends StatelessWidget {
+class MarcaSeleccion extends StatefulWidget {
   final bool activo, seleccionado;
   final Widget child;
-  const MarcaSeleccion({super.key, required this.activo, required this.seleccionado, required this.child});
+
+  /// Sin selección activa, al pasar el ratón aparece el check arriba a la derecha; pulsarlo entra en
+  /// el modo selección con esta tarjeta marcada.
+  final VoidCallback? onMarcar;
+  const MarcaSeleccion({
+    super.key,
+    required this.activo,
+    required this.seleccionado,
+    required this.child,
+    this.onMarcar,
+  });
 
   @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        foregroundDecoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: activo && seleccionado ? P.morado : Colors.transparent, width: 2),
-        ),
-        child: child,
+  State<MarcaSeleccion> createState() => _MarcaSeleccionState();
+}
+
+class _MarcaSeleccionState extends State<MarcaSeleccion> {
+  bool encima = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final verCheck = widget.activo || (encima && widget.onMarcar != null);
+    return MouseRegion(
+      onEnter: (_) => setState(() => encima = true),
+      onExit: (_) => setState(() => encima = false),
+      child: Stack(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(P.radio),
+              border: Border.all(color: widget.activo && widget.seleccionado ? P.morado : Colors.transparent, width: 2),
+            ),
+            child: widget.child,
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 150),
+              opacity: verCheck ? 1 : 0,
+              child: IgnorePointer(
+                ignoring: !verCheck || widget.activo,
+                child: Tooltip(
+                  message: 'Seleccionar',
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(onTap: widget.onMarcar, child: CirculoSeleccion(widget.seleccionado)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      if (activo) Positioned(top: 12, right: 12, child: CirculoSeleccion(seleccionado)),
-    ],
+    );
+  }
+}
+
+/// Botón de la cabecera de una lista (a la izquierda de "Nombre"): entra o sale del modo selección.
+class BotonSeleccionLista extends StatelessWidget {
+  final bool activo;
+  final VoidCallback onTap;
+  const BotonSeleccionLista({super.key, required this.activo, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: activo ? 'Salir de la selección' : 'Seleccionar',
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: IconButton(
+        tooltip: activo ? 'Salir de la selección' : 'Seleccionar',
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+        style: IconButton.styleFrom(
+          fixedSize: const Size(32, 32),
+          minimumSize: const Size(32, 32),
+          maximumSize: const Size(32, 32),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          hoverColor: P.hover,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+        ),
+        icon: Icon(Icons.checklist_rounded, size: 22, color: activo ? P.morado : P.textoSuave),
+      ),
+    ),
   );
 }
 
@@ -1170,26 +1637,6 @@ class Atenuado extends StatelessWidget {
   Widget build(BuildContext context) => IgnorePointer(
     ignoring: activo,
     child: AnimatedOpacity(duration: const Duration(milliseconds: 200), opacity: activo ? .3 : 1, child: child),
-  );
-}
-
-/// Botón que entra en el modo selección.
-class BotonSeleccionar extends StatelessWidget {
-  final VoidCallback onPressed;
-  const BotonSeleccionar({super.key, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) => IconButton.outlined(
-    tooltip: 'Seleccionar',
-    style: IconButton.styleFrom(
-      side: BorderSide(color: P.borde),
-      backgroundColor: P.superficie,
-      fixedSize: const Size(40, 40),
-      minimumSize: const Size(40, 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
-    ),
-    onPressed: onPressed,
-    icon: Icon(Icons.checklist_rounded, size: 18, color: P.textoSuave),
   );
 }
 
@@ -1243,5 +1690,112 @@ class BarraSeleccion extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+// ── Rendimiento ──────────────────────────────────────────
+
+/// Como LayoutBuilder, pero solo vuelve a construir su contenido cuando cambia [clave] (un umbral,
+/// el nº de columnas, el alto…). Al redimensionar en tiempo real (barra lateral, separador del mapa)
+/// el contenido se recoloca sin reconstruirse en cada fotograma. Lo que dependa del ancho exacto
+/// debe resolverse con maquetación (Expanded, Flexible, [Rejilla]), no con el número del builder.
+class SegunTamano extends StatefulWidget {
+  final Object? Function(BoxConstraints box) clave;
+  final Widget Function(BuildContext context, BoxConstraints box) builder;
+  const SegunTamano({super.key, required this.clave, required this.builder});
+
+  @override
+  State<SegunTamano> createState() => _SegunTamanoState();
+}
+
+class _SegunTamanoState extends State<SegunTamano> {
+  Object? _clave;
+  Widget? _hijo;
+
+  @override
+  Widget build(BuildContext context) {
+    // Si el padre se reconstruye (datos nuevos), el contenido también; un cambio de tamaño, solo si cambia la clave.
+    _hijo = null;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final k = widget.clave(box);
+        if (_hijo == null || k != _clave) {
+          _clave = k;
+          _hijo = widget.builder(context, box);
+        }
+        return _hijo!;
+      },
+    );
+  }
+}
+
+/// Rejilla desplazable de tarjetas: tantas columnas como quepan de [anchoMin] y, por filas, solo
+/// construye las visibles (ListView.builder). Para listas que pueden crecer (clientes, trabajadores, tareas).
+class ListaRejilla extends StatelessWidget {
+  final double anchoMin, hueco;
+  final int total;
+  final Widget Function(int i) item;
+  final EdgeInsets padding;
+  const ListaRejilla({
+    super.key,
+    required this.anchoMin,
+    required this.total,
+    required this.item,
+    this.hueco = 16,
+    this.padding = const EdgeInsets.only(bottom: 80),
+  });
+
+  int _cols(BoxConstraints box) => max(1, ((box.maxWidth + hueco) / (anchoMin + hueco)).floor());
+
+  @override
+  Widget build(BuildContext context) => SegunTamano(
+    clave: _cols,
+    builder: (context, box) {
+      final cols = _cols(box);
+      return ListView.builder(
+        padding: padding,
+        itemCount: (total / cols).ceil(),
+        itemBuilder: (_, f) => Padding(
+          padding: EdgeInsets.only(bottom: hueco),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var j = 0; j < cols; j++) ...[
+                if (j > 0) SizedBox(width: hueco),
+                Expanded(child: f * cols + j < total ? item(f * cols + j) : const SizedBox()),
+              ],
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Rejilla de [columnas] columnas iguales hecha con filas de Expanded: el ancho de cada tarjeta lo
+/// resuelve la maquetación, así redimensionar no reconstruye las tarjetas.
+class Rejilla extends StatelessWidget {
+  final int columnas;
+  final double hueco;
+  final List<Widget> children;
+  const Rejilla({super.key, required this.columnas, required this.children, this.hueco = 14});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (var i = 0; i < children.length; i += columnas) ...[
+        if (i > 0) SizedBox(height: hueco),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var j = 0; j < columnas; j++) ...[
+              if (j > 0) SizedBox(width: hueco),
+              Expanded(child: i + j < children.length ? children[i + j] : const SizedBox()),
+            ],
+          ],
+        ),
+      ],
+    ],
   );
 }

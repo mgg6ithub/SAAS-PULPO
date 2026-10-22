@@ -61,17 +61,10 @@ class _ClientesState extends State<Clientes> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Cabecera(
-                      titulo: 'Clientes',
-                      subtitulo:
-                          '${store.clientes.length} ${store.clientes.length == 1 ? 'cliente' : 'clientes'} a los que das mantenimiento',
-                      acciones: [
-                        BotonPrimario('Nuevo cliente', tecla: 'N', onPressed: () => abrirClienteForm(context)),
-                      ],
-                    ),
-                    const SizedBox(height: 22),
-                    BarraFiltros(
+                    // Una sola barra: título y filtros a la izquierda; buscador y acciones a la derecha.
+                    BarraVista(
                       izquierda: [
+                        const TituloVista('Clientes'),
                         Pestanas(
                           opciones: ['Todos · ${store.clientes.length}', 'Activos', 'Inactivos'],
                           seleccion: filtro,
@@ -80,14 +73,14 @@ class _ClientesState extends State<Clientes> {
                       ],
                       derecha: [
                         Buscador(hint: 'Buscar cliente…', onChanged: (v) => setState(() => q = v)),
-                        BotonSeleccionar(onPressed: () => setState(() => seleccionando = true)),
                         SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
+                        BotonPrimario('Nuevo cliente', tecla: 'N', onPressed: () => abrirClienteForm(context)),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: huecoVista),
               Expanded(
                 child: clientes.isEmpty
                     ? Vacio(
@@ -112,12 +105,17 @@ class _ClientesState extends State<Clientes> {
                                 clientes,
                                 onTap,
                                 seleccion: seleccionando ? seleccion : null,
+                                onModo: () => seleccionando ? salirSeleccion() : setState(() => seleccionando = true),
                                 key: const ValueKey('lista'),
                               )
                             : _Bloques(
                                 clientes,
                                 onTap,
                                 seleccion: seleccionando ? seleccion : null,
+                                onMarcar: (id) => setState(() {
+                                  seleccionando = true;
+                                  seleccion.add(id);
+                                }),
                                 key: const ValueKey('bloques'),
                               ),
                       ),
@@ -158,13 +156,12 @@ class _Bloques extends StatelessWidget {
 
   /// Si no es null, se está seleccionando: el toque marca en vez de abrir.
   final Set<String>? seleccion;
-  const _Bloques(this.clientes, this.onAbrir, {this.seleccion, super.key});
+  final ValueChanged<String> onMarcar;
+  const _Bloques(this.clientes, this.onAbrir, {this.seleccion, required this.onMarcar, super.key});
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.only(bottom: 80),
-    child: Wrap(spacing: 16, runSpacing: 16, children: [for (final c in clientes) _bloque(c)]),
-  );
+  Widget build(BuildContext context) =>
+      ListaRejilla(anchoMin: 300, total: clientes.length, item: (i) => _bloque(clientes[i]));
 
   Widget _bloque(Cliente c) {
     final tareas = store.tareasDe(c.id);
@@ -173,8 +170,8 @@ class _Bloques extends StatelessWidget {
     return MarcaSeleccion(
       activo: seleccion != null,
       seleccionado: seleccion?.contains(c.id) ?? false,
+      onMarcar: () => onMarcar(c.id),
       child: HoverCard(
-        width: 300,
         onTap: () => onAbrir(c.id),
         child: Opacity(
           opacity: c.activa ? 1 : .55,
@@ -186,9 +183,7 @@ class _Bloques extends StatelessWidget {
                   Avatar(c.iniciales, colorPaleta(c.color), size: 40, cuadrado: true),
                   const Spacer(),
                   if (seleccion == null)
-                    c.activa
-                        ? const Pill('Activo', P.verde, punto: true)
-                        : const Pill('Inactivo', P.gris, punto: true),
+                    c.activa ? const Pill('Activo', P.verde, punto: true) : const Pill('Inactivo', P.gris, punto: true),
                 ],
               ),
               const SizedBox(height: 16),
@@ -234,17 +229,22 @@ class _Tabla extends StatelessWidget {
   final List<Cliente> clientes;
   final ValueChanged<String> onAbrir;
   final Set<String>? seleccion;
-  const _Tabla(this.clientes, this.onAbrir, {this.seleccion, super.key});
+
+  /// Entra o sale del modo selección (botón de la cabecera, a la izquierda de "Nombre").
+  final VoidCallback onModo;
+  const _Tabla(this.clientes, this.onAbrir, {this.seleccion, required this.onModo, super.key});
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
+  Widget build(BuildContext context) => SegunTamano(
+    clave: (box) => box.maxWidth > 980,
     builder: (context, box) {
       final ancho = box.maxWidth > 980;
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
+          seleccionCabecera: BotonSeleccionLista(activo: seleccion != null, onTap: onModo),
           columnas: [
-            if (seleccion != null) const Col('', ancho: 36),
+            if (seleccion != null) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Nombre', flex: 4),
             if (ancho) const Col('CIF/NIF', flex: 2),
             const Col('Población', flex: 2),

@@ -32,21 +32,21 @@ void main() {
   testWidgets('contraída solo muestra iconos y al pasar el ratón sale el nombre', (tester) async {
     ajustes.ponerAnchoBarra(Ajustes.anchoIconos);
     await montar(tester);
-    // "Itinerario" también es un botón de la cabecera de Inicio: en la barra no hay texto.
-    expect(find.text('Itinerario'), findsOneWidget);
+    // Contraída, en la barra no hay texto.
+    expect(find.text('Itinerario'), findsNothing);
 
     final raton = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await raton.addPointer(location: Offset.zero);
     addTearDown(raton.removePointer);
     await raton.moveTo(tester.getCenter(find.byIcon(Icons.calendar_month_outlined)));
     await tester.pumpAndSettle();
-    expect(find.text('Itinerario'), findsNWidgets(2)); // + la pestañita
+    expect(find.text('Itinerario'), findsOneWidget); // la pestañita
   });
 
   testWidgets('el botón de arriba contrae y vuelve al ancho anterior', (tester) async {
     ajustes.ponerAnchoBarra(400);
     await montar(tester);
-    expect(find.text('Itinerario'), findsNWidgets(2));
+    expect(find.text('Itinerario'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.keyboard_double_arrow_left_rounded));
     await tester.pumpAndSettle();
     expect(ajustes.barraContraida, isTrue);

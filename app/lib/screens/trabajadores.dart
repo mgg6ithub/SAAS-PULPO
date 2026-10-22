@@ -58,17 +58,10 @@ class _TrabajadoresState extends State<Trabajadores> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Cabecera(
-                      titulo: 'Trabajadores',
-                      subtitulo:
-                          '${store.trabajadores.where((w) => w.activo).length} activos · ${store.trabajadores.where((w) => w.activo && w.estadoHoy == EstadoHoy.disponible).length} disponibles hoy',
-                      acciones: [
-                        BotonPrimario('Nuevo trabajador', tecla: 'N', onPressed: () => abrirTrabajadorForm(context)),
-                      ],
-                    ),
-                    const SizedBox(height: 22),
-                    BarraFiltros(
+                    // Una sola barra: título y filtros a la izquierda; buscador y acciones a la derecha.
+                    BarraVista(
                       izquierda: [
+                        const TituloVista('Trabajadores'),
                         Pestanas(
                           opciones: const ['Todos', 'Disponibles', 'Ocupados', 'Ausentes'],
                           seleccion: estado,
@@ -78,14 +71,14 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ],
                       derecha: [
                         Buscador(hint: 'Buscar trabajador…', onChanged: (v) => setState(() => q = v)),
-                        BotonSeleccionar(onPressed: () => setState(() => seleccionando = true)),
                         SelectorVista(lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
+                        BotonPrimario('Nuevo trabajador', tecla: 'N', onPressed: () => abrirTrabajadorForm(context)),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: huecoVista),
               Expanded(
                 child: lista.isEmpty
                     ? Vacio(
@@ -97,10 +90,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                       )
                     : this.lista
                     ? _tabla(lista)
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        child: Wrap(spacing: 16, runSpacing: 16, children: [for (final w in lista) _tarjeta(w)]),
-                      ),
+                    : ListaRejilla(anchoMin: 260, total: lista.length, item: (i) => _tarjeta(lista[i])),
               ),
             ],
           ),
@@ -135,14 +125,19 @@ class _TrabajadoresState extends State<Trabajadores> {
       ? setState(() => seleccion.contains(w.id) ? seleccion.remove(w.id) : seleccion.add(w.id))
       : widget.onAbrir(w.id);
 
-  Widget _tabla(List<Trabajador> ws) => LayoutBuilder(
+  Widget _tabla(List<Trabajador> ws) => SegunTamano(
+    clave: (box) => box.maxWidth > 980,
     builder: (context, box) {
       final ancho = box.maxWidth > 980;
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
+          seleccionCabecera: BotonSeleccionLista(
+            activo: seleccionando,
+            onTap: () => seleccionando ? salirSeleccion() : setState(() => seleccionando = true),
+          ),
           columnas: [
-            if (seleccionando) const Col('', ancho: 36),
+            if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Nombre', flex: 3),
             const Col('Competencias', flex: 4),
             if (ancho) const Col('Teléfono', flex: 2),
@@ -204,8 +199,11 @@ class _TrabajadoresState extends State<Trabajadores> {
     return MarcaSeleccion(
       activo: seleccionando,
       seleccionado: seleccion.contains(w.id),
+      onMarcar: () => setState(() {
+        seleccionando = true;
+        seleccion.add(w.id);
+      }),
       child: HoverCard(
-        width: 260,
         padding: const EdgeInsets.all(20),
         onTap: () => _tocar(w),
         child: Opacity(

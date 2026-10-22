@@ -31,6 +31,9 @@ class Ajustes extends ChangeNotifier {
 
   bool get barraContraida => anchoBarra <= anchoIconos;
 
+  /// Aviso propio del ancho de la barra: solo repinta la barra, no toda la app (como [notifyListeners]).
+  final cambioBarra = ValueNotifier<int>(0);
+
   /// Índice en `acentos` (theme.dart); 0 es el morado del logo.
   int acento = 0;
 
@@ -88,7 +91,7 @@ class Ajustes extends ChangeNotifier {
       _prefs?.setDouble('ajustes_ancho_expandido', anchoExpandido);
     }
     _prefs?.setDouble('ajustes_ancho_barra', anchoBarra);
-    notifyListeners();
+    cambioBarra.value++;
   }
 
   void alternarContraida() => ponerAnchoBarra(barraContraida ? anchoExpandido : anchoIconos);

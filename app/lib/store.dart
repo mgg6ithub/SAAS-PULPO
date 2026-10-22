@@ -421,6 +421,66 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
+  /// Cantidades exactas; las plantillas no cuentan como tareas de la simulación.
+  void cargarSimulacion({
+    required int equipo,
+    required int cuentas,
+    required int cantidadTareas,
+    required int dias,
+  }) {
+    if (equipo < 0 ||
+        equipo > 100 ||
+        cuentas < 1 ||
+        cuentas > 200 ||
+        cantidadTareas < 0 ||
+        cantidadTareas > 1000 ||
+        dias < 1 ||
+        dias > 90) {
+      throw ArgumentError('Cantidades de simulación fuera de rango');
+    }
+    if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
+    demo = true;
+    _inicial();
+    final plantillas = tareas.toList();
+    final r = Random(7);
+    trabajadores = [
+      for (var i = 0; i < equipo; i++)
+        Trabajador(
+          id: 'w$i',
+          nombre: 'Trabajador',
+          apellidos: '${i + 1}',
+          competencias: [...competencias],
+          color: i % 8,
+        ),
+    ];
+    final sitios = _coordsDemo.values.toList();
+    clientes = [
+      for (var i = 0; i < cuentas; i++)
+        Cliente(
+          id: 'c$i',
+          nombre: 'Cliente ${i + 1}',
+          ciudad: 'Bilbao',
+          provincia: 'Bizkaia',
+          lat: sitios[i % sitios.length].$1,
+          lng: sitios[i % sitios.length].$2,
+          color: i % 8,
+        ),
+    ];
+    for (var i = 0; i < cantidadTareas; i++) {
+      final t = plantillas[i % plantillas.length].copia();
+      t
+        ..id = 'd$i'
+        ..plantilla = false
+        ..clienteId = clientes[i % cuentas].id
+        ..proximo = masDias(hoy(), r.nextInt(dias))
+        ..inicioMin = (8 + r.nextInt(9)) * 60
+        ..duracionMin = [30, 60, 90, 120][r.nextInt(4)]
+        ..trabajadorIds = equipo == 0 ? [] : [trabajadores[i % equipo].id];
+      tareas.add(t);
+    }
+    _cambio();
+  }
+
   static const _coordsDemo = {
     'c0': (43.2571, -2.9246),
     'c1': (43.3505, -3.0085),

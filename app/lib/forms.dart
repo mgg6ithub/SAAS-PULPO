@@ -157,10 +157,21 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 _cabecera(),
                 const Divider(),
                 Expanded(
-                  child: SingleChildScrollView(
-                    controller: scroll,
-                    padding: const EdgeInsets.fromLTRB(32, 6, 32, 32),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                  child: ClipRect(
+                    // Solo el marco cambia de tamaño en cada fotograma. Los campos conservan
+                    // el ancho de destino, sin escalar texto ni repetir su maquetación.
+                    child: OverflowBox(
+                      alignment: Alignment.topLeft,
+                      minWidth: ancho,
+                      maxWidth: ancho,
+                      child: SingleChildScrollView(
+                        controller: scroll,
+                        padding: const EdgeInsets.fromLTRB(32, 6, 32, 32),
+                        child: RepaintBoundary(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const Divider(),
@@ -185,83 +196,104 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
       onPanStart: acoplada || widget.incrustada ? null : (_) => setState(() => arrastrando = true),
       onPanUpdate: acoplada || widget.incrustada ? null : (d) => setState(() => desplazamiento += d.delta),
       onPanEnd: acoplada || widget.incrustada ? null : (_) => setState(() => arrastrando = false),
-      child: Padding(
-        // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
-        padding: EdgeInsets.fromLTRB(32, acoplada || widget.incrustada ? 16 : 6, 12, 12),
-        child: Column(
-          children: [
-            if (!acoplada && !widget.incrustada)
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(color: P.borde, borderRadius: BorderRadius.circular(3)),
-              ),
-            Row(
+      child: Stack(
+        children: [
+          Padding(
+            // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
+            padding: EdgeInsets.fromLTRB(32, acoplada || widget.incrustada ? 16 : 6, widget.incrustada ? 12 : 120, 12),
+            child: Column(
               children: [
-                if (widget.lider != null) ...[widget.lider!, const SizedBox(width: 12)],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.etiqueta != null)
-                        Text(
-                          widget.etiqueta!.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: .8,
-                            color: P.morado,
+                if (!acoplada && !widget.incrustada) const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (widget.lider != null) ...[widget.lider!, const SizedBox(width: 12)],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.etiqueta != null)
+                            Text(
+                              widget.etiqueta!.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: .8,
+                                color: P.morado,
+                              ),
+                            ),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            layoutBuilder: (actual, anteriores) =>
+                                Stack(alignment: Alignment.centerLeft, children: [...anteriores, ?actual]),
+                            child: Text(
+                              _titulo,
+                              key: ValueKey(_titulo),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: P.titulos,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -.5,
+                              ),
+                            ),
                           ),
-                        ),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        layoutBuilder: (actual, anteriores) =>
-                            Stack(alignment: Alignment.centerLeft, children: [...anteriores, ?actual]),
-                        child: Text(
-                          _titulo,
-                          key: ValueKey(_titulo),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: P.titulos,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -.5,
-                          ),
-                        ),
+                          if (widget.subtitulo != null)
+                            Text(
+                              widget.subtitulo!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: P.textoSuave, fontSize: 13),
+                            ),
+                        ],
                       ),
-                      if (widget.subtitulo != null)
-                        Text(
-                          widget.subtitulo!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: P.textoSuave, fontSize: 13),
-                        ),
-                    ],
+                    ),
+                    if (widget.extra != null) ...[const SizedBox(width: 12), widget.extra!, const SizedBox(width: 8)],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (!acoplada && !widget.incrustada)
+            Positioned(
+              top: 6,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(color: P.borde, borderRadius: BorderRadius.circular(3)),
                   ),
                 ),
-                if (widget.extra != null) ...[const SizedBox(width: 12), widget.extra!, const SizedBox(width: 8)],
-                if (!widget.incrustada) ...[
+              ),
+            ),
+          if (!widget.incrustada)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   _BotonVentana(
-                    CupertinoIcons.sidebar_left,
-                    lado < 0 ? 'Volver a ventana' : 'Acoplar a la izquierda',
+                    lado < 0 ? CupertinoIcons.rectangle : CupertinoIcons.sidebar_left,
+                    lado < 0 ? 'Acoplar al centro' : 'Acoplar a la izquierda',
                     () => acoplar(-1),
-                    activo: lado < 0,
+                    centro: lado < 0,
                   ),
                   _BotonVentana(
-                    CupertinoIcons.sidebar_right,
-                    lado > 0 ? 'Volver a ventana' : 'Acoplar a la derecha',
+                    lado > 0 ? CupertinoIcons.rectangle : CupertinoIcons.sidebar_right,
+                    lado > 0 ? 'Acoplar al centro' : 'Acoplar a la derecha',
                     () => acoplar(1),
-                    activo: lado > 0,
+                    centro: lado > 0,
                   ),
                   const SizedBox(width: 4),
                   _BotonVentana(CupertinoIcons.xmark, 'Cerrar', () => Navigator.pop(context)),
                 ],
-              ],
+              ),
             ),
-          ],
-        ),
+        ],
       ),
     ),
   );
@@ -296,21 +328,33 @@ class _BotonVentana extends StatelessWidget {
   final IconData icono;
   final String tooltip;
   final VoidCallback onTap;
-  final bool activo;
-  const _BotonVentana(this.icono, this.tooltip, this.onTap, {this.activo = false});
+  final bool centro;
+  const _BotonVentana(this.icono, this.tooltip, this.onTap, {this.centro = false});
 
   @override
   Widget build(BuildContext context) => IconButton(
     tooltip: tooltip,
     onPressed: onTap,
     style: IconButton.styleFrom(
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       fixedSize: const Size(34, 34),
       minimumSize: const Size(34, 34),
       padding: EdgeInsets.zero,
-      backgroundColor: activo ? P.moradoSuave : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl - 2)),
     ),
-    icon: Icon(icono, size: 19, color: activo ? P.morado : P.textoSuave),
+    icon: centro
+        ? SizedBox(
+            width: 19,
+            height: 19,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(CupertinoIcons.rectangle, size: 19, color: P.textoSuave),
+                Icon(CupertinoIcons.line_horizontal_3, size: 8, color: P.textoSuave),
+              ],
+            ),
+          )
+        : Icon(icono, size: 19, color: P.textoSuave),
   );
 }
 

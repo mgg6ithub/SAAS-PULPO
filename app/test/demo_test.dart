@@ -9,6 +9,24 @@ void main() {
     await store.cargar();
   });
 
+  test('simulación respeta cantidades, fechas y referencias y restaura el respaldo', () async {
+    store.guardarCliente(Cliente(id: 'real', nombre: 'Real'));
+    store.cargarSimulacion(equipo: 3, cuentas: 5, cantidadTareas: 27, dias: 7);
+    expect(store.trabajadores.length, 3);
+    expect(store.clientes.length, 5);
+    final tareas = store.tareas.where((t) => !t.esPlantilla).toList();
+    expect(tareas.length, 27);
+    for (final t in tareas) {
+      expect(store.cliente(t.clienteId), isNotNull);
+      expect(store.trabajador(t.trabajadorIds.single), isNotNull);
+      expect(t.proximo!.difference(hoy()).inDays, inInclusiveRange(0, 6));
+    }
+    store.cargarSimulacion(equipo: 0, cuentas: 1, cantidadTareas: 2, dias: 1);
+    expect(store.tareas.where((t) => !t.esPlantilla).every((t) => t.trabajadorIds.isEmpty), isTrue);
+    await store.quitarDemo();
+    expect(store.clientes.map((c) => c.id), ['real']);
+  });
+
   test('quitar los datos de ejemplo devuelve exactamente los datos de antes', () async {
     store.guardarCliente(Cliente(id: 'mio', nombre: 'Mi cliente real'));
     store.cargarDemo();

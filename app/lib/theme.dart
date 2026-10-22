@@ -21,6 +21,9 @@ class P {
   static Color get barra => _o ? const Color(0xFF14131B) : Colors.white;
   static Color get columna => _o ? const Color(0xFF15141C) : const Color(0xFFF7F6FB);
 
+  /// Fila de lista bajo el ratón: un velo morado muy suave (como el borde morado de las tarjetas).
+  static Color get hoverFila => morado.withValues(alpha: _o ? .12 : .06);
+
   /// Fondo al pasar el ratón o elemento activo de la barra.
   static Color get hover => _o ? const Color(0xFF24232D) : const Color(0xFFEFECF7);
 
@@ -49,8 +52,11 @@ class P {
   static const radioControl = 10.0;
 }
 
-/// Margen de todas las páginas: igual en todas, y contenido para que quepa en un portátil.
-const margenPagina = EdgeInsets.fromLTRB(32, 28, 32, 24);
+/// Margen de todas las páginas: igual en todas y estrecho, para aprovechar el ancho de un portátil.
+const margenPagina = EdgeInsets.fromLTRB(12, 12, 12, 12);
+
+/// Hueco entre los bloques de una vista (barra y contenido, panel, calendario y mapa): igual en todas.
+const huecoVista = 10.0;
 
 /// Logo de Pulpo (el de la landing).
 class LogoPulpo extends StatelessWidget {
@@ -163,6 +169,8 @@ ThemeData temaPulpo() {
     ),
     scaffoldBackgroundColor: P.fondo,
     fontFamily: fuente,
+    // En escritorio Flutter compacta los controles (los botones se quedaban en 32): todos a su alto real, 40.
+    visualDensity: VisualDensity.standard,
   );
   P.titulos = fuente;
   final radio = BorderRadius.circular(P.radioControl);
@@ -188,7 +196,8 @@ ThemeData temaPulpo() {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        // Todos los botones miden 40 de alto (sin padding vertical): mismo alto en toda la app.
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         minimumSize: const Size(0, 40),
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: radio),
@@ -199,7 +208,7 @@ ThemeData temaPulpo() {
       style: OutlinedButton.styleFrom(
         foregroundColor: P.texto,
         backgroundColor: P.superficie,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         minimumSize: const Size(0, 40),
         textStyle: textoBoton,
         side: BorderSide(color: P.borde),

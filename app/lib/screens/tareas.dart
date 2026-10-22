@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
@@ -22,6 +20,22 @@ class _TareasPaginaState extends State<TareasPagina> {
   int pestana = 0; // 0 de clientes, 1 plantillas, 2 todas
   String? tipo;
   bool lista = true;
+  bool seleccionando = false;
+  final seleccion = <String>{};
+
+  void salirSeleccion() => setState(() {
+    seleccionando = false;
+    seleccion.clear();
+  });
+
+  Future<void> eliminarSeleccion() async {
+    final n = seleccion.length;
+    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'tarea' : 'tareas'}?')) return;
+    for (final id in seleccion) {
+      store.borrarTarea(id);
+    }
+    salirSeleccion();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,102 +54,135 @@ class _TareasPaginaState extends State<TareasPagina> {
         });
     final tiposUsados = {for (final t in store.tareas) t.tipo};
 
-    return Padding(
-      padding: margenPagina,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Cabecera(
-            titulo: 'Tareas',
-            subtitulo: '$deClientes mantenimientos de clientes · ${store.plantillas.length} plantillas',
-            acciones: [
-              BotonPrimario(
-                pestana == 1 ? 'Nueva plantilla' : 'Nueva tarea',
-                tecla: 'N',
-                onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          BarraFiltros(
-            izquierda: [
-              Pestanas(
-                opciones: ['De clientes · $deClientes', 'Plantillas · ${store.plantillas.length}', 'Todas'],
-                seleccion: pestana,
-                onChanged: (i) => setState(() => pestana = i),
-              ),
-            ],
-            derecha: [
-              Buscador(hint: 'Buscar tarea, equipo o cliente…', width: 280, onChanged: (v) => setState(() => q = v)),
-              SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
+    return Stack(
+      children: [
+        Padding(
+          padding: margenPagina,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final x in tipos.where((x) => tiposUsados.contains(x.nombre)))
-                _ChipTipo(x, tipo == x.nombre, () => setState(() => tipo = tipo == x.nombre ? null : x.nombre)),
-            ],
-          ),
-          if (pestana == 1) ...[
-            const SizedBox(height: 12),
-            Tarjeta(
-              color: P.moradoSuave,
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Icon(Icons.lightbulb_outline_rounded, color: P.morado, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Las plantillas no tienen cliente. Al crear una tarea dentro de un cliente, elige una y se rellena casi todo.',
-                      style: TextStyle(color: P.moradoOscuro, fontSize: 13),
-                    ),
+              // Una sola barra (como el Itinerario): título y filtros a la izquierda; buscador y acciones a la derecha.
+              BarraVista(
+                izquierda: [
+                  const TituloVista('Tareas'),
+                  Pestanas(
+                    opciones: ['De clientes · $deClientes', 'Plantillas · ${store.plantillas.length}', 'Todas'],
+                    seleccion: pestana,
+                    onChanged: (i) => setState(() => pestana = i),
+                  ),
+                ],
+                derecha: [
+                  Buscador(
+                    hint: 'Buscar tarea, equipo o cliente…',
+                    width: 280,
+                    onChanged: (v) => setState(() => q = v),
+                  ),
+                  SelectorVista(
+                    lista: lista,
+                    onChanged: (v) => setState(() {
+                      lista = v;
+                      seleccionando = false;
+                      seleccion.clear();
+                    }),
+                  ),
+                  BotonPrimario(
+                    pestana == 1 ? 'Nueva plantilla' : 'Nueva tarea',
+                    tecla: 'N',
+                    onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                   ),
                 ],
               ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Expanded(
-            child: filtradas.isEmpty
-                ? Vacio(
-                    icono: Icons.handyman_outlined,
-                    titulo: store.tareas.isEmpty ? 'Aún no hay tareas' : null,
-                    texto: pestana == 0 && deClientes == 0
-                        ? 'Crea tareas dentro de tus clientes, desde cero o a partir de una plantilla.'
-                        : 'No hay tareas con estos filtros',
-                  )
-                : lista
-                ? _tabla(filtradas)
-                : LayoutBuilder(
-                    builder: (context, box) {
-                      final cols = max(1, (box.maxWidth / 440).floor());
-                      final w = (box.maxWidth - (cols - 1) * 14) / cols;
-                      return SingleChildScrollView(
-                        child: Wrap(
-                          spacing: 14,
-                          runSpacing: 14,
-                          children: [for (final t in filtradas) TareaCard(t, width: w)],
+              const SizedBox(height: huecoVista),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final x in tipos.where((x) => tiposUsados.contains(x.nombre)))
+                    _ChipTipo(x, tipo == x.nombre, () => setState(() => tipo = tipo == x.nombre ? null : x.nombre)),
+                ],
+              ),
+              if (pestana == 1) ...[
+                const SizedBox(height: 12),
+                Tarjeta(
+                  color: P.moradoSuave,
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline_rounded, color: P.morado, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Las plantillas no tienen cliente. Al crear una tarea dentro de un cliente, elige una y se rellena casi todo.',
+                          style: TextStyle(color: P.moradoOscuro, fontSize: 13),
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
+                ),
+              ],
+              const SizedBox(height: huecoVista),
+              Expanded(
+                child: filtradas.isEmpty
+                    ? Vacio(
+                        icono: Icons.handyman_outlined,
+                        titulo: store.tareas.isEmpty ? 'Aún no hay tareas' : null,
+                        texto: pestana == 0 && deClientes == 0
+                            ? 'Crea tareas dentro de tus clientes, desde cero o a partir de una plantilla.'
+                            : 'No hay tareas con estos filtros',
+                      )
+                    : lista
+                    ? _tabla(filtradas)
+                    // Solo se reconstruye al cambiar el nº de columnas; el ancho de cada tarjeta lo pone la Rejilla.
+                    : ListaRejilla(
+                        anchoMin: 420,
+                        hueco: 14,
+                        padding: EdgeInsets.zero,
+                        total: filtradas.length,
+                        item: (i) => TareaCard(filtradas[i]),
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        if (seleccionando)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 24,
+            child: Center(
+              child: BarraSeleccion(
+                seleccionados: seleccion.length,
+                total: filtradas.length,
+                nombre: 'tareas',
+                onTodos: () => setState(() {
+                  if (filtradas.every((t) => seleccion.contains(t.id))) {
+                    seleccion.removeAll(filtradas.map((t) => t.id));
+                  } else {
+                    seleccion.addAll(filtradas.map((t) => t.id));
+                  }
+                }),
+                onEliminar: eliminarSeleccion,
+                onSalir: salirSeleccion,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
-  Widget _tabla(List<Tarea> ts) => LayoutBuilder(
+  Widget _tabla(List<Tarea> ts) => SegunTamano(
+    clave: (box) => box.maxWidth > 1000,
     builder: (context, box) {
       final ancho = box.maxWidth > 1000;
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
+          seleccionCabecera: BotonSeleccionLista(
+            activo: seleccionando,
+            onTap: () => seleccionando ? salirSeleccion() : setState(() => seleccionando = true),
+          ),
           columnas: [
+            if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Equipo / tarea', flex: 4),
             const Col('Cliente', flex: 3),
             if (ancho) const Col('Periodicidad', flex: 2),
@@ -145,13 +192,20 @@ class _TareasPaginaState extends State<TareasPagina> {
             const Col('Estado', ancho: 80, derecha: true),
           ],
           filas: ts.length,
-          onTap: (i) => abrirTareaForm(context, ts[i]),
+          onTap: (i) {
+            if (seleccionando) {
+              setState(() => seleccion.contains(ts[i].id) ? seleccion.remove(ts[i].id) : seleccion.add(ts[i].id));
+            } else {
+              abrirTareaForm(context, ts[i]);
+            }
+          },
           pie: pieTabla(ts.length, ts.length == 1 ? 'tarea' : 'tareas'),
           celdas: (i) {
             final t = ts[i];
             final c = store.cliente(t.clienteId);
             final vencida = t.proximo != null && diasHasta(t.proximo!) < 0;
             return [
+              if (seleccionando) CirculoSeleccion(seleccion.contains(t.id)),
               Row(
                 children: [
                   BarraTipo(t.tipo, alto: 28, color: t.colorBloque),
