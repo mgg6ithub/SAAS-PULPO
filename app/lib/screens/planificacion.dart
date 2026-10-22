@@ -39,9 +39,17 @@ class _PlanificacionState extends State<Planificacion> {
   set dia(DateTime d) => _dia = d;
   late bool mapa = widget.mapa && Uri.base.queryParameters['mapa'] != '0';
 
-  /// Ancho del mapa (se ajusta arrastrando el separador); null = el de por defecto.
-  double? anchoMapa;
-  bool sobreSeparador = false, arrastrando = false;
+  /// Ancho del mapa (se ajusta arrastrando el separador); null = el de por defecto. Va en un
+  /// ValueNotifier: arrastrar solo maqueta de nuevo la fila del calendario y el mapa, no toda la página.
+  final anchoMapa = ValueNotifier<double?>(null);
+
+  /// El mapa ya se ha mostrado alguna vez: desde entonces se queda montado (solo se oculta).
+  bool mapaVisto = false;
+  @override
+  void dispose() {
+    anchoMapa.dispose();
+    super.dispose();
+  }
 
   /// Panel lateral con los trabajos sin técnico.
   bool sinAsignar = false;
@@ -79,7 +87,11 @@ class _PlanificacionState extends State<Planificacion> {
     final (desde, hasta, nombrePeriodo) = periodo;
     final contenido = switch (vista) {
       0 => VistaDiaTecnicos(dia, key: ValueKey('dia-$dia')),
-      1 => VistaSemana(lunes, key: ValueKey('semana-$lunes')),
+      1 => VistaSemana(
+        lunes,
+        key: ValueKey('semana-$lunes'),
+        onSinAsignar: () => setState(() => sinAsignar = !sinAsignar),
+      ),
       2 => VistaCalendario(
         key: ValueKey('mes-${dia.year}-${dia.month}'),
         inicial: dia,
@@ -93,16 +105,27 @@ class _PlanificacionState extends State<Planificacion> {
       // La línea de días original: scroll horizontal día a día con la línea de tiempo abajo.
       _ => const VistaDias(key: ValueKey('linea')),
     };
-    // Más alto para el calendario y el mapa: menos margen arriba y abajo, y una sola barra compacta.
+    final calendario = RepaintBoundary(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        layoutBuilder: (actual, anteriores) => Stack(fit: StackFit.expand, children: [...anteriores, ?actual]),
+        child: contenido,
+      ),
+    );
+    final panel = RepaintBoundary(child: PanelSinAsignar(onCerrar: () => setState(() => sinAsignar = false)));
+    final mapaVista = RepaintBoundary(
+      child: MapaAgenda(key: ValueKey('mapa-$desde-$hasta'), desde: desde, hasta: hasta, periodo: nombrePeriodo),
+    );
+    // Más sitio para el calendario y el mapa: márgenes estrechos y una sola barra compacta.
     return Padding(
-      padding: margenPagina.copyWith(top: 18, bottom: 16),
+      padding: margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Fecha y vistas a la izquierda; a la derecha del todo, todo con el mismo alto (40):
           // [Sin asignar] [+ Nueva tarea] [Organizar] [Mapa]. Técnico se filtra pulsando su fila en la vista Día.
-          LayoutBuilder(
-            builder: (context, box) {
+          Builder(
+            builder: (context) {
               final fecha = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -160,25 +183,22 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  SizedBox(
-                    height: 40,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.fromLTRB(12, 0, 16, 0)),
-                      icon: const Icon(Icons.add_rounded, size: 19),
-                      onPressed: () async {
-                        final f = vista < 3 ? dia : hoy();
-                        // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
-                        final h = diasHasta(f) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
-                        await abrirTareaForm(context, null, fecha: f, horaMin: h);
-                        // Si se ha creado para otro día, el itinerario salta a ese día para verla aparecer.
-                        final t = store.tareas.where((x) => store.esRecien(x.id)).firstOrNull;
-                        if (t?.proximo != null && mounted) {
-                          final (d, h, _) = periodo;
-                          if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h)) setState(() => dia = t.proximo!);
-                        }
-                      },
-                      label: const Text('Nueva tarea'),
-                    ),
+                  BotonAccion(
+                    'Nueva tarea',
+                    icono: Icons.add_rounded,
+                    tooltip: 'Crear una tarea (N)',
+                    onPressed: () async {
+                      final f = vista < 3 ? dia : hoy();
+                      // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
+                      final h = diasHasta(f) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
+                      await abrirTareaForm(context, null, fecha: f, horaMin: h);
+                      // Si se ha creado para otro día, el itinerario salta a ese día para verla aparecer.
+                      final t = store.tareas.where((x) => store.esRecien(x.id)).firstOrNull;
+                      if (t?.proximo != null && mounted) {
+                        final (d, h, _) = periodo;
+                        if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h)) setState(() => dia = t.proximo!);
+                      }
+                    },
                   ),
                   const SizedBox(width: 8),
                   // El pulpo: organiza el día que estás viendo.
@@ -187,95 +207,66 @@ class _PlanificacionState extends State<Planificacion> {
                   _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
                 ],
               );
-              // Siempre una sola fila: ocupa todo el ancho (el hueco empuja los botones a la derecha)
-              // y, si en una pantalla estrecha no cabe, se desplaza en horizontal en vez de partirse.
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: box.maxWidth),
-                  child: IntrinsicWidth(
-                    child: Row(
-                      children: [
-                        fecha,
-                        const SizedBox(width: 16),
-                        vistas,
-                        const Spacer(),
-                        const SizedBox(width: 16),
-                        acciones,
-                      ],
-                    ),
-                  ),
-                ),
-              );
+              return BarraVista(izquierda: [fecha, vistas], derecha: [acciones]);
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: huecoVista),
           Expanded(
             child: LayoutBuilder(
+              // Calendario y mapa se crean fuera (más arriba): al redimensionar o arrastrar el separador,
+              // aquí solo se recoloca la fila con las mismas instancias, sin reconstruirlas.
               builder: (context, box) {
                 final conMapa = mapa && box.maxWidth > 760;
-                final maxMapa = box.maxWidth - 360;
-                final ancho = (anchoMapa ?? (box.maxWidth * .4).clamp(300, 640)).clamp(260.0, maxMapa).toDouble();
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (sinAsignar) ...[
-                      SizedBox(width: 290, child: PanelSinAsignar(onCerrar: () => setState(() => sinAsignar = false))),
-                      const SizedBox(width: 14),
-                    ],
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        layoutBuilder: (actual, anteriores) =>
-                            Stack(fit: StackFit.expand, children: [...anteriores, ?actual]),
-                        child: contenido,
+                final maxMapa = max(260.0, box.maxWidth - 360);
+                // El mapa se monta la primera vez que se muestra y luego ya no se desmonta.
+                if (conMapa) mapaVisto = true;
+                // Ancho por defecto fijo: al mover la barra lateral solo cambia el calendario, no el mapa.
+                double ancho(double? a) => (a ?? 420.0).clamp(260.0, maxMapa).toDouble();
+                return ValueListenableBuilder<double?>(
+                  valueListenable: anchoMapa,
+                  builder: (context, a, _) => Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Panel "Sin asignar": entra deslizándose desde la izquierda.
+                      ClipRect(
+                        child: AnimatedAlign(
+                          duration: const Duration(milliseconds: 260),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.centerRight,
+                          widthFactor: sinAsignar ? 1 : 0,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: huecoVista),
+                            child: SizedBox(width: 290, child: panel),
+                          ),
+                        ),
                       ),
-                    ),
-                    if (conMapa) ...[
-                      // Separador arrastrable: flechas ↔ al pasar el ratón.
-                      MouseRegion(
-                        cursor: SystemMouseCursors.resizeColumn,
-                        onEnter: (_) => setState(() => sobreSeparador = true),
-                        onExit: (_) => setState(() => sobreSeparador = false),
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onHorizontalDragStart: (_) => setState(() {
-                            arrastrando = true;
-                            anchoMapa = ancho;
-                          }),
-                          onHorizontalDragUpdate: (d) =>
-                              setState(() => anchoMapa = (anchoMapa! - d.delta.dx).clamp(260.0, maxMapa)),
-                          onHorizontalDragEnd: (_) => setState(() => arrastrando = false),
-                          child: SizedBox(
-                            width: 14,
-                            // Alto real (no infinito): animar hasta infinito rompe el layout.
-                            child: LayoutBuilder(
-                              builder: (context, caja) => Center(
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 150),
-                                  width: sobreSeparador || arrastrando ? 4 : 2,
-                                  height: sobreSeparador || arrastrando ? caja.maxHeight : 40,
-                                  decoration: BoxDecoration(
-                                    color: sobreSeparador || arrastrando ? P.morado : P.borde,
-                                    borderRadius: BorderRadius.circular(2),
+                      Expanded(child: calendario),
+                      // El mapa se queda montado y se abre o cierra deslizándose: no se vuelve a crear
+                      // ni a cargar las teselas cada vez.
+                      if (mapaVisto)
+                        ClipRect(
+                          child: AnimatedAlign(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.centerLeft,
+                            widthFactor: conMapa ? 1 : 0,
+                            child: TickerMode(
+                              enabled: conMapa,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _Separador(
+                                    onInicio: () => anchoMapa.value = ancho(a),
+                                    onMover: (dx) => anchoMapa.value = (anchoMapa.value! - dx).clamp(260.0, maxMapa),
                                   ),
-                                ),
+                                  SizedBox(width: ancho(a), child: mapaVista),
+                                ],
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      SizedBox(
-                        width: ancho,
-                        child: MapaAgenda(
-                          key: ValueKey('mapa-$desde-$hasta'),
-                          desde: desde,
-                          hasta: hasta,
-                          periodo: nombrePeriodo,
-                        ),
-                      ),
                     ],
-                  ],
+                  ),
                 );
               },
             ),
@@ -499,6 +490,9 @@ class _BotonSinAsignar extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Triángulo amarillo de aviso: hay trabajo sin técnico.
+        const Icon(Icons.warning_amber_rounded, size: 18, color: P.ambar),
+        const SizedBox(width: 6),
         const Text('Sin asignar'),
         if (n > 0) ...[
           const SizedBox(width: 6),
@@ -514,4 +508,52 @@ class _BotonSinAsignar extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Separador arrastrable entre calendario y mapa: raya fina que, al pasar el ratón o arrastrar,
+/// se hace morada y ocupa todo el alto. Lleva su propio estado: el hover no repinta el itinerario.
+class _Separador extends StatefulWidget {
+  final VoidCallback onInicio;
+  final ValueChanged<double> onMover;
+  const _Separador({required this.onInicio, required this.onMover});
+
+  @override
+  State<_Separador> createState() => _SeparadorState();
+}
+
+class _SeparadorState extends State<_Separador> {
+  bool encima = false, arrastrando = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final activo = encima || arrastrando;
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => encima = true),
+      onExit: (_) => setState(() => encima = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragStart: (_) {
+          setState(() => arrastrando = true);
+          widget.onInicio();
+        },
+        onHorizontalDragUpdate: (d) => widget.onMover(d.delta.dx),
+        onHorizontalDragEnd: (_) => setState(() => arrastrando = false),
+        child: SizedBox(
+          width: huecoVista,
+          // Alto real (no infinito): animar hasta infinito rompe el layout.
+          child: LayoutBuilder(
+            builder: (context, caja) => Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: activo ? 4 : 2,
+                height: activo ? caja.maxHeight : 40,
+                decoration: BoxDecoration(color: activo ? P.morado : P.borde, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

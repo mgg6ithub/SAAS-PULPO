@@ -67,7 +67,9 @@ class _VistaCalendarioState extends State<VistaCalendario> {
           ],
         ),
         Expanded(
-          child: LayoutBuilder(
+          // Solo depende del alto: un cambio de ancho no reconstruye el mes.
+          child: SegunTamano(
+            clave: (box) => box.maxHeight,
             builder: (context, box) => ValueListenableBuilder(
               valueListenable: altoFilaMes,
               builder: (context, zoom, _) {
@@ -78,8 +80,9 @@ class _VistaCalendarioState extends State<VistaCalendario> {
                   child: SingleChildScrollView(
                     key: const PageStorageKey('itinerario-mes'),
                     child: Container(
-                      decoration: BoxDecoration(
-                        color: P.superficie,
+                      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+                      // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+                      foregroundDecoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(P.radio),
                         border: Border.all(color: P.borde),
                       ),
@@ -132,7 +135,8 @@ class _VistaCalendarioState extends State<VistaCalendario> {
         ),
         child: Opacity(
           opacity: n < 0 || !delMes ? .55 : 1,
-          child: LayoutBuilder(
+          child: SegunTamano(
+            clave: (box) => ((box.maxHeight - 34) / 25).floor(),
             builder: (context, box) {
               // Cuántos bloques caben; el resto se resume en "+N".
               final caben = ((box.maxHeight - 34) / 25).floor().clamp(0, 99);

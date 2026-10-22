@@ -108,7 +108,8 @@ class _Resumen extends StatelessWidget {
     final hechos = tareas.where((t) => t.ultimo != null).map((t) => t.ultimo!).toList()..sort();
     final proximos = conFecha.take(6).toList();
 
-    return LayoutBuilder(
+    return SegunTamano(
+      clave: (box) => box.maxWidth > 900,
       builder: (context, box) {
         final dosCol = box.maxWidth > 900;
         final principal = Column(

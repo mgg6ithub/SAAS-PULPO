@@ -372,15 +372,17 @@ class _BotonPulpoState extends State<BotonPulpo> {
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0, end: 1),
                   duration: const Duration(milliseconds: 1500),
-                  builder: (_, v, _) => Transform.rotate(
-                    angle: v * 6.28,
-                    child: const LogoPulpo(size: 64),
-                  ),
+                  builder: (_, v, _) => Transform.rotate(angle: v * 6.28, child: const LogoPulpo(size: 64)),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   'El pulpo está planificando…',
-                  style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.4),
+                  style: TextStyle(
+                    fontFamily: P.titulos,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.4,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -438,10 +440,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // El pulpo del logo, en blanco sobre el morado (como en la landing).
-              ColorFiltered(
-                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                child: LogoPulpo(size: 20),
-              ),
+              ColorFiltered(colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn), child: LogoPulpo(size: 20)),
               SizedBox(width: 8),
               Text(
                 'Organizar',

@@ -50,10 +50,11 @@ class Resumen extends StatelessWidget {
     final sinTrabajador = conFecha.where((t) => t.trabajadorIds.isEmpty && diasHasta(t.proximo!) <= 7).toList();
     final vacia = store.clientes.isEmpty;
 
-    return LayoutBuilder(
+    // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
+    return SegunTamano(
+      clave: (box) => min(1080.0, box.maxWidth - margenPagina.horizontal) > 760,
       builder: (context, box) {
-        final ancho = min(1080.0, box.maxWidth - margenPagina.horizontal);
-        final dosCol = ancho > 760;
+        final dosCol = min(1080.0, box.maxWidth - margenPagina.horizontal) > 760;
         Widget par(Widget a, Widget b) => dosCol
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,10 +67,10 @@ class Resumen extends StatelessWidget {
             : Column(children: [a, const SizedBox(height: 16), b]);
 
         return SingleChildScrollView(
-          padding: EdgeInsets.only(top: margenPagina.top, bottom: margenPagina.bottom),
+          padding: EdgeInsets.fromLTRB(margenPagina.left, margenPagina.top, margenPagina.right, margenPagina.bottom),
           child: Center(
-            child: SizedBox(
-              width: ancho,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1080),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -119,7 +120,8 @@ class _Bienvenida extends StatelessWidget {
       border: Border.all(color: P.borde),
     ),
     clipBehavior: Clip.antiAlias,
-    child: LayoutBuilder(
+    child: SegunTamano(
+      clave: (box) => box.maxWidth < 760,
       builder: (context, box) {
         final texto = Padding(
           padding: const EdgeInsets.all(28),
@@ -188,7 +190,10 @@ class _Maqueta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(color: P.fondo, border: Border(left: BorderSide(color: P.borde))),
+    decoration: BoxDecoration(
+      color: P.fondo,
+      border: Border(left: BorderSide(color: P.borde)),
+    ),
     padding: const EdgeInsets.all(28),
     child: Center(
       child: Container(
@@ -352,7 +357,7 @@ class _CargaTrabajadores extends StatelessWidget {
           for (final w in ws.take(6))
             InkWell(
               onTap: () => onTrabajador(w.id),
-              hoverColor: P.columna,
+              hoverColor: P.hoverFila,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
                 child: Row(
@@ -440,16 +445,7 @@ class _Proximos extends StatelessWidget {
             ),
           )
         else
-          LayoutBuilder(
-            builder: (context, box) {
-              final w = (box.maxWidth - (columnas - 1) * 14) / columnas;
-              return Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: [for (final t in ts) TareaCard(t, width: w)],
-              );
-            },
-          ),
+          Rejilla(columnas: columnas, children: [for (final t in ts) TareaCard(t)]),
       ],
     );
   }
@@ -504,7 +500,13 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             saludo,
-            style: TextStyle(fontFamily: P.titulos, fontSize: 36, fontWeight: FontWeight.w700, letterSpacing: -1.2, height: 1.1),
+            style: TextStyle(
+              fontFamily: P.titulos,
+              fontSize: 36,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -1.2,
+              height: 1.1,
+            ),
           ),
           const SizedBox(height: 8),
           Text(frase, style: TextStyle(color: P.textoSuave, fontSize: 16)),
@@ -514,9 +516,11 @@ class _Hero extends StatelessWidget {
         spacing: 8,
         runSpacing: 8,
         children: [
-          OutlinedButton(onPressed: () => onIr(Seccion.planificacion), child: const Text('Itinerario')),
+          // Sin botón "Itinerario": ya está "Ir al itinerario" en Próximos mantenimientos (una acción, un sitio).
           if (sinTrabajador.isNotEmpty)
-            OutlinedButton(
+            BotonAccion(
+              '✦ Asignar ${sinTrabajador.length}',
+              tooltip: 'Asignar el trabajador más adecuado a lo que no tiene',
               onPressed: () {
                 final n = store.automatizar(sinTrabajador);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -530,12 +534,13 @@ class _Hero extends StatelessWidget {
                   ),
                 );
               },
-              child: Text('✦ Asignar ${sinTrabajador.length}'),
             ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: P.tinta, foregroundColor: Colors.white),
+          // Igual que en el Itinerario.
+          BotonAccion(
+            'Nueva tarea',
+            icono: Icons.add_rounded,
+            tooltip: 'Crear una tarea (N)',
             onPressed: () => abrirTareaForm(context, null),
-            child: const Text('Nueva tarea'),
           ),
         ],
       ),
@@ -563,45 +568,37 @@ class _Kpis extends StatelessWidget {
       ('Vencidas', vencidas, P.rojo, vencidas == 0 ? '¡todo al día!' : 'requieren atención'),
       ('Hechas', hechas, P.verde, 'últimos 30 días'),
     ];
-    return LayoutBuilder(
-      builder: (context, box) {
-        final cols = dosCol ? 4 : 2;
-        final w = (box.maxWidth - (cols - 1) * 14) / cols;
-        return Wrap(
-          spacing: 14,
-          runSpacing: 14,
-          children: [
-            for (final (etiqueta, valor, color, nota) in items)
-              // Tarjeta blanca con una barra de su color abajo del todo.
-              Container(
-                width: w,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: P.superficie,
-                  borderRadius: BorderRadius.circular(P.radio),
-                  border: Border.all(color: P.borde),
+    return Rejilla(
+      columnas: dosCol ? 4 : 2,
+      children: [
+        for (final (etiqueta, valor, color, nota) in items)
+          // Tarjeta blanca con una barra de su color abajo del todo.
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: P.superficie,
+              borderRadius: BorderRadius.circular(P.radio),
+              border: Border.all(color: P.borde),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                  child: Cifra(
+                    etiqueta,
+                    valor,
+                    nota: nota,
+                    tamano: 32,
+                    color: color == P.rojo && valor > 0 ? P.rojo : null,
+                    punto: color,
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                      child: Cifra(
-                        etiqueta,
-                        valor,
-                        nota: nota,
-                        tamano: 32,
-                        color: color == P.rojo && valor > 0 ? P.rojo : null,
-                        punto: color,
-                      ),
-                    ),
-                    Container(height: 4, color: color),
-                  ],
-                ),
-              ),
-          ],
-        );
-      },
+                Container(height: 4, color: color),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

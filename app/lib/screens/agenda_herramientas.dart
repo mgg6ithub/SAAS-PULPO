@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
@@ -131,7 +132,12 @@ class _FichaRapida extends StatelessWidget {
                     children: [
                       Text(
                         t.nombre,
-                        style: TextStyle(fontFamily: P.titulos, fontSize: 19, fontWeight: FontWeight.w700, letterSpacing: -.4),
+                        style: TextStyle(
+                          fontFamily: P.titulos,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -.4,
+                        ),
                       ),
                       Text(
                         [t.tipo, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
@@ -314,8 +320,9 @@ class PanelSinAsignar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ts = pendientes();
     return Container(
-      decoration: BoxDecoration(
-        color: P.superficie,
+      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+      // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+      foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(P.radio),
         border: Border.all(color: P.borde),
       ),
@@ -323,29 +330,41 @@ class PanelSinAsignar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sin asignar',
-                        style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
-                      ),
-                      Text('Pulsa una para asignarla', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-                    ],
-                  ),
+          // Cerrar en la esquina de arriba a la derecha (como el aviso en la esquina del calendario).
+          Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 40, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tareas sin asignar',
+                      style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      'Pulsa una tarea para asignarla o arrástrala',
+                      style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                    ),
+                  ],
                 ),
-                IconButton(
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IconButton(
                   tooltip: 'Cerrar',
                   onPressed: onCerrar,
-                  icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(34, 34),
+                    minimumSize: const Size(34, 34),
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl - 2)),
+                  ),
+                  icon: Icon(CupertinoIcons.xmark, size: 17, color: P.textoSuave),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           Divider(height: 1, color: P.borde),
           Expanded(
@@ -358,9 +377,10 @@ class PanelSinAsignar extends StatelessWidget {
                       final t = ts[i];
                       final c = store.cliente(t.clienteId);
                       final vencida = t.proximo != null && diasHasta(t.proximo!) < 0;
-                      return InkWell(
+                      // Se puede pulsar (ficha rápida) o arrastrar a un día y hora del calendario (Semana).
+                      final fila = InkWell(
                         onTap: () => abrirFichaRapida(context, t),
-                        hoverColor: P.columna,
+                        hoverColor: P.hoverFila,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                           child: Row(
@@ -383,12 +403,23 @@ class PanelSinAsignar extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(fontSize: 12.5, color: vencida ? P.rojo : P.textoSuave),
                                     ),
+                                    Text(
+                                      'Dura ${duracion(t.duracionMin)}',
+                                      style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                                    ),
                                   ],
                                 ),
                               ),
                             ],
                           ),
                         ),
+                      );
+                      return Draggable<Tarea>(
+                        data: t,
+                        dragAnchorStrategy: pointerDragAnchorStrategy,
+                        feedback: _Arrastrando(t),
+                        childWhenDragging: Opacity(opacity: .4, child: fila),
+                        child: MouseRegion(cursor: SystemMouseCursors.grab, child: fila),
                       );
                     },
                   ),
@@ -397,4 +428,34 @@ class PanelSinAsignar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lo que se ve bajo el ratón al arrastrar una tarea desde "Sin asignar": tarjetita con su color.
+class _Arrastrando extends StatelessWidget {
+  final Tarea t;
+  const _Arrastrando(this.t);
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    elevation: 8,
+    borderRadius: BorderRadius.circular(8),
+    child: Container(
+      width: 180,
+      height: 44,
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+      decoration: BoxDecoration(
+        color: Color.lerp(P.superficie, t.colorBloque, .14),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: t.colorBloque, width: 3)),
+      ),
+      alignment: Alignment.centerLeft,
+      child: Text(
+        t.nombre,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.texto),
+      ),
+    ),
+  );
 }

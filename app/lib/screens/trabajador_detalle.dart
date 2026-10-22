@@ -48,7 +48,8 @@ class TrabajadorDetalle extends StatelessWidget {
       ),
     );
 
-    return LayoutBuilder(
+    return SegunTamano(
+      clave: (box) => box.maxWidth > 1000,
       builder: (context, box) {
         // Con sitio, la ficha completa va fija a la derecha; si no, se abre con "Editar ficha".
         final conFicha = box.maxWidth > 1000;

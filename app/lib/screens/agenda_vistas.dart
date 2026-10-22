@@ -94,22 +94,17 @@ class BloqueTarea extends StatelessWidget {
     final base = _bloque(context, color, hecha, vencida, cliente);
     final bloque = !arrastrable
         ? base
-        : LayoutBuilder(
-            builder: (context, box) => Draggable<Tarea>(
-              data: t,
-              feedback: Material(
-                color: Colors.transparent,
-                elevation: 8,
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: box.maxWidth,
-                  height: box.maxHeight.isFinite ? box.maxHeight : 40,
-                  child: Opacity(opacity: .92, child: base),
-                ),
-              ),
-              childWhenDragging: Opacity(opacity: .3, child: base),
-              child: MouseRegion(cursor: SystemMouseCursors.grab, child: base),
+        // Sin LayoutBuilder (se reconstruiría en cada cambio de ancho): la copia que se arrastra tiene tamaño fijo.
+        : Draggable<Tarea>(
+            data: t,
+            feedback: Material(
+              color: Colors.transparent,
+              elevation: 8,
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(width: 170, height: 46, child: Opacity(opacity: .92, child: base)),
             ),
+            childWhenDragging: Opacity(opacity: .3, child: base),
+            child: MouseRegion(cursor: SystemMouseCursors.grab, child: base),
           );
     if (!store.esRecien(t.id)) return bloque;
     // Recién creada: entra creciendo y con un halo morado que se apaga.
@@ -204,8 +199,9 @@ class VistaDiaTecnicos extends StatelessWidget {
         final porHora = max(72.0, (box.maxWidth - izq) / (_hasta - _desde));
         final ancho = izq + porHora * (_hasta - _desde);
         return Container(
-          decoration: BoxDecoration(
-            color: P.superficie,
+          decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+          // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+          foregroundDecoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
             border: Border.all(color: P.borde),
           ),
@@ -265,14 +261,7 @@ class VistaDiaTecnicos extends StatelessWidget {
     );
   }
 
-  Widget _filaTecnico(
-    BuildContext context,
-    Trabajador? w,
-    List<Tarea> ts,
-    double izq,
-    double porHora,
-    double alto,
-  ) {
+  Widget _filaTecnico(BuildContext context, Trabajador? w, List<Tarea> ts, double izq, double porHora, double alto) {
     final conHora = ts.where((t) => t.inicioMin != null).toList();
     final sinHora = ts.where((t) => t.inicioMin == null).toList();
     final ahora = TimeOfDay.now();
@@ -347,17 +336,9 @@ class VistaDiaTecnicos extends StatelessWidget {
                 cursor: SystemMouseCursors.cell,
                 child: Stack(
                   children: [
-                    // Rejilla de horas.
-                    Row(
-                      children: [
-                        for (var h = _desde; h < _hasta; h++)
-                          Container(
-                            width: porHora,
-                            decoration: BoxDecoration(
-                              border: Border(left: BorderSide(color: P.borde.withValues(alpha: .6))),
-                            ),
-                          ),
-                      ],
+                    // Rejilla de horas: un solo dibujo en vez de un widget por hora.
+                    Positioned.fill(
+                      child: CustomPaint(painter: _LineasHoras(porHora, vertical: true, color: P.borde)),
                     ),
                     for (final t in conHora)
                       if (t.inicioMin! < _hasta * 60 && t.finMin! > _desde * 60)
@@ -394,7 +375,10 @@ class VistaDiaTecnicos extends StatelessWidget {
 
 class VistaSemana extends StatelessWidget {
   final DateTime lunes;
-  const VistaSemana(this.lunes, {super.key});
+
+  /// Abre el panel "Sin asignar" (lo pide el triángulo de aviso de la esquina).
+  final VoidCallback? onSinAsignar;
+  const VistaSemana(this.lunes, {super.key, this.onSinAsignar});
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
@@ -402,7 +386,9 @@ class VistaSemana extends StatelessWidget {
     builder: (context, alto, _) => ConZoom(
       onZoom: zoomSemana,
       // Por defecto las horas llenan todo el alto; el zoom solo las agranda a partir de ahí.
-      child: LayoutBuilder(
+      // Solo se reconstruye si cambia el alto: al cambiar el ancho (barra, mapa) solo se recoloca.
+      child: SegunTamano(
+        clave: (box) => box.maxHeight,
         builder: (context, box) => _construir(context, max(alto, (box.maxHeight - 100) / (_hasta - _desde))),
       ),
     ),
@@ -411,102 +397,75 @@ class VistaSemana extends StatelessWidget {
   Widget _construir(BuildContext context, double altoH) {
     final dias = [for (var i = 0; i < 7; i++) masDias(lunes, i)];
     final porDia = [for (final d in dias) tareasDe(d)];
-    // Arriba, lo que no tiene hora y lo vencido (para no amontonarlo en la rejilla de hoy).
+    // Lo que no tiene hora y lo vencido no va en la rejilla (para no amontonarlo en la de hoy).
     bool arriba(Tarea t, DateTime d) =>
         t.inicioMin == null || (!t.hechaEl(d) && t.proximo != null && diasHasta(t.proximo!) < 0);
-    final haySinHora = [for (final (i, ts) in porDia.indexed) ts.any((t) => arriba(t, dias[i]))].any((x) => x);
     const izq = 50.0;
     return Container(
-      decoration: BoxDecoration(
-        color: P.superficie,
+      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+      // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+      foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(P.radio),
         border: Border.all(color: P.borde),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Cabecera de días.
-          Container(
-            color: P.cabeceraTabla,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Row(
-              children: [
-                const SizedBox(width: izq),
-                for (final d in dias)
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          diasSemana[d.weekday - 1].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: .6,
-                            color: P.textoSuave,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          alignment: Alignment.center,
-                          decoration: diasHasta(d) == 0 ? BoxDecoration(color: P.morado, shape: BoxShape.circle) : null,
-                          child: Text(
-                            '${d.day}',
-                            style: TextStyle(
-                              fontFamily: P.titulos,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w600,
-                              color: diasHasta(d) == 0 ? Colors.white : P.texto,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: P.borde),
-          // Franja de lo que no tiene hora.
-          if (haySinHora) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: izq,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8, top: 4),
-                      child: Text('Pendiente', style: TextStyle(fontSize: 12, color: P.textoSuave)),
-                    ),
-                  ),
-                  for (final (i, ts) in porDia.indexed)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
+          // Cabecera de días; en su esquina de arriba a la izquierda, el aviso de tareas sin asignar.
+          Stack(
+            children: [
+              Container(
+                color: P.cabeceraTabla,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    const SizedBox(width: izq),
+                    for (final d in dias)
+                      Expanded(
                         child: Column(
                           children: [
-                            for (final t in ts.where((t) => arriba(t, dias[i])).take(3))
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 3),
-                                child: SizedBox(height: 26, child: BloqueTarea(t, dias[i], compacto: true)),
+                            Text(
+                              diasSemana[d.weekday - 1].toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: .6,
+                                color: P.textoSuave,
                               ),
-                            if (ts.where((t) => arriba(t, dias[i])).length > 3)
-                              Text(
-                                '+${ts.where((t) => arriba(t, dias[i])).length - 3} más',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: P.textoSuave),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              width: 36,
+                              height: 36,
+                              alignment: Alignment.center,
+                              decoration: diasHasta(d) == 0
+                                  ? BoxDecoration(color: P.morado, shape: BoxShape.circle)
+                                  : null,
+                              child: Text(
+                                '${d.day}',
+                                style: TextStyle(
+                                  fontFamily: P.titulos,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w600,
+                                  color: diasHasta(d) == 0 ? Colors.white : P.texto,
+                                ),
                               ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Divider(height: 1, color: P.borde),
-          ],
+              if (PanelSinAsignar.pendientes().isNotEmpty && onSinAsignar != null)
+                Positioned(
+                  top: 4,
+                  left: 4,
+                  child: _AvisoSinAsignar(PanelSinAsignar.pendientes().length, onSinAsignar!),
+                ),
+            ],
+          ),
+          Divider(height: 1, color: P.borde),
           Expanded(
             child: SingleChildScrollView(
               key: const PageStorageKey('itinerario-semana'),
@@ -566,9 +525,9 @@ class VistaSemana extends StatelessWidget {
       final libre = carriles.indexWhere((c) => c.last.finMin! <= t.inicioMin!);
       libre < 0 ? carriles.add([t]) : carriles[libre].add(t);
     }
-    return LayoutBuilder(
-      builder: (context, box) {
-        final anchoCarril = box.maxWidth / max(1, carriles.length);
+    // Sin LayoutBuilder: los carriles son Expanded, así un cambio de ancho no reconstruye los bloques.
+    return Builder(
+      builder: (context) {
         return Container(
           decoration: BoxDecoration(
             color: diasHasta(dia) == 0 ? P.moradoSuave.withValues(alpha: .35) : null,
@@ -582,6 +541,11 @@ class VistaSemana extends StatelessWidget {
               final c = d.data.copia()
                 ..proximo = dia
                 ..inicioMin = _horaEn(max(0, y), altoH);
+              // Desde "Sin asignar": al colocarla se le asigna el trabajador más adecuado y sale de la lista.
+              if (c.trabajadorIds.isEmpty) {
+                final m = store.mejorPara(c);
+                if (m != null) c.trabajadorIds = [m.id];
+              }
               store.guardarTarea(c);
             },
             builder: (context, candidatos, _) => Container(
@@ -593,38 +557,42 @@ class VistaSemana extends StatelessWidget {
                   cursor: SystemMouseCursors.cell,
                   child: Stack(
                     children: [
-                      for (var h = 0; h < _hasta - _desde; h++) ...[
-                        Positioned(
-                          top: h * altoH,
-                          left: 0,
-                          right: 0,
-                          child: Divider(height: 1, color: P.borde.withValues(alpha: .6)),
-                        ),
-                        // Con zoom, líneas finas en las medias y en los cuartos.
-                        for (final m in [
-                          if (altoH >= 110) 30,
-                          if (altoH >= 200) ...[15, 45],
-                        ])
-                          Positioned(
-                            top: h * altoH + m / 60 * altoH,
-                            left: 0,
-                            right: 0,
-                            child: Divider(height: 1, color: P.borde.withValues(alpha: .3)),
-                          ),
-                      ],
-                      for (final (c, carril) in carriles.indexed)
-                        for (final t in carril)
-                          if (t.inicioMin! < _hasta * 60 && t.finMin! > _desde * 60)
-                            Positioned(
-                              top: (max(t.inicioMin!, _desde * 60) - _desde * 60) / 60 * altoH + 1,
-                              height: max(
-                                24,
-                                (min(t.finMin!, _hasta * 60) - max(t.inicioMin!, _desde * 60)) / 60 * altoH - 2,
+                      // Líneas de horas (y, con zoom, de medias y cuartos): un solo dibujo por columna.
+                      Positioned.fill(
+                        child: CustomPaint(painter: _LineasHoras(altoH, color: P.borde)),
+                      ),
+                      Positioned.fill(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final carril in carriles)
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                                  child: Stack(
+                                    children: [
+                                      for (final t in carril)
+                                        if (t.inicioMin! < _hasta * 60 && t.finMin! > _desde * 60)
+                                          Positioned(
+                                            top: (max(t.inicioMin!, _desde * 60) - _desde * 60) / 60 * altoH + 1,
+                                            height: max(
+                                              24,
+                                              (min(t.finMin!, _hasta * 60) - max(t.inicioMin!, _desde * 60)) /
+                                                      60 *
+                                                      altoH -
+                                                  2,
+                                            ),
+                                            left: 0,
+                                            right: 0,
+                                            child: BloqueTarea(t, dia, compacto: t.duracionMin < 60, arrastrable: true),
+                                          ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              left: c * anchoCarril + 2,
-                              width: anchoCarril - 4,
-                              child: BloqueTarea(t, dia, compacto: t.duracionMin < 60, arrastrable: true),
-                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -711,8 +679,9 @@ class _MapaAgendaState extends State<MapaAgenda> {
     final sel = elegido == null ? null : store.cliente(elegido);
 
     return Container(
-      decoration: BoxDecoration(
-        color: P.superficie,
+      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+      // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
+      foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(P.radio),
         border: Border.all(color: P.borde),
       ),
@@ -1017,4 +986,62 @@ class _HerramientasMapa extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Triángulo ámbar de la esquina del calendario: "N tareas sin asignar"; al pulsar abre su panel.
+class _AvisoSinAsignar extends StatelessWidget {
+  final int n;
+  final VoidCallback onTap;
+  const _AvisoSinAsignar(this.n, this.onTap);
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: '$n ${n == 1 ? 'tarea sin asignar' : 'tareas sin asignar'}',
+    child: IconButton(
+      onPressed: onTap,
+      mouseCursor: SystemMouseCursors.click,
+      style: IconButton.styleFrom(
+        fixedSize: const Size(34, 34),
+        minimumSize: const Size(34, 34),
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl - 2)),
+      ),
+      icon: const Icon(Icons.warning_amber_rounded, color: P.ambar, size: 20),
+    ),
+  );
+}
+
+/// Líneas de la rejilla de horas, pintadas de una vez (horizontales en Semana, verticales en Día).
+/// Con zoom añade líneas más suaves en las medias y, con más zoom, en los cuartos.
+class _LineasHoras extends CustomPainter {
+  final double porHora;
+  final bool vertical;
+  final Color color;
+  const _LineasHoras(this.porHora, {this.vertical = false, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fuerte = Paint()
+      ..color = color.withValues(alpha: .6)
+      ..strokeWidth = 1;
+    final suave = Paint()
+      ..color = color.withValues(alpha: .3)
+      ..strokeWidth = 1;
+    final marcas = [
+      if (porHora >= 110) 30,
+      if (porHora >= 200) ...[15, 45],
+    ];
+    void linea(double p, Paint pincel) => vertical
+        ? canvas.drawLine(Offset(p, 0), Offset(p, size.height), pincel)
+        : canvas.drawLine(Offset(0, p + .5), Offset(size.width, p + .5), pincel);
+    for (var h = 0; h < _hasta - _desde; h++) {
+      linea(h * porHora, fuerte);
+      for (final m in marcas) {
+        linea(h * porHora + m / 60 * porHora, suave);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LineasHoras old) => old.porHora != porHora || old.color != color || old.vertical != vertical;
 }
