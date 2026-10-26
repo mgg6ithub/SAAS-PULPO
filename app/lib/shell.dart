@@ -58,6 +58,8 @@ class _ShellState extends State<Shell> {
   }
 
   void ir(Seccion s) => setState(() {
+    // Primeros pasos: ver el itinerario cuenta solo si ya hay algún trabajo que ver en él.
+    if (s == Seccion.planificacion && store.tareas.any((t) => !t.esPlantilla)) ajustes.marcarGuiaItinerario();
     seccion = s;
     clienteId = null;
     trabajadorId = null;
