@@ -55,7 +55,12 @@ class Resumen extends StatelessWidget {
             : Column(children: [a, const SizedBox(height: 16), b]);
 
         return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(margenPagina.left, margenPagina.top + 16, margenPagina.right, margenPagina.bottom),
+          padding: EdgeInsets.fromLTRB(
+            margenPagina.left,
+            margenPagina.top + 16,
+            margenPagina.right,
+            margenPagina.bottom,
+          ),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1080),
@@ -156,11 +161,7 @@ class _PrimerosPasos extends StatelessWidget {
     final actual = hechos.indexOf(false);
     // Borde discontinuo: es una guía de paso, no una tarjeta de datos.
     return CustomPaint(
-      foregroundPainter: BordeDiscontinuo(
-        P.gris.withValues(alpha: .4),
-        BorderRadius.circular(P.radio),
-        separacion: 6,
-      ),
+      foregroundPainter: BordeDiscontinuo(P.gris.withValues(alpha: .4), BorderRadius.circular(P.radio), separacion: 6),
       child: Tarjeta(
         color: P.superficie,
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
@@ -659,10 +660,7 @@ class _HeroState extends State<_Hero> {
                       child: Padding(
                         padding: const EdgeInsets.only(left: 10),
                         child: ExcludeSemantics(
-                          child: CustomPaint(
-                            size: const Size.square(36),
-                            painter: _IconoSaludo(_ahora.hour),
-                          ),
+                          child: CustomPaint(size: const Size.square(36), painter: _IconoSaludo(_ahora.hour)),
                         ),
                       ),
                     ),
@@ -679,50 +677,38 @@ class _HeroState extends State<_Hero> {
               ),
               const SizedBox(height: 4),
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               if (clientes == 0)
-                Padding(
-                  // Sin hueco extra: la flecha cae sobre el margen inferior del bloque.
-                  padding: EdgeInsets.zero,
-                  child: Text.rich(
-                    TextSpan(
-                      text: 'Completa los primeros ',
-                      children: [
-                        WidgetSpan(
-                          alignment: PlaceholderAlignment.baseline,
-                          baseline: TextBaseline.alphabetic,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              const Text(
-                                'pasos',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const Positioned(
-                                top: 17,
-                                left: 4,
-                                child: ExcludeSemantics(
-                                  child: CustomPaint(
-                                    size: Size(22, 18),
-                                    painter: _FlechaGuia(),
+                // Las huellas salen del final del texto y bajan hacia la guía (caen sobre el margen inferior).
+                const Text.rich(
+                  TextSpan(
+                    text: 'Completa los primeros pasos',
+                    children: [
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: SizedBox(
+                            width: 60,
+                            height: 18,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  child: ExcludeSemantics(
+                                    child: CustomPaint(size: Size(60, 36), painter: _HuellasGuia()),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                      ),
+                    ],
                   ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
                 )
               else
                 Wrap(
@@ -757,31 +743,49 @@ class _HeroState extends State<_Hero> {
 /// Margen interior del bloque del saludo; la fecha de encima entra lo mismo para alinearse con él.
 const _sangriaHero = 22.0;
 
-/// Flecha dibujada bajo «pasos», con la punta dirigida a la guía.
-class _FlechaGuia extends CustomPainter {
-  const _FlechaGuia();
+/// Huellas que caminan desde el final de «Completa los primeros pasos» y giran hacia abajo, a la guía,
+/// con una flechita al final.
+class _HuellasGuia extends CustomPainter {
+  const _HuellasGuia();
+
+  // Curva del camino (cuadrática): sale en horizontal y acaba bajando.
+  static const _p0 = Offset(2, 9), _p1 = Offset(46, 5), _p2 = Offset(52, 26);
+
+  Offset _punto(double t) => _p0 * ((1 - t) * (1 - t)) + _p1 * (2 * (1 - t) * t) + _p2 * (t * t);
+  Offset _direccion(double t) => (_p1 - _p0) * (2 * (1 - t)) + (_p2 - _p1) * (2 * t);
 
   @override
   void paint(Canvas canvas, Size size) {
+    final relleno = Paint()..color = Colors.white.withValues(alpha: .9);
+    // Cuatro pisadas alternando pie izquierdo y derecho a lo largo del camino.
+    for (final (i, t) in [0.08, 0.32, 0.56, 0.8].indexed) {
+      final d = _direccion(t);
+      final angulo = atan2(d.dy, d.dx);
+      canvas.save();
+      canvas.translate(_punto(t).dx, _punto(t).dy);
+      canvas.rotate(angulo);
+      canvas.translate(0, i.isEven ? -2.6 : 2.6);
+      canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 5.5, height: 3.4), relleno);
+      canvas.drawCircle(const Offset(4.2, 0), 1.1, relleno);
+      canvas.restore();
+    }
     final pincel = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.7
+      ..strokeWidth = 1.8
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(
       Path()
-        ..moveTo(11, 1)
-        ..cubicTo(22, 3, 19, 12, 5, 15)
-        ..moveTo(8, 10)
-        ..lineTo(5, 15)
-        ..lineTo(10, 17.5),
+        ..moveTo(_p2.dx - 4.5, 29)
+        ..lineTo(_p2.dx, 34)
+        ..lineTo(_p2.dx + 4.5, 29),
       pincel,
     );
   }
 
   @override
-  bool shouldRepaint(_FlechaGuia old) => false;
+  bool shouldRepaint(_HuellasGuia old) => false;
 }
 
 /// Ilustraciones vectoriales del saludo: amanecer, sol y luna con estrellas.
@@ -789,8 +793,7 @@ class _IconoSaludo extends CustomPainter {
   final int hora;
   const _IconoSaludo(this.hora);
 
-  int get periodo =>
-      hora >= 6 && hora < 14 ? 0 : (hora >= 14 && hora < 21 ? 1 : 2);
+  int get periodo => hora >= 6 && hora < 14 ? 0 : (hora >= 14 && hora < 21 ? 1 : 2);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -814,40 +817,18 @@ class _IconoSaludo extends CustomPainter {
     if (noche) {
       final luna = Path.combine(
         PathOperation.difference,
-        Path()
-          ..addOval(Rect.fromCircle(center: const Offset(17, 19), radius: 11)),
-        Path()
-          ..addOval(Rect.fromCircle(center: const Offset(22, 14), radius: 10)),
+        Path()..addOval(Rect.fromCircle(center: const Offset(17, 19), radius: 11)),
+        Path()..addOval(Rect.fromCircle(center: const Offset(22, 14), radius: 10)),
       );
       canvas.drawPath(luna, relleno);
       void estrella(Offset centro, double radio) {
         canvas.drawPath(
           Path()
             ..moveTo(centro.dx, centro.dy - radio)
-            ..quadraticBezierTo(
-              centro.dx,
-              centro.dy,
-              centro.dx + radio,
-              centro.dy,
-            )
-            ..quadraticBezierTo(
-              centro.dx,
-              centro.dy,
-              centro.dx,
-              centro.dy + radio,
-            )
-            ..quadraticBezierTo(
-              centro.dx,
-              centro.dy,
-              centro.dx - radio,
-              centro.dy,
-            )
-            ..quadraticBezierTo(
-              centro.dx,
-              centro.dy,
-              centro.dx,
-              centro.dy - radio,
-            )
+            ..quadraticBezierTo(centro.dx, centro.dy, centro.dx + radio, centro.dy)
+            ..quadraticBezierTo(centro.dx, centro.dy, centro.dx, centro.dy + radio)
+            ..quadraticBezierTo(centro.dx, centro.dy, centro.dx - radio, centro.dy)
+            ..quadraticBezierTo(centro.dx, centro.dy, centro.dx, centro.dy - radio)
             ..close(),
           Paint()..color = Colors.white.withValues(alpha: .95),
         );
@@ -855,11 +836,7 @@ class _IconoSaludo extends CustomPainter {
 
       estrella(const Offset(27, 9), 3.5);
       estrella(const Offset(29, 25), 2);
-      canvas.drawCircle(
-        const Offset(10, 6),
-        1,
-        Paint()..color = Colors.white.withValues(alpha: .7),
-      );
+      canvas.drawCircle(const Offset(10, 6), 1, Paint()..color = Colors.white.withValues(alpha: .7));
     } else if (amanecer) {
       canvas.drawPath(
         Path()
@@ -874,11 +851,7 @@ class _IconoSaludo extends CustomPainter {
         canvas.drawLine(centro + direccion * 11, centro + direccion * (i.isOdd ? 16 : 13.5), trazo);
       }
       canvas.drawLine(const Offset(5, 26), const Offset(31, 26), trazo);
-      canvas.drawLine(
-        const Offset(10, 30),
-        const Offset(26, 30),
-        trazo..color = Colors.white.withValues(alpha: .5),
-      );
+      canvas.drawLine(const Offset(10, 30), const Offset(26, 30), trazo..color = Colors.white.withValues(alpha: .5));
     } else {
       canvas.drawCircle(centro, 7.5, relleno);
       for (var i = 0; i < 8; i++) {
