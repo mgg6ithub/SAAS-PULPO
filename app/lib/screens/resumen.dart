@@ -258,21 +258,21 @@ class _PrimerosPasos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // (título, explicación, ruta en la app, botón). El botón lo hace aquí mismo; la ruta, al lado, enseña
-    // dónde se hace en la app para la próxima vez. Ver el itinerario: solo su botón.
+    // (título, explicación, ruta en la app, botón). Los pasos de crear no se hacen aquí: la ruta es un botón
+    // que lleva a su sección y abre el formulario, para que se aprenda dónde está. Ver el itinerario: su botón.
     final pasos = [
       (
         'Crea tu primer cliente',
         'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación…',
-        ('Clientes', 'Nuevo cliente'),
-        BotonPrimario('Nuevo cliente', onPressed: () => abrirClienteForm(context)),
+        (Icons.apartment_outlined, 'Clientes', 'Nuevo cliente', Seccion.clientes, abrirClienteForm),
+        null,
       ),
       (
         'Crea un trabajo',
         'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
             'También puedes crearlo desde la ficha del cliente.',
-        ('Trabajos', 'Nuevo trabajo'),
-        BotonPrimario('Nuevo trabajo', onPressed: () => abrirTareaForm(context, null)),
+        (Icons.handyman_outlined, 'Trabajos', 'Nuevo trabajo', Seccion.tareas, (c) => abrirTareaForm(c, null)),
+        null,
       ),
       (
         'Mira tu trabajo en el itinerario',
@@ -283,8 +283,8 @@ class _PrimerosPasos extends StatelessWidget {
       (
         'Añade un trabajador',
         'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.',
-        ('Trabajadores', 'Nuevo trabajador'),
-        BotonPrimario('Nuevo trabajador', onPressed: () => abrirTrabajadorForm(context)),
+        (Icons.badge_outlined, 'Trabajadores', 'Nuevo trabajador', Seccion.trabajadores, abrirTrabajadorForm),
+        null,
       ),
     ];
     final actual = hechos.indexOf(false);
@@ -367,12 +367,17 @@ class _PrimerosPasos extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(detalle, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
                               const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 14,
-                                runSpacing: 8,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [boton, if (ruta != null) _Ruta(ruta.$1, ruta.$2)],
-                              ),
+                              if (ruta != null)
+                                _Ruta(
+                                  ruta.$1,
+                                  ruta.$2,
+                                  ruta.$3,
+                                  onTap: () {
+                                    onIr(ruta.$4);
+                                    ruta.$5(context);
+                                  },
+                                ),
+                              ?boton,
                               const SizedBox(height: 6),
                             ],
                           ],
@@ -389,21 +394,38 @@ class _PrimerosPasos extends StatelessWidget {
   }
 }
 
-/// Dónde se hace un paso en la app, en texto suave junto al botón: «o en Clientes › Nuevo cliente».
+/// Dónde se hace un paso en la app, en una pastilla suave: icono y sección › acción. Al pulsarla lleva
+/// a esa sección y abre su formulario, como si se hubiera pulsado allí.
 class _Ruta extends StatelessWidget {
+  final IconData icono;
   final String seccion, accion;
-  const _Ruta(this.seccion, this.accion);
+  final VoidCallback onTap;
+  const _Ruta(this.icono, this.seccion, this.accion, {required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final estilo = TextStyle(fontSize: 13, color: P.textoSuave);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('o en $seccion', style: estilo),
-        Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
-        Text(accion, style: estilo),
-      ],
+    const estilo = TextStyle(fontSize: 13, fontWeight: FontWeight.w500);
+    return Material(
+      color: P.hover,
+      borderRadius: BorderRadius.circular(P.radioControl),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(P.radioControl),
+        hoverColor: P.moradoSuave,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icono, size: 15, color: P.textoSuave),
+              const SizedBox(width: 6),
+              Text(seccion, style: estilo),
+              Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
+              Text(accion, style: estilo),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
