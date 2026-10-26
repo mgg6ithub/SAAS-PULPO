@@ -2213,8 +2213,9 @@ class _MenuCriticidad extends StatelessWidget {
           child: Row(children: [_punto(c), const SizedBox(width: 10), Text(c.etiqueta)]),
         ),
     ],
+    // Fondo bajo, que no llegue a la línea de debajo de la cabecera.
     child: SizedBox(
-      height: 24,
+      height: 22,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -2264,7 +2265,11 @@ class _BotonMenuState<T> extends State<_BotonMenu<T>> {
       items: widget.items,
     );
     if (!mounted) return;
-    setState(() => abierto = false);
+    // Sin fondo al cerrar: vuelve solo al salir y entrar otra vez con el ratón.
+    setState(() {
+      abierto = false;
+      hover = false;
+    });
     if (v != null) widget.onSelected(v);
   }
 
@@ -2281,7 +2286,7 @@ class _BotonMenuState<T> extends State<_BotonMenu<T>> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: hover && !abierto ? P.hover : P.hover.withValues(alpha: 0),
             borderRadius: BorderRadius.circular(P.radioControl),
