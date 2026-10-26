@@ -954,13 +954,26 @@ class _ClienteFormState extends State<ClienteForm> {
   late final contacto = TextEditingController(text: c.contacto);
   late final telContacto = TextEditingController(text: c.telefonoContacto);
   late final notas = TextEditingController(text: c.notas);
-  String? error;
+  bool intentoGuardar = false;
+  final _claveNombre = GlobalKey();
+
+  String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
+
+  void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final contexto = clave.currentContext;
+    if (contexto != null) {
+      Scrollable.ensureVisible(
+        contexto,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+        alignment: .2,
+      );
+    }
+  });
 
   void guardar() {
-    if (nombre.text.trim().isEmpty) {
-      setState(() => error = 'El nombre es obligatorio');
-      return;
-    }
+    setState(() => intentoGuardar = true);
+    if (error != null) return _irA(_claveNombre);
     c
       ..nombre = nombre.text.trim()
       ..cif = cif.text.trim()
@@ -1001,6 +1014,7 @@ class _ClienteFormState extends State<ClienteForm> {
     lider: FotoFormulario(foto: c.foto, cuadrado: true, onCambio: (f) => setState(() => c.foto = f)),
     extra: selectorColor(c.color, (i) => setState(() => c.color = i), size: 20),
     onGuardar: guardar,
+    avisos: [if (error != null) ('Te falta el nombre', () => _irA(_claveNombre))],
     onBorrar: widget.original == null
         ? null
         : () async {
@@ -1012,7 +1026,10 @@ class _ClienteFormState extends State<ClienteForm> {
           },
     campos: [
       Bloque('Datos del cliente', primero: true, descripcion: 'Cómo se llama y cómo contactar con él.', [
-        campo('Nombre', nombre, hint: 'Colegio San José', error: error, obligatorio: true),
+        KeyedSubtree(
+          key: _claveNombre,
+          child: campo('Nombre', nombre, hint: 'Colegio San José', error: error, obligatorio: true),
+        ),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ]),
       Bloque('Persona de contacto', descripcion: 'Con quién hablas para coordinar las visitas.', [
@@ -1074,14 +1091,28 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
   late final email = TextEditingController(text: w.email);
   late final titulos = TextEditingController(text: w.titulos);
   late final info = TextEditingController(text: w.info);
-  String? error, errorCompetencias;
+  bool intentoGuardar = false;
+  final _claveNombre = GlobalKey(), _claveCompetencias = GlobalKey();
+
+  String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
+  String? get errorCompetencias => intentoGuardar && w.competencias.isEmpty ? 'Elige una competencia' : null;
+
+  void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final contexto = clave.currentContext;
+    if (contexto != null) {
+      Scrollable.ensureVisible(
+        contexto,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+        alignment: .2,
+      );
+    }
+  });
 
   void guardar() {
-    setState(() {
-      error = nombre.text.trim().isEmpty ? 'El nombre es obligatorio' : null;
-      errorCompetencias = w.competencias.isEmpty ? 'Elige al menos una competencia' : null;
-    });
-    if (error != null || errorCompetencias != null) return;
+    setState(() => intentoGuardar = true);
+    if (error != null) return _irA(_claveNombre);
+    if (errorCompetencias != null) return _irA(_claveCompetencias);
     w
       ..nombre = nombre.text.trim()
       ..apellidos = apellidos.text.trim()
@@ -1109,6 +1140,10 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
     extra: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20),
     incrustada: widget.incrustada,
     onGuardar: guardar,
+    avisos: [
+      if (error != null) ('Te falta el nombre', () => _irA(_claveNombre)),
+      if (errorCompetencias != null) ('Te falta una competencia', () => _irA(_claveCompetencias)),
+    ],
     onBorrar: widget.original == null
         ? null
         : () async {
@@ -1120,16 +1155,42 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
           },
     campos: [
       Bloque('Datos personales', primero: true, descripcion: 'Nombre y forma de contacto.', [
-        dos(campo('Nombre', nombre, error: error, obligatorio: true), campo('Apellidos', apellidos)),
+        dos(
+          KeyedSubtree(
+            key: _claveNombre,
+            child: campo('Nombre', nombre, error: error, obligatorio: true),
+          ),
+          campo('Apellidos', apellidos),
+        ),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ]),
       Bloque('Competencias', descripcion: 'Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.', [
-        chipsCompetencias(w.competencias, () => setState(() => errorCompetencias = null)),
-        if (errorCompetencias != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(errorCompetencias!, style: const TextStyle(color: P.rojo, fontSize: 12)),
+        KeyedSubtree(
+          key: _claveCompetencias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              etiqueta('Competencias'),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: errorCompetencias == null ? Colors.transparent : P.rojo),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: chipsCompetencias(w.competencias, () => setState(() {})),
+                ),
+              ),
+              SizedBox(
+                height: 20,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(errorCompetencias ?? ' ', style: const TextStyle(color: P.rojo, fontSize: 12)),
+                ),
+              ),
+            ],
           ),
+        ),
         const SizedBox(height: 12),
         campo('Títulos y carnés', titulos, hint: 'Carné RITE, PRL 60 h…'),
       ]),
