@@ -44,14 +44,17 @@ class Resumen extends StatelessWidget {
       clave: (box) => min(1080.0, box.maxWidth - margenPagina.horizontal) > 760,
       builder: (context, box) {
         final dosCol = min(1080.0, box.maxWidth - margenPagina.horizontal) > 760;
+        // En pareja, las dos tarjetas miden lo mismo: lo que pida la más alta, sin huecos fijos.
         Widget par(Widget a, Widget b) => dosCol
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: a),
-                  const SizedBox(width: 16),
-                  Expanded(child: b),
-                ],
+            ? IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: a),
+                    const SizedBox(width: 16),
+                    Expanded(child: b),
+                  ],
+                ),
               )
             : Column(children: [a, const SizedBox(height: 16), b]);
 
@@ -68,7 +71,7 @@ class Resumen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Hero(conFecha: conFecha, sinTrabajador: sinTrabajador, pasos: pasos),
+                  _Hero(conFecha: conFecha, pasos: pasos),
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pulpo.
@@ -531,13 +534,12 @@ class _Pendientes extends StatelessWidget {
         ),
     ];
     return SeccionTarjeta(
-      alto: _alto,
       titulo: 'Acciones pendientes',
       accion: filas.isEmpty ? null : Pill('${filas.length}', P.rojo),
       children: filas.isEmpty
           ? [
               const SizedBox(
-                height: 180,
+                height: 140,
                 child: Vacio(icono: Icons.task_alt_rounded, texto: 'Nada pendiente. ¡Todo al día!'),
               ),
             ]
@@ -574,14 +576,13 @@ class _CargaTrabajadores extends StatelessWidget {
     ws.sort((a, b) => carga(b) - carga(a));
     final maximo = max(1, ws.isEmpty ? 1 : carga(ws.first));
     return SeccionTarjeta(
-      alto: _alto,
       titulo: 'Carga del equipo',
       subtitulo: 'Trabajos asignados en los próximos 7 días',
       sinFilas: true,
       children: [
         if (ws.isEmpty)
           const SizedBox(
-            height: 160,
+            height: 140,
             child: Vacio(icono: Icons.badge_outlined, texto: 'Aún no hay trabajadores'),
           )
         else
@@ -682,18 +683,15 @@ class _Proximos extends StatelessWidget {
   }
 }
 
-/// Alto común de las tarjetas que van en pareja, para que queden iguales.
-const _alto = 340.0;
-
 /// Cabecera de Inicio: la fecha en morado y las acciones fuera, justo encima de un bloque morado claro
 /// (degradado desde la izquierda) con el saludo, una frase según el momento y tres cifras, sin botones.
 /// Saludo, fecha y frase siguen a la hora: se revisan cada minuto.
 class _Hero extends StatefulWidget {
-  final List<Tarea> conFecha, sinTrabajador;
+  final List<Tarea> conFecha;
 
   /// Pasos de la guía hechos o no (ver [_PrimerosPasos]).
   final List<bool> pasos;
-  const _Hero({required this.conFecha, required this.sinTrabajador, required this.pasos});
+  const _Hero({required this.conFecha, required this.pasos});
 
   @override
   State<_Hero> createState() => _HeroState();
@@ -759,7 +757,6 @@ class _HeroState extends State<_Hero> {
 
   @override
   Widget build(BuildContext context) {
-    final sinTrabajador = widget.sinTrabajador;
     // Desde el primer cliente, mostrar las cifras aunque la guía siga pendiente.
     final hechos = widget.pasos.where((p) => p).length;
     final clientes = store.clientes.length;
@@ -787,26 +784,6 @@ class _HeroState extends State<_Hero> {
               ),
             ),
             // Sin botón "Itinerario": ya está "Ir al itinerario" en Próximos mantenimientos (una acción, un sitio).
-            if (sinTrabajador.isNotEmpty) ...[
-              BotonAccion(
-                '✦ Asignar ${sinTrabajador.length}',
-                tooltip: 'Asignar el trabajador más adecuado a lo que no tiene',
-                onPressed: () {
-                  final n = store.automatizar(sinTrabajador);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      width: 420,
-                      content: Text(
-                        n == 0
-                            ? 'No hay trabajadores aptos para lo que falta.'
-                            : 'Pulpo ha asignado $n ${n == 1 ? 'mantenimiento' : 'mantenimientos'}.',
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-            ],
             // Igual que en el Itinerario.
             if (hechos == widget.pasos.length)
               BotonAccion(

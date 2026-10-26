@@ -71,9 +71,11 @@ class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
     ],
-    // Arrastrar con el ratón para el scroll horizontal de la vista principal.
+    // Arrastrar con el ratón para el scroll horizontal de la vista principal. Sin rebote: en el Mac la web
+    // rebotaba y dejaba "desplazar" vistas que ya caben enteras.
     scrollBehavior: const MaterialScrollBehavior().copyWith(
       dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
+      physics: const ClampingScrollPhysics(),
     ),
     // Tamaño de letra de Ajustes (accesibilidad): escala todo el texto, ventanas incluidas.
     builder: (context, child) => MediaQuery(
