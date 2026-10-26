@@ -310,7 +310,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             ),
           // A la altura del título, bajo los botones de ventana.
           if (widget.bajoBotones != null && !widget.incrustada)
-            Positioned(top: acoplada ? 32 : 34, right: 12, child: widget.bajoBotones!),
+            Positioned(top: acoplada ? 40 : 42, right: 12, child: widget.bajoBotones!),
         ],
       ),
     ),
