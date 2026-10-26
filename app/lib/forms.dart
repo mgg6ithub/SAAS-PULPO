@@ -935,7 +935,7 @@ class _ClienteFormState extends State<ClienteForm> {
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
-    etiqueta: 'Cliente',
+    etiqueta: 'Clientes',
     titulo: widget.original == null ? 'Nuevo cliente' : 'Editar cliente',
     tituloDesplazado: nombre.text,
     lider: FotoFormulario(foto: c.foto, cuadrado: true, onCambio: (f) => setState(() => c.foto = f)),
@@ -1032,7 +1032,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
-    etiqueta: 'Trabajador',
+    etiqueta: 'Trabajadores',
     titulo: widget.original == null ? 'Nuevo trabajador' : (widget.incrustada ? 'Ficha' : 'Editar trabajador'),
     tituloDesplazado: '${nombre.text} ${apellidos.text}',
     lider: FotoFormulario(foto: w.foto, onCambio: (f) => setState(() => w.foto = f)),
@@ -1224,7 +1224,7 @@ class _TareaFormState extends State<TareaForm> {
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
-      etiqueta: t.esPlantilla ? 'Plantilla' : 'Trabajo',
+      etiqueta: t.esPlantilla ? 'Plantillas' : 'Trabajos',
       titulo: nueva ? (t.esPlantilla ? 'Nueva plantilla' : 'Nuevo trabajo') : nombre.text,
       tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
