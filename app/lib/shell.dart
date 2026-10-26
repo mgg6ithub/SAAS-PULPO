@@ -244,6 +244,12 @@ class _BarraState extends State<_Barra> {
   final _arrastre = ValueNotifier<double?>(null);
   double _inicioX = 0, _inicioAncho = 0;
 
+  /// En ventanas estrechas la barra arranca en solo iconos, pero "Expandir" la abre igualmente.
+  bool _abiertaCompacta = false;
+
+  void _alternar() =>
+      widget.compacta ? setState(() => _abiertaCompacta = !_abiertaCompacta) : ajustes.alternarContraida();
+
   @override
   void dispose() {
     _arrastre.dispose();
@@ -255,7 +261,7 @@ class _BarraState extends State<_Barra> {
 
   /// Ancho objetivo. Al arrastrar sigue al ratón sin saltos; al soltar se ajusta (y se anima).
   double _ancho(double? arrastrando) {
-    if (widget.compacta) return Ajustes.anchoIconos;
+    if (widget.compacta) return _abiertaCompacta ? Ajustes.anchoTextos + 40 : Ajustes.anchoIconos;
     if (arrastrando != null) return arrastrando;
     final a = ajustes.anchoBarra;
     return a <= Ajustes.anchoIconos ? Ajustes.anchoIconos : a.clamp(Ajustes.anchoTextos, maximo);
@@ -302,7 +308,7 @@ class _BarraState extends State<_Barra> {
                         ? Icons.keyboard_double_arrow_left_rounded
                         : Icons.keyboard_double_arrow_right_rounded,
                     'Expandir',
-                    ajustes.alternarContraida,
+                    _alternar,
                   ),
                 ] else
                   Row(
@@ -323,15 +329,14 @@ class _BarraState extends State<_Barra> {
                           ),
                         ),
                       ),
-                      if (!widget.compacta)
-                        _Icono(
-                          ajustes.barraDerecha
-                              ? Icons.keyboard_double_arrow_right_rounded
-                              : Icons.keyboard_double_arrow_left_rounded,
-                          'Contraer',
-                          ajustes.alternarContraida,
-                          pequeno: true,
-                        ),
+                      _Icono(
+                        ajustes.barraDerecha
+                            ? Icons.keyboard_double_arrow_right_rounded
+                            : Icons.keyboard_double_arrow_left_rounded,
+                        'Contraer',
+                        _alternar,
+                        pequeno: true,
+                      ),
                     ],
                   ),
                 // Contraída: una línea separa el logo del menú. Expandida, solo aire.
