@@ -170,17 +170,21 @@ class _PrimerosPasos extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    'Primeros pasos',
-                    style: TextStyle(
-                      fontFamily: P.titulos,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -.3,
-                    ),
+                Text(
+                  'Primeros pasos',
+                  style: TextStyle(
+                    fontFamily: P.titulos,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.3,
                   ),
                 ),
+                const SizedBox(width: 16),
+                // Pasitos que caminan hacia la derecha, en onda, junto al título.
+                ExcludeSemantics(
+                  child: CustomPaint(size: const Size(150, 30), painter: _HuellasGuia(P.morado.withValues(alpha: .4))),
+                ),
+                const Spacer(),
                 Text(
                   '${hechos.where((h) => h).length} de ${pasos.length}',
                   style: TextStyle(fontSize: 12.5, color: P.textoSuave),
@@ -679,46 +683,33 @@ class _HeroState extends State<_Hero> {
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
               const SizedBox(height: 8),
               if (clientes == 0)
-                // Las huellas caminan por detrás del texto, de izquierda a derecha, subiendo hacia la
-                // bienvenida y pasando por debajo; al final de «pasos» sale la flecha hacia la guía.
-                const Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: -_alturaHuellas,
-                      bottom: -_alturaHuellas,
-                      child: ExcludeSemantics(child: CustomPaint(painter: _HuellasGuia())),
-                    ),
-                    Text.rich(
-                      TextSpan(
-                        text: 'Completa los primeros pasos',
-                        children: [
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: SizedBox(
-                              width: 4,
-                              height: 18,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Positioned(
-                                    top: 12,
-                                    left: -8,
-                                    child: ExcludeSemantics(
-                                      child: CustomPaint(size: Size(22, 18), painter: _FlechaGuia()),
-                                    ),
-                                  ),
-                                ],
+                // Al final de «pasos» sale la flecha curva hacia la guía.
+                const Text.rich(
+                  TextSpan(
+                    text: 'Completa los primeros pasos',
+                    children: [
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: SizedBox(
+                          width: 4,
+                          height: 18,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned(
+                                top: 12,
+                                left: -8,
+                                child: ExcludeSemantics(
+                                  child: CustomPaint(size: Size(22, 18), painter: _FlechaGuia()),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
-                    ),
-                  ],
+                    ],
+                  ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
                 )
               else
                 Wrap(
@@ -753,22 +744,19 @@ class _HeroState extends State<_Hero> {
 /// Margen interior del bloque del saludo; la fecha de encima entra lo mismo para alinearse con él.
 const _sangriaHero = 22.0;
 
-/// Cuánto suben y bajan las huellas respecto al centro del texto.
-const _alturaHuellas = 14.0;
-
-/// Huellas tenues que cruzan «Completa los primeros pasos» de izquierda a derecha en una onda: suben hacia
-/// la bienvenida, bajan por debajo del texto y acaban al final de «pasos».
+/// Pasitos que caminan de izquierda a derecha en una onda (arriba y abajo), junto al título de la guía.
 class _HuellasGuia extends CustomPainter {
-  const _HuellasGuia();
+  final Color color;
+  const _HuellasGuia(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final relleno = Paint()..color = Colors.white.withValues(alpha: .32);
-    final centro = size.height / 2, ancho = size.width - 8;
-    // Una onda completa: arriba en la primera mitad, abajo en la segunda.
-    double y(double x) => centro - (_alturaHuellas - 3) * sin(2 * pi * x / ancho);
-    double pendiente(double x) => -(_alturaHuellas - 3) * cos(2 * pi * x / ancho) * 2 * pi / ancho;
-    final n = max(4, (ancho / 17).floor());
+    final relleno = Paint()..color = color;
+    final centro = size.height / 2, ancho = size.width - 8, amplitud = size.height / 2 - 4;
+    // Una onda completa y marcada: arriba en la primera mitad, abajo en la segunda.
+    double y(double x) => centro - amplitud * sin(2 * pi * x / ancho);
+    double pendiente(double x) => -amplitud * cos(2 * pi * x / ancho) * 2 * pi / ancho;
+    final n = max(4, (ancho / 15).floor());
     for (var i = 0; i < n; i++) {
       final x = 4 + i * (ancho - 4) / (n - 1);
       canvas.save();
@@ -776,8 +764,9 @@ class _HuellasGuia extends CustomPainter {
       canvas.rotate(atan(pendiente(x)));
       // Pie izquierdo y derecho alternos, a cada lado del camino.
       canvas.translate(0, i.isEven ? -2.6 : 2.6);
-      canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 5.5, height: 3.4), relleno);
-      canvas.drawCircle(const Offset(4.2, 0), 1.1, relleno);
+      // Planta delante (hacia la derecha) y talón detrás: se ve hacia dónde camina.
+      canvas.drawOval(Rect.fromCenter(center: const Offset(1.5, 0), width: 6, height: 3.8), relleno);
+      canvas.drawOval(Rect.fromCenter(center: const Offset(-4, 0), width: 3.2, height: 2.8), relleno);
       canvas.restore();
     }
   }
