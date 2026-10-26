@@ -222,28 +222,22 @@ class _FilaGrupoHorario extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            width: 92,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            width: 58,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                SizedBox(width: 18, child: CustomPaint(painter: _CorcheteHorario(P.borde))),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hhmm(grupo.inicio),
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
-                      ),
-                      Text(hhmm(grupo.fin), style: TextStyle(fontSize: 12, color: P.textoSuave)),
-                    ],
-                  ),
+                Text(
+                  hhmm(grupo.inicio),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
                 ),
+                Icon(Icons.arrow_downward_rounded, size: 15, color: P.textoSuave),
+                Text(hhmm(grupo.fin), style: TextStyle(fontSize: 12, color: P.textoSuave)),
               ],
             ),
           ),
+          const SizedBox(width: 10),
+          SizedBox(width: 18, child: CustomPaint(painter: _CorcheteHorario(P.borde))),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               children: [
