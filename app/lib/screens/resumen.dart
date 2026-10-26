@@ -179,11 +179,6 @@ class _PrimerosPasos extends StatelessWidget {
                     letterSpacing: -.3,
                   ),
                 ),
-                const SizedBox(width: 16),
-                // Pasitos que caminan hacia la derecha, en onda, junto al título.
-                ExcludeSemantics(
-                  child: CustomPaint(size: const Size(150, 30), painter: _HuellasGuia(P.morado.withValues(alpha: .4))),
-                ),
                 const Spacer(),
                 Text(
                   '${hechos.where((h) => h).length} de ${pasos.length}',
@@ -191,7 +186,14 @@ class _PrimerosPasos extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            // Pasitos que caminan hacia la derecha, en onda, bajo el título.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ExcludeSemantics(
+                child: CustomPaint(size: const Size(290, 30), painter: _HuellasGuia(P.morado.withValues(alpha: .4))),
+              ),
+            ),
+            const SizedBox(height: 6),
             for (final (i, (titulo, detalle, ruta, boton)) in pasos.indexed)
               IntrinsicHeight(
                 child: Row(
