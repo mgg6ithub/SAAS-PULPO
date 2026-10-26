@@ -360,11 +360,10 @@ class _Avisos extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
-    child: PopupMenuButton<int>(
+    child: _BotonMenu<int>(
       tooltip: 'Lo que falta para guardar',
-      position: PopupMenuPosition.over,
       onSelected: (i) => avisos[i].$2(),
-      itemBuilder: (_) => [
+      items: [
         for (final (i, (texto, _)) in avisos.indexed)
           PopupMenuItem(
             value: i,
@@ -377,32 +376,29 @@ class _Avisos extends StatelessWidget {
             ),
           ),
       ],
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.warning_amber_rounded, size: 17, color: P.rojo),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  avisos.first.$1,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
-                ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.warning_amber_rounded, size: 17, color: P.rojo),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                avisos.first.$1,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
               ),
-              if (avisos.length > 1)
-                Text(
-                  '  +${avisos.length - 1}',
-                  style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              const SizedBox(width: 4),
-              const Icon(CupertinoIcons.chevron_up_chevron_down, size: 13, color: P.rojo),
-            ],
-          ),
+            ),
+            if (avisos.length > 1)
+              Text(
+                '  +${avisos.length - 1}',
+                style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            const SizedBox(width: 4),
+            const Icon(CupertinoIcons.chevron_up_chevron_down, size: 13, color: P.rojo),
+          ],
         ),
       ),
     ),
@@ -2207,35 +2203,90 @@ class _MenuCriticidad extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) => PopupMenuButton<Criticidad>(
+  Widget build(BuildContext context) => _BotonMenu<Criticidad>(
     tooltip: '¿Cómo de importante es este trabajo?',
-    position: PopupMenuPosition.under,
-    initialValue: valor,
     onSelected: onChanged,
-    itemBuilder: (_) => [
+    items: [
       for (final c in Criticidad.values.reversed)
         PopupMenuItem(
           value: c,
           child: Row(children: [_punto(c), const SizedBox(width: 10), Text(c.etiqueta)]),
         ),
     ],
-    // Cursor de mano explícito: el del propio botón se pierde al cerrar el menú.
+    child: SizedBox(
+      height: 24,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _punto(valor),
+          const SizedBox(width: 8),
+          Text('Criticidad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+          const SizedBox(width: 6),
+          Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 4),
+          Icon(CupertinoIcons.chevron_up_chevron_down, size: 14, color: P.textoSuave),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Botón que abre un menú debajo: fondo redondeado suave al pasar el ratón (sin el destello cuadrado de
+/// PopupMenuButton), cursor de mano siempre, y el fondo se apaga despacio al abrirse el menú.
+class _BotonMenu<T> extends StatefulWidget {
+  final String tooltip;
+  final List<PopupMenuEntry<T>> items;
+  final ValueChanged<T> onSelected;
+  final Widget child;
+  const _BotonMenu({
+    super.key,
+    required this.tooltip,
+    required this.items,
+    required this.onSelected,
+    required this.child,
+  });
+
+  @override
+  State<_BotonMenu<T>> createState() => _BotonMenuState<T>();
+}
+
+class _BotonMenuState<T> extends State<_BotonMenu<T>> {
+  bool hover = false, abierto = false;
+
+  Future<void> _abrir() async {
+    final caja = context.findRenderObject()! as RenderBox;
+    final capa = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final abajo = caja.localToGlobal(caja.size.bottomLeft(const Offset(0, 4)), ancestor: capa);
+    setState(() => abierto = true);
+    final v = await showMenu<T>(
+      context: context,
+      position: RelativeRect.fromRect(abajo & Size(caja.size.width, 0), Offset.zero & capa.size),
+      items: widget.items,
+    );
+    if (!mounted) return;
+    setState(() => abierto = false);
+    if (v != null) widget.onSelected(v);
+  }
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: abierto ? '' : widget.tooltip,
     child: MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: Container(
-        height: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _punto(valor),
-            const SizedBox(width: 8),
-            Text('Criticidad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-            const SizedBox(width: 6),
-            Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(width: 4),
-            Icon(CupertinoIcons.chevron_up_chevron_down, size: 14, color: P.textoSuave),
-          ],
+      onEnter: (_) => setState(() => hover = true),
+      onExit: (_) => setState(() => hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _abrir,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: hover && !abierto ? P.hover : P.hover.withValues(alpha: 0),
+            borderRadius: BorderRadius.circular(P.radioControl),
+          ),
+          child: widget.child,
         ),
       ),
     ),
