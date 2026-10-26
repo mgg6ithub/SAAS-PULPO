@@ -51,6 +51,9 @@ class VentanaFormulario extends StatefulWidget {
   /// Arriba a la derecha, antes de acoplar y cerrar (p. ej. los colores).
   final Widget? extra;
 
+  /// Arriba a la derecha, debajo de los botones de acoplar y cerrar (p. ej. la criticidad del trabajo).
+  final Widget? bajoBotones;
+
   /// Al bajar y dejar de ver el campo del nombre, el título pasa a ser este (el nombre escrito).
   final String? tituloDesplazado;
   final List<Widget> campos;
@@ -71,6 +74,7 @@ class VentanaFormulario extends StatefulWidget {
     this.etiqueta,
     this.lider,
     this.extra,
+    this.bajoBotones,
     this.tituloDesplazado,
     required this.campos,
     required this.onGuardar,
@@ -207,7 +211,13 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
         children: [
           Padding(
             // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
-            padding: EdgeInsets.fromLTRB(32, acoplada || widget.incrustada ? 16 : 6, widget.incrustada ? 12 : 120, 12),
+            // A la derecha, sitio para los botones de ventana (y la criticidad debajo, si la hay).
+            padding: EdgeInsets.fromLTRB(
+              32,
+              acoplada || widget.incrustada ? 16 : 6,
+              widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : 120),
+              12,
+            ),
             child: Column(
               children: [
                 if (!acoplada && !widget.incrustada) const SizedBox(height: 12),
@@ -300,6 +310,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 ],
               ),
             ),
+          if (widget.bajoBotones != null && !widget.incrustada)
+            Positioned(top: 44, right: 12, child: widget.bajoBotones!),
         ],
       ),
     ),
@@ -420,7 +432,10 @@ class Bloque extends StatelessWidget {
 
   /// El primero va pegado a la cabecera, que ya tiene su línea: sin línea encima.
   final bool primero;
-  const Bloque(this.titulo, this.children, {super.key, this.descripcion, this.primero = false});
+
+  /// Bajo la descripción, en la columna del título (p. ej. los colores del trabajo).
+  final Widget? pie;
+  const Bloque(this.titulo, this.children, {super.key, this.descripcion, this.primero = false, this.pie});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -438,6 +453,7 @@ class Bloque extends StatelessWidget {
               const SizedBox(height: 4),
               Text(descripcion!, style: TextStyle(fontSize: 12.5, color: P.textoSuave, height: 1.4)),
             ],
+            if (pie != null) ...[const SizedBox(height: 14), pie!],
           ],
         );
         final campos = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
@@ -1127,6 +1143,7 @@ class _TareaFormState extends State<TareaForm> {
         periodicidad: widget.plantilla ? Periodicidad.mensual : Periodicidad.unica,
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
+        criticidad: Criticidad.rutinaria,
       );
   late final nombre = TextEditingController(text: t.nombre)..addListener(() => setState(() {}));
   late final marca = TextEditingController(text: t.marca);
@@ -1213,6 +1230,7 @@ class _TareaFormState extends State<TareaForm> {
       subtitulo: t.esPlantilla
           ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
           : store.cliente(t.clienteId)?.nombre,
+      bajoBotones: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
       onGuardar: guardar,
       aviso: errorHorario,
       avisoIcono: Icons.schedule_rounded,
@@ -1272,8 +1290,8 @@ class _TareaFormState extends State<TareaForm> {
                 ),
               ),
             ],
-            if (!t.esPlantilla) SelectorColorTarea(t, () => setState(() {})),
           ],
+          pie: t.esPlantilla ? null : SelectorColorTarea(t, () => setState(() {})),
         ),
         if (!t.esPlantilla)
           Bloque('Cliente y equipo', descripcion: 'Para quién es y quién la hace.', [
@@ -1315,14 +1333,6 @@ class _TareaFormState extends State<TareaForm> {
           ]),
         Bloque('Cuándo', descripcion: 'Fecha, hora y cada cuánto se repite.', [
           SelectorCuando(t, () => setState(() {}), error: errorHorario, key: _claveCuando),
-          etiqueta('Criticidad'),
-          conMargen(
-            SelectorEstado<Criticidad>(
-              opciones: [for (final c in Criticidad.values) (c, c.etiqueta, c.color)],
-              valor: t.criticidad,
-              onChanged: (c) => setState(() => t.criticidad = c),
-            ),
-          ),
         ]),
         Bloque('Cuánto', descripcion: 'Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.', [
           etiqueta('Duración'),
@@ -2013,6 +2023,8 @@ class SelectorColorTarea extends StatelessWidget {
     0xFF64748B,
   ];
 
+  static const _lado = 20.0;
+
   Widget _circulo(Color c, bool sel, VoidCallback onTap, {Widget? dentro, String? tip}) => Tooltip(
     message: tip ?? '',
     child: InkWell(
@@ -2020,8 +2032,8 @@ class SelectorColorTarea extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
-        width: 28,
-        height: 28,
+        width: _lado,
+        height: _lado,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: c,
@@ -2029,7 +2041,7 @@ class SelectorColorTarea extends StatelessWidget {
           border: Border.all(color: sel ? P.superficie : Colors.transparent, width: 2),
           boxShadow: sel ? [BoxShadow(color: c, spreadRadius: 2)] : null,
         ),
-        child: dentro ?? (sel ? const Icon(Icons.check_rounded, size: 15, color: Colors.white) : null),
+        child: dentro ?? (sel ? const Icon(Icons.check_rounded, size: 12, color: Colors.white) : null),
       ),
     ),
   );
@@ -2076,58 +2088,106 @@ class SelectorColorTarea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final propio = t.color != null && !colores.contains(t.color);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          etiqueta('Color en el calendario'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              _circulo(
-                tipoDe(t.tipo).color,
-                t.color == null,
-                () {
-                  t.color = null;
-                  onCambio();
-                },
-                tip: 'Automático (color del tipo)',
-                dentro: t.color == null
-                    ? const Icon(Icons.check_rounded, size: 15, color: Colors.white)
-                    : const Text(
-                        'A',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
-                      ),
-              ),
-              for (final c in colores)
-                _circulo(Color(c), t.color == c, () {
-                  t.color = c;
-                  onCambio();
-                }),
-              if (propio) _circulo(Color(t.color!), true, () {}),
-              Tooltip(
-                message: 'Otro color',
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => _otro(context),
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: P.borde, width: 1.5),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Color en el calendario', style: TextStyle(fontSize: 12, color: P.textoSuave)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _circulo(
+              tipoDe(t.tipo).color,
+              t.color == null,
+              () {
+                t.color = null;
+                onCambio();
+              },
+              tip: 'Automático (color del tipo)',
+              dentro: t.color == null
+                  ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
+                  : const Text(
+                      'A',
+                      style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
                     ),
-                    child: Icon(Icons.add_rounded, size: 16, color: P.textoSuave),
+            ),
+            for (final c in colores)
+              _circulo(Color(c), t.color == c, () {
+                t.color = c;
+                onCambio();
+              }),
+            if (propio) _circulo(Color(t.color!), true, () {}),
+            Tooltip(
+              message: 'Otro color',
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => _otro(context),
+                child: Container(
+                  width: _lado,
+                  height: _lado,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: P.borde, width: 1.5),
                   ),
+                  child: Icon(Icons.add_rounded, size: 13, color: P.textoSuave),
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
+}
+
+/// Criticidad del trabajo en un menú pequeño arriba a la derecha del formulario: punto de color, la
+/// elegida y flechas arriba/abajo. De menos a más: rutinaria, media, alta, crítica.
+class _MenuCriticidad extends StatelessWidget {
+  final Criticidad valor;
+  final ValueChanged<Criticidad> onChanged;
+  const _MenuCriticidad(this.valor, this.onChanged);
+
+  Widget _punto(Criticidad c) => Container(
+    width: 8,
+    height: 8,
+    decoration: BoxDecoration(color: c.color, shape: BoxShape.circle),
+  );
+
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<Criticidad>(
+    tooltip: 'Criticidad',
+    position: PopupMenuPosition.under,
+    initialValue: valor,
+    onSelected: onChanged,
+    itemBuilder: (_) => [
+      for (final c in Criticidad.values.reversed)
+        PopupMenuItem(
+          value: c,
+          child: Row(children: [_punto(c), const SizedBox(width: 10), Text(c.etiqueta)]),
+        ),
+    ],
+    child: Container(
+      height: 32,
+      padding: const EdgeInsets.only(left: 10, right: 6),
+      decoration: BoxDecoration(
+        color: P.superficie,
+        borderRadius: BorderRadius.circular(P.radioControl),
+        border: Border.all(color: P.borde),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _punto(valor),
+          const SizedBox(width: 8),
+          Text('Criticidad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+          const SizedBox(width: 6),
+          Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 4),
+          Icon(CupertinoIcons.chevron_up_chevron_down, size: 14, color: P.textoSuave),
+        ],
+      ),
+    ),
+  );
 }
