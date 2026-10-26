@@ -836,55 +836,6 @@ class _ZonaFotoState extends State<_ZonaFoto> {
   );
 }
 
-/// Elegir una opción entre pastillas de su color (estado de hoy, estado de la máquina…).
-class SelectorEstado<T> extends StatelessWidget {
-  final List<(T, String, Color)> opciones;
-  final T valor;
-  final ValueChanged<T> onChanged;
-  const SelectorEstado({super.key, required this.opciones, required this.valor, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      for (final (v, texto, color) in opciones)
-        InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () => onChanged(v),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: v == valor ? color.withValues(alpha: .12) : P.superficie,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: v == valor ? color : P.borde, width: v == valor ? 1.5 : 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  texto,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: v == valor ? FontWeight.w700 : FontWeight.w500,
-                    color: v == valor ? color : P.texto,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-    ],
-  );
-}
-
 Widget chipsCompetencias(List<String> seleccion, VoidCallback onChanged) => Wrap(
   spacing: 6,
   runSpacing: 6,
@@ -1012,7 +963,6 @@ class _ClienteFormState extends State<ClienteForm> {
     titulo: widget.original == null ? 'Nuevo cliente' : 'Editar cliente',
     tituloDesplazado: nombre.text,
     lider: FotoFormulario(foto: c.foto, cuadrado: true, onCambio: (f) => setState(() => c.foto = f)),
-    extra: selectorColor(c.color, (i) => setState(() => c.color = i), size: 20),
     onGuardar: guardar,
     avisos: [if (error != null) ('Te falta el nombre', () => _irA(_claveNombre))],
     onBorrar: widget.original == null
@@ -1031,7 +981,7 @@ class _ClienteFormState extends State<ClienteForm> {
           child: campo('Nombre', nombre, hint: 'Colegio San José', error: error, obligatorio: true),
         ),
         dos(campo('Teléfono', telefono), campo('Email', email)),
-      ]),
+      ], pie: selectorColor(c.color, (i) => setState(() => c.color = i), size: 20)),
       Bloque('Persona de contacto', descripcion: 'Con quién hablas para coordinar las visitas.', [
         dos(campo('Nombre', contacto, hint: 'Administrador, conserje…'), campo('Teléfono', telContacto)),
       ]),
@@ -1137,7 +1087,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
     titulo: widget.original == null ? 'Nuevo trabajador' : (widget.incrustada ? 'Ficha' : 'Editar trabajador'),
     tituloDesplazado: '${nombre.text} ${apellidos.text}',
     lider: FotoFormulario(foto: w.foto, onCambio: (f) => setState(() => w.foto = f)),
-    extra: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20),
+    bajoBotones: _MenuEstadoHoy(w.estadoHoy, (e) => setState(() => w.estadoHoy = e)),
     incrustada: widget.incrustada,
     onGuardar: guardar,
     avisos: [
@@ -1163,7 +1113,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
           campo('Apellidos', apellidos),
         ),
         dos(campo('Teléfono', telefono), campo('Email', email)),
-      ]),
+      ], pie: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20)),
       Bloque('Competencias', descripcion: 'Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.', [
         KeyedSubtree(
           key: _claveCompetencias,
@@ -1193,15 +1143,6 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         ),
         const SizedBox(height: 12),
         campo('Títulos y carnés', titulos, hint: 'Carné RITE, PRL 60 h…'),
-      ]),
-      Bloque('Disponibilidad', descripcion: 'Cómo está hoy. Los ausentes no reciben trabajos.', [
-        conMargen(
-          SelectorEstado<EstadoHoy>(
-            opciones: [for (final e in EstadoHoy.values) (e, e.etiqueta, e.color)],
-            valor: w.estadoHoy,
-            onChanged: (e) => setState(() => w.estadoHoy = e),
-          ),
-        ),
       ]),
       Bloque('Notas', [
         campo('Información básica', info, lineas: 2),
@@ -2316,6 +2257,45 @@ class _MenuCriticidad extends StatelessWidget {
           _punto(valor),
           const SizedBox(width: 8),
           Text('Criticidad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+          const SizedBox(width: 6),
+          Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 4),
+          Icon(CupertinoIcons.chevron_up_chevron_down, size: 14, color: P.textoSuave),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Disponibilidad del trabajador bajo los controles de ventana, igual que la criticidad del trabajo.
+class _MenuEstadoHoy extends StatelessWidget {
+  final EstadoHoy valor;
+  final ValueChanged<EstadoHoy> onChanged;
+  const _MenuEstadoHoy(this.valor, this.onChanged);
+
+  Widget _punto(EstadoHoy estado) => Container(
+    width: 8,
+    height: 8,
+    decoration: BoxDecoration(color: estado.color, shape: BoxShape.circle),
+  );
+
+  @override
+  Widget build(BuildContext context) => BotonMenu<EstadoHoy>(
+    tooltip: 'Disponibilidad del trabajador',
+    seleccionado: valor,
+    onSelected: onChanged,
+    opciones: [
+      for (final estado in EstadoHoy.values)
+        (estado, Row(children: [_punto(estado), const SizedBox(width: 10), Text(estado.etiqueta)])),
+    ],
+    child: SizedBox(
+      height: 22,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _punto(valor),
+          const SizedBox(width: 8),
+          Text('Disponibilidad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
           const SizedBox(width: 6),
           Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(width: 4),
