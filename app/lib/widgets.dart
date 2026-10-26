@@ -696,16 +696,14 @@ class BarraVista extends StatelessWidget {
   final Widget? principal;
   const BarraVista({super.key, required this.izquierda, required this.derecha, this.principal});
 
+  /// Grupo de controles: si no cabe en su fila, baja en varias; uno solo más ancho que la fila se desplaza.
   Widget _grupo(Iterable<Widget> ws, double hueco) => ws.isEmpty
       ? const SizedBox.shrink()
-      : SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final (i, w) in ws.indexed) ...[if (i > 0) SizedBox(width: hueco), w],
-            ],
-          ),
+      : Wrap(
+          spacing: hueco,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [for (final w in ws) SingleChildScrollView(scrollDirection: Axis.horizontal, child: w)],
         );
 
   @override
@@ -770,19 +768,23 @@ class _RenderBarra extends RenderBox
         ],
       ];
     } else {
+      // Ni título y principal caben: el título se recorta (se desplaza) para no dejar la principal sola abajo.
       filas = [
-        (f([0]), <int>[]),
+        (f([0]), f([3])),
         (f([1]), <int>[]),
         (f([2]), <int>[]),
-        (<int>[], f([3])),
       ];
+    }
+    final limite = [for (final x in nat) min(x, w)];
+    if (hay(0) && hay(3) && nat[0] + _huecoCentro + nat[3] > w) {
+      limite[0] = max(0.0, w - _huecoCentro - nat[3]);
     }
 
     var y = 0.0;
     for (final (izq, der) in filas.where((fila) => fila.$1.isNotEmpty || fila.$2.isNotEmpty)) {
       // Lo que no cabe solo en su fila se desplaza dentro de su ancho.
       for (final i in [...izq, ...der]) {
-        hijos[i].layout(BoxConstraints(maxWidth: min(nat[i], w)), parentUsesSize: true);
+        hijos[i].layout(BoxConstraints(maxWidth: limite[i]), parentUsesSize: true);
       }
       final alto = [...izq, ...der].fold(0.0, (m, i) => max(m, hijos[i].size.height));
       var x = 0.0;
@@ -833,9 +835,37 @@ class Pestanas extends StatelessWidget {
   final ValueChanged<int> onChanged;
   const Pestanas({super.key, required this.opciones, required this.seleccion, required this.onChanged});
 
+  /// Móvil: un desplegable con la opción elegida (las pestañas no caben y quedarían cortadas).
+  Widget _desplegable(TextStyle estilo) => PopupMenuButton<int>(
+    tooltip: '',
+    position: PopupMenuPosition.under,
+    onSelected: onChanged,
+    itemBuilder: (_) => [
+      for (final (i, o) in opciones.indexed)
+        PopupMenuItem(
+          value: i,
+          child: Text(o, style: estilo.copyWith(color: i == seleccion ? P.morado : P.texto)),
+        ),
+    ],
+    child: Container(
+      height: 40,
+      padding: const EdgeInsets.only(left: 14, right: 8),
+      decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(seleccion >= 0 && seleccion < opciones.length ? opciones[seleccion] : '', style: estilo),
+          const SizedBox(width: 4),
+          Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
+        ],
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final estilo = DefaultTextStyle.of(context).style.merge(const TextStyle(fontSize: 14, fontWeight: FontWeight.w600));
+    if (esMovil(context)) return _desplegable(estilo);
     final escala = MediaQuery.textScalerOf(context);
     // Ancho de cada opción: el del texto más largo (mismo ancho para todas, así la pastilla solo se desplaza).
     var mayor = 0.0;
