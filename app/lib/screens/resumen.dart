@@ -7,7 +7,6 @@ import '../ajustes.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../shell.dart';
-import 'simulaciones.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -115,8 +114,8 @@ const _meses = [
   'diciembre',
 ];
 
-/// Para una cuenta sin trabajos: el ciclo de Pulpo en tres tarjetas y la opción de probarlo con datos
-/// de ejemplo. Desaparece con el primer trabajo y deja paso a las cifras y los paneles.
+/// Para una cuenta sin trabajos: el ciclo de Pulpo en tres tarjetas y qué cifras verá en Inicio.
+/// Desaparece con el primer trabajo y deja paso a las cifras y los paneles.
 class _ComoFunciona extends StatelessWidget {
   final bool columnas;
   const _ComoFunciona({required this.columnas});
@@ -165,6 +164,35 @@ class _ComoFunciona extends StatelessWidget {
           ),
         ),
     ];
+    final cifras = [
+      for (final (color, titulo, texto) in const [
+        (P.azul, 'Para hoy', 'Los mantenimientos que tocan hoy, con su técnico.'),
+        (P.teal, 'Esta semana', 'Lo que viene en los próximos 7 días.'),
+        (P.rojo, 'Vencidos', 'Lo que se pasó de fecha, para recuperarlo antes.'),
+        (P.verde, 'Hechos', 'Lo terminado en los últimos 30 días.'),
+      ])
+        Tarjeta(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(titulo, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(texto, style: TextStyle(fontSize: 12.5, height: 1.4, color: P.textoSuave)),
+            ],
+          ),
+        ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -186,35 +214,26 @@ class _ComoFunciona extends StatelessWidget {
           )
         else
           for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(height: 12), t],
-        const SizedBox(height: 16),
-        Tarjeta(
-          color: P.moradoSuave,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          child: Wrap(
-            spacing: 16,
-            runSpacing: 10,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '¿Prefieres verlo funcionando primero?',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: P.moradoOscuro),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Crea clientes, trabajadores y trabajos de ejemplo y mira cómo los organiza Pulpo.',
-                    style: TextStyle(fontSize: 13, color: P.moradoOscuro.withValues(alpha: .8)),
-                  ),
-                ],
-              ),
-              BotonAccion('Probar con datos de ejemplo', onPressed: () => abrirSimulaciones(context)),
-            ],
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
+          child: Text(
+            'Lo que verás aquí',
+            style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
           ),
         ),
+        // Avance de las cifras de Inicio: qué mide cada una, sin ceros.
+        if (columnas)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (i, c) in cifras.indexed) ...[if (i > 0) const SizedBox(width: 16), Expanded(child: c)],
+              ],
+            ),
+          )
+        else
+          for (final (i, c) in cifras.indexed) ...[if (i > 0) const SizedBox(height: 12), c],
       ],
     );
   }
