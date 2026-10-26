@@ -168,37 +168,26 @@ class _PrimerosPasos extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Pasitos que caminan hacia la derecha, en onda, por detrás del título (sin ocupar sitio).
-            Stack(
-              clipBehavior: Clip.none,
+            Row(
               children: [
-                Positioned(
-                  left: 0,
-                  top: -5,
-                  child: ExcludeSemantics(
-                    child: CustomPaint(
-                      size: const Size(290, 30),
-                      painter: _HuellasGuia(P.morado.withValues(alpha: .4)),
-                    ),
+                Text(
+                  'Primeros pasos',
+                  style: TextStyle(
+                    fontFamily: P.titulos,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.3,
                   ),
                 ),
-                Row(
-                  children: [
-                    Text(
-                      'Primeros pasos',
-                      style: TextStyle(
-                        fontFamily: P.titulos,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -.3,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${hechos.where((h) => h).length} de ${pasos.length}',
-                      style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-                    ),
-                  ],
+                const SizedBox(width: 16),
+                // Pasitos que caminan hacia la derecha, en onda, junto al título.
+                ExcludeSemantics(
+                  child: CustomPaint(size: const Size(150, 30), painter: _HuellasGuia(P.morado.withValues(alpha: .4))),
+                ),
+                const Spacer(),
+                Text(
+                  '${hechos.where((h) => h).length} de ${pasos.length}',
+                  style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                 ),
               ],
             ),
