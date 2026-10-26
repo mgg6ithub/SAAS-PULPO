@@ -37,6 +37,14 @@ class Ajustes extends ChangeNotifier {
   /// Índice en `acentos` (theme.dart); 0 es el morado del logo.
   int acento = 0;
 
+  /// Paso "Mira tu trabajo en el itinerario" de la guía de Inicio, ya hecho.
+  bool guiaItinerario = false;
+
+  void marcarGuiaItinerario() {
+    guiaItinerario = true;
+    _prefs?.setBool('ajustes_guia_itinerario', true);
+  }
+
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     tema = ThemeMode.values[_prefs!.getInt('ajustes_tema') ?? ThemeMode.light.index];
@@ -47,6 +55,7 @@ class Ajustes extends ChangeNotifier {
     acento = _prefs!.getInt('ajustes_acento') ?? 0;
     anchoBarra = _prefs!.getDouble('ajustes_ancho_barra') ?? 248;
     anchoExpandido = _prefs!.getDouble('ajustes_ancho_expandido') ?? 248;
+    guiaItinerario = _prefs!.getBool('ajustes_guia_itinerario') ?? false;
   }
 
   /// Si la app se pinta en oscuro ahora mismo (el modo sistema mira el del navegador).

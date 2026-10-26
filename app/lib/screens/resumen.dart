@@ -1,13 +1,16 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../ajustes.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../shell.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'planificacion.dart';
 import 'tarea_card.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
@@ -17,30 +20,8 @@ class Resumen extends StatelessWidget {
   final ValueChanged<String> onTrabajador;
   const Resumen({super.key, required this.onIr, required this.onTrabajador});
 
-  String get saludo {
-    final h = DateTime.now().hour;
-    return h < 14 ? 'Buenos días' : (h < 21 ? 'Buenas tardes' : 'Buenas noches');
-  }
-
-  static const _dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-  static const _meses = [
-    'enero',
-    'febrero',
-    'marzo',
-    'abril',
-    'mayo',
-    'junio',
-    'julio',
-    'agosto',
-    'septiembre',
-    'octubre',
-    'noviembre',
-    'diciembre',
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final h = hoy();
     final activas = store.tareas.where((t) => !t.esPlantilla && t.activa).toList();
     final conFecha = activas.where((t) => t.proximo != null).toList();
     final vencidas = conFecha.where((t) => diasHasta(t.proximo!) < 0).toList();
@@ -48,8 +29,14 @@ class Resumen extends StatelessWidget {
     final semana = conFecha.where((t) => diasHasta(t.proximo!) >= 0 && diasHasta(t.proximo!) <= 7).toList();
     final hechas30 = activas.where((t) => t.ultimo != null && diasHasta(t.ultimo!) >= -30).length;
     final sinTrabajador = conFecha.where((t) => t.trabajadorIds.isEmpty && diasHasta(t.proximo!) <= 7).toList();
-    final guiaHecha =
-        store.clientes.isNotEmpty && store.trabajadores.isNotEmpty && store.tareas.any((t) => !t.esPlantilla);
+    // Pasos de la guía, siempre según los datos de ahora: si se borra el cliente, vuelve a pedirlo.
+    final hayTarea = store.tareas.any((t) => !t.esPlantilla);
+    final pasos = [
+      store.clientes.isNotEmpty,
+      hayTarea,
+      hayTarea && ajustes.guiaItinerario,
+      store.trabajadores.isNotEmpty,
+    ];
 
     // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
     return SegunTamano(
@@ -75,16 +62,9 @@ class Resumen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Hero(
-                    saludo: saludo,
-                    fecha: 'Hoy es ${_dias[h.weekday - 1]}, ${h.day} de ${_meses[h.month - 1]}',
-                    hoy: hoyT.length,
-                    vencidas: vencidas.length,
-                    sinTrabajador: sinTrabajador,
-                    onIr: onIr,
-                  ),
+                  _Hero(conFecha: conFecha, sinTrabajador: sinTrabajador, pasos: pasos),
                   const SizedBox(height: 16),
-                  if (!guiaHecha) ...[const _PrimerosPasos(), const SizedBox(height: 16)],
+                  if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   _Kpis(
                     hoy: hoyT.length,
                     semana: semana.length,
@@ -109,120 +89,215 @@ class Resumen extends StatelessWidget {
   }
 }
 
-/// Guía de primeros pasos (como la de Google Play Console): índice vertical con ticks que se marcan
-/// solos según lo que ya existe. Solo el paso en curso lleva su acción; desaparece al completarla.
+const _dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const _meses = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+];
+
+/// Guía de primeros pasos (como la de Google Play Console): índice vertical con ticks que se marcan y
+/// desmarcan solos según los datos. A la derecha de cada paso, dónde se hace en la app; solo el paso
+/// en curso lleva su botón. Desaparece al completarla.
 class _PrimerosPasos extends StatelessWidget {
-  const _PrimerosPasos();
+  /// Hecho o no, por paso: cliente, trabajo, ver el itinerario, trabajador.
+  final List<bool> hechos;
+  final ValueChanged<Seccion> onIr;
+  const _PrimerosPasos(this.hechos, {required this.onIr});
+
+  /// Abre el itinerario en la semana del último trabajo creado, para verlo en su día y su hora.
+  void _verItinerario() {
+    final t = store.tareas.lastWhere((t) => !t.esPlantilla);
+    Planificacion.mostrarSemana(t.proximo ?? hoy());
+    ajustes.marcarGuiaItinerario();
+    onIr(Seccion.planificacion);
+  }
 
   @override
   Widget build(BuildContext context) {
+    // (título, explicación, ruta en la app, botón).
     final pasos = [
       (
         'Crea tu primer cliente',
-        'El edificio, colegio u hospital donde haces el mantenimiento.',
-        store.clientes.isNotEmpty,
-        'Nuevo cliente',
-        () => abrirClienteForm(context),
+        'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación… '
+            'Con su dirección, Pulpo lo sitúa en el mapa y en las rutas.',
+        (Icons.apartment_outlined, 'Clientes', 'Nuevo cliente'),
+        BotonPrimario('Nuevo cliente', onPressed: () => abrirClienteForm(context)),
       ),
       (
         'Crea un trabajo',
-        'Un mantenimiento para ese cliente; Pulpo calcula cuándo toca.',
-        store.tareas.any((t) => !t.esPlantilla),
-        'Nuevo trabajo',
-        () => abrirTareaForm(context, null, clienteId: store.clientes.firstOrNull?.id),
+        'Una tarea de mantenimiento: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
+            'También puedes crearla desde la ficha del cliente.',
+        (Icons.handyman_outlined, 'Tareas', 'Nueva tarea'),
+        BotonPrimario(
+          'Nueva tarea',
+          onPressed: () => abrirTareaForm(context, null, clienteId: store.clientes.firstOrNull?.id),
+        ),
+      ),
+      (
+        'Mira tu trabajo en el itinerario',
+        'El itinerario es tu semana: cada trabajo en su día y a su hora, y en el mapa.',
+        (Icons.calendar_month_outlined, 'Itinerario', null),
+        BotonPrimario('Ir al itinerario', icono: Icons.calendar_month_outlined, onPressed: _verItinerario),
       ),
       (
         'Añade un trabajador',
-        'Quién hace los mantenimientos; Pulpo le asignará los que pueda hacer.',
-        store.trabajadores.isNotEmpty,
-        'Nuevo trabajador',
-        () => abrirTrabajadorForm(context),
+        'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.',
+        (Icons.badge_outlined, 'Trabajadores', 'Nuevo trabajador'),
+        BotonPrimario('Nuevo trabajador', onPressed: () => abrirTrabajadorForm(context)),
       ),
     ];
-    final hechos = pasos.where((p) => p.$3).length;
-    final actual = pasos.indexWhere((p) => !p.$3);
+    final actual = hechos.indexOf(false);
     return Tarjeta(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Primeros pasos',
-                    style: TextStyle(
-                      fontFamily: P.titulos,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -.4,
-                    ),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Primeros pasos',
+                  style: TextStyle(
+                    fontFamily: P.titulos,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.3,
                   ),
                 ),
-                Text('$hechos de ${pasos.length}', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-              ],
-            ),
-            const SizedBox(height: 18),
-            for (final (i, (titulo, detalle, hecho, accion, onTap)) in pasos.indexed)
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Marca y, debajo, la línea que une con el siguiente paso.
-                    SizedBox(
-                      width: 22,
-                      child: Column(
-                        children: [
-                          _MarcaPaso(hecho: hecho, actual: i == actual),
-                          if (i < pasos.length - 1)
-                            Expanded(
-                              child: Container(
-                                width: 1.5,
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                color: P.borde,
-                              ),
+              ),
+              Text(
+                '${hechos.where((h) => h).length} de ${pasos.length}',
+                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (final (i, (titulo, detalle, ruta, boton)) in pasos.indexed)
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Marca y, debajo, la línea discontinua que une con el siguiente paso.
+                  SizedBox(
+                    width: 20,
+                    child: Column(
+                      children: [
+                        _MarcaPaso(hecho: hechos[i], actual: i == actual),
+                        if (i < pasos.length - 1)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              child: CustomPaint(size: const Size(2, double.infinity), painter: _Discontinua(P.borde)),
                             ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Título a la izquierda y, a la derecha, dónde se hace (baja de línea si no cabe).
+                          SizedBox(
+                            width: double.infinity,
+                            child: Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 12,
+                              runSpacing: 2,
+                              children: [
+                                AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 220),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    height: 1.45,
+                                    fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
+                                    color: hechos[i] || i == actual ? P.texto : P.textoSuave,
+                                    decoration: hechos[i] ? TextDecoration.lineThrough : null,
+                                    decorationColor: P.textoSuave,
+                                  ),
+                                  child: Text(titulo),
+                                ),
+                                _Ruta(ruta.$1, ruta.$2, ruta.$3),
+                              ],
+                            ),
+                          ),
+                          if (i == actual) ...[
+                            const SizedBox(height: 2),
+                            Text(detalle, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
+                            const SizedBox(height: 10),
+                            boton,
+                          ],
                         ],
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 220),
-                              style: TextStyle(
-                                fontSize: 14,
-                                height: 1.45,
-                                fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
-                                color: hecho || i == actual ? P.texto : P.textoSuave,
-                                decoration: hecho ? TextDecoration.lineThrough : null,
-                                decorationColor: P.textoSuave,
-                              ),
-                              child: Text(titulo),
-                            ),
-                            if (i == actual) ...[
-                              const SizedBox(height: 2),
-                              Text(detalle, style: TextStyle(fontSize: 13, color: P.textoSuave)),
-                              const SizedBox(height: 12),
-                              BotonPrimario(accion, onPressed: onTap),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
+}
+
+/// Dónde se hace un paso en la app: icono y nombre de la sección › acción.
+class _Ruta extends StatelessWidget {
+  final IconData icono;
+  final String seccion;
+  final String? accion;
+  const _Ruta(this.icono, this.seccion, this.accion);
+
+  @override
+  Widget build(BuildContext context) {
+    final estilo = TextStyle(fontSize: 12.5, color: P.textoSuave);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icono, size: 15, color: P.textoSuave),
+        const SizedBox(width: 5),
+        Text(seccion, style: estilo),
+        if (accion != null) ...[
+          Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
+          Text(accion!, style: estilo),
+        ],
+      ],
+    );
+  }
+}
+
+/// Línea vertical discontinua centrada, para unir los pasos de la guía.
+class _Discontinua extends CustomPainter {
+  final Color color;
+  const _Discontinua(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pincel = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    final x = size.width / 2;
+    for (var y = 0.0; y < size.height; y += 6) {
+      canvas.drawLine(Offset(x, y), Offset(x, min(y + 3, size.height)), pincel);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Discontinua old) => old.color != color;
 }
 
 /// Marca de un paso: tick verde si está hecho, anillo morado si es el actual, anillo gris si falta.
@@ -453,41 +528,107 @@ class _Proximos extends StatelessWidget {
 /// Alto común de las tarjetas que van en pareja, para que queden iguales.
 const _alto = 340.0;
 
-/// Cabecera de Inicio: la fecha en morado y las acciones fuera; dentro de un bloque morado oscuro
-/// (degradado suave), el saludo, una frase y tres cifras básicas, sin botones.
-class _Hero extends StatelessWidget {
-  final String saludo, fecha;
-  final int hoy, vencidas;
-  final List<Tarea> sinTrabajador;
-  final ValueChanged<Seccion> onIr;
-  const _Hero({
-    required this.saludo,
-    required this.fecha,
-    required this.hoy,
-    required this.vencidas,
-    required this.sinTrabajador,
-    required this.onIr,
-  });
+/// Cabecera de Inicio: la fecha en morado y las acciones fuera, justo encima de un bloque morado oscuro
+/// (degradado suave) con el saludo, una frase según el momento y tres cifras básicas, sin botones.
+/// Saludo, fecha y frase siguen a la hora: se revisan cada minuto.
+class _Hero extends StatefulWidget {
+  final List<Tarea> conFecha, sinTrabajador;
 
+  /// Pasos de la guía hechos o no (ver [_PrimerosPasos]).
+  final List<bool> pasos;
+  const _Hero({required this.conFecha, required this.sinTrabajador, required this.pasos});
+
+  @override
+  State<_Hero> createState() => _HeroState();
+}
+
+class _HeroState extends State<_Hero> {
+  late final Timer _reloj;
+  late DateTime _ahora = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    // Solo repinta si cambia la hora (saludo, frase) o el día (fecha).
+    _reloj = Timer.periodic(const Duration(minutes: 1), (_) {
+      final n = DateTime.now();
+      if (n.hour != _ahora.hour || n.day != _ahora.day) setState(() => _ahora = n);
+    });
+  }
+
+  @override
+  void dispose() {
+    _reloj.cancel();
+    super.dispose();
+  }
+
+  String get saludo {
+    final h = _ahora.hour;
+    return h >= 6 && h < 14 ? 'Buenos días' : (h >= 14 && h < 21 ? 'Buenas tardes' : 'Buenas noches');
+  }
+
+  String get fecha => 'Hoy es ${_dias[_ahora.weekday - 1]}, ${_ahora.day} de ${_meses[_ahora.month - 1]}';
+
+  static String _mant(int n) => '$n ${n == 1 ? 'mantenimiento' : 'mantenimientos'}';
+
+  /// Primera vez: bienvenida; con la guía a medias: lo que falta; después, el día (y por la noche, mañana).
   String get frase {
-    if (store.clientes.isEmpty) return 'Preparado para automatizarlo todo.';
-    return hoy == 0
-        ? 'Hoy no hay nada programado.'
-        : 'Hoy tienes $hoy ${hoy == 1 ? 'mantenimiento' : 'mantenimientos'}.';
+    final pasos = widget.pasos;
+    final quedan = pasos.where((p) => !p).length;
+    if (quedan == pasos.length) {
+      return 'Te damos la bienvenida a Pulpo. Sigue los primeros pasos y en unos minutos tendrás tu mantenimiento en marcha.';
+    }
+    if (quedan == 1) return 'Solo te queda un paso para tener tu mantenimiento en marcha.';
+    if (quedan > 1) return 'Vas bien: te quedan $quedan pasos para tener tu mantenimiento en marcha.';
+
+    final hoyT = widget.conFecha.where((t) => diasHasta(t.proximo!) == 0).toList();
+    final vencidas = widget.conFecha.where((t) => diasHasta(t.proximo!) < 0).length;
+    final futuras = widget.conFecha.where((t) => diasHasta(t.proximo!) > 0).toList()
+      ..sort((a, b) => a.proximo!.compareTo(b.proximo!));
+    if (hoyT.isNotEmpty) {
+      final horas = [for (final t in hoyT) ?t.inicioMin]..sort();
+      return 'Hoy tienes ${_mant(hoyT.length)}${horas.isEmpty ? '' : ', el primero a las ${hhmm(horas.first)}'}.';
+    }
+    final manana = futuras.where((t) => diasHasta(t.proximo!) == 1).length;
+    if (_ahora.hour >= 19 && manana > 0) return 'Por hoy, nada más. Mañana tienes ${_mant(manana)}.';
+    if (vencidas > 0) return 'Hoy no hay nada programado: buen momento para ponerte al día con lo vencido.';
+    if (futuras.isNotEmpty) {
+      final d = futuras.first.proximo!;
+      final cuando = diasHasta(d) == 1 ? 'mañana' : 'el ${_dias[d.weekday - 1]} ${d.day}';
+      return 'Hoy no hay nada programado. El próximo mantenimiento es $cuando.';
+    }
+    return 'Todo al día. Pulpo te avisará cuando toque el siguiente mantenimiento.';
   }
 
   @override
   Widget build(BuildContext context) {
-    final disponibles = store.trabajadores.where((w) => w.activo && w.estadoHoy != EstadoHoy.ausente).length;
-    final cifras = [
-      (vencidas, vencidas == 1 ? 'vencida' : 'vencidas'),
-      (sinTrabajador.length, 'sin asignar'),
-      (disponibles, disponibles == 1 ? 'trabajador hoy' : 'trabajadores hoy'),
-    ];
+    final sinTrabajador = widget.sinTrabajador;
+    // Con la guía a medias, lo que ya hay; después, lo que pide atención.
+    final List<(int, String)> cifras;
+    if (widget.pasos.contains(false)) {
+      final clientes = store.clientes.length;
+      final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
+      final trabajadores = store.trabajadores.length;
+      cifras = [
+        (clientes, clientes == 1 ? 'cliente' : 'clientes'),
+        (trabajos, trabajos == 1 ? 'trabajo' : 'trabajos'),
+        (trabajadores, trabajadores == 1 ? 'trabajador' : 'trabajadores'),
+      ];
+    } else {
+      final vencidas = widget.conFecha.where((t) => diasHasta(t.proximo!) < 0).length;
+      final disponibles = store.trabajadores.where((w) => w.activo && w.estadoHoy != EstadoHoy.ausente).length;
+      cifras = [
+        (vencidas, vencidas == 1 ? 'vencida' : 'vencidas'),
+        (sinTrabajador.length, 'sin asignar'),
+        (disponibles, disponibles == 1 ? 'trabajador hoy' : 'trabajadores hoy'),
+      ];
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // La fecha, pegada al bloque (abajo de la fila de botones).
         Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: Text(
@@ -525,9 +666,9 @@ class _Hero extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
             // Morado apagado hacia tinta: menos saturado que el morado de acción.
@@ -553,7 +694,7 @@ class _Hero extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .72), fontSize: 15.5)),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               Wrap(
                 spacing: 28,
                 runSpacing: 10,

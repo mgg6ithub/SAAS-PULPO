@@ -23,6 +23,12 @@ class Planificacion extends StatefulWidget {
   final bool mapa;
   const Planificacion({super.key, this.mapa = true});
 
+  /// La próxima vez que se pinte, el itinerario enseña la semana de [d] (lo usa la guía de Inicio).
+  static void mostrarSemana(DateTime d) {
+    _PlanificacionState._dia = d;
+    _PlanificacionState._vista = 1;
+  }
+
   @override
   State<Planificacion> createState() => _PlanificacionState();
 }
