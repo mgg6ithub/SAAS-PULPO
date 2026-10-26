@@ -22,8 +22,12 @@ import 'widgets.dart';
 /// Dónde va la ventana: 0 flotando en el centro, -1 acoplada a la izquierda, 1 a la derecha.
 int _lado = 0;
 
+/// Nombre de la ruta de las ventanas de [abrirPanel] (el atajo N la reconoce para cerrarla).
+const rutaPanel = 'panel';
+
 Future<void> abrirPanel(BuildContext context, Widget panel) => showGeneralDialog(
   context: context,
+  routeSettings: const RouteSettings(name: rutaPanel),
   barrierDismissible: true,
   barrierLabel: 'Cerrar',
   barrierColor: P.texto.withValues(alpha: .25),

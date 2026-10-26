@@ -41,6 +41,7 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_tecla);
     // ?nuevo=tarea|cliente|trabajador abre ese formulario al entrar (útil para capturas).
     final nuevo = Uri.base.queryParameters['nuevo'];
     if (nuevo != null) {
@@ -65,16 +66,46 @@ class _ShellState extends State<Shell> {
     trabajadorId = null;
   });
 
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_tecla);
+    super.dispose();
+  }
+
+  /// Ventana abierta con la N: otra N la cierra.
+  bool _abiertaConN = false;
+
   /// "N" crea algo nuevo según la sección en la que estés (como en Holded).
-  void nuevo() {
-    switch (seccion) {
-      case Seccion.clientes:
-        abrirClienteForm(context);
-      case Seccion.trabajadores:
-        abrirTrabajadorForm(context);
-      default:
-        abrirTareaForm(context, null);
+  Future<void> nuevo() async {
+    _abiertaConN = true;
+    await switch (seccion) {
+      Seccion.clientes => abrirClienteForm(context),
+      Seccion.trabajadores => abrirTrabajadorForm(context),
+      _ => abrirTareaForm(context, null),
+    };
+    _abiertaConN = false;
+  }
+
+  /// Atajo N, escuchado en todo el teclado (no depende de dónde esté el foco, que tras un clic puede quedar
+  /// fuera de esta vista). Se ignora al escribir en un campo y con Ctrl/Cmd/Alt. Abre la ventana de nuevo
+  /// de la sección; si la abrió una N y sigue arriba (sin un menú o diálogo encima), la cierra.
+  bool _tecla(KeyEvent e) {
+    if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.keyN || !mounted) return false;
+    final teclado = HardwareKeyboard.instance;
+    if (teclado.isControlPressed || teclado.isMetaPressed || teclado.isAltPressed) return false;
+    final foco = primaryFocus?.context;
+    if (foco?.findAncestorStateOfType<EditableTextState>() != null) return false;
+    final arriba = foco == null ? null : ModalRoute.of(foco);
+    final aqui = ModalRoute.of(context);
+    if (_abiertaConN && arriba != null && arriba != aqui && arriba.settings.name == rutaPanel) {
+      Navigator.of(context).pop();
+      return true;
     }
+    if (arriba == null || arriba == aqui) {
+      nuevo();
+      return true;
+    }
+    return false;
   }
 
   @override
@@ -84,20 +115,6 @@ class _ShellState extends State<Shell> {
     final enDetalle = clienteId != null || trabajadorId != null;
     return Focus(
       autofocus: true,
-      // "N" solo si no se está escribiendo en un campo de texto (si no, no se podría teclear la n).
-      onKeyEvent: (_, e) {
-        final escribiendo = primaryFocus?.context?.findAncestorStateOfType<EditableTextState>() != null;
-        if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.keyN || escribiendo) {
-          return KeyEventResult.ignored;
-        }
-        if (HardwareKeyboard.instance.isControlPressed ||
-            HardwareKeyboard.instance.isMetaPressed ||
-            HardwareKeyboard.instance.isAltPressed) {
-          return KeyEventResult.ignored;
-        }
-        nuevo();
-        return KeyEventResult.handled;
-      },
       child: Scaffold(
         backgroundColor: P.fondo,
         // La barra va a la izquierda o, si se elige en Ajustes, a la derecha.

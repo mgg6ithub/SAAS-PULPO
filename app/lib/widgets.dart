@@ -669,6 +669,8 @@ class Buscador extends StatelessWidget {
     // expands: el campo llena los 40 de alto, igual que botones y pestañas.
     child: TextField(
       onChanged: onChanged,
+      // Clic fuera del buscador = deja de escribir (en web con ratón no lo hace solo), así vuelven los atajos.
+      onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       expands: true,
       maxLines: null,
       textAlignVertical: TextAlignVertical.center,
