@@ -1041,15 +1041,19 @@ class _ClienteFormState extends State<ClienteForm> {
 
 // ── Trabajador ──
 
-Future<void> abrirTrabajadorForm(BuildContext context, [Trabajador? w]) =>
-    abrirPanel(context, TrabajadorForm(original: w));
+/// [competencias]: ya marcadas en un trabajador nuevo (la guía de Inicio pasa las que piden los trabajos creados).
+Future<void> abrirTrabajadorForm(BuildContext context, [Trabajador? w, List<String> competencias = const []]) =>
+    abrirPanel(context, TrabajadorForm(original: w, competencias: competencias));
 
 class TrabajadorForm extends StatefulWidget {
   final Trabajador? original;
 
   /// Fijo a la derecha de la vista del trabajador: guardar no cierra nada.
   final bool incrustada;
-  const TrabajadorForm({super.key, this.original, this.incrustada = false});
+
+  /// Competencias ya marcadas si es nuevo.
+  final List<String> competencias;
+  const TrabajadorForm({super.key, this.original, this.incrustada = false, this.competencias = const []});
 
   @override
   State<TrabajadorForm> createState() => _TrabajadorFormState();
@@ -1057,7 +1061,12 @@ class TrabajadorForm extends StatefulWidget {
 
 class _TrabajadorFormState extends State<TrabajadorForm> {
   late final Trabajador w =
-      widget.original?.copia() ?? Trabajador(id: store.nuevoId(), color: store.trabajadores.length % paleta.length);
+      widget.original?.copia() ??
+      Trabajador(
+        id: store.nuevoId(),
+        color: store.trabajadores.length % paleta.length,
+        competencias: [...widget.competencias],
+      );
   late final nombre = TextEditingController(text: w.nombre)..addListener(() => setState(() {}));
   late final apellidos = TextEditingController(text: w.apellidos)..addListener(() => setState(() {}));
   late final telefono = TextEditingController(text: w.telefono);

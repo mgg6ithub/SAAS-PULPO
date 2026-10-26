@@ -293,7 +293,18 @@ class _PrimerosPasos extends StatelessWidget {
       (
         'Añade un trabajador',
         'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.',
-        (Icons.badge_outlined, 'Trabajadores', 'Nuevo trabajador', Seccion.trabajadores, abrirTrabajadorForm),
+        // Con las competencias que piden los trabajos ya creados: así Organizar puede asignarle el primero.
+        (
+          Icons.badge_outlined,
+          'Trabajadores',
+          'Nuevo trabajador',
+          Seccion.trabajadores,
+          (c) => abrirTrabajadorForm(
+            c,
+            null,
+            {for (final t in store.tareas.where((t) => !t.esPlantilla)) ...t.competencias}.toList(),
+          ),
+        ),
         null,
       ),
       (
