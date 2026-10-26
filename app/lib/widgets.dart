@@ -2083,6 +2083,7 @@ class _BotonMenuState<T> extends State<BotonMenu<T>> {
 }
 
 /// Opción de [BotonMenu]: la actual empieza resaltada y con el foco; ↑↓ pasan a la anterior o la siguiente.
+/// Solo hay un resaltado, el del foco: pasar el ratón por una opción le da el foco (no se suman hover y foco).
 class _OpcionMenu<T> extends PopupMenuEntry<T> {
   final T valor;
   final bool actual;
@@ -2100,6 +2101,14 @@ class _OpcionMenu<T> extends PopupMenuEntry<T> {
 }
 
 class _OpcionMenuState<T> extends State<_OpcionMenu<T>> {
+  final foco = FocusNode();
+
+  @override
+  void dispose() {
+    foco.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Shortcuts(
     // En web las flechas desplazan la página por defecto: aquí mueven el foco entre opciones.
@@ -2112,10 +2121,14 @@ class _OpcionMenuState<T> extends State<_OpcionMenu<T>> {
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: InkWell(
+        focusNode: foco,
         autofocus: widget.actual,
         borderRadius: BorderRadius.circular(P.radioControl - 2),
         focusColor: P.hover,
-        hoverColor: P.hover,
+        hoverColor: Colors.transparent,
+        onHover: (dentro) {
+          if (dentro) foco.requestFocus();
+        },
         splashFactory: NoSplash.splashFactory,
         onTap: () => Navigator.pop(context, widget.valor),
         child: Container(
