@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'models.dart';
 import 'store.dart';
@@ -572,26 +573,40 @@ class BotonPrimario extends StatelessWidget {
   const BotonPrimario(this.texto, {super.key, this.icono = Icons.add_rounded, required this.onPressed, this.tecla});
 
   @override
-  Widget build(BuildContext context) => FilledButton(
-    onPressed: onPressed,
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(texto),
-        if (tecla != null) ...[
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .2),
-              borderRadius: BorderRadius.circular(4),
+  Widget build(BuildContext context) => esMovil(context)
+      ? Tooltip(
+          message: texto,
+          child: IconButton.filled(
+            style: IconButton.styleFrom(
+              fixedSize: const Size(40, 40),
+              minimumSize: const Size(40, 40),
+              backgroundColor: P.morado,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
             ),
-            child: Text(tecla!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            onPressed: onPressed,
+            icon: Icon(icono, size: 20, color: Colors.white),
           ),
-        ],
-      ],
-    ),
-  );
+        )
+      : FilledButton(
+          onPressed: onPressed,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(texto),
+              if (tecla != null) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(tecla!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ],
+          ),
+        );
 }
 
 /// Botón de acción de las cabeceras: siempre 40 de alto, borde fino (o relleno de [color]),
@@ -621,13 +636,22 @@ class BotonAccion extends StatelessWidget {
           overlayColor: const WidgetStatePropertyAll(Colors.transparent),
           mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.click),
         );
+    final soloIcono = icono != null && esMovil(context);
     final boton = SizedBox(
       height: 40,
-      child: icono == null
+      width: soloIcono ? 40 : null,
+      child: soloIcono
+          ? OutlinedButton(
+              style: style.copyWith(padding: const WidgetStatePropertyAll(EdgeInsets.zero)),
+              onPressed: onPressed,
+              child: Icon(icono, size: 19),
+            )
+          : icono == null
           ? OutlinedButton(style: style, onPressed: onPressed, child: Text(texto))
           : OutlinedButton.icon(style: style, onPressed: onPressed, icon: Icon(icono, size: 19), label: Text(texto)),
     );
-    return tooltip == null ? boton : Tooltip(message: tooltip!, child: boton);
+    final mensaje = tooltip ?? (soloIcono ? texto : null);
+    return mensaje == null ? boton : Tooltip(message: mensaje, child: boton);
   }
 }
 
@@ -659,31 +683,136 @@ class Buscador extends StatelessWidget {
   );
 }
 
+/// Ventana estrecha (móvil, tablet en vertical, media pantalla pequeña): los botones con icono
+/// se quedan solo en el icono.
+bool esMovil(BuildContext context) => MediaQuery.sizeOf(context).width < 700;
+
 /// Barra única de arriba de cada vista (como la del Itinerario): a la izquierda título y filtros; a la
-/// derecha buscador y acciones, todo de 40 de alto. Si la ventana es estrecha (media pantalla, tablet,
-/// móvil), los controles bajan a otra fila en vez de cortarse; uno más ancho que la pantalla se desplaza.
+/// derecha buscador y acciones, todo de 40 de alto. [principal] (Nuevo cliente, Nuevo trabajo…) va
+/// siempre arriba a la derecha, junto al título, mientras quepa. Si la ventana se estrecha, filtros y
+/// buscador bajan a otra fila; un grupo más ancho que la pantalla se desplaza.
 class BarraVista extends StatelessWidget {
   final List<Widget> izquierda, derecha;
-  const BarraVista({super.key, required this.izquierda, required this.derecha});
+  final Widget? principal;
+  const BarraVista({super.key, required this.izquierda, required this.derecha, this.principal});
 
-  Widget _grupo(List<Widget> ws, double hueco) => Wrap(
-    spacing: hueco,
-    runSpacing: 8,
-    crossAxisAlignment: WrapCrossAlignment.center,
-    children: [for (final w in ws) SingleChildScrollView(scrollDirection: Axis.horizontal, child: w)],
-  );
+  Widget _grupo(Iterable<Widget> ws, double hueco) => ws.isEmpty
+      ? const SizedBox.shrink()
+      : SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final (i, w) in ws.indexed) ...[if (i > 0) SizedBox(width: hueco), w],
+            ],
+          ),
+        );
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      spacing: 16,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [_grupo(izquierda, 14), _grupo(derecha, 8)],
-    ),
+  Widget build(BuildContext context) => _Barra(
+    children: [
+      _grupo(izquierda.take(1), 0),
+      _grupo(izquierda.skip(1), 14),
+      _grupo(derecha, 8),
+      principal ?? const SizedBox.shrink(),
+    ],
   );
+}
+
+/// Colocación de la [BarraVista]: hijos 0 título, 1 filtros, 2 derecha, 3 principal.
+class _Barra extends MultiChildRenderObjectWidget {
+  const _Barra({required super.children});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderBarra();
+}
+
+class _BarraData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderBarra extends RenderBox
+    with ContainerRenderObjectMixin<RenderBox, _BarraData>, RenderBoxContainerDefaultsMixin<RenderBox, _BarraData> {
+  static const _huecoIzq = 14.0, _huecoDer = 8.0, _huecoCentro = 16.0, _huecoFilas = 8.0;
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _BarraData) child.parentData = _BarraData();
+  }
+
+  @override
+  void performLayout() {
+    final w = constraints.maxWidth;
+    final hijos = getChildrenAsList();
+    // Ancho natural de cada grupo (sin límite); los vacíos no cuentan.
+    final nat = [for (final h in hijos) (h..layout(const BoxConstraints(), parentUsesSize: true)).size.width];
+    bool hay(int i) => nat[i] > 0;
+    double suma(List<int> ids, double hueco) =>
+        ids.isEmpty ? 0 : ids.fold(0.0, (s, i) => s + nat[i]) + hueco * (ids.length - 1);
+    bool cabe(List<int> izq, List<int> der) =>
+        suma(izq, _huecoIzq) + (izq.isNotEmpty && der.isNotEmpty ? _huecoCentro : 0) + suma(der, _huecoDer) <= w;
+    List<int> f(List<int> ids) => ids.where(hay).toList();
+
+    // Filas (izquierda, derecha), de más a menos juntas: la principal sube con el título mientras quepa.
+    final List<(List<int>, List<int>)> filas;
+    if (cabe(f([0, 1]), f([2, 3]))) {
+      filas = [
+        (f([0, 1]), f([2, 3])),
+      ];
+    } else if (cabe(f([0, 1]), f([3]))) {
+      filas = [
+        (f([0, 1]), f([3])),
+        (f([2]), <int>[]),
+      ];
+    } else if (cabe(f([0]), f([3]))) {
+      filas = [
+        (f([0]), f([3])),
+        if (cabe(f([1]), f([2])))
+          (f([1]), f([2]))
+        else ...[
+          (f([1]), <int>[]),
+          (f([2]), <int>[]),
+        ],
+      ];
+    } else {
+      filas = [
+        (f([0]), <int>[]),
+        (f([1]), <int>[]),
+        (f([2]), <int>[]),
+        (<int>[], f([3])),
+      ];
+    }
+
+    var y = 0.0;
+    for (final (izq, der) in filas.where((fila) => fila.$1.isNotEmpty || fila.$2.isNotEmpty)) {
+      // Lo que no cabe solo en su fila se desplaza dentro de su ancho.
+      for (final i in [...izq, ...der]) {
+        hijos[i].layout(BoxConstraints(maxWidth: min(nat[i], w)), parentUsesSize: true);
+      }
+      final alto = [...izq, ...der].fold(0.0, (m, i) => max(m, hijos[i].size.height));
+      var x = 0.0;
+      for (final i in izq) {
+        (hijos[i].parentData! as _BarraData).offset = Offset(x, y + (alto - hijos[i].size.height) / 2);
+        x += hijos[i].size.width + _huecoIzq;
+      }
+      x = w;
+      for (final i in der.reversed) {
+        x -= hijos[i].size.width;
+        (hijos[i].parentData! as _BarraData).offset = Offset(x, y + (alto - hijos[i].size.height) / 2);
+        x -= _huecoDer;
+      }
+      y += alto + _huecoFilas;
+    }
+    for (final (i, h) in hijos.indexed) {
+      if (!hay(i)) (h.parentData! as _BarraData).offset = Offset.zero;
+    }
+    size = constraints.constrain(Size(w, max(0, y - _huecoFilas)));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }
 
 /// Título de vista dentro de la [BarraVista].
@@ -1823,6 +1952,5 @@ class BordeDiscontinuo extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(BordeDiscontinuo old) =>
-      old.color != color || old.radio != radio || old.separacion != separacion;
+  bool shouldRepaint(BordeDiscontinuo old) => old.color != color || old.radio != radio || old.separacion != separacion;
 }

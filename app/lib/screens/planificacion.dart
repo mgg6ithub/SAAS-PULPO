@@ -213,7 +213,7 @@ class _PlanificacionState extends State<Planificacion> {
                   _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
                 ],
               );
-              return BarraVista(izquierda: [fecha, vistas], derecha: [acciones]);
+              return BarraVista(izquierda: [fecha, vistas], derecha: const [], principal: acciones);
             },
           ),
           const SizedBox(height: huecoVista),
@@ -498,8 +498,8 @@ class _BotonSinAsignar extends StatelessWidget {
       children: [
         // Triángulo amarillo de aviso: hay trabajo sin técnico.
         const Icon(Icons.warning_amber_rounded, size: 18, color: P.ambar),
-        const SizedBox(width: 6),
-        const Text('Sin asignar'),
+        // En móvil, solo el aviso y el número.
+        if (!esMovil(context)) ...const [SizedBox(width: 6), Text('Sin asignar')],
         if (n > 0) ...[
           const SizedBox(width: 6),
           Container(

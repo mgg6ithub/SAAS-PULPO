@@ -85,12 +85,12 @@ class _TareasPaginaState extends State<TareasPagina> {
                       seleccion.clear();
                     }),
                   ),
-                  BotonPrimario(
-                    pestana == 1 ? 'Nueva plantilla' : 'Nuevo trabajo',
-                    tecla: 'N',
-                    onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
-                  ),
                 ],
+                principal: BotonPrimario(
+                  pestana == 1 ? 'Nueva plantilla' : 'Nuevo trabajo',
+                  tecla: 'N',
+                  onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
+                ),
               ),
               const SizedBox(height: huecoVista),
               Wrap(
@@ -129,6 +129,19 @@ class _TareasPaginaState extends State<TareasPagina> {
                         texto: pestana == 0 && deClientes == 0
                             ? 'Crea trabajos dentro de tus clientes, desde cero o a partir de una plantilla.'
                             : 'No hay trabajos con estos filtros',
+                        // Sin búsqueda ni filtro de tipo: botón para crear (el primero, si aún no hay).
+                        accion: q.isEmpty && tipo == null
+                            ? FilledButton(
+                                onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
+                                child: Text(
+                                  pestana == 1
+                                      ? 'Nueva plantilla'
+                                      : deClientes == 0
+                                      ? 'Añadir el primer trabajo'
+                                      : 'Nuevo trabajo',
+                                ),
+                              )
+                            : null,
                       )
                     : lista
                     ? _tabla(filtradas)

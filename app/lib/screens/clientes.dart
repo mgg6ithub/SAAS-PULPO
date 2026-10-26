@@ -74,8 +74,8 @@ class _ClientesState extends State<Clientes> {
                       derecha: [
                         Buscador(hint: 'Buscar cliente…', onChanged: (v) => setState(() => q = v)),
                         SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
-                        BotonPrimario('Nuevo cliente', tecla: 'N', onPressed: () => abrirClienteForm(context)),
                       ],
+                      principal: BotonPrimario('Nuevo cliente', tecla: 'N', onPressed: () => abrirClienteForm(context)),
                     ),
                   ],
                 ),

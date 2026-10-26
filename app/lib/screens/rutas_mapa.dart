@@ -416,7 +416,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
   /// Como el "✦ Organizar" de la landing: morado del logo, plano; al pasar, sube un pelo y se ilumina.
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: 'Pulpo reparte los trabajos del día y traza las rutas',
+    message: 'Organizar: Pulpo reparte los trabajos del día y traza las rutas',
     child: MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => hover = true),
@@ -426,7 +426,8 @@ class _BotonPulpoState extends State<BotonPulpo> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          // En móvil, solo el pulpo.
+          padding: EdgeInsets.symmetric(horizontal: esMovil(context) ? 10 : 16),
           transform: Matrix4.translationValues(0, hover ? -1 : 0, 0),
           decoration: BoxDecoration(
             color: P.morado,
@@ -436,16 +437,21 @@ class _BotonPulpoState extends State<BotonPulpo> {
             ],
           ),
           // widthFactor 1: centrado sin estirarse a todo el ancho.
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               // El pulpo del logo, en blanco sobre el morado (como en la landing).
-              ColorFiltered(colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn), child: LogoPulpo(size: 20)),
-              SizedBox(width: 8),
-              Text(
-                'Organizar',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -.1),
+              const ColorFiltered(
+                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                child: LogoPulpo(size: 20),
               ),
+              if (!esMovil(context)) ...const [
+                SizedBox(width: 8),
+                Text(
+                  'Organizar',
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -.1),
+                ),
+              ],
             ],
           ),
         ),

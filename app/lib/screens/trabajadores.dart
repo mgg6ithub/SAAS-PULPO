@@ -72,8 +72,12 @@ class _TrabajadoresState extends State<Trabajadores> {
                       derecha: [
                         Buscador(hint: 'Buscar trabajador…', onChanged: (v) => setState(() => q = v)),
                         SelectorVista(lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
-                        BotonPrimario('Nuevo trabajador', tecla: 'N', onPressed: () => abrirTrabajadorForm(context)),
                       ],
+                      principal: BotonPrimario(
+                        'Nuevo trabajador',
+                        tecla: 'N',
+                        onPressed: () => abrirTrabajadorForm(context),
+                      ),
                     ),
                   ],
                 ),
@@ -87,6 +91,12 @@ class _TrabajadoresState extends State<Trabajadores> {
                         texto: store.trabajadores.isEmpty
                             ? 'Añade a tu equipo con sus competencias para que Pulpo sepa a quién asignar cada trabajo.'
                             : 'No hay trabajadores con estos filtros',
+                        accion: store.trabajadores.isEmpty
+                            ? FilledButton(
+                                onPressed: () => abrirTrabajadorForm(context),
+                                child: const Text('Añadir el primer trabajador'),
+                              )
+                            : null,
                       )
                     : this.lista
                     ? _tabla(lista)
