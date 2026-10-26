@@ -580,7 +580,7 @@ class _HeroState extends State<_Hero> {
   @override
   Widget build(BuildContext context) {
     final sinTrabajador = widget.sinTrabajador;
-    // Con la guía a medias, en vez de ceros, la invitación a completarla; después, lo que ya hay.
+    // Desde el primer cliente, mostrar las cifras aunque la guía siga pendiente.
     final hechos = widget.pasos.where((p) => p).length;
     final clientes = store.clientes.length;
     final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
@@ -664,7 +664,7 @@ class _HeroState extends State<_Hero> {
               const SizedBox(height: 4),
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
               const SizedBox(height: 14),
-              if (hechos < widget.pasos.length)
+              if (clientes == 0)
                 Text.rich(
                   TextSpan(
                     children: [
