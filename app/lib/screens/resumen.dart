@@ -679,36 +679,46 @@ class _HeroState extends State<_Hero> {
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
               const SizedBox(height: 8),
               if (clientes == 0)
-                // Las huellas salen del final del texto y bajan hacia la guía (caen sobre el margen inferior).
-                const Text.rich(
-                  TextSpan(
-                    text: 'Completa los primeros pasos',
-                    children: [
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: SizedBox(
-                            width: 60,
-                            height: 18,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Positioned(
-                                  top: 0,
-                                  left: 0,
-                                  child: ExcludeSemantics(
-                                    child: CustomPaint(size: Size(60, 36), painter: _HuellasGuia()),
+                // Las huellas caminan por detrás del texto, de izquierda a derecha, subiendo hacia la
+                // bienvenida y pasando por debajo; al final de «pasos» sale la flecha hacia la guía.
+                const Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: -_alturaHuellas,
+                      bottom: -_alturaHuellas,
+                      child: ExcludeSemantics(child: CustomPaint(painter: _HuellasGuia())),
+                    ),
+                    Text.rich(
+                      TextSpan(
+                        text: 'Completa los primeros pasos',
+                        children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: SizedBox(
+                              width: 4,
+                              height: 18,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Positioned(
+                                    top: 12,
+                                    left: -8,
+                                    child: ExcludeSemantics(
+                                      child: CustomPaint(size: Size(22, 18), painter: _FlechaGuia()),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                  ],
                 )
               else
                 Wrap(
@@ -743,49 +753,64 @@ class _HeroState extends State<_Hero> {
 /// Margen interior del bloque del saludo; la fecha de encima entra lo mismo para alinearse con él.
 const _sangriaHero = 22.0;
 
-/// Huellas que caminan desde el final de «Completa los primeros pasos» y giran hacia abajo, a la guía,
-/// con una flechita al final.
+/// Cuánto suben y bajan las huellas respecto al centro del texto.
+const _alturaHuellas = 14.0;
+
+/// Huellas tenues que cruzan «Completa los primeros pasos» de izquierda a derecha en una onda: suben hacia
+/// la bienvenida, bajan por debajo del texto y acaban al final de «pasos».
 class _HuellasGuia extends CustomPainter {
   const _HuellasGuia();
 
-  // Curva del camino (cuadrática): sale en horizontal y acaba bajando.
-  static const _p0 = Offset(2, 9), _p1 = Offset(46, 5), _p2 = Offset(52, 26);
-
-  Offset _punto(double t) => _p0 * ((1 - t) * (1 - t)) + _p1 * (2 * (1 - t) * t) + _p2 * (t * t);
-  Offset _direccion(double t) => (_p1 - _p0) * (2 * (1 - t)) + (_p2 - _p1) * (2 * t);
-
   @override
   void paint(Canvas canvas, Size size) {
-    final relleno = Paint()..color = Colors.white.withValues(alpha: .9);
-    // Cuatro pisadas alternando pie izquierdo y derecho a lo largo del camino.
-    for (final (i, t) in [0.08, 0.32, 0.56, 0.8].indexed) {
-      final d = _direccion(t);
-      final angulo = atan2(d.dy, d.dx);
+    final relleno = Paint()..color = Colors.white.withValues(alpha: .32);
+    final centro = size.height / 2, ancho = size.width - 8;
+    // Una onda completa: arriba en la primera mitad, abajo en la segunda.
+    double y(double x) => centro - (_alturaHuellas - 3) * sin(2 * pi * x / ancho);
+    double pendiente(double x) => -(_alturaHuellas - 3) * cos(2 * pi * x / ancho) * 2 * pi / ancho;
+    final n = max(4, (ancho / 17).floor());
+    for (var i = 0; i < n; i++) {
+      final x = 4 + i * (ancho - 4) / (n - 1);
       canvas.save();
-      canvas.translate(_punto(t).dx, _punto(t).dy);
-      canvas.rotate(angulo);
+      canvas.translate(x, y(x));
+      canvas.rotate(atan(pendiente(x)));
+      // Pie izquierdo y derecho alternos, a cada lado del camino.
       canvas.translate(0, i.isEven ? -2.6 : 2.6);
       canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 5.5, height: 3.4), relleno);
       canvas.drawCircle(const Offset(4.2, 0), 1.1, relleno);
       canvas.restore();
     }
+  }
+
+  @override
+  bool shouldRepaint(_HuellasGuia old) => false;
+}
+
+/// Flecha curva que sale del final de «pasos» y baja hacia la guía.
+class _FlechaGuia extends CustomPainter {
+  const _FlechaGuia();
+
+  @override
+  void paint(Canvas canvas, Size size) {
     final pincel = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
+      ..strokeWidth = 1.7
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(
       Path()
-        ..moveTo(_p2.dx - 4.5, 29)
-        ..lineTo(_p2.dx, 34)
-        ..lineTo(_p2.dx + 4.5, 29),
+        ..moveTo(11, 1)
+        ..cubicTo(22, 3, 19, 12, 5, 15)
+        ..moveTo(8, 10)
+        ..lineTo(5, 15)
+        ..lineTo(10, 17.5),
       pincel,
     );
   }
 
   @override
-  bool shouldRepaint(_HuellasGuia old) => false;
+  bool shouldRepaint(_FlechaGuia old) => false;
 }
 
 /// Ilustraciones vectoriales del saludo: amanecer, sol y luna con estrellas.
