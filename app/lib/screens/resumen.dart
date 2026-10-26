@@ -125,7 +125,7 @@ class _PrimerosPasos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // (título, explicación, ruta en la app, botón). Los pasos de crear no llevan botón: se hacen desde
-    // su sección, como siempre, y la ruta indica dónde.
+    // su sección, como siempre, y la ruta indica dónde. Ver el itinerario, al revés: solo su botón.
     final pasos = [
       (
         'Crea tu primer cliente',
@@ -135,15 +135,15 @@ class _PrimerosPasos extends StatelessWidget {
       ),
       (
         'Crea un trabajo',
-        'Una tarea de mantenimiento: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
-            'También puedes crearla desde la ficha del cliente.',
-        (Icons.handyman_outlined, 'Tareas', 'Nueva tarea'),
+        'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
+            'También puedes crearlo desde la ficha del cliente.',
+        (Icons.handyman_outlined, 'Trabajos', 'Nuevo trabajo'),
         null,
       ),
       (
         'Mira tu trabajo en el itinerario',
         'El itinerario es tu semana: cada trabajo en su día y a su hora, y en el mapa.',
-        (Icons.calendar_month_outlined, 'Itinerario', null),
+        null,
         BotonPrimario('Ir al itinerario', icono: Icons.calendar_month_outlined, onPressed: _verItinerario),
       ),
       (
@@ -212,36 +212,26 @@ class _PrimerosPasos extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Título a la izquierda y, en el paso en curso, dónde se hace a la derecha (baja de
-                            // línea si no cabe).
-                            SizedBox(
-                              width: double.infinity,
-                              child: Wrap(
-                                alignment: WrapAlignment.spaceBetween,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 12,
-                                runSpacing: 2,
-                                children: [
-                                  AnimatedDefaultTextStyle(
-                                    duration: const Duration(milliseconds: 220),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      height: 1.45,
-                                      fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
-                                      color: hechos[i] || i == actual ? P.texto : P.textoSuave,
-                                      decoration: hechos[i] ? TextDecoration.lineThrough : null,
-                                      decorationColor: P.textoSuave,
-                                    ),
-                                    child: Text(titulo),
-                                  ),
-                                  if (i == actual) _Ruta(ruta.$1, ruta.$2, ruta.$3),
-                                ],
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 220),
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.45,
+                                fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
+                                color: hechos[i] || i == actual ? P.texto : P.textoSuave,
+                                decoration: hechos[i] ? TextDecoration.lineThrough : null,
+                                decorationColor: P.textoSuave,
                               ),
+                              child: Text(titulo),
                             ),
+                            // El paso en curso, más abierto: explicación y, debajo, dónde se hace o su botón.
                             if (i == actual) ...[
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 4),
                               Text(detalle, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
-                              if (boton != null) ...[const SizedBox(height: 10), boton],
+                              const SizedBox(height: 12),
+                              if (ruta != null) _Ruta(ruta.$1, ruta.$2, ruta.$3),
+                              ?boton,
+                              const SizedBox(height: 6),
                             ],
                           ],
                         ),
@@ -257,27 +247,28 @@ class _PrimerosPasos extends StatelessWidget {
   }
 }
 
-/// Dónde se hace un paso en la app: icono y nombre de la sección › acción.
+/// Dónde se hace un paso en la app, en una pastilla suave: icono y sección › acción.
 class _Ruta extends StatelessWidget {
   final IconData icono;
-  final String seccion;
-  final String? accion;
+  final String seccion, accion;
   const _Ruta(this.icono, this.seccion, this.accion);
 
   @override
   Widget build(BuildContext context) {
-    final estilo = TextStyle(fontSize: 12.5, color: P.textoSuave);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icono, size: 15, color: P.textoSuave),
-        const SizedBox(width: 5),
-        Text(seccion, style: estilo),
-        if (accion != null) ...[
+    const estilo = TextStyle(fontSize: 13, fontWeight: FontWeight.w500);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icono, size: 15, color: P.textoSuave),
+          const SizedBox(width: 6),
+          Text(seccion, style: estilo),
           Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
-          Text(accion!, style: estilo),
+          Text(accion, style: estilo),
         ],
-      ],
+      ),
     );
   }
 }
@@ -330,14 +321,14 @@ class _Pendientes extends StatelessWidget {
         FilaLista(
           lider: _punto(P.morado),
           titulo: '${sinTrabajador.length} sin trabajador esta semana',
-          derecha: _cat('Tareas'),
+          derecha: _cat('Trabajos'),
           onTap: () => onIr(Seccion.tareas),
         ),
       if (averiadas > 0)
         FilaLista(
           lider: _punto(P.ambar),
           titulo: '$averiadas ${averiadas == 1 ? 'equipo' : 'equipos'} en revisión o averiados',
-          derecha: _cat('Tareas'),
+          derecha: _cat('Trabajos'),
           onTap: () => onIr(Seccion.tareas),
         ),
       if (sinTareas > 0)
@@ -401,7 +392,7 @@ class _CargaTrabajadores extends StatelessWidget {
     return SeccionTarjeta(
       alto: _alto,
       titulo: 'Carga del equipo',
-      subtitulo: 'Tareas asignadas en los próximos 7 días',
+      subtitulo: 'Trabajos asignados en los próximos 7 días',
       sinFilas: true,
       children: [
         if (ws.isEmpty)
@@ -634,9 +625,9 @@ class _HeroState extends State<_Hero> {
             ],
             // Igual que en el Itinerario.
             BotonAccion(
-              'Nueva tarea',
+              'Nuevo trabajo',
               icono: Icons.add_rounded,
-              tooltip: 'Crear una tarea (N)',
+              tooltip: 'Crear un trabajo (N)',
               onPressed: () => abrirTareaForm(context, null),
             ),
           ],
@@ -658,15 +649,15 @@ class _HeroState extends State<_Hero> {
                 saludo,
                 style: TextStyle(
                   fontFamily: P.titulos,
-                  fontSize: 34,
+                  fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: -1.1,
+                  letterSpacing: -.8,
                   height: 1.1,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 15.5)),
+              const SizedBox(height: 4),
+              Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
               const SizedBox(height: 14),
               if (hechos < widget.pasos.length)
                 Text.rich(
@@ -676,9 +667,13 @@ class _HeroState extends State<_Hero> {
                         text: 'Completa los primeros pasos',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
                       ),
-                      TextSpan(
-                        text: '  ·  $hechos de ${widget.pasos.length}',
-                        style: TextStyle(fontSize: 13.5, color: Colors.white.withValues(alpha: .82)),
+                      // Señala la guía, justo debajo del bloque.
+                      const WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Padding(
+                          padding: EdgeInsets.only(left: 6),
+                          child: Icon(Icons.arrow_downward_rounded, size: 17, color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -735,12 +730,12 @@ class _Kpis extends StatelessWidget {
       (Icons.date_range_rounded, 'Esta semana', semana, P.teal, 'próximos 7 días'),
       (
         Icons.warning_amber_rounded,
-        'Vencidas',
+        'Vencidos',
         vencidas,
         P.rojo,
         vencidas == 0 ? '¡todo al día!' : 'requieren atención',
       ),
-      (Icons.task_alt_rounded, 'Hechas', hechas, P.verde, 'últimos 30 días'),
+      (Icons.task_alt_rounded, 'Hechos', hechas, P.verde, 'últimos 30 días'),
     ];
     return Rejilla(
       columnas: dosCol ? 4 : 2,

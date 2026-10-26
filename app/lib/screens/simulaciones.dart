@@ -19,7 +19,7 @@ class _Simulaciones extends StatefulWidget {
 
 class _SimulacionesState extends State<_Simulaciones> {
   final _form = GlobalKey<FormState>();
-  static const _nombres = ['Trabajadores', 'Clientes', 'Tareas', 'Días a simular'];
+  static const _nombres = ['Trabajadores', 'Clientes', 'Trabajos', 'Días a simular'];
   static const _minimos = [0, 1, 0, 1];
   static const _maximos = [100, 200, 1000, 90];
   final _valores = [6, 8, 40, 30];
@@ -45,7 +45,7 @@ class _SimulacionesState extends State<_Simulaciones> {
       final tareas = store.tareas.where((t) => !t.esPlantilla).length;
       _resultado =
           'Simulación activa: ${store.trabajadores.length} trabajadores · '
-          '${store.clientes.length} clientes · $tareas tareas';
+          '${store.clientes.length} clientes · $tareas trabajos';
     });
   }
 

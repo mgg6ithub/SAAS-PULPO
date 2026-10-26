@@ -147,7 +147,7 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
               _Grupo('Datos', [
                 _Fila(
                   titulo: 'En este navegador',
-                  subtitulo: 'Tus clientes, trabajadores y tareas',
+                  subtitulo: 'Tus clientes, trabajadores y trabajos',
                   child: TextButton(
                     style: TextButton.styleFrom(foregroundColor: P.rojo),
                     onPressed: () async {

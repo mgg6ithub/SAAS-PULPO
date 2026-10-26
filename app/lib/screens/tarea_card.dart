@@ -28,7 +28,7 @@ class TareaCard extends StatelessWidget {
     // Como los cuadraditos de la landing: nombre en negrita, una línea gris con hora · cliente · tipo
     // y, arriba a la derecha, quién lo hace. El punto del color del tipo es la única marca de color.
     final detalle = [
-      if (realizada && t.ultimo != null) 'hecha ${relativo(t.ultimo!).toLowerCase()}',
+      if (realizada && t.ultimo != null) 'hecho ${relativo(t.ultimo!).toLowerCase()}',
       if (!realizada && !t.esPlantilla && t.proximo != null) relativo(t.proximo!),
       if (!realizada) ?t.horario,
       if (t.esPlantilla) t.periodicidad.etiqueta,
@@ -88,7 +88,7 @@ class TareaCard extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      if (realizada) const Pill('Hecha', P.verde, punto: true) else pillEstado(t),
+                      if (realizada) const Pill('Hecho', P.verde, punto: true) else pillEstado(t),
                       if (averiada) Pill(t.estadoMaquina.etiqueta, t.estadoMaquina.color),
                       if (t.esPlantilla)
                         for (final c in t.competencias) Etiqueta(c, P.morado),
@@ -97,7 +97,7 @@ class TareaCard extends StatelessWidget {
                 ),
                 if (botonHecha)
                   Tooltip(
-                    message: 'Marcar como hecha hoy',
+                    message: 'Marcar como hecho hoy',
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 30),
@@ -105,7 +105,7 @@ class TareaCard extends StatelessWidget {
                         textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                       ),
                       onPressed: () => store.marcarHecha(t),
-                      child: const Text('Hecha'),
+                      child: const Text('Hecho'),
                     ),
                   ),
               ],

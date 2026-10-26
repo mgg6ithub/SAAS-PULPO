@@ -26,8 +26,8 @@ class TrabajadorDetalle extends StatelessWidget {
     final lista = tareas.isEmpty
         ? Vacio(
             icono: Icons.assignment_outlined,
-            texto: 'No tiene ninguna tarea asignada.',
-            accion: FilledButton(onPressed: () => abrirAsignar(context, w), child: const Text('Asignar tarea')),
+            texto: 'No tiene ningún trabajo asignado.',
+            accion: FilledButton(onPressed: () => abrirAsignar(context, w), child: const Text('Asignar trabajo')),
           )
         : SingleChildScrollView(
             child: SeccionTarjeta(
@@ -41,7 +41,7 @@ class TrabajadorDetalle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          const Text('Tareas asignadas', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          const Text('Trabajos asignados', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(width: 8),
           Pill('${tareas.length}', P.gris),
         ],
@@ -82,7 +82,7 @@ class TrabajadorDetalle extends StatelessWidget {
                   // Sin tareas, el botón está en el centro; arriba solo cuando ya hay alguna.
                   if (tareas.isNotEmpty)
                     BotonPrimario(
-                      'Asignar tarea',
+                      'Asignar trabajo',
                       icono: Icons.add_task_rounded,
                       onPressed: () => abrirAsignar(context, w),
                     ),
@@ -201,7 +201,7 @@ class _AsignarState extends State<_Asignar> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ASIGNAR TAREA',
+                        'ASIGNAR TRABAJO',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.morado),
                       ),
                       Text(
@@ -209,7 +209,7 @@ class _AsignarState extends State<_Asignar> {
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.4),
                       ),
                       Text(
-                        'Toca una tarea para asignarla. Las que se solapan con su horario no se pueden elegir.',
+                        'Toca un trabajo para asignarlo. Los que se solapan con su horario no se pueden elegir.',
                         style: TextStyle(fontSize: 13, color: P.textoSuave),
                       ),
                     ],
@@ -221,7 +221,7 @@ class _AsignarState extends State<_Asignar> {
             const SizedBox(height: 12),
             Expanded(
               child: porCliente.isEmpty
-                  ? const Vacio(icono: Icons.business_outlined, texto: 'Ningún cliente tiene tareas todavía')
+                  ? const Vacio(icono: Icons.business_outlined, texto: 'Ningún cliente tiene trabajos todavía')
                   : ListView(
                       padding: const EdgeInsets.only(right: 8),
                       children: [for (final e in porCliente.entries) _cliente(e.key, e.value, w)],
@@ -325,7 +325,7 @@ class _AsignarState extends State<_Asignar> {
               ),
               const SizedBox(width: 8),
               if (asignada)
-                const Pill('Asignada', P.verde, punto: true)
+                const Pill('Asignado', P.verde, punto: true)
               else if (choques.isNotEmpty)
                 const Icon(Icons.block_rounded, size: 20, color: P.rojo)
               else

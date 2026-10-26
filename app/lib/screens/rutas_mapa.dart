@@ -186,7 +186,7 @@ Future<void> abrirPorQue(BuildContext context, Plan plan) => showDialog(
             ),
             const SizedBox(height: 6),
             Text(
-              '1) Primero las más críticas y las de franja más estrecha.  2) Cada una al técnico que ya tenía o a uno apto.  '
+              '1) Primero los más críticos y los de franja más estrecha.  2) Cada uno al técnico que ya tenía o a uno apto.  '
               '3) En el hueco que menos desplazamiento añade, respetando franjas y la jornada (${hhmm(inicioJornada)}–${hhmm(finJornada)}).  '
               '4) Se mejora el orden si así se recorre menos.',
               style: TextStyle(fontSize: 12.5, color: P.textoSuave, height: 1.5),
@@ -386,7 +386,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${plan.rutas.fold(0, (s, r) => s + r.paradas.length) + plan.sinProgramar.length} tareas · '
+                  '${plan.rutas.fold(0, (s, r) => s + r.paradas.length) + plan.sinProgramar.length} trabajos · '
                   '${plan.rutas.length} técnicos · calculando distancias y franjas',
                   style: TextStyle(fontSize: 13.5, color: P.textoSuave),
                 ),
@@ -406,7 +406,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
       SnackBar(
         width: 460,
         content: Text(
-          'Pulpo ha planificado $n ${n == 1 ? 'tarea' : 'tareas'}'
+          'Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
           '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}',
         ),
       ),
@@ -416,7 +416,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
   /// Como el "✦ Organizar" de la landing: morado del logo, plano; al pasar, sube un pelo y se ilumina.
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: 'Pulpo reparte las tareas del día y traza las rutas',
+    message: 'Pulpo reparte los trabajos del día y traza las rutas',
     child: MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => hover = true),

@@ -190,9 +190,9 @@ class _PlanificacionState extends State<Planificacion> {
                     const SizedBox(width: 8),
                   ],
                   BotonAccion(
-                    'Nueva tarea',
+                    'Nuevo trabajo',
                     icono: Icons.add_rounded,
-                    tooltip: 'Crear una tarea (N)',
+                    tooltip: 'Crear un trabajo (N)',
                     onPressed: () async {
                       final f = vista < 3 ? dia : hoy();
                       // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
@@ -337,7 +337,7 @@ class _Tablero extends StatelessWidget {
                 const SizedBox(width: 16),
                 _Columna(
                   'Actual',
-                  'Vencidas y próximos 7 días',
+                  'Vencidos y próximos 7 días',
                   P.morado,
                   actual,
                   w,
@@ -367,7 +367,7 @@ class _PulpoMagico extends StatelessWidget {
     return Tooltip(
       message: pendientes == 0
           ? 'Todo lo actual ya tiene trabajador'
-          : 'Asignar el trabajador más adecuado a $pendientes ${pendientes == 1 ? 'tarea' : 'tareas'}',
+          : 'Asignar el trabajador más adecuado a $pendientes ${pendientes == 1 ? 'trabajo' : 'trabajos'}',
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
@@ -382,7 +382,7 @@ class _PulpoMagico extends StatelessWidget {
                     ? (pendientes == 0
                           ? 'Todo lo actual ya tiene trabajador.'
                           : 'No hay trabajadores aptos para lo que falta.')
-                    : 'Pulpo ha asignado $n ${n == 1 ? 'tarea' : 'tareas'}.',
+                    : 'Pulpo ha asignado $n ${n == 1 ? 'trabajo' : 'trabajos'}.',
               ),
             ),
           );

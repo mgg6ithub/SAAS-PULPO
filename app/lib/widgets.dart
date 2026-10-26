@@ -1443,10 +1443,10 @@ class PillTrabajadores extends StatelessWidget {
 /// Estado de una tarea como pastilla suave con su punto: vencida, toca hoy, pronto, al día.
 Widget pillEstado(Tarea t) {
   if (t.esPlantilla) return Pill('Plantilla', P.morado, icono: Icons.content_copy_rounded);
-  if (!t.activa) return const Pill('Pausada', P.gris, punto: true);
+  if (!t.activa) return const Pill('Pausado', P.gris, punto: true);
   if (t.proximo == null) return const Pill('Sin fecha', P.gris, punto: true);
   final n = diasHasta(t.proximo!);
-  if (n < 0) return const Pill('Vencida', P.rojo, punto: true);
+  if (n < 0) return const Pill('Vencido', P.rojo, punto: true);
   if (n == 0) return Pill('Hoy', P.morado, punto: true);
   if (n <= 7) return const Pill('Pronto', P.ambar, punto: true);
   return const Pill('Al día', P.verde, punto: true);

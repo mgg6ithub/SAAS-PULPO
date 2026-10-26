@@ -148,7 +148,7 @@ Plan planificar(DateTime dia) {
       sinProgramar.add((
         t,
         t.ventanaDesdeMin != null
-            ? 'No cabe en su franja (${hhmm(t.ventanaDesdeMin!)}–${hhmm(t.ventanaHastaMin!)}) con las demás'
+            ? 'No cabe en su franja (${hhmm(t.ventanaDesdeMin!)}–${hhmm(t.ventanaHastaMin!)}) con los demás'
             : 'No cabe en la jornada (${hhmm(inicioJornada)}–${hhmm(finJornada)}) de ningún técnico apto',
       ));
       continue;

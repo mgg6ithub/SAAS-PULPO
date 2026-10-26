@@ -58,12 +58,12 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
               c.activa ? const Pill('Activo', P.verde, punto: true) : const Pill('Inactivo', P.gris, punto: true),
               const SizedBox(width: 4),
               OutlinedButton(onPressed: () => abrirClienteForm(context, c), child: const Text('Editar')),
-              BotonPrimario('Nueva tarea', onPressed: () => abrirTareaForm(context, null, clienteId: c.id)),
+              BotonPrimario('Nuevo trabajo', onPressed: () => abrirTareaForm(context, null, clienteId: c.id)),
             ],
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
-            opciones: const ['Resumen', 'Tareas', 'Datos'],
+            opciones: const ['Resumen', 'Trabajos', 'Datos'],
             contadores: [null, tareas.length, null],
             seleccion: pestana,
             onChanged: (i) => setState(() => pestana = i),
@@ -121,7 +121,7 @@ class _Resumen extends StatelessWidget {
                 spacing: 48,
                 runSpacing: 16,
                 children: [
-                  Cifra('Tareas', tareas.length, nota: '${{for (final t in tareas) t.tipo}.length} tipos'),
+                  Cifra('Trabajos', tareas.length, nota: '${{for (final t in tareas) t.tipo}.length} tipos'),
                   Cifra(
                     'Vencidos',
                     vencidas,
@@ -161,7 +161,7 @@ class _Resumen extends StatelessWidget {
                           texto: 'Este cliente aún no tiene mantenimientos.\nCréalos desde cero o a partir de una plantilla.',
                           accion: FilledButton(
                             onPressed: () => abrirTareaForm(context, null, clienteId: c.id),
-                            child: const Text('Nueva tarea'),
+                            child: const Text('Nuevo trabajo'),
                           ),
                         ),
                       ),
@@ -222,7 +222,7 @@ class _Mantenimientos extends StatelessWidget {
         texto: 'Crea el primero desde cero o a partir de una plantilla.',
         accion: FilledButton(
           onPressed: () => abrirTareaForm(context, null, clienteId: c.id),
-          child: const Text('Nueva tarea'),
+          child: const Text('Nuevo trabajo'),
         ),
       );
     }
@@ -230,11 +230,11 @@ class _Mantenimientos extends StatelessWidget {
       alignment: Alignment.topCenter,
       child: Tabla(
         columnas: const [
-          Col('Equipo / tarea', flex: 4),
+          Col('Equipo / trabajo', flex: 4),
           Col('Periodicidad', flex: 2),
           Col('Último', flex: 2),
           Col('Próximo', flex: 2),
-          Col('Asignada a', ancho: 90),
+          Col('Asignado a', ancho: 90),
           Col('Estado', ancho: 80, derecha: true),
         ],
         filas: tareas.length,

@@ -97,7 +97,7 @@ void main() {
     for (final (seccion, filtros) in [
       ('Clientes', ['Activos', 'Inactivos', 'Todos · 8']),
       ('Trabajadores', ['Disponibles', 'Ocupados', 'Todos']),
-      ('Tareas', ['Todas', 'De clientes']),
+      ('Trabajos', ['Todos', 'De clientes']),
       ('Inicio', <String>[]),
     ]) {
       ajustes.ponerAnchoBarra(260);

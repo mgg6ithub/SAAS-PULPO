@@ -465,7 +465,7 @@ class _BarraState extends State<_Barra> {
       (Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, vencidas),
       (Icons.apartment_outlined, 'Clientes', Seccion.clientes, 0),
       (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
-      (Icons.handyman_outlined, 'Tareas', Seccion.tareas, 0),
+      (Icons.handyman_outlined, 'Trabajos', Seccion.tareas, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
     return Stack(
@@ -491,7 +491,7 @@ class _BarraState extends State<_Barra> {
     return Padding(
       padding: const EdgeInsets.only(bottom: _hueco),
       child: _ConEtiqueta(
-        texto: aviso > 0 ? '$texto · $aviso vencidas' : texto,
+        texto: aviso > 0 ? '$texto · $aviso vencidos' : texto,
         activa: iconos,
         child: InkWell(
           borderRadius: BorderRadius.circular(P.radioControl),

@@ -30,7 +30,7 @@ class _TareasPaginaState extends State<TareasPagina> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'tarea' : 'tareas'}?')) return;
+    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'trabajo' : 'trabajos'}?')) return;
     for (final id in seleccion) {
       store.borrarTarea(id);
     }
@@ -64,16 +64,16 @@ class _TareasPaginaState extends State<TareasPagina> {
               // Una sola barra (como el Itinerario): título y filtros a la izquierda; buscador y acciones a la derecha.
               BarraVista(
                 izquierda: [
-                  const TituloVista('Tareas'),
+                  const TituloVista('Trabajos'),
                   Pestanas(
-                    opciones: ['De clientes · $deClientes', 'Plantillas · ${store.plantillas.length}', 'Todas'],
+                    opciones: ['De clientes · $deClientes', 'Plantillas · ${store.plantillas.length}', 'Todos'],
                     seleccion: pestana,
                     onChanged: (i) => setState(() => pestana = i),
                   ),
                 ],
                 derecha: [
                   Buscador(
-                    hint: 'Buscar tarea, equipo o cliente…',
+                    hint: 'Buscar trabajo, equipo o cliente…',
                     width: 280,
                     onChanged: (v) => setState(() => q = v),
                   ),
@@ -86,7 +86,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                     }),
                   ),
                   BotonPrimario(
-                    pestana == 1 ? 'Nueva plantilla' : 'Nueva tarea',
+                    pestana == 1 ? 'Nueva plantilla' : 'Nuevo trabajo',
                     tecla: 'N',
                     onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                   ),
@@ -112,7 +112,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Las plantillas no tienen cliente. Al crear una tarea dentro de un cliente, elige una y se rellena casi todo.',
+                          'Las plantillas no tienen cliente. Al crear un trabajo dentro de un cliente, elige una y se rellena casi todo.',
                           style: TextStyle(color: P.moradoOscuro, fontSize: 13),
                         ),
                       ),
@@ -125,10 +125,10 @@ class _TareasPaginaState extends State<TareasPagina> {
                 child: filtradas.isEmpty
                     ? Vacio(
                         icono: Icons.handyman_outlined,
-                        titulo: store.tareas.isEmpty ? 'Aún no hay tareas' : null,
+                        titulo: store.tareas.isEmpty ? 'Aún no hay trabajos' : null,
                         texto: pestana == 0 && deClientes == 0
-                            ? 'Crea tareas dentro de tus clientes, desde cero o a partir de una plantilla.'
-                            : 'No hay tareas con estos filtros',
+                            ? 'Crea trabajos dentro de tus clientes, desde cero o a partir de una plantilla.'
+                            : 'No hay trabajos con estos filtros',
                       )
                     : lista
                     ? _tabla(filtradas)
@@ -153,7 +153,7 @@ class _TareasPaginaState extends State<TareasPagina> {
               child: BarraSeleccion(
                 seleccionados: seleccion.length,
                 total: filtradas.length,
-                nombre: 'tareas',
+                nombre: 'trabajos',
                 onTodos: () => setState(() {
                   if (filtradas.every((t) => seleccion.contains(t.id))) {
                     seleccion.removeAll(filtradas.map((t) => t.id));
@@ -183,12 +183,12 @@ class _TareasPaginaState extends State<TareasPagina> {
           ),
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
-            const Col('Equipo / tarea', flex: 4),
+            const Col('Equipo / trabajo', flex: 4),
             const Col('Cliente', flex: 3),
             if (ancho) const Col('Periodicidad', flex: 2),
             const Col('Próximo', flex: 2),
             if (ancho) const Col('Horario', flex: 2),
-            const Col('Asignada a', ancho: 90),
+            const Col('Asignado a', ancho: 90),
             const Col('Estado', ancho: 80, derecha: true),
           ],
           filas: ts.length,
@@ -199,7 +199,7 @@ class _TareasPaginaState extends State<TareasPagina> {
               abrirTareaForm(context, ts[i]);
             }
           },
-          pie: pieTabla(ts.length, ts.length == 1 ? 'tarea' : 'tareas'),
+          pie: pieTabla(ts.length, ts.length == 1 ? 'trabajo' : 'trabajos'),
           celdas: (i) {
             final t = ts[i];
             final c = store.cliente(t.clienteId);

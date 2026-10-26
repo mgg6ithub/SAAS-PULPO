@@ -245,7 +245,7 @@ class _FichaRapida extends StatelessWidget {
                     store.marcarHecha(t);
                     Navigator.pop(context);
                   },
-                  child: const Text('Marcar hecha'),
+                  child: const Text('Marcar hecho'),
                 ),
               ],
             ),
@@ -339,11 +339,11 @@ class PanelSinAsignar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tareas sin asignar',
+                      'Trabajos sin asignar',
                       style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                     Text(
-                      'Pulsa una tarea para asignarla o arrástrala',
+                      'Pulsa un trabajo para asignarlo o arrástralo',
                       style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                     ),
                   ],

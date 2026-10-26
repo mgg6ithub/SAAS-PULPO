@@ -996,7 +996,7 @@ class _AvisoSinAsignar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: '$n ${n == 1 ? 'tarea sin asignar' : 'tareas sin asignar'}',
+    message: '$n ${n == 1 ? 'trabajo sin asignar' : 'trabajos sin asignar'}',
     child: IconButton(
       onPressed: onTap,
       mouseCursor: SystemMouseCursors.click,

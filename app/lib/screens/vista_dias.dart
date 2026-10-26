@@ -604,7 +604,7 @@ class _BloqueCliente extends StatelessWidget {
             if (hecha)
               const Icon(Icons.check_circle_rounded, size: 18, color: P.verde)
             else ...[
-              if (vencida) ...[const Pill('Vencida', P.rojo, punto: true), const SizedBox(width: 6)],
+              if (vencida) ...[const Pill('Vencido', P.rojo, punto: true), const SizedBox(width: 6)],
               if (t.horario != null && !vencida) ...[
                 Text(hhmm(t.inicioMin!), style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
                 const SizedBox(width: 6),

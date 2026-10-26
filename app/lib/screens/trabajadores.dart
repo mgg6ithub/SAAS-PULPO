@@ -85,7 +85,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                         icono: Icons.badge_outlined,
                         titulo: store.trabajadores.isEmpty ? 'Aún no hay trabajadores' : null,
                         texto: store.trabajadores.isEmpty
-                            ? 'Añade a tu equipo con sus competencias para que Pulpo sepa a quién asignar cada tarea.'
+                            ? 'Añade a tu equipo con sus competencias para que Pulpo sepa a quién asignar cada trabajo.'
                             : 'No hay trabajadores con estos filtros',
                       )
                     : this.lista
@@ -141,7 +141,7 @@ class _TrabajadoresState extends State<Trabajadores> {
             const Col('Nombre', flex: 3),
             const Col('Competencias', flex: 4),
             if (ancho) const Col('Teléfono', flex: 2),
-            const Col('Tareas', flex: 1),
+            const Col('Trabajos', flex: 1),
             const Col('Hoy', ancho: 90, derecha: true),
           ],
           filas: ws.length,
@@ -246,7 +246,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)
                       : const Pill('Inactivo', P.gris, punto: true),
                   const SizedBox(width: 6),
-                  Pill('$asignadas tareas', P.gris),
+                  Pill('$asignadas trabajos', P.gris),
                 ],
               ),
               const SizedBox(height: 14),

@@ -901,7 +901,7 @@ class _ClienteFormState extends State<ClienteForm> {
         ? null
         : () async {
             final nav = Navigator.of(context);
-            if (await confirmar(context, '¿Eliminar ${c.nombre} y todas sus tareas?')) {
+            if (await confirmar(context, '¿Eliminar ${c.nombre} y todos sus trabajos?')) {
               store.borrarCliente(c.id);
               nav.pop();
             }
@@ -1009,7 +1009,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         dos(campo('Nombre', nombre, error: error), campo('Apellidos', apellidos)),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ]),
-      Bloque('Competencias', descripcion: 'Qué sabe hacer. Pulpo solo le asigna tareas que puede hacer.', [
+      Bloque('Competencias', descripcion: 'Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.', [
         chipsCompetencias(w.competencias, () => setState(() => errorCompetencias = null)),
         if (errorCompetencias != null)
           Padding(
@@ -1019,7 +1019,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         const SizedBox(height: 12),
         campo('Títulos y carnés', titulos, hint: 'Carné RITE, PRL 60 h…'),
       ]),
-      Bloque('Disponibilidad', descripcion: 'Cómo está hoy. Los ausentes no reciben tareas.', [
+      Bloque('Disponibilidad', descripcion: 'Cómo está hoy. Los ausentes no reciben trabajos.', [
         conMargen(
           SelectorEstado<EstadoHoy>(
             opciones: [for (final e in EstadoHoy.values) (e, e.etiqueta, e.color)],
@@ -1150,11 +1150,11 @@ class _TareaFormState extends State<TareaForm> {
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
-      etiqueta: t.esPlantilla ? 'Plantilla' : 'Tarea',
-      titulo: nueva ? (t.esPlantilla ? 'Nueva plantilla' : 'Nueva tarea') : nombre.text,
+      etiqueta: t.esPlantilla ? 'Plantilla' : 'Trabajo',
+      titulo: nueva ? (t.esPlantilla ? 'Nueva plantilla' : 'Nuevo trabajo') : nombre.text,
       tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
-          ? 'Sin cliente: sirve de plantilla para crear tareas en tus clientes.'
+          ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
           : store.cliente(t.clienteId)?.nombre,
       onGuardar: guardar,
       onBorrar: nueva
@@ -1169,7 +1169,7 @@ class _TareaFormState extends State<TareaForm> {
       // Mismo esquema que cliente y trabajador: bloques con su título a la izquierda y los campos a la derecha.
       campos: [
         Bloque(
-          t.esPlantilla ? 'Plantilla' : 'Tarea',
+          t.esPlantilla ? 'Plantilla' : 'Trabajo',
           primero: true,
           descripcion: t.esPlantilla ? 'Cómo se llama y de qué tipo es.' : 'Qué hay que hacer y de qué tipo es.',
           [
@@ -1288,7 +1288,7 @@ class _TareaFormState extends State<TareaForm> {
           campo('Notas / observaciones', notas, lineas: 3),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Activa'),
+            title: const Text('Activo'),
             value: t.activa,
             onChanged: (v) => setState(() => t.activa = v),
           ),

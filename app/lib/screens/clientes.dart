@@ -32,7 +32,7 @@ class _ClientesState extends State<Clientes> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'cliente' : 'clientes'} y sus tareas?')) return;
+    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'cliente' : 'clientes'} y sus trabajos?')) return;
     for (final id in seleccion) {
       store.borrarCliente(id);
     }
@@ -207,12 +207,12 @@ class _Bloques extends StatelessWidget {
                     Padding(padding: const EdgeInsets.only(right: 6), child: BarraTipo(t, alto: 28)),
                   const Spacer(),
                   Text(
-                    '${tareas.length} ${tareas.length == 1 ? 'tarea' : 'tareas'}',
+                    '${tareas.length} ${tareas.length == 1 ? 'trabajo' : 'trabajos'}',
                     style: TextStyle(color: P.textoSuave, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   if (vencidas > 0) ...[
                     const SizedBox(width: 8),
-                    Pill('$vencidas vencida${vencidas == 1 ? '' : 's'}', P.rojo),
+                    Pill('$vencidas vencido${vencidas == 1 ? '' : 's'}', P.rojo),
                   ],
                 ],
               ),
@@ -249,7 +249,7 @@ class _Tabla extends StatelessWidget {
             if (ancho) const Col('CIF/NIF', flex: 2),
             const Col('Población', flex: 2),
             if (ancho) const Col('Contacto', flex: 3),
-            const Col('Tareas', flex: 2),
+            const Col('Trabajos', flex: 2),
             const Col('Próximo', flex: 2),
             const Col('Estado', ancho: 80, derecha: true),
           ],
@@ -294,7 +294,7 @@ class _Tabla extends StatelessWidget {
               fechas.isEmpty
                   ? celdaTexto('', suave: true)
                   : Text(
-                      vencidas > 0 ? '$vencidas vencida${vencidas == 1 ? '' : 's'}' : relativo(fechas.first),
+                      vencidas > 0 ? '$vencidas vencido${vencidas == 1 ? '' : 's'}' : relativo(fechas.first),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: vencidas > 0 ? FontWeight.w600 : FontWeight.w400,

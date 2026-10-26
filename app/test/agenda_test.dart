@@ -54,13 +54,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ascensor').first);
     await tester.pumpAndSettle();
-    expect(find.text('Marcar hecha'), findsOneWidget);
+    expect(find.text('Marcar hecho'), findsOneWidget);
 
     await tester.tap(find.text('Lucía').last);
     await tester.pumpAndSettle();
     expect(store.tareas.firstWhere((t) => t.id == 'a').trabajadorIds, unorderedEquals(['w1', 'w2']));
 
-    await tester.tap(find.text('Marcar hecha'));
+    await tester.tap(find.text('Marcar hecho'));
     await tester.pumpAndSettle();
     expect(store.tareas.firstWhere((t) => t.id == 'a').ultimo, hoy());
   });
