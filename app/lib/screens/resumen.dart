@@ -55,7 +55,7 @@ class Resumen extends StatelessWidget {
             : Column(children: [a, const SizedBox(height: 16), b]);
 
         return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(margenPagina.left, margenPagina.top, margenPagina.right, margenPagina.bottom),
+          padding: EdgeInsets.fromLTRB(margenPagina.left, margenPagina.top + 16, margenPagina.right, margenPagina.bottom),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1080),
