@@ -57,6 +57,9 @@ class VentanaFormulario extends StatefulWidget {
   final VoidCallback onGuardar;
   final VoidCallback? onBorrar;
 
+  /// Aviso en rojo en la barra de abajo, centrado entre Eliminar y Cancelar (p. ej. "El horario es obligatorio").
+  final String? aviso;
+
   /// Panel fijo dentro de una vista (p. ej. a la derecha del trabajador), no una ventana flotante.
   final bool incrustada;
   const VentanaFormulario({
@@ -70,6 +73,7 @@ class VentanaFormulario extends StatefulWidget {
     required this.campos,
     required this.onGuardar,
     this.onBorrar,
+    this.aviso,
     this.incrustada = false,
   });
 
@@ -308,7 +312,18 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             onPressed: widget.onBorrar,
             child: const Text('Eliminar'),
           ),
-        const Spacer(),
+        Expanded(
+          child: widget.aviso == null
+              ? const SizedBox()
+              : Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    widget.aviso!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+        ),
         if (!widget.incrustada) ...[
           TextButton(
             style: TextButton.styleFrom(foregroundColor: P.textoSuave),
@@ -1170,6 +1185,7 @@ class _TareaFormState extends State<TareaForm> {
           ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
           : store.cliente(t.clienteId)?.nombre,
       onGuardar: guardar,
+      aviso: errorHorario,
       onBorrar: nueva
           ? null
           : () async {
@@ -1723,6 +1739,7 @@ class _SelectorCuandoState extends State<SelectorCuando> {
     IconData icono,
     VoidCallback onTap, {
     bool destacado = false,
+    bool conError = false,
   }) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -1736,11 +1753,14 @@ class _SelectorCuandoState extends State<SelectorCuando> {
           decoration: BoxDecoration(
             color: destacado ? P.moradoSuave.withValues(alpha: .6) : P.superficie,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: destacado ? P.morado.withValues(alpha: .45) : P.borde),
+            // En rojo el campo que falta para poder guardar.
+            border: conError
+                ? Border.all(color: P.rojo, width: 1.5)
+                : Border.all(color: destacado ? P.morado.withValues(alpha: .45) : P.borde),
           ),
           child: Row(
             children: [
-              Icon(icono, size: 18, color: destacado ? P.morado : P.textoSuave),
+              Icon(icono, size: 18, color: conError ? P.rojo : (destacado ? P.morado : P.textoSuave)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1767,6 +1787,9 @@ class _SelectorCuandoState extends State<SelectorCuando> {
     );
     return h == null ? null : h.hour * 60 + h.minute;
   }
+
+  /// El aviso lo muestra la barra de abajo del formulario; aquí solo se marca en rojo el campo.
+  bool get hayError => widget.error != null;
 
   @override
   Widget build(BuildContext context) {
@@ -1845,6 +1868,7 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                       final m = await _pedirHora(t.inicioMin);
                       if (m != null) cambiar(() => t.inicioMin = m);
                     },
+                    conError: hayError && t.inicioMin == null,
                   ),
                 )
               else ...[
@@ -1864,9 +1888,15 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                         });
                       }
                     },
+                    conError: hayError && t.ventanaDesdeMin == null,
                   ),
                 ),
-                const SizedBox(width: 12),
+                // De la hora de inicio a la de fin.
+                SizedBox(
+                  width: 36,
+                  height: 46,
+                  child: Icon(Icons.arrow_forward_rounded, size: 18, color: P.textoSuave),
+                ),
                 Expanded(
                   child: _campo(
                     'Hasta',
@@ -1877,6 +1907,11 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                       final m = await _pedirHora(t.ventanaHastaMin);
                       if (m != null) cambiar(() => t.ventanaHastaMin = m);
                     },
+                    // Vacía o antes que la de inicio.
+                    conError:
+                        hayError &&
+                        (t.ventanaHastaMin == null ||
+                            (t.ventanaDesdeMin != null && t.ventanaHastaMin! <= t.ventanaDesdeMin!)),
                   ),
                 ),
               ],
@@ -1903,14 +1938,6 @@ class _SelectorCuandoState extends State<SelectorCuando> {
               ),
             ],
           ),
-          if (widget.error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Semantics(
-                liveRegion: true,
-                child: Text(widget.error!, style: const TextStyle(color: P.rojo, fontSize: 12)),
-              ),
-            ),
         ],
       ),
     );
