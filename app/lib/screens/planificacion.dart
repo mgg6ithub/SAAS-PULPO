@@ -227,7 +227,13 @@ class _PlanificacionState extends State<Planificacion> {
                   _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
                 ],
               );
-              return BarraVista(izquierda: [fecha, vistas], derecha: const [], principal: acciones);
+              // Con menos de 900 los botones van solo con icono: así caben junto a la fecha sin solaparse.
+              return BarraVista(
+                izquierda: [fecha, vistas],
+                derecha: const [],
+                principal: acciones,
+                principalCompactoBajo: 900,
+              );
             },
           ),
           const SizedBox(height: huecoVista),

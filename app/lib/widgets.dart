@@ -688,7 +688,19 @@ class Buscador extends StatelessWidget {
 
 /// Ventana estrecha (móvil, tablet en vertical, media pantalla pequeña): los botones con icono
 /// se quedan solo en el icono.
-bool esMovil(BuildContext context) => MediaQuery.sizeOf(context).width < 700;
+/// También dentro de una [BarraVista] que se ha quedado sin sitio para su principal (`principalCompactoBajo`).
+bool esMovil(BuildContext context) =>
+    MediaQuery.sizeOf(context).width < 700 ||
+    (context.dependOnInheritedWidgetOfExactType<_Compacto>()?.compacto ?? false);
+
+/// Marca para [esMovil]: lo de debajo se dibuja compacto (solo iconos).
+class _Compacto extends InheritedWidget {
+  final bool compacto;
+  const _Compacto({required this.compacto, required super.child});
+
+  @override
+  bool updateShouldNotify(_Compacto old) => old.compacto != compacto;
+}
 
 /// Barra única de arriba de cada vista (como la del Itinerario): a la izquierda título y filtros; a la
 /// derecha buscador y acciones, todo de 40 de alto. [principal] (Nuevo cliente, Nuevo trabajo…) va
@@ -697,7 +709,17 @@ bool esMovil(BuildContext context) => MediaQuery.sizeOf(context).width < 700;
 class BarraVista extends StatelessWidget {
   final List<Widget> izquierda, derecha;
   final Widget? principal;
-  const BarraVista({super.key, required this.izquierda, required this.derecha, this.principal});
+
+  /// Con la barra más estrecha que esto, la principal se dibuja compacta (solo iconos) aunque la ventana no
+  /// sea de móvil: p. ej. el Itinerario, con varios botones junto a la fecha.
+  final double? principalCompactoBajo;
+  const BarraVista({
+    super.key,
+    required this.izquierda,
+    required this.derecha,
+    this.principal,
+    this.principalCompactoBajo,
+  });
 
   /// Grupo de controles: si no cabe en su fila, baja en varias; uno solo más ancho que la fila se desplaza.
   Widget _grupo(Iterable<Widget> ws, double hueco) => ws.isEmpty
@@ -709,16 +731,24 @@ class BarraVista extends StatelessWidget {
           children: [for (final w in ws) SingleChildScrollView(scrollDirection: Axis.horizontal, child: w)],
         );
 
+  List<Widget> _hijos(Widget? principal) => [
+    // El título sin desplazamiento: así puede acortarse ([TextoAjustable]) con el ancho que le quede.
+    izquierda.isEmpty ? const SizedBox.shrink() : izquierda.first,
+    _grupo(izquierda.skip(1), 14),
+    _grupo(derecha, 8),
+    principal ?? const SizedBox.shrink(),
+  ];
+
   @override
-  Widget build(BuildContext context) => _Barra(
-    children: [
-      // El título sin desplazamiento: así puede acortarse ([TextoAjustable]) con el ancho que le quede.
-      izquierda.isEmpty ? const SizedBox.shrink() : izquierda.first,
-      _grupo(izquierda.skip(1), 14),
-      _grupo(derecha, 8),
-      principal ?? const SizedBox.shrink(),
-    ],
-  );
+  Widget build(BuildContext context) => principalCompactoBajo == null || principal == null
+      ? _Barra(children: _hijos(principal))
+      // Solo se reconstruye al cruzar el umbral.
+      : SegunTamano(
+          clave: (box) => box.maxWidth < principalCompactoBajo!,
+          builder: (context, box) => _Barra(
+            children: _hijos(_Compacto(compacto: box.maxWidth < principalCompactoBajo!, child: principal!)),
+          ),
+        );
 }
 
 /// Colocación de la [BarraVista]: hijos 0 título, 1 filtros, 2 derecha, 3 principal.
@@ -734,6 +764,9 @@ class _BarraData extends ContainerBoxParentData<RenderBox> {}
 class _RenderBarra extends RenderBox
     with ContainerRenderObjectMixin<RenderBox, _BarraData>, RenderBoxContainerDefaultsMixin<RenderBox, _BarraData> {
   static const _huecoIzq = 14.0, _huecoDer = 8.0, _huecoCentro = 16.0, _huecoFilas = 8.0;
+
+  /// Lo mínimo que se deja al título para acortarlo junto a la principal.
+  static const _tituloMinimo = 200.0;
 
   @override
   void setupParentData(RenderBox child) {
@@ -771,16 +804,24 @@ class _RenderBarra extends RenderBox
           (f([2]), <int>[]),
         ],
       ];
-    } else {
+    } else if (w - _huecoCentro - nat[3] >= _tituloMinimo) {
       // Ni título y principal caben: el título se acorta para no dejar la principal sola abajo.
       filas = [
         (f([0]), f([3])),
         (f([1]), <int>[]),
         (f([2]), <int>[]),
       ];
+    } else {
+      // Caso extremo (la principal casi no deja sitio): cada cosa en su fila antes que cortar el título.
+      filas = [
+        (f([0]), <int>[]),
+        (f([1]), <int>[]),
+        (f([2]), <int>[]),
+        (<int>[], f([3])),
+      ];
     }
     final limite = [for (final x in nat) min(x, w)];
-    if (hay(0) && hay(3) && nat[0] + _huecoCentro + nat[3] > w) {
+    if (hay(0) && hay(3) && nat[0] + _huecoCentro + nat[3] > w && w - _huecoCentro - nat[3] >= _tituloMinimo) {
       limite[0] = max(0.0, w - _huecoCentro - nat[3]);
     }
 
