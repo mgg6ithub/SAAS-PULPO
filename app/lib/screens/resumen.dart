@@ -7,6 +7,7 @@ import '../ajustes.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../shell.dart';
+import 'simulaciones.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -70,7 +71,8 @@ class Resumen extends StatelessWidget {
                   _Hero(conFecha: conFecha, sinTrabajador: sinTrabajador, pasos: pasos),
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
-                  // Sin ningún trabajo todo serían ceros y paneles vacíos: solo bienvenida y guía.
+                  // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pulpo.
+                  if (!hayTarea) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
                     _Kpis(
                       hoy: hoyT.length,
@@ -112,6 +114,111 @@ const _meses = [
   'noviembre',
   'diciembre',
 ];
+
+/// Para una cuenta sin trabajos: el ciclo de Pulpo en tres tarjetas y la opción de probarlo con datos
+/// de ejemplo. Desaparece con el primer trabajo y deja paso a las cifras y los paneles.
+class _ComoFunciona extends StatelessWidget {
+  final bool columnas;
+  const _ComoFunciona({required this.columnas});
+
+  @override
+  Widget build(BuildContext context) {
+    const etapas = [
+      (P.azul, 'Tus clientes', 'Cada edificio, local o instalación que mantienes, con su dirección en el mapa.'),
+      (P.teal, 'Sus trabajos', 'Qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca y avisa de lo que vence.'),
+      (
+        P.ambar,
+        'Pulpo organiza',
+        'Reparte los trabajos entre tu equipo según lo que sabe hacer y traza la ruta del día.',
+      ),
+    ];
+    final tarjetas = [
+      for (final (i, (color, titulo, texto)) in etapas.indexed)
+        Tarjeta(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Barrita de color en lugar de icono, con el número de la etapa.
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 4,
+                    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${i + 1}',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: color),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                titulo,
+                style: TextStyle(fontFamily: P.titulos, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -.2),
+              ),
+              const SizedBox(height: 4),
+              Text(texto, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
+            ],
+          ),
+        ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
+          child: Text(
+            'Cómo funciona Pulpo',
+            style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
+          ),
+        ),
+        if (columnas)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(width: 16), Expanded(child: t)],
+              ],
+            ),
+          )
+        else
+          for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(height: 12), t],
+        const SizedBox(height: 16),
+        Tarjeta(
+          color: P.moradoSuave,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 10,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '¿Prefieres verlo funcionando primero?',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: P.moradoOscuro),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Crea clientes, trabajadores y trabajos de ejemplo y mira cómo los organiza Pulpo.',
+                    style: TextStyle(fontSize: 13, color: P.moradoOscuro.withValues(alpha: .8)),
+                  ),
+                ],
+              ),
+              BotonAccion('Probar con datos de ejemplo', onPressed: () => abrirSimulaciones(context)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 /// Guía de primeros pasos (como la de Google Play Console): índice vertical con ticks que se marcan y
 /// desmarcan solos según los datos. A la derecha de cada paso, dónde se hace en la app; solo el paso
