@@ -70,20 +70,23 @@ class Resumen extends StatelessWidget {
                   _Hero(conFecha: conFecha, sinTrabajador: sinTrabajador, pasos: pasos),
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
-                  _Kpis(
-                    hoy: hoyT.length,
-                    semana: semana.length,
-                    vencidas: vencidas.length,
-                    hechas: hechas30,
-                    dosCol: dosCol,
-                  ),
-                  const SizedBox(height: 16),
-                  par(
-                    _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
-                    _CargaTrabajadores(onTrabajador: onTrabajador),
-                  ),
-                  const SizedBox(height: 32),
-                  _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
+                  // Sin ningún trabajo todo serían ceros y paneles vacíos: solo bienvenida y guía.
+                  if (hayTarea) ...[
+                    _Kpis(
+                      hoy: hoyT.length,
+                      semana: semana.length,
+                      vencidas: vencidas.length,
+                      hechas: hechas30,
+                      dosCol: dosCol,
+                    ),
+                    const SizedBox(height: 16),
+                    par(
+                      _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
+                      _CargaTrabajadores(onTrabajador: onTrabajador),
+                    ),
+                    const SizedBox(height: 32),
+                    _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
+                  ],
                 ],
               ),
             ),
@@ -129,21 +132,21 @@ class _PrimerosPasos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // (título, explicación, ruta en la app, botón). Los pasos de crear no llevan botón: se hacen desde
-    // su sección, como siempre, y la ruta indica dónde. Ver el itinerario, al revés: solo su botón.
+    // (título, explicación, ruta en la app, botón). El botón lo hace aquí mismo; la ruta, al lado, enseña
+    // dónde se hace en la app para la próxima vez. Ver el itinerario: solo su botón.
     final pasos = [
       (
         'Crea tu primer cliente',
         'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación…',
-        (Icons.apartment_outlined, 'Clientes', 'Nuevo cliente'),
-        null,
+        ('Clientes', 'Nuevo cliente'),
+        BotonPrimario('Nuevo cliente', onPressed: () => abrirClienteForm(context)),
       ),
       (
         'Crea un trabajo',
         'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
             'También puedes crearlo desde la ficha del cliente.',
-        (Icons.handyman_outlined, 'Trabajos', 'Nuevo trabajo'),
-        null,
+        ('Trabajos', 'Nuevo trabajo'),
+        BotonPrimario('Nuevo trabajo', onPressed: () => abrirTareaForm(context, null)),
       ),
       (
         'Mira tu trabajo en el itinerario',
@@ -154,8 +157,8 @@ class _PrimerosPasos extends StatelessWidget {
       (
         'Añade un trabajador',
         'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.',
-        (Icons.badge_outlined, 'Trabajadores', 'Nuevo trabajador'),
-        null,
+        ('Trabajadores', 'Nuevo trabajador'),
+        BotonPrimario('Nuevo trabajador', onPressed: () => abrirTrabajadorForm(context)),
       ),
     ];
     final actual = hechos.indexOf(false);
@@ -238,8 +241,12 @@ class _PrimerosPasos extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(detalle, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
                               const SizedBox(height: 12),
-                              if (ruta != null) _Ruta(ruta.$1, ruta.$2, ruta.$3),
-                              ?boton,
+                              Wrap(
+                                spacing: 14,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [boton, if (ruta != null) _Ruta(ruta.$1, ruta.$2)],
+                              ),
                               const SizedBox(height: 6),
                             ],
                           ],
@@ -256,28 +263,21 @@ class _PrimerosPasos extends StatelessWidget {
   }
 }
 
-/// Dónde se hace un paso en la app, en una pastilla suave: icono y sección › acción.
+/// Dónde se hace un paso en la app, en texto suave junto al botón: «o en Clientes › Nuevo cliente».
 class _Ruta extends StatelessWidget {
-  final IconData icono;
   final String seccion, accion;
-  const _Ruta(this.icono, this.seccion, this.accion);
+  const _Ruta(this.seccion, this.accion);
 
   @override
   Widget build(BuildContext context) {
-    const estilo = TextStyle(fontSize: 13, fontWeight: FontWeight.w500);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icono, size: 15, color: P.textoSuave),
-          const SizedBox(width: 6),
-          Text(seccion, style: estilo),
-          Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
-          Text(accion, style: estilo),
-        ],
-      ),
+    final estilo = TextStyle(fontSize: 13, color: P.textoSuave);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('o en $seccion', style: estilo),
+        Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
+        Text(accion, style: estilo),
+      ],
     );
   }
 }
@@ -683,32 +683,8 @@ class _HeroState extends State<_Hero> {
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
               const SizedBox(height: 8),
               if (clientes == 0)
-                // Al final de «pasos» sale la flecha curva hacia la guía.
-                const Text.rich(
-                  TextSpan(
-                    text: 'Completa los primeros pasos',
-                    children: [
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: SizedBox(
-                          width: 4,
-                          height: 18,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Positioned(
-                                top: 12,
-                                left: -8,
-                                child: ExcludeSemantics(
-                                  child: CustomPaint(size: Size(22, 18), painter: _FlechaGuia()),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                const Text(
+                  'Completa los primeros pasos',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
                 )
               else
@@ -756,50 +732,23 @@ class _HuellasGuia extends CustomPainter {
     // Una onda completa y marcada: arriba en la primera mitad, abajo en la segunda.
     double y(double x) => centro - amplitud * sin(2 * pi * x / ancho);
     double pendiente(double x) => -amplitud * cos(2 * pi * x / ancho) * 2 * pi / ancho;
-    final n = max(4, (ancho / 15).floor());
+    final n = max(4, (ancho / 26).floor());
     for (var i = 0; i < n; i++) {
       final x = 4 + i * (ancho - 4) / (n - 1);
       canvas.save();
       canvas.translate(x, y(x));
       canvas.rotate(atan(pendiente(x)));
       // Pie izquierdo y derecho alternos, a cada lado del camino.
-      canvas.translate(0, i.isEven ? -2.6 : 2.6);
+      canvas.translate(0, i.isEven ? -3.6 : 3.6);
       // Planta delante (hacia la derecha) y talón detrás: se ve hacia dónde camina.
-      canvas.drawOval(Rect.fromCenter(center: const Offset(1.5, 0), width: 6, height: 3.8), relleno);
-      canvas.drawOval(Rect.fromCenter(center: const Offset(-4, 0), width: 3.2, height: 2.8), relleno);
+      canvas.drawOval(Rect.fromCenter(center: const Offset(2, 0), width: 8.5, height: 5.4), relleno);
+      canvas.drawOval(Rect.fromCenter(center: const Offset(-5.5, 0), width: 4.4, height: 3.8), relleno);
       canvas.restore();
     }
   }
 
   @override
   bool shouldRepaint(_HuellasGuia old) => false;
-}
-
-/// Flecha curva que sale del final de «pasos» y baja hacia la guía.
-class _FlechaGuia extends CustomPainter {
-  const _FlechaGuia();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pincel = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(
-      Path()
-        ..moveTo(11, 1)
-        ..cubicTo(22, 3, 19, 12, 5, 15)
-        ..moveTo(8, 10)
-        ..lineTo(5, 15)
-        ..lineTo(10, 17.5),
-      pincel,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_FlechaGuia old) => false;
 }
 
 /// Ilustraciones vectoriales del saludo: amanecer, sol y luna con estrellas.
