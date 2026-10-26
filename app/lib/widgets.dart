@@ -660,27 +660,28 @@ class Buscador extends StatelessWidget {
 }
 
 /// Barra única de arriba de cada vista (como la del Itinerario): a la izquierda título y filtros; a la
-/// derecha buscador y acciones, todo de 40 de alto. Nunca se parte en dos filas: si no cabe, se desplaza.
+/// derecha buscador y acciones, todo de 40 de alto. Si la ventana es estrecha (media pantalla, tablet,
+/// móvil), los controles bajan a otra fila en vez de cortarse; uno más ancho que la pantalla se desplaza.
 class BarraVista extends StatelessWidget {
   final List<Widget> izquierda, derecha;
   const BarraVista({super.key, required this.izquierda, required this.derecha});
 
-  List<Widget> _con(List<Widget> ws, double hueco) => [
-    for (final (i, w) in ws.indexed) ...[if (i > 0) SizedBox(width: hueco), w],
-  ];
+  Widget _grupo(List<Widget> ws, double hueco) => Wrap(
+    spacing: hueco,
+    runSpacing: 8,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [for (final w in ws) SingleChildScrollView(scrollDirection: Axis.horizontal, child: w)],
+  );
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: box.maxWidth),
-        child: IntrinsicWidth(
-          child: Row(
-            children: [..._con(izquierda, 14), const Spacer(), const SizedBox(width: 16), ..._con(derecha, 8)],
-          ),
-        ),
-      ),
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      spacing: 16,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [_grupo(izquierda, 14), _grupo(derecha, 8)],
     ),
   );
 }
