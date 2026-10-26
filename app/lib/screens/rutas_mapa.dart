@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:video_player/video_player.dart';
 
 import '../ajustes.dart';
 import '../models.dart';
@@ -357,48 +358,13 @@ class _BotonPulpoState extends State<BotonPulpo> {
 
   Future<void> _planificar() async {
     final plan = planificar(widget.dia);
-    // Espera con animación: que se vea que el pulpo "piensa".
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (c) {
-        Future.delayed(const Duration(milliseconds: 1600), () {
-          if (c.mounted) Navigator.pop(c);
-        });
-        return Dialog(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: const Duration(milliseconds: 1500),
-                  builder: (_, v, _) => Transform.rotate(angle: v * 6.28, child: const LogoPulpo(size: 64)),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'El pulpo está planificando…',
-                  style: TextStyle(
-                    fontFamily: P.titulos,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.4,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${plan.rutas.fold(0, (s, r) => s + r.paradas.length) + plan.sinProgramar.length} trabajos · '
-                  '${plan.rutas.length} técnicos · calculando distancias y franjas',
-                  style: TextStyle(fontSize: 13.5, color: P.textoSuave),
-                ),
-                const SizedBox(height: 16),
-                const SizedBox(width: 220, child: LinearProgressIndicator()),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (_) => _DialogoPlanificando(
+        trabajos: plan.rutas.fold(0, (s, r) => s + r.paradas.length) + plan.sinProgramar.length,
+        tecnicos: plan.rutas.length,
+      ),
     );
     aplicar(plan);
     var asignacionTutorial = false;
@@ -474,4 +440,98 @@ class _BotonPulpoState extends State<BotonPulpo> {
       ),
     ),
   );
+}
+
+class _DialogoPlanificando extends StatefulWidget {
+  final int trabajos;
+  final int tecnicos;
+
+  const _DialogoPlanificando({required this.trabajos, required this.tecnicos});
+
+  @override
+  State<_DialogoPlanificando> createState() => _DialogoPlanificandoState();
+}
+
+class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
+  late final VideoPlayerController _video;
+  late final Future<void> _videoListo;
+
+  @override
+  void initState() {
+    super.initState();
+    _video = VideoPlayerController.asset('assets/videos/pulpo-animacione.mp4');
+    _videoListo = _iniciarVideo();
+  }
+
+  Future<void> _iniciarVideo() async {
+    try {
+      await _video.initialize();
+      if (!mounted) return;
+      await _video.setLooping(true);
+      await _video.setVolume(0);
+      await _video.play();
+    } finally {
+      Future<void>.delayed(const Duration(seconds: 4), () {
+        if (mounted) Navigator.of(context).pop();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _video.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ancho = (MediaQuery.sizeOf(context).width - 128).clamp(180.0, 250.0).toDouble();
+    final altoVideo = (MediaQuery.sizeOf(context).height - 250).clamp(120.0, 444.0).toDouble();
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SizedBox(
+          width: ancho,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FutureBuilder<void>(
+                future: _videoListo,
+                builder: (context, snapshot) => ClipRRect(
+                  borderRadius: BorderRadius.circular(P.radioControl),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: altoVideo),
+                    child: snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+                        ? AspectRatio(aspectRatio: _video.value.aspectRatio, child: VideoPlayer(_video))
+                        : AspectRatio(
+                            aspectRatio: 9 / 16,
+                            child: Center(child: LogoPulpo(size: 76)),
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'El pulpo está planificando…',
+                style: TextStyle(
+                  fontFamily: P.titulos,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.4,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${widget.trabajos} trabajos · ${widget.tecnicos} técnicos · calculando distancias y franjas',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(width: ancho, child: const LinearProgressIndicator()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
