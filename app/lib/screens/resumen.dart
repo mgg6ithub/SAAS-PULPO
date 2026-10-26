@@ -682,7 +682,8 @@ class _HeroState extends State<_Hero> {
               const SizedBox(height: 14),
               if (clientes == 0)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  // Sin hueco extra: la flecha cae sobre el margen inferior del bloque.
+                  padding: EdgeInsets.zero,
                   child: Text.rich(
                     TextSpan(
                       text: 'Completa los primeros ',
@@ -702,11 +703,11 @@ class _HeroState extends State<_Hero> {
                                 ),
                               ),
                               const Positioned(
-                                top: 18,
-                                left: 0,
+                                top: 17,
+                                left: 4,
                                 child: ExcludeSemantics(
                                   child: CustomPaint(
-                                    size: Size(36, 30),
+                                    size: Size(22, 18),
                                     painter: _FlechaGuia(),
                                   ),
                                 ),
@@ -770,11 +771,11 @@ class _FlechaGuia extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(
       Path()
-        ..moveTo(18, 1)
-        ..cubicTo(36, 4, 32, 20, 8, 25)
-        ..moveTo(13, 17)
-        ..lineTo(8, 25)
-        ..lineTo(17, 29),
+        ..moveTo(11, 1)
+        ..cubicTo(22, 3, 19, 12, 5, 15)
+        ..moveTo(8, 10)
+        ..lineTo(5, 15)
+        ..lineTo(10, 17.5),
       pincel,
     );
   }
