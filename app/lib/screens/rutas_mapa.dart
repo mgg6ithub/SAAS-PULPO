@@ -485,8 +485,8 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
 
   @override
   Widget build(BuildContext context) {
-    final ancho = (MediaQuery.sizeOf(context).width - 128).clamp(180.0, 250.0).toDouble();
-    final altoVideo = (MediaQuery.sizeOf(context).height - 250).clamp(120.0, 444.0).toDouble();
+    final ancho = (MediaQuery.sizeOf(context).width - 112).clamp(180.0, 380.0).toDouble();
+    final altoVideo = (MediaQuery.sizeOf(context).height - 220).clamp(120.0, 650.0).toDouble();
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -505,7 +505,7 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
                         ? AspectRatio(aspectRatio: _video.value.aspectRatio, child: VideoPlayer(_video))
                         : AspectRatio(
                             aspectRatio: 9 / 16,
-                            child: Center(child: LogoPulpo(size: 76)),
+                            child: Center(child: LogoPulpo(size: 96)),
                           ),
                   ),
                 ),
