@@ -267,6 +267,7 @@ class _CorcheteHorario extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final pintura = Paint()
       ..color = color.withValues(alpha: .65)
+      ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
     final path = Path()
