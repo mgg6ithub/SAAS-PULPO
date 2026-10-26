@@ -45,6 +45,14 @@ class Ajustes extends ChangeNotifier {
     _prefs?.setBool('ajustes_guia_itinerario', true);
   }
 
+  /// Paso "Deja que Pulpo lo organice": se ha pulsado Organizar con trabajos y algún trabajador.
+  bool guiaOrganizar = false;
+
+  void marcarGuiaOrganizar() {
+    guiaOrganizar = true;
+    _prefs?.setBool('ajustes_guia_organizar', true);
+  }
+
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     tema = ThemeMode.values[_prefs!.getInt('ajustes_tema') ?? ThemeMode.light.index];
@@ -56,6 +64,7 @@ class Ajustes extends ChangeNotifier {
     anchoBarra = _prefs!.getDouble('ajustes_ancho_barra') ?? 248;
     anchoExpandido = _prefs!.getDouble('ajustes_ancho_expandido') ?? 248;
     guiaItinerario = _prefs!.getBool('ajustes_guia_itinerario') ?? false;
+    guiaOrganizar = _prefs!.getBool('ajustes_guia_organizar') ?? false;
   }
 
   /// Si la app se pinta en oscuro ahora mismo (el modo sistema mira el del navegador).

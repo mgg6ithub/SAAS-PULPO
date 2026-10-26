@@ -36,6 +36,7 @@ class Resumen extends StatelessWidget {
       hayTarea,
       hayTarea && ajustes.guiaItinerario,
       store.trabajadores.isNotEmpty,
+      hayTarea && store.trabajadores.isNotEmpty && ajustes.guiaOrganizar,
     ];
 
     // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
@@ -248,6 +249,12 @@ class _PrimerosPasos extends StatelessWidget {
   final ValueChanged<Seccion> onIr;
   const _PrimerosPasos(this.hechos, {required this.onIr});
 
+  /// Deja el itinerario en la semana del último trabajo, para organizar el día en que cae.
+  Future<void> _semanaDelTrabajo(BuildContext context) async {
+    final t = store.tareas.where((t) => !t.esPlantilla).lastOrNull;
+    Planificacion.mostrarSemana(t?.proximo ?? hoy());
+  }
+
   /// Abre el itinerario en la semana del último trabajo creado, para verlo en su día y su hora.
   void _verItinerario() {
     final t = store.tareas.lastWhere((t) => !t.esPlantilla);
@@ -284,6 +291,12 @@ class _PrimerosPasos extends StatelessWidget {
         'Añade un trabajador',
         'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.',
         (Icons.badge_outlined, 'Trabajadores', 'Nuevo trabajador', Seccion.trabajadores, abrirTrabajadorForm),
+        null,
+      ),
+      (
+        'Deja que Pulpo lo organice',
+        'Pulsa Organizar en el itinerario y mira cómo Pulpo asigna cada trabajo a quien sabe hacerlo y le traza la ruta.',
+        (Icons.calendar_month_outlined, 'Itinerario', 'Organizar', Seccion.planificacion, _semanaDelTrabajo),
         null,
       ),
     ];
@@ -373,8 +386,8 @@ class _PrimerosPasos extends StatelessWidget {
                                   ruta.$2,
                                   ruta.$3,
                                   onTap: () {
-                                    onIr(ruta.$4);
                                     ruta.$5(context);
+                                    onIr(ruta.$4);
                                   },
                                 ),
                               ?boton,
