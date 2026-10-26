@@ -196,11 +196,24 @@ class BloqueTarea extends StatelessWidget {
                   if (lineas.tecnico)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        tecnicos.map((w) => w.nombre).join(', '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, height: 1.25, fontWeight: FontWeight.w500, color: P.texto),
+                      child: Row(
+                        children: [
+                          // Circulito del (primer) técnico, como el cuadradito del cliente de arriba.
+                          Avatar(
+                            inicialesDe(tecnicos.first.nombreCompleto),
+                            colorPaleta(tecnicos.first.color),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              tecnicos.map((w) => w.nombre).join(', '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, height: 1.25, fontWeight: FontWeight.w500, color: P.texto),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   if (lineas.detalle)
