@@ -751,16 +751,12 @@ class _RenderBarra extends RenderBox
         suma(izq, _huecoIzq) + (izq.isNotEmpty && der.isNotEmpty ? _huecoCentro : 0) + suma(der, _huecoDer) <= w;
     List<int> f(List<int> ids) => ids.where(hay).toList();
 
-    // Filas (izquierda, derecha), de más a menos juntas: la principal sube con el título mientras quepa.
+    // Filas (izquierda, derecha): si no cabe todo en una, los filtros bajan bajo el título (como en
+    // Trabajadores) y la principal se queda arriba a la derecha mientras quepa.
     final List<(List<int>, List<int>)> filas;
     if (cabe(f([0, 1]), f([2, 3]))) {
       filas = [
         (f([0, 1]), f([2, 3])),
-      ];
-    } else if (cabe(f([0, 1]), f([3]))) {
-      filas = [
-        (f([0, 1]), f([3])),
-        (f([2]), <int>[]),
       ];
     } else if (cabe(f([0]), f([3]))) {
       filas = [
