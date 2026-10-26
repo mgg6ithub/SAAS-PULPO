@@ -343,7 +343,7 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
-  void cargarDemo() {
+  void cargarDemo({bool soloProximosDosDias = false}) {
     // Guarda lo que hay para poder volver a ello con quitarDemo().
     if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
     demo = true;
@@ -412,7 +412,7 @@ class Store extends ChangeNotifier {
     for (final c in clientes) {
       for (var k = 0; k < 3 + r.nextInt(3); k++) {
         final (tipo, nombre, per, comp) = equipos[r.nextInt(equipos.length)];
-        final desfase = r.nextInt(30) - 6; // algunas vencidas, la mayoría en las próximas semanas
+        final desfase = soloProximosDosDias ? 1 + r.nextInt(2) : r.nextInt(30) - 6;
         final proximo = masDias(hoy(), desfase);
         final aptos = trabajadores.where((w) => comp.every(w.competencias.contains)).toList();
         tareas.add(

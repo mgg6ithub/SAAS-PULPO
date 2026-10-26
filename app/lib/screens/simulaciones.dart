@@ -218,7 +218,7 @@ class _SimulacionesState extends State<_Simulaciones> {
                   'Generar datos por defecto',
                   icono: Icons.auto_awesome_outlined,
                   onPressed: () {
-                    store.cargarDemo();
+                    store.cargarDemo(soloProximosDosDias: true);
                     _mostrarResultado('Datos de ejemplo cargados.');
                   },
                 ),
