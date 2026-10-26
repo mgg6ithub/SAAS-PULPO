@@ -124,24 +124,21 @@ class _PrimerosPasos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // (título, explicación, ruta en la app, botón).
+    // (título, explicación, ruta en la app, botón). Los pasos de crear no llevan botón: se hacen desde
+    // su sección, como siempre, y la ruta indica dónde.
     final pasos = [
       (
         'Crea tu primer cliente',
-        'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación… '
-            'Con su dirección, Pulpo lo sitúa en el mapa y en las rutas.',
+        'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación…',
         (Icons.apartment_outlined, 'Clientes', 'Nuevo cliente'),
-        BotonPrimario('Nuevo cliente', onPressed: () => abrirClienteForm(context)),
+        null,
       ),
       (
         'Crea un trabajo',
         'Una tarea de mantenimiento: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
             'También puedes crearla desde la ficha del cliente.',
         (Icons.handyman_outlined, 'Tareas', 'Nueva tarea'),
-        BotonPrimario(
-          'Nueva tarea',
-          onPressed: () => abrirTareaForm(context, null, clienteId: store.clientes.firstOrNull?.id),
-        ),
+        null,
       ),
       (
         'Mira tu trabajo en el itinerario',
@@ -153,102 +150,108 @@ class _PrimerosPasos extends StatelessWidget {
         'Añade un trabajador',
         'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.',
         (Icons.badge_outlined, 'Trabajadores', 'Nuevo trabajador'),
-        BotonPrimario('Nuevo trabajador', onPressed: () => abrirTrabajadorForm(context)),
+        null,
       ),
     ];
     final actual = hechos.indexOf(false);
-    return Tarjeta(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Primeros pasos',
-                  style: TextStyle(
-                    fontFamily: P.titulos,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.3,
-                  ),
-                ),
-              ),
-              Text(
-                '${hechos.where((h) => h).length} de ${pasos.length}',
-                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          for (final (i, (titulo, detalle, ruta, boton)) in pasos.indexed)
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Marca y, debajo, la línea discontinua que une con el siguiente paso.
-                  SizedBox(
-                    width: 20,
-                    child: Column(
-                      children: [
-                        _MarcaPaso(hecho: hechos[i], actual: i == actual),
-                        if (i < pasos.length - 1)
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
-                              child: CustomPaint(size: const Size(2, double.infinity), painter: _Discontinua(P.borde)),
-                            ),
-                          ),
-                      ],
+    // Borde discontinuo: es una guía de paso, no una tarjeta de datos.
+    return CustomPaint(
+      foregroundPainter: BordeDiscontinuo(P.textoSuave.withValues(alpha: .45), BorderRadius.circular(P.radio)),
+      child: Tarjeta(
+        color: P.superficie,
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Primeros pasos',
+                    style: TextStyle(
+                      fontFamily: P.titulos,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.3,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                ),
+                Text(
+                  '${hechos.where((h) => h).length} de ${pasos.length}',
+                  style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final (i, (titulo, detalle, ruta, boton)) in pasos.indexed)
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Marca y, debajo, la línea que une con el siguiente paso.
+                    SizedBox(
+                      width: 20,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Título a la izquierda y, a la derecha, dónde se hace (baja de línea si no cabe).
-                          SizedBox(
-                            width: double.infinity,
-                            child: Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 12,
-                              runSpacing: 2,
-                              children: [
-                                AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 220),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    height: 1.45,
-                                    fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
-                                    color: hechos[i] || i == actual ? P.texto : P.textoSuave,
-                                    decoration: hechos[i] ? TextDecoration.lineThrough : null,
-                                    decorationColor: P.textoSuave,
-                                  ),
-                                  child: Text(titulo),
-                                ),
-                                _Ruta(ruta.$1, ruta.$2, ruta.$3),
-                              ],
+                          _MarcaPaso(hecho: hechos[i], actual: i == actual),
+                          if (i < pasos.length - 1)
+                            Expanded(
+                              child: Container(
+                                width: 1.5,
+                                margin: const EdgeInsets.symmetric(vertical: 3),
+                                color: P.borde,
+                              ),
                             ),
-                          ),
-                          if (i == actual) ...[
-                            const SizedBox(height: 2),
-                            Text(detalle, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
-                            const SizedBox(height: 10),
-                            boton,
-                          ],
                         ],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Título a la izquierda y, en el paso en curso, dónde se hace a la derecha (baja de
+                            // línea si no cabe).
+                            SizedBox(
+                              width: double.infinity,
+                              child: Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 12,
+                                runSpacing: 2,
+                                children: [
+                                  AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 220),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.45,
+                                      fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
+                                      color: hechos[i] || i == actual ? P.texto : P.textoSuave,
+                                      decoration: hechos[i] ? TextDecoration.lineThrough : null,
+                                      decorationColor: P.textoSuave,
+                                    ),
+                                    child: Text(titulo),
+                                  ),
+                                  if (i == actual) _Ruta(ruta.$1, ruta.$2, ruta.$3),
+                                ],
+                              ),
+                            ),
+                            if (i == actual) ...[
+                              const SizedBox(height: 2),
+                              Text(detalle, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
+                              if (boton != null) ...[const SizedBox(height: 10), boton],
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -277,27 +280,6 @@ class _Ruta extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Línea vertical discontinua centrada, para unir los pasos de la guía.
-class _Discontinua extends CustomPainter {
-  final Color color;
-  const _Discontinua(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pincel = Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-    final x = size.width / 2;
-    for (var y = 0.0; y < size.height; y += 6) {
-      canvas.drawLine(Offset(x, y), Offset(x, min(y + 3, size.height)), pincel);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Discontinua old) => old.color != color;
 }
 
 /// Marca de un paso: tick verde si está hecho, anillo morado si es el actual, anillo gris si falta.

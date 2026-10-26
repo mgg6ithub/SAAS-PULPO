@@ -577,7 +577,7 @@ class FotoFormulario extends StatelessWidget {
           },
           child: foto.isEmpty
               ? CustomPaint(
-                  painter: _BordeDiscontinuo(P.textoSuave.withValues(alpha: .6), radio),
+                  painter: BordeDiscontinuo(P.textoSuave.withValues(alpha: .6), radio),
                   child: SizedBox(
                     width: _lado,
                     height: _lado,
@@ -592,30 +592,6 @@ class FotoFormulario extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Borde de rayas alrededor de un rectángulo redondeado.
-class _BordeDiscontinuo extends CustomPainter {
-  final Color color;
-  final BorderRadius radio;
-  const _BordeDiscontinuo(this.color, this.radio);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pincel = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    final camino = Path()..addRRect(radio.toRRect(Offset.zero & size).deflate(.7));
-    for (final m in camino.computeMetrics()) {
-      for (var d = 0.0; d < m.length; d += 7) {
-        canvas.drawPath(m.extractPath(d, min(d + 4, m.length)), pincel);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BordeDiscontinuo old) => old.color != color || old.radio != radio;
 }
 
 /// Reduce la imagen a 256 px de ancho y la devuelve en PNG base64 (cabe de sobra en el guardado local).
@@ -696,7 +672,7 @@ class _ZonaFotoState extends State<_ZonaFoto> {
             if (f != null) await _usar(f.file.readAsBytes());
           },
           child: CustomPaint(
-            painter: _BordeDiscontinuo(
+            painter: BordeDiscontinuo(
               encima ? P.morado : P.textoSuave.withValues(alpha: .5),
               BorderRadius.circular(P.radio),
             ),
