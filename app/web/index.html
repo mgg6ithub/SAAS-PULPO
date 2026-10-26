@@ -41,6 +41,35 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    (async () => {
+      const bootstrap = document.createElement('script');
+      bootstrap.async = true;
+
+      try {
+        const versionUrl = new URL('version.txt', document.baseURI);
+        versionUrl.searchParams.set('t', Date.now().toString());
+        const response = await fetch(versionUrl, { cache: 'no-store' });
+        const version = (await response.text()).trim();
+
+        if (!response.ok || !/^[0-9a-f]{40}$/.test(version)) {
+          throw new Error('Build version unavailable');
+        }
+
+        const pageUrl = new URL(window.location.href);
+        if (pageUrl.searchParams.get('pulpo-version') !== version) {
+          pageUrl.searchParams.set('pulpo-version', version);
+          window.location.replace(pageUrl);
+          return;
+        }
+
+        bootstrap.src = `flutter_bootstrap.js?v=${version}`;
+      } catch (_) {
+        bootstrap.src = 'flutter_bootstrap.js';
+      }
+
+      document.body.append(bootstrap);
+    })();
+  </script>
 </body>
 </html>

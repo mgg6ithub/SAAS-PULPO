@@ -28,6 +28,24 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter build web --release --base-href /SAAS-PULPO/
+      - name: Versionar recursos del build
+        env:
+          BUILD_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          build = Path('build/web')
+          version = os.environ['BUILD_SHA']
+          bootstrap = build / 'flutter_bootstrap.js'
+          source = bootstrap.read_text()
+          marker = '"mainJsPath":"main.dart.js"'
+          if marker not in source:
+              raise SystemExit('No se encontró mainJsPath en flutter_bootstrap.js')
+          bootstrap.write_text(source.replace(marker, f'"mainJsPath":"main.dart.js?v={version}"', 1))
+          (build / 'version.txt').write_text(version + '\n')
+          PY
       - run: cp -R ../landing build/web/landing
       - uses: actions/upload-pages-artifact@v3
         with:
