@@ -1336,7 +1336,8 @@ class _TareaFormState extends State<TareaForm> {
                   }),
                 ),
               ),
-            ] else if (nueva) ...[
+              // Plantillas también al editar: se pueden aplicar a un trabajo ya creado.
+            ] else ...[
               etiqueta('A partir de una plantilla'),
               conMargen(
                 Wrap(

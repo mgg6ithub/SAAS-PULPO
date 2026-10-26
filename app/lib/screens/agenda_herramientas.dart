@@ -213,6 +213,25 @@ class _FichaRapida extends StatelessWidget {
                         ),
                     ],
                   ),
+                  // Sin técnico: por qué, si nadie puede hacerlo (le faltan competencias a todos).
+                  if (t.trabajadorIds.isEmpty && t.competencias.isNotEmpty && !ws.any((w) => store.esApto(w, t)))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, size: 16, color: P.ambar),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Nadie tiene ${t.competencias.join(', ')}. Pulpo no puede asignarlo: añádesela a un '
+                              'trabajador o elige uno a mano.',
+                              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -240,13 +259,24 @@ class _FichaRapida extends StatelessWidget {
                   },
                   child: const Text('Editar todo'),
                 ),
-                FilledButton(
-                  onPressed: () {
-                    store.marcarHecha(t);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Marcar hecho'),
-                ),
+                // Hecho por error: se puede deshacer.
+                if (store.puedeDesmarcar(t))
+                  FilledButton.tonal(onPressed: () => store.desmarcarHecha(t), child: const Text('Desmarcar hecho'))
+                else
+                  FilledButton(
+                    onPressed: () {
+                      store.marcarHecha(t);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          width: 380,
+                          content: Text('«${t.nombre}» marcado como hecho'),
+                          action: SnackBarAction(label: 'Deshacer', onPressed: () => store.desmarcarHecha(t)),
+                        ),
+                      );
+                    },
+                    child: const Text('Marcar hecho'),
+                  ),
               ],
             ),
           ],

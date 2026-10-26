@@ -153,7 +153,23 @@ class Store extends ChangeNotifier {
   }
 
   /// El mantenimiento se ha hecho hoy: se calcula el siguiente.
+  /// Cómo estaba cada tarea antes de marcarla hecha, para poder desmarcarla (durante la sesión).
+  final _antesDeHecha = <String, (DateTime?, DateTime?, EstadoMaquina)>{};
+
+  bool puedeDesmarcar(Tarea t) => _antesDeHecha.containsKey(t.id);
+
+  void desmarcarHecha(Tarea t) {
+    final antes = _antesDeHecha.remove(t.id);
+    if (antes == null) return;
+    t
+      ..ultimo = antes.$1
+      ..proximo = antes.$2
+      ..estadoMaquina = antes.$3;
+    _cambio();
+  }
+
   void marcarHecha(Tarea t) {
+    _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina);
     t.ultimo = hoy();
     // Una tarea única, al hacerse, ya no tiene próxima.
     t.proximo = t.periodicidad.repite ? masDias(hoy(), t.periodicidad.dias) : null;
@@ -422,12 +438,7 @@ class Store extends ChangeNotifier {
   }
 
   /// Cantidades exactas; las plantillas no cuentan como tareas de la simulación.
-  void cargarSimulacion({
-    required int equipo,
-    required int cuentas,
-    required int cantidadTareas,
-    required int dias,
-  }) {
+  void cargarSimulacion({required int equipo, required int cuentas, required int cantidadTareas, required int dias}) {
     if (equipo < 0 ||
         equipo > 100 ||
         cuentas < 1 ||
