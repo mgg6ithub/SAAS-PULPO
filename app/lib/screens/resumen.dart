@@ -650,8 +650,24 @@ class _HeroState extends State<_Hero> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                saludo,
+              Text.rich(
+                TextSpan(
+                  text: saludo,
+                  children: [
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: ExcludeSemantics(
+                          child: CustomPaint(
+                            size: const Size.square(36),
+                            painter: _IconoSaludo(_ahora.hour),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 style: TextStyle(
                   fontFamily: P.titulos,
                   fontSize: 28,
@@ -665,22 +681,46 @@ class _HeroState extends State<_Hero> {
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
               const SizedBox(height: 14),
               if (clientes == 0)
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: 'Completa los primeros pasos',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
-                      // Señala la guía, justo debajo del bloque.
-                      const WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 6),
-                          child: Icon(Icons.arrow_downward_rounded, size: 17, color: Colors.white),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'Completa los primeros ',
+                      children: [
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              const Text(
+                                'pasos',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const Positioned(
+                                top: 18,
+                                left: 0,
+                                child: ExcludeSemantics(
+                                  child: CustomPaint(
+                                    size: Size(36, 30),
+                                    painter: _FlechaGuia(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 )
               else
@@ -715,6 +755,154 @@ class _HeroState extends State<_Hero> {
 
 /// Margen interior del bloque del saludo; la fecha de encima entra lo mismo para alinearse con él.
 const _sangriaHero = 22.0;
+
+/// Flecha dibujada bajo «pasos», con la punta dirigida a la guía.
+class _FlechaGuia extends CustomPainter {
+  const _FlechaGuia();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pincel = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.7
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(18, 1)
+        ..cubicTo(36, 4, 32, 20, 8, 25)
+        ..moveTo(13, 17)
+        ..lineTo(8, 25)
+        ..lineTo(17, 29),
+      pincel,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FlechaGuia old) => false;
+}
+
+/// Ilustraciones vectoriales del saludo: amanecer, sol y luna con estrellas.
+class _IconoSaludo extends CustomPainter {
+  final int hora;
+  const _IconoSaludo(this.hora);
+
+  int get periodo =>
+      hora >= 6 && hora < 14 ? 0 : (hora >= 14 && hora < 21 ? 1 : 2);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final amanecer = periodo == 0;
+    final noche = periodo == 2;
+    final centro = Offset(18, amanecer ? 25 : 18);
+    final luz = Paint()..color = Colors.white.withValues(alpha: .08);
+    canvas.drawCircle(const Offset(18, 18), 17, luz);
+    final relleno = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: noche
+            ? [Colors.white, Color.lerp(P.gris, Colors.white, .8)!]
+            : [Color.lerp(P.ambar, Colors.white, .75)!, P.ambar],
+      ).createShader(const Rect.fromLTWH(6, 6, 24, 26));
+    final trazo = Paint()
+      ..color = Colors.white.withValues(alpha: .9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.7
+      ..strokeCap = StrokeCap.round;
+    if (noche) {
+      final luna = Path.combine(
+        PathOperation.difference,
+        Path()
+          ..addOval(Rect.fromCircle(center: const Offset(17, 19), radius: 11)),
+        Path()
+          ..addOval(Rect.fromCircle(center: const Offset(22, 14), radius: 10)),
+      );
+      canvas.drawPath(luna, relleno);
+      void estrella(Offset centro, double radio) {
+        canvas.drawPath(
+          Path()
+            ..moveTo(centro.dx, centro.dy - radio)
+            ..quadraticBezierTo(
+              centro.dx,
+              centro.dy,
+              centro.dx + radio,
+              centro.dy,
+            )
+            ..quadraticBezierTo(
+              centro.dx,
+              centro.dy,
+              centro.dx,
+              centro.dy + radio,
+            )
+            ..quadraticBezierTo(
+              centro.dx,
+              centro.dy,
+              centro.dx - radio,
+              centro.dy,
+            )
+            ..quadraticBezierTo(
+              centro.dx,
+              centro.dy,
+              centro.dx,
+              centro.dy - radio,
+            )
+            ..close(),
+          Paint()..color = Colors.white.withValues(alpha: .95),
+        );
+      }
+
+      estrella(const Offset(27, 9), 3.5);
+      estrella(const Offset(29, 25), 2);
+      canvas.drawCircle(
+        const Offset(10, 6),
+        1,
+        Paint()..color = Colors.white.withValues(alpha: .7),
+      );
+    } else if (amanecer) {
+      canvas.drawPath(
+        Path()
+          ..arcTo(Rect.fromCircle(center: centro, radius: 8), pi, pi, false)
+          ..close(),
+        relleno,
+      );
+      for (var i = 1; i <= 5; i++) {
+        final angulo = -pi + i * pi / 6;
+        final direccion = Offset(cos(angulo), sin(angulo));
+        canvas.drawLine(
+          centro + direccion * 11.5,
+          centro + direccion * 15,
+          trazo,
+        );
+      }
+      canvas.drawLine(const Offset(5, 26), const Offset(31, 26), trazo);
+      canvas.drawLine(
+        const Offset(10, 30),
+        const Offset(26, 30),
+        trazo..color = Colors.white.withValues(alpha: .5),
+      );
+    } else {
+      canvas.drawCircle(centro, 7.5, relleno);
+      for (var i = 0; i < 8; i++) {
+        final direccion = Offset(cos(i * pi / 4), sin(i * pi / 4));
+        canvas.drawLine(
+          centro + direccion * 11.5,
+          centro + direccion * 15,
+          trazo,
+        );
+      }
+      canvas.drawCircle(
+        const Offset(15.5, 15.5),
+        2.5,
+        Paint()..color = Colors.white.withValues(alpha: .2),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_IconoSaludo old) => old.periodo != periodo;
+}
 
 /// Cuatro cifras en tarjetas blancas: punto de color, etiqueta, número grande y una nota.
 class _Kpis extends StatelessWidget {
