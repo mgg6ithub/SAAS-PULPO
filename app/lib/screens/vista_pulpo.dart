@@ -11,7 +11,15 @@ import 'agenda_herramientas.dart';
 class VistaPulpo extends StatelessWidget {
   final DateTime dia;
   final VoidCallback onCrearTrabajo;
-  const VistaPulpo({super.key, required this.dia, required this.onCrearTrabajo});
+  final bool mostrarSinConcretar;
+  final VoidCallback onCambiarVisibilidad;
+  const VistaPulpo({
+    super.key,
+    required this.dia,
+    required this.onCrearTrabajo,
+    required this.mostrarSinConcretar,
+    required this.onCambiarVisibilidad,
+  });
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -28,13 +36,23 @@ class VistaPulpo extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, box) {
           final estrecho = box.maxWidth < 920;
-          final pendientes = _PanelSinConcretar(tareas: sinConcretar, onCrear: onCrearTrabajo);
-          final agenda = _TrabajosDia(tareas: asignados);
+          final pendientes = _PanelSinConcretar(
+            tareas: sinConcretar,
+            onCrear: onCrearTrabajo,
+            onOcultar: onCambiarVisibilidad,
+          );
+          final agenda = _TrabajosDia(
+            tareas: asignados,
+            mostrarSinConcretar: mostrarSinConcretar,
+            onMostrarSinConcretar: onCambiarVisibilidad,
+          );
           if (estrecho) {
             return Column(
               children: [
-                SizedBox(height: 190, child: pendientes),
-                const SizedBox(height: huecoVista),
+                if (mostrarSinConcretar) ...[
+                  SizedBox(height: 155, child: pendientes),
+                  const SizedBox(height: huecoVista),
+                ],
                 Expanded(child: agenda),
               ],
             );
@@ -42,8 +60,7 @@ class VistaPulpo extends StatelessWidget {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(width: 250, child: pendientes),
-              const SizedBox(width: huecoVista),
+              if (mostrarSinConcretar) ...[SizedBox(width: 250, child: pendientes), const SizedBox(width: huecoVista)],
               Expanded(child: agenda),
             ],
           );
@@ -56,7 +73,8 @@ class VistaPulpo extends StatelessWidget {
 class _PanelSinConcretar extends StatelessWidget {
   final List<Tarea> tareas;
   final VoidCallback onCrear;
-  const _PanelSinConcretar({required this.tareas, required this.onCrear});
+  final VoidCallback onOcultar;
+  const _PanelSinConcretar({required this.tareas, required this.onCrear, required this.onOcultar});
 
   @override
   Widget build(BuildContext context) => Tarjeta(
@@ -72,10 +90,11 @@ class _PanelSinConcretar extends StatelessWidget {
                 style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
+            BotonAccion('Crear', onPressed: onCrear, tooltip: 'Crear trabajo', color: P.tinta),
             IconButton(
-              tooltip: 'Crear trabajo',
-              onPressed: onCrear,
-              icon: const Icon(Icons.add_rounded),
+              tooltip: 'Ocultar trabajos sin concretar',
+              onPressed: onOcultar,
+              icon: const Icon(Icons.visibility_off_rounded),
               visualDensity: VisualDensity.compact,
             ),
           ],
@@ -145,7 +164,9 @@ class _TrabajoSinConcretar extends StatelessWidget {
 
 class _TrabajosDia extends StatelessWidget {
   final List<Tarea> tareas;
-  const _TrabajosDia({required this.tareas});
+  final bool mostrarSinConcretar;
+  final VoidCallback onMostrarSinConcretar;
+  const _TrabajosDia({required this.tareas, required this.mostrarSinConcretar, required this.onMostrarSinConcretar});
 
   List<_GrupoHorario> get grupos {
     final resultado = <_GrupoHorario>[];
@@ -166,6 +187,7 @@ class _TrabajosDia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final horarios = grupos;
+    final tecnicos = store.trabajadores.where((w) => w.activo).toList();
     return Tarjeta(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       child: Column(
@@ -179,10 +201,18 @@ class _TrabajosDia extends StatelessWidget {
                   style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
-              Text(
-                'Trabajadores',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
-              ),
+              if (!mostrarSinConcretar)
+                IconButton(
+                  tooltip: 'Mostrar trabajos sin concretar',
+                  onPressed: onMostrarSinConcretar,
+                  icon: const Icon(Icons.visibility_rounded),
+                  visualDensity: VisualDensity.compact,
+                )
+              else
+                Text(
+                  'Trabajadores',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -194,7 +224,7 @@ class _TrabajosDia extends StatelessWidget {
                 : ListView.separated(
                     itemCount: horarios.length,
                     separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
-                    itemBuilder: (context, i) => _FilaGrupoHorario(grupo: horarios[i]),
+                    itemBuilder: (context, i) => _FilaGrupoHorario(grupo: horarios[i], tecnicos: tecnicos),
                   ),
           ),
         ],
@@ -212,51 +242,59 @@ class _GrupoHorario {
 
 class _FilaGrupoHorario extends StatelessWidget {
   final _GrupoHorario grupo;
-  const _FilaGrupoHorario({required this.grupo});
+  final List<Trabajador> tecnicos;
+  const _FilaGrupoHorario({required this.grupo, required this.tecnicos});
+
+  static const _altoFilaTrabajo = 74.0;
+  static const _huecoTrabajos = 8.0;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12),
-    child: IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 58,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  hhmm(grupo.inicio),
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
-                ),
-                const SizedBox(height: 3),
-                Icon(Icons.arrow_downward_rounded, size: 15, color: P.textoSuave),
-                const SizedBox(height: 3),
-                Text(
-                  hhmm(grupo.fin),
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(width: 18, child: CustomPaint(painter: _CorcheteHorario(P.textoSuave))),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              children: [
-                for (final (i, tarea) in grupo.tareas.indexed) ...[
-                  if (i > 0) const SizedBox(height: 8),
-                  _FilaTrabajo(tarea: tarea),
+  Widget build(BuildContext context) {
+    final altoGrupo = grupo.tareas.length * _altoFilaTrabajo + (grupo.tareas.length - 1) * _huecoTrabajos;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: SizedBox(
+        height: altoGrupo,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 58,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    hhmm(grupo.inicio),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
+                  ),
+                  const SizedBox(height: 3),
+                  Icon(Icons.arrow_downward_rounded, size: 15, color: P.textoSuave),
+                  const SizedBox(height: 3),
+                  Text(
+                    hhmm(grupo.fin),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
+                  ),
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            SizedBox(width: 18, child: CustomPaint(painter: _CorcheteHorario(P.textoSuave))),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                children: [
+                  for (final (i, tarea) in grupo.tareas.indexed) ...[
+                    if (i > 0) const SizedBox(height: _huecoTrabajos),
+                    _FilaTrabajo(tarea: tarea, tecnicos: tecnicos),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _CorcheteHorario extends CustomPainter {
@@ -284,12 +322,12 @@ class _CorcheteHorario extends CustomPainter {
 
 class _FilaTrabajo extends StatelessWidget {
   final Tarea tarea;
-  const _FilaTrabajo({required this.tarea});
+  final List<Trabajador> tecnicos;
+  const _FilaTrabajo({required this.tarea, required this.tecnicos});
 
   @override
   Widget build(BuildContext context) {
     final tecnico = tarea.trabajadorIds.map(store.trabajador).whereType<Trabajador>().firstOrNull;
-    final tecnicos = store.trabajadores.where((w) => w.activo).toList();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(

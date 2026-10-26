@@ -36,6 +36,7 @@ class Planificacion extends StatefulWidget {
 class _PlanificacionState extends State<Planificacion> {
   final _marcoGuiaKey = GlobalKey();
   final _organizarGuiaKey = GlobalKey();
+  bool _mostrarSinConcretar = true;
   Rect? _organizarRect;
   bool _medicionPendiente = false;
 
@@ -138,6 +139,8 @@ class _PlanificacionState extends State<Planificacion> {
     final contenido = switch (vista) {
       0 => VistaPulpo(
         dia: dia,
+        mostrarSinConcretar: _mostrarSinConcretar,
+        onCambiarVisibilidad: () => setState(() => _mostrarSinConcretar = !_mostrarSinConcretar),
         onCrearTrabajo: () async {
           final hora = diasHasta(dia) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
           await abrirTareaForm(context, null, fecha: dia, horaMin: hora);
