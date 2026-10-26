@@ -137,7 +137,7 @@ class BloqueTarea extends StatelessWidget {
   /// Qué cabe en el bloque, por orden: el título (hasta dos líneas), el técnico y la hora con el cliente.
   ({int titulo, bool tecnico, bool detalle}) _lineas(bool conTecnico) {
     if (alto == null) return (titulo: 1, tecnico: false, detalle: !compacto);
-    final n = ((alto! - 4) / 17.5).floor();
+    final n = ((alto! - 9) / 17.5).floor();
     if (n <= 1) return (titulo: 1, tecnico: false, detalle: false);
     if (n == 2) {
       return conTecnico ? (titulo: 1, tecnico: true, detalle: false) : (titulo: 2, tecnico: false, detalle: false);
@@ -160,7 +160,7 @@ class BloqueTarea extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(left: BorderSide(color: vencida ? P.rojo : color, width: 3)),
             ),
-            padding: const EdgeInsets.fromLTRB(4, 2, 3, 1),
+            padding: EdgeInsets.fromLTRB(8, compacto ? 2 : 6, 6, 2),
             child: Opacity(
               opacity: hecha ? .55 : 1,
               child: Column(
@@ -176,7 +176,7 @@ class BloqueTarea extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 1),
                           child: Avatar(cliente.iniciales, colorPaleta(cliente.color), size: 16, cuadrado: true),
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 6),
                       ],
                       Expanded(
                         child: Text(
@@ -195,7 +195,7 @@ class BloqueTarea extends StatelessWidget {
                   ),
                   if (lineas.tecnico)
                     Padding(
-                      padding: const EdgeInsets.only(top: 1),
+                      padding: const EdgeInsets.only(top: 2),
                       child: Row(
                         children: [
                           // Circulito del (primer) técnico, como el cuadradito del cliente de arriba.
@@ -204,7 +204,7 @@ class BloqueTarea extends StatelessWidget {
                             colorPaleta(tecnicos.first.color),
                             size: 14,
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               tecnicos.map((w) => w.nombre).join(', '),
