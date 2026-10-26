@@ -160,7 +160,7 @@ class BloqueTarea extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(left: BorderSide(color: vencida ? P.rojo : color, width: 3)),
             ),
-            padding: EdgeInsets.fromLTRB(8, compacto ? 2 : 6, 6, 2),
+            padding: EdgeInsets.fromLTRB(4, compacto ? 2 : 6, 3, 2),
             child: Opacity(
               opacity: hecha ? .55 : 1,
               child: Column(
@@ -176,7 +176,7 @@ class BloqueTarea extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 1),
                           child: Avatar(cliente.iniciales, colorPaleta(cliente.color), size: 16, cuadrado: true),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 3),
                       ],
                       Expanded(
                         child: Text(
@@ -204,7 +204,7 @@ class BloqueTarea extends StatelessWidget {
                             colorPaleta(tecnicos.first.color),
                             size: 14,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 3),
                           Expanded(
                             child: Text(
                               tecnicos.map((w) => w.nombre).join(', '),
