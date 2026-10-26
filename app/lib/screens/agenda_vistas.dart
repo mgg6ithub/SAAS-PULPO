@@ -136,7 +136,8 @@ class BloqueTarea extends StatelessWidget {
 
   /// Qué cabe en el bloque, por orden: el título (hasta dos líneas), el técnico y la hora con el cliente.
   ({int titulo, bool tecnico, bool detalle}) _lineas(bool conTecnico) {
-    if (alto == null) return (titulo: 1, tecnico: false, detalle: !compacto);
+    if (compacto) return (titulo: 1, tecnico: false, detalle: false);
+    if (alto == null) return (titulo: 1, tecnico: false, detalle: true);
     final n = ((alto! - 9) / 17.5).floor();
     if (n <= 1) return (titulo: 1, tecnico: false, detalle: false);
     if (n == 2) {
@@ -171,7 +172,7 @@ class BloqueTarea extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (cliente != null) ...[
+                      if (cliente != null && !compacto) ...[
                         Padding(
                           padding: const EdgeInsets.only(top: 1),
                           child: Avatar(cliente.iniciales, colorPaleta(cliente.color), size: 16, cuadrado: true),
@@ -712,7 +713,13 @@ class VistaSemana extends StatelessWidget {
                               alignment: Alignment(total == 1 ? 0 : -1 + 2 * indice / (total - 1), -1),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                                child: BloqueTarea(tarea, dia, arrastrable: true, alto: altoBloque(tarea)),
+                                child: BloqueTarea(
+                                  tarea,
+                                  dia,
+                                  compacto: total >= 4,
+                                  arrastrable: true,
+                                  alto: altoBloque(tarea),
+                                ),
                               ),
                             ),
                           ),
