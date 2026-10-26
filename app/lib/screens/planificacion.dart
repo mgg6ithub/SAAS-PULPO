@@ -77,14 +77,18 @@ class _PlanificacionState extends State<Planificacion> {
     _ => '${meses[dia.month - 1]} ${dia.year}',
   };
 
-  /// Título corto para ventanas estrechas: que quepa junto a las flechas y los botones.
-  String get tituloCorto => switch (vista) {
-    0 => '${dia.day} de ${meses[dia.month - 1].toLowerCase()}',
-    1 => rangoSemana(lunes),
-    2 => meses[dia.month - 1],
-    3 => '7 días',
-    _ => '3 días',
-  };
+  /// Del título más largo al más corto: se muestra el primero que cabe junto a los botones.
+  List<String> get titulos {
+    final mes = meses[dia.month - 1];
+    final corto = mes.substring(0, 3).toLowerCase();
+    return switch (vista) {
+      0 => [titulo, '${dia.day} de ${mes.toLowerCase()}', '${dia.day} $corto', '${dia.day}'],
+      1 => [titulo, rangoSemana(lunes), '${lunes.day} ${meses[lunes.month - 1].substring(0, 3).toLowerCase()}'],
+      2 => [titulo, mes, corto],
+      3 => ['Próximos 7 días', '7 días'],
+      _ => ['De ayer a pasado mañana', '3 días'],
+    };
+  }
 
   void mover(int n) => setState(
     () => dia = switch (vista) {
@@ -154,18 +158,15 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                     const SizedBox(width: 14),
                   ],
-                  Text(
-                    esMovil(context)
-                        ? tituloCorto
-                        : vista < 3
-                        ? titulo
-                        : (vista == 3 ? 'Próximos 7 días' : 'De ayer a pasado mañana'),
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: P.titulos,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -.5,
+                  Flexible(
+                    child: TextoAjustable(
+                      titulos,
+                      estilo: TextStyle(
+                        fontFamily: P.titulos,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -.5,
+                      ),
                     ),
                   ),
                   if (filtroAgenda.activo) ...[

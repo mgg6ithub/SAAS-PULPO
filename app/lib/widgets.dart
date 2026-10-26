@@ -709,7 +709,8 @@ class BarraVista extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Barra(
     children: [
-      _grupo(izquierda.take(1), 0),
+      // El título sin desplazamiento: así puede acortarse ([TextoAjustable]) con el ancho que le quede.
+      izquierda.isEmpty ? const SizedBox.shrink() : izquierda.first,
       _grupo(izquierda.skip(1), 14),
       _grupo(derecha, 8),
       principal ?? const SizedBox.shrink(),
@@ -740,8 +741,8 @@ class _RenderBarra extends RenderBox
   void performLayout() {
     final w = constraints.maxWidth;
     final hijos = getChildrenAsList();
-    // Ancho natural de cada grupo (sin límite); los vacíos no cuentan.
-    final nat = [for (final h in hijos) (h..layout(const BoxConstraints(), parentUsesSize: true)).size.width];
+    // Ancho de cada grupo con todo el ancho disponible; los vacíos no cuentan.
+    final nat = [for (final h in hijos) (h..layout(BoxConstraints(maxWidth: w), parentUsesSize: true)).size.width];
     bool hay(int i) => nat[i] > 0;
     double suma(List<int> ids, double hueco) =>
         ids.isEmpty ? 0 : ids.fold(0.0, (s, i) => s + nat[i]) + hueco * (ids.length - 1);
@@ -768,7 +769,7 @@ class _RenderBarra extends RenderBox
         ],
       ];
     } else {
-      // Ni título y principal caben: el título se recorta (se desplaza) para no dejar la principal sola abajo.
+      // Ni título y principal caben: el título se acorta para no dejar la principal sola abajo.
       filas = [
         (f([0]), f([3])),
         (f([1]), <int>[]),
@@ -812,6 +813,31 @@ class _RenderBarra extends RenderBox
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
       defaultHitTestChildren(result, position: position);
+}
+
+/// Texto de una línea que elige, de [variantes] (de la más larga a la más corta), la primera que cabe.
+class TextoAjustable extends StatelessWidget {
+  final List<String> variantes;
+  final TextStyle estilo;
+  const TextoAjustable(this.variantes, {super.key, required this.estilo});
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final style = DefaultTextStyle.of(context).style.merge(estilo);
+      final escala = MediaQuery.textScalerOf(context);
+      final texto = variantes.firstWhere((v) {
+        final tp = TextPainter(
+          text: TextSpan(text: v, style: style),
+          textDirection: TextDirection.ltr,
+          textScaler: escala,
+          maxLines: 1,
+        )..layout();
+        return tp.width <= box.maxWidth;
+      }, orElse: () => variantes.last);
+      return Text(texto, maxLines: 1, softWrap: false, overflow: TextOverflow.clip, style: style);
+    },
+  );
 }
 
 /// Título de vista dentro de la [BarraVista].
