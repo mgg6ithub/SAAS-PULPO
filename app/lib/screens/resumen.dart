@@ -31,12 +31,15 @@ class Resumen extends StatelessWidget {
     final sinTrabajador = conFecha.where((t) => t.trabajadorIds.isEmpty && diasHasta(t.proximo!) <= 7).toList();
     // Pasos de la guía, siempre según los datos de ahora: si se borra el cliente, vuelve a pedirlo.
     final hayTarea = store.tareas.any((t) => !t.esPlantilla);
+    final hayTrabajador = store.trabajadores.any((w) => w.activo);
+    final hayTrabajoAsignado = store.tareas.any(
+      (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
+    );
     final pasos = [
       store.clientes.isNotEmpty,
       hayTarea,
       hayTarea && ajustes.guiaItinerario,
-      store.trabajadores.isNotEmpty,
-      hayTarea && store.trabajadores.isNotEmpty && ajustes.guiaOrganizar,
+      hayTrabajador && hayTarea && ajustes.guiaOrganizar && hayTrabajoAsignado,
     ];
 
     // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
@@ -270,6 +273,7 @@ class _PrimerosPasos extends StatelessWidget {
   Widget build(BuildContext context) {
     // (título, explicación, ruta en la app, botón). Los pasos de crear no se hacen aquí: la ruta es un botón
     // que lleva a su sección y abre el formulario, para que se aprenda dónde está. Ver el itinerario: su botón.
+    final hayTrabajador = store.trabajadores.any((w) => w.activo);
     final pasos = [
       (
         'Crea tu primer cliente',
@@ -291,26 +295,24 @@ class _PrimerosPasos extends StatelessWidget {
         BotonPrimario('Ir al itinerario', icono: Icons.calendar_month_outlined, onPressed: _verItinerario),
       ),
       (
-        'Añade un trabajador',
-        'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.',
-        // Con las competencias que piden los trabajos ya creados: así Organizar puede asignarle el primero.
-        (
-          Icons.badge_outlined,
-          'Trabajadores',
-          'Nuevo trabajador',
-          Seccion.trabajadores,
-          (c) => abrirTrabajadorForm(
-            c,
-            null,
-            {for (final t in store.tareas.where((t) => !t.esPlantilla)) ...t.competencias}.toList(),
-          ),
-        ),
-        null,
-      ),
-      (
-        'Deja que Pulpo lo organice',
-        'Pulsa Organizar en el itinerario y mira cómo Pulpo asigna cada trabajo a quien sabe hacerlo y le traza la ruta.',
-        (Icons.calendar_month_outlined, 'Itinerario', 'Organizar', Seccion.planificacion, _semanaDelTrabajo),
+        !hayTrabajador ? 'Añade un trabajador' : 'Deja que Pulpo organice tu primer trabajo',
+        !hayTrabajador
+            ? 'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.'
+            : 'Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico y trazará la ruta.',
+        !hayTrabajador
+            // Con las competencias de los trabajos ya creados, Organizar podrá asignar el primero.
+            ? (
+                Icons.badge_outlined,
+                'Trabajadores',
+                'Nuevo trabajador',
+                Seccion.trabajadores,
+                (c) => abrirTrabajadorForm(
+                  c,
+                  null,
+                  {for (final t in store.tareas.where((t) => !t.esPlantilla)) ...t.competencias}.toList(),
+                ),
+              )
+            : (Icons.calendar_month_outlined, 'Itinerario', 'Organizar', Seccion.planificacion, _semanaDelTrabajo),
         null,
       ),
     ];

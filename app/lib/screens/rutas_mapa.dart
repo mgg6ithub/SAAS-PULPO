@@ -5,7 +5,6 @@ import 'package:latlong2/latlong.dart';
 import '../ajustes.dart';
 import '../models.dart';
 import '../planificador.dart';
-import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -401,8 +400,8 @@ class _BotonPulpoState extends State<BotonPulpo> {
       },
     );
     aplicar(plan);
-    // Último paso de la guía de Inicio: organizar con algún trabajo y algún trabajador.
-    if (store.trabajadores.isNotEmpty && store.tareas.any((t) => !t.esPlantilla)) ajustes.marcarGuiaOrganizar();
+    // La guía solo termina si Organizar consiguió incluir al menos un trabajo en una ruta.
+    if (plan.rutas.any((ruta) => ruta.paradas.isNotEmpty)) ajustes.marcarGuiaOrganizar();
     widget.onHecho();
     if (!mounted) return;
     final n = plan.rutas.fold(0, (s, r) => s + r.paradas.length);

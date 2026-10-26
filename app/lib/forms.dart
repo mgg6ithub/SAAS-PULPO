@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
+import 'ajustes.dart';
 import 'geo.dart';
 import 'models.dart';
 import 'store.dart';
@@ -1088,6 +1089,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
       ..email = email.text.trim()
       ..titulos = titulos.text.trim()
       ..info = info.text.trim();
+    if (widget.original == null && store.trabajadores.isEmpty) ajustes.reiniciarGuiaOrganizar();
     store.guardarTrabajador(w.copia());
     if (widget.incrustada) {
       ScaffoldMessenger.of(context).showSnackBar(

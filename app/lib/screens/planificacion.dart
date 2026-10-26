@@ -34,6 +34,11 @@ class Planificacion extends StatefulWidget {
 }
 
 class _PlanificacionState extends State<Planificacion> {
+  final _marcoGuiaKey = GlobalKey();
+  final _organizarGuiaKey = GlobalKey();
+  Rect? _organizarRect;
+  bool _medicionPendiente = false;
+
   // ?v=0..4 abre una vista concreta (útil para enlaces y capturas): 0 Día, 1 Semana, 2 Mes, 3 Tablero, 4 Línea.
   // Vista y día viven fuera del State: si la página se reconstruye (p. ej. al mover un bloque
   // y guardar), el itinerario sigue exactamente donde estaba.
@@ -61,6 +66,31 @@ class _PlanificacionState extends State<Planificacion> {
   bool sinAsignar = false;
 
   DateTime get lunes => lunesDe(dia);
+
+  bool get _guiaOrganizarVisible {
+    final trabajoAsignado = store.tareas.any(
+      (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
+    );
+    return ajustes.guiaItinerario &&
+        store.tareas.any((t) => !t.esPlantilla) &&
+        store.trabajadores.any((w) => w.activo) &&
+        !(ajustes.guiaOrganizar && trabajoAsignado);
+  }
+
+  void _medirBotonOrganizar() {
+    if (_medicionPendiente) return;
+    _medicionPendiente = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _medicionPendiente = false;
+      if (!mounted || !_guiaOrganizarVisible) return;
+      final boton = _organizarGuiaKey.currentContext?.findRenderObject();
+      final marco = _marcoGuiaKey.currentContext?.findRenderObject();
+      if (boton is! RenderBox || marco is! RenderBox || !boton.hasSize || !marco.hasSize) return;
+      final posicion = boton.localToGlobal(Offset.zero, ancestor: marco);
+      final rect = posicion & boton.size;
+      if (rect != _organizarRect) setState(() => _organizarRect = rect);
+    });
+  }
 
   /// Periodo que se ve ahora (para el mapa y el título).
   (DateTime, DateTime, String) get periodo => switch (vista) {
@@ -103,6 +133,7 @@ class _PlanificacionState extends State<Planificacion> {
       ListenableBuilder(listenable: filtroAgenda, builder: (context, _) => _build(context));
 
   Widget _build(BuildContext context) {
+    final mostrarGuia = _guiaOrganizarVisible;
     final (desde, hasta, nombrePeriodo) = periodo;
     final contenido = switch (vista) {
       0 => VistaDiaTecnicos(dia, key: ValueKey('dia-$dia')),
@@ -136,7 +167,7 @@ class _PlanificacionState extends State<Planificacion> {
       child: MapaAgenda(key: ValueKey('mapa-$desde-$hasta'), desde: desde, hasta: hasta, periodo: nombrePeriodo),
     );
     // Más sitio para el calendario y el mapa: márgenes estrechos y una sola barra compacta.
-    return Padding(
+    final pagina = Padding(
       padding: margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +253,11 @@ class _PlanificacionState extends State<Planificacion> {
                   ),
                   const SizedBox(width: 8),
                   // El pulpo: organiza el día que estás viendo.
-                  BotonPulpo(dia: vista < 3 ? dia : hoy(), onHecho: () => setState(() => mapa = true)),
+                  BotonPulpo(
+                    key: _organizarGuiaKey,
+                    dia: vista < 3 ? dia : hoy(),
+                    onHecho: () => setState(() => mapa = true),
+                  ),
                   const SizedBox(width: 8),
                   _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
                 ],
@@ -300,7 +335,93 @@ class _PlanificacionState extends State<Planificacion> {
         ],
       ),
     );
+    return LayoutBuilder(
+      builder: (context, _) {
+        if (mostrarGuia) _medirBotonOrganizar();
+        return Stack(
+          key: _marcoGuiaKey,
+          fit: StackFit.expand,
+          children: [
+            pagina,
+            if (mostrarGuia && _organizarRect != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Semantics(
+                    label: 'Pulsa Organizar para que Pulpo asigne el trabajo al técnico.',
+                    liveRegion: true,
+                    child: CustomPaint(painter: _GuiaOrganizarPainter(_organizarRect!)),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
+}
+
+class _GuiaOrganizarPainter extends CustomPainter {
+  final Rect boton;
+  const _GuiaOrganizarPainter(this.boton);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final limites = Offset.zero & size;
+    final foco = boton.inflate(7);
+    canvas.saveLayer(limites, Paint());
+    canvas.drawRect(limites, Paint()..color = Colors.black.withValues(alpha: .48));
+    canvas.drawRRect(RRect.fromRectAndRadius(foco, const Radius.circular(14)), Paint()..blendMode = BlendMode.clear);
+    canvas.restore();
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(foco, const Radius.circular(14)),
+      Paint()
+        ..color = P.morado
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+
+    const texto = 'Pulsa Organizar para que Pulpo asigne el trabajo al técnico.';
+    final letras = TextPainter(
+      text: const TextSpan(
+        text: texto,
+        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600, height: 1.3),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: min(220, size.width - 32).toDouble());
+    final burbuja = Rect.fromLTWH(
+      (boton.left - letras.width - 40).clamp(12, size.width - letras.width - 36).toDouble(),
+      (boton.bottom + 38).clamp(12, size.height - letras.height - 32).toDouble(),
+      letras.width + 24,
+      letras.height + 18,
+    );
+    canvas.drawRRect(RRect.fromRectAndRadius(burbuja, const Radius.circular(12)), Paint()..color = P.morado);
+    letras.paint(canvas, Offset(burbuja.left + 12, burbuja.top + 9));
+
+    final inicio = Offset(burbuja.right - 8, burbuja.top + 2);
+    final fin = Offset(boton.left + boton.width * .45, boton.bottom + 7);
+    final control1 = Offset(inicio.dx + 42, inicio.dy - 66);
+    final control2 = Offset(fin.dx + 48, fin.dy + 56);
+    final flecha = Path()
+      ..moveTo(inicio.dx, inicio.dy)
+      ..cubicTo(control1.dx, control1.dy, control2.dx, control2.dy, fin.dx, fin.dy);
+    final pintura = Paint()
+      ..color = P.morado
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(flecha, pintura);
+    final angulo = atan2(fin.dy - control2.dy, fin.dx - control2.dx);
+    final punta = Path()
+      ..moveTo(fin.dx, fin.dy)
+      ..lineTo(fin.dx - 11 * cos(angulo - .48), fin.dy - 11 * sin(angulo - .48))
+      ..lineTo(fin.dx - 11 * cos(angulo + .48), fin.dy - 11 * sin(angulo + .48))
+      ..close();
+    canvas.drawPath(punta, Paint()..color = P.morado);
+  }
+
+  @override
+  bool shouldRepaint(_GuiaOrganizarPainter old) => old.boton != boton;
 }
 
 /// Icono de mapa: lo muestra u oculta (relleno en morado cuando está visible).

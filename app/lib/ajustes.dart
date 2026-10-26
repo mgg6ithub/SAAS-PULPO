@@ -45,12 +45,17 @@ class Ajustes extends ChangeNotifier {
     _prefs?.setBool('ajustes_guia_itinerario', true);
   }
 
-  /// Paso "Deja que Pulpo lo organice": se ha pulsado Organizar con trabajos y algún trabajador.
+  /// Paso final de Inicio: Organizar ha incluido al menos un trabajo en una ruta.
   bool guiaOrganizar = false;
 
   void marcarGuiaOrganizar() {
     guiaOrganizar = true;
     _prefs?.setBool('ajustes_guia_organizar', true);
+  }
+
+  void reiniciarGuiaOrganizar() {
+    guiaOrganizar = false;
+    _prefs?.setBool('ajustes_guia_organizar', false);
   }
 
   Future<void> cargar() async {
