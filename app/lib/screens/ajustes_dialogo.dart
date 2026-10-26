@@ -127,7 +127,7 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                   titulo: 'Vista al abrir',
                   subtitulo: 'Con la que se abre el itinerario',
                   child: Pestanas(
-                    opciones: const ['Día', 'Semana', 'Mes', 'Tablero', 'Línea'],
+                    opciones: const ['Pulpo', 'Calendario'],
                     seleccion: ajustes.vistaInicio,
                     onChanged: ajustes.ponerVistaInicio,
                   ),

@@ -18,8 +18,8 @@ class Ajustes extends ChangeNotifier {
   /// Tipo de letra: índice en `fuentes` (theme.dart).
   int fuente = 0;
 
-  /// Vista con la que abre la Agenda: 0 Día, 1 Semana, 2 Mes, 3 Tablero.
-  int vistaInicio = 1;
+  /// Vista con la que abre el itinerario: 0 Pulpo, 1 Calendario.
+  int vistaInicio = 0;
 
   /// Ancho de la barra lateral, ajustable arrastrando su borde. Por debajo de [anchoTextos]
   /// se queda en solo iconos ([anchoIconos]). El máximo es un 25 % de la ventana.
@@ -64,7 +64,7 @@ class Ajustes extends ChangeNotifier {
     barraDerecha = _prefs!.getBool('ajustes_barra_derecha') ?? false;
     tamanoLetra = _prefs!.getInt('ajustes_tamano_letra') ?? 0;
     fuente = _prefs!.getInt('ajustes_fuente') ?? 0;
-    vistaInicio = _prefs!.getInt('ajustes_vista_agenda') ?? 1;
+    vistaInicio = _prefs!.getInt('ajustes_vista_itinerario') ?? 0;
     acento = _prefs!.getInt('ajustes_acento') ?? 0;
     anchoBarra = _prefs!.getDouble('ajustes_ancho_barra') ?? 248;
     anchoExpandido = _prefs!.getDouble('ajustes_ancho_expandido') ?? 248;
@@ -126,8 +126,8 @@ class Ajustes extends ChangeNotifier {
   }
 
   void ponerVistaInicio(int v) {
-    vistaInicio = v;
-    _prefs?.setInt('ajustes_vista_agenda', v);
+    vistaInicio = v.clamp(0, 1);
+    _prefs?.setInt('ajustes_vista_itinerario', vistaInicio);
     notifyListeners();
   }
 }

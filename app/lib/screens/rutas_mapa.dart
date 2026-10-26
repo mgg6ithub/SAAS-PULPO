@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../ajustes.dart';
 import '../models.dart';
 import '../planificador.dart';
+import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -400,8 +401,18 @@ class _BotonPulpoState extends State<BotonPulpo> {
       },
     );
     aplicar(plan);
-    // La guía solo termina si Organizar consiguió incluir al menos un trabajo en una ruta.
-    if (plan.rutas.any((ruta) => ruta.paradas.isNotEmpty)) ajustes.marcarGuiaOrganizar();
+    var asignacionTutorial = false;
+    if (ajustes.guiaItinerario && !ajustes.guiaOrganizar) {
+      final tecnico = store.trabajadores.where((w) => w.activo).firstOrNull;
+      final trabajo = store.tareas.where((t) => !t.esPlantilla && t.activa).firstOrNull;
+      if (tecnico != null && trabajo != null) {
+        store.guardarTarea(trabajo.copia()..trabajadorIds = [tecnico.id]);
+        asignacionTutorial = true;
+      }
+    }
+    if (asignacionTutorial || plan.rutas.any((ruta) => ruta.paradas.isNotEmpty)) {
+      ajustes.marcarGuiaOrganizar();
+    }
     widget.onHecho();
     if (!mounted) return;
     final n = plan.rutas.fold(0, (s, r) => s + r.paradas.length);
@@ -409,8 +420,10 @@ class _BotonPulpoState extends State<BotonPulpo> {
       SnackBar(
         width: 460,
         content: Text(
-          'Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
-          '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}',
+          asignacionTutorial
+              ? 'Pulpo ha asignado el trabajo al técnico.'
+              : 'Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
+                    '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}',
         ),
       ),
     );

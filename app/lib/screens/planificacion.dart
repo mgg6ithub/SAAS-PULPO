@@ -12,8 +12,8 @@ import 'agenda_herramientas.dart';
 import 'agenda_vistas.dart';
 import 'rutas_mapa.dart';
 import 'tarea_card.dart';
-import 'vista_calendario.dart';
 import 'vista_dias.dart';
+import 'vista_pulpo.dart';
 
 /// Agenda (antes Planificación), inspirada en el Schedule de Jobber:
 /// Día (una fila por técnico), Semana (por horas), Mes y Tablero, con un mapa lateral opcional
@@ -23,10 +23,10 @@ class Planificacion extends StatefulWidget {
   final bool mapa;
   const Planificacion({super.key, this.mapa = true});
 
-  /// La próxima vez que se pinte, el itinerario enseña la semana de [d] (lo usa la guía de Inicio).
+  /// La próxima vez que se pinte, el itinerario enseña el día de [d] (lo usa la guía de Inicio).
   static void mostrarSemana(DateTime d) {
     _PlanificacionState._dia = d;
-    _PlanificacionState._vista = 1;
+    _PlanificacionState._vista = 0;
   }
 
   @override
@@ -44,7 +44,7 @@ class _PlanificacionState extends State<Planificacion> {
   // y guardar), el itinerario sigue exactamente donde estaba.
   static int? _vista;
   static DateTime? _dia;
-  int get vista => _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? ajustes.vistaInicio).clamp(0, 4);
+  int get vista => _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? ajustes.vistaInicio).clamp(0, 1);
   set vista(int v) => _vista = v;
   DateTime get dia => _dia ??= hoy();
   set dia(DateTime d) => _dia = d;
@@ -136,24 +136,18 @@ class _PlanificacionState extends State<Planificacion> {
     final mostrarGuia = _guiaOrganizarVisible;
     final (desde, hasta, nombrePeriodo) = periodo;
     final contenido = switch (vista) {
-      0 => VistaDiaTecnicos(dia, key: ValueKey('dia-$dia')),
-      1 => VistaSemana(
+      0 => VistaPulpo(
+        dia: dia,
+        onCrearTrabajo: () async {
+          final hora = diasHasta(dia) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
+          await abrirTareaForm(context, null, fecha: dia, horaMin: hora);
+        },
+      ),
+      _ => VistaSemana(
         lunes,
         key: ValueKey('semana-$lunes'),
         onSinAsignar: () => setState(() => sinAsignar = !sinAsignar),
       ),
-      2 => VistaCalendario(
-        key: ValueKey('mes-${dia.year}-${dia.month}'),
-        inicial: dia,
-        conCabecera: false,
-        onDia: (d) => setState(() {
-          dia = d;
-          vista = 0;
-        }),
-      ),
-      3 => const _Tablero(),
-      // La línea de días original: scroll horizontal día a día con la línea de tiempo abajo.
-      _ => const VistaDias(key: ValueKey('linea')),
     };
     final calendario = RepaintBoundary(
       child: AnimatedSwitcher(
@@ -179,10 +173,10 @@ class _PlanificacionState extends State<Planificacion> {
               final fecha = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (vista < 3) ...[
+                  ...[
                     NavegadorFecha(
-                      anterior: const ['Día anterior', 'Semana anterior', 'Mes anterior'][vista],
-                      siguiente: const ['Día siguiente', 'Semana siguiente', 'Mes siguiente'][vista],
+                      anterior: vista == 0 ? 'Día anterior' : 'Semana anterior',
+                      siguiente: vista == 0 ? 'Día siguiente' : 'Semana siguiente',
                       onAnterior: () => mover(-1),
                       onHoy: () => setState(() => dia = hoy()),
                       onSiguiente: () => mover(1),
@@ -215,7 +209,7 @@ class _PlanificacionState extends State<Planificacion> {
                 ],
               );
               final vistas = Pestanas(
-                opciones: const ['Día', 'Semana', 'Mes', 'Tablero', 'Línea'],
+                opciones: const ['Pulpo', 'Calendario'],
                 seleccion: vista,
                 onChanged: (i) => setState(() => vista = i),
               );
@@ -223,7 +217,7 @@ class _PlanificacionState extends State<Planificacion> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // "Sin asignar" solo aparece cuando hay algo sin técnico (o con su panel abierto).
-                  if (sinAsignar || PanelSinAsignar.pendientes().isNotEmpty) ...[
+                  if (vista == 1 && (sinAsignar || PanelSinAsignar.pendientes().isNotEmpty)) ...[
                     SizedBox(
                       height: 40,
                       child: _BotonSinAsignar(
@@ -234,32 +228,28 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  BotonAccion(
-                    'Nuevo trabajo',
-                    icono: Icons.add_rounded,
-                    tooltip: 'Crear un trabajo (N)',
-                    onPressed: () async {
-                      final f = vista < 3 ? dia : hoy();
-                      // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
-                      final h = diasHasta(f) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
-                      await abrirTareaForm(context, null, fecha: f, horaMin: h);
-                      // Si se ha creado para otro día, el itinerario salta a ese día para verla aparecer.
-                      final t = store.tareas.where((x) => store.esRecien(x.id)).firstOrNull;
-                      if (t?.proximo != null && mounted) {
-                        final (d, h, _) = periodo;
-                        if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h)) setState(() => dia = t.proximo!);
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 8),
+                  if (vista == 1)
+                    BotonAccion(
+                      'Nuevo trabajo',
+                      icono: Icons.add_rounded,
+                      tooltip: 'Crear un trabajo (N)',
+                      onPressed: () async {
+                        final f = dia;
+                        // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
+                        final h = diasHasta(f) == 0 ? (TimeOfDay.now().hour + 1).clamp(7, 20) * 60 : 9 * 60;
+                        await abrirTareaForm(context, null, fecha: f, horaMin: h);
+                        // Si se ha creado para otro día, el itinerario salta a ese día para verla aparecer.
+                        final t = store.tareas.where((x) => store.esRecien(x.id)).firstOrNull;
+                        if (t?.proximo != null && mounted) {
+                          final (d, h, _) = periodo;
+                          if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h)) setState(() => dia = t.proximo!);
+                        }
+                      },
+                    ),
+                  if (vista == 1) const SizedBox(width: 8),
                   // El pulpo: organiza el día que estás viendo.
-                  BotonPulpo(
-                    key: _organizarGuiaKey,
-                    dia: vista < 3 ? dia : hoy(),
-                    onHecho: () => setState(() => mapa = true),
-                  ),
-                  const SizedBox(width: 8),
-                  _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
+                  BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = true)),
+                  if (vista == 1) ...[const SizedBox(width: 8), _BotonMapa(mapa, () => setState(() => mapa = !mapa))],
                 ],
               );
               // Con menos de 900 los botones van solo con icono: así caben junto a la fecha sin solaparse.
@@ -277,7 +267,7 @@ class _PlanificacionState extends State<Planificacion> {
               // Calendario y mapa se crean fuera (más arriba): al redimensionar o arrastrar el separador,
               // aquí solo se recoloca la fila con las mismas instancias, sin reconstruirlas.
               builder: (context, box) {
-                final conMapa = mapa && box.maxWidth > 760;
+                final conMapa = vista == 1 && mapa && box.maxWidth > 760;
                 final maxMapa = max(260.0, box.maxWidth - 360);
                 // El mapa se monta la primera vez que se muestra y luego ya no se desmonta.
                 if (conMapa) mapaVisto = true;
@@ -451,6 +441,8 @@ class _BotonMapa extends StatelessWidget {
   );
 }
 
+// Vista anterior conservada para recuperarla cuando vuelvan a exponerse las variantes.
+// ignore: unused_element
 class _Tablero extends StatelessWidget {
   const _Tablero();
 
