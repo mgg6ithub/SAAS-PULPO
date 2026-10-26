@@ -1093,11 +1093,10 @@ class _TareaFormState extends State<TareaForm> {
       widget.original?.copia() ??
       Tarea(
         id: store.nuevoId(),
-        // Desde la agenda (con fecha o técnico) es una tarea real, no una plantilla: se propone el primer cliente.
-        // Una tarea nueva es de un cliente (se propone el primero); solo es plantilla si se pide.
-        clienteId: widget.clienteId ?? (widget.plantilla ? null : store.clientes.firstOrNull?.id),
+        clienteId: widget.clienteId,
         plantilla: widget.plantilla,
-        proximo: widget.fecha,
+        proximo: widget.fecha ?? hoy(),
+        periodicidad: widget.plantilla ? Periodicidad.mensual : Periodicidad.unica,
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
       );
@@ -1108,8 +1107,21 @@ class _TareaFormState extends State<TareaForm> {
   late final ubicacion = TextEditingController(text: t.ubicacion);
   late final notas = TextEditingController(text: t.notas);
   String? error;
+  bool intentoGuardar = false;
 
   bool get nueva => widget.original == null;
+
+  String? get errorHorario {
+    if (!intentoGuardar || t.esPlantilla) return null;
+    if (t.inicioMin == null) return 'El horario es obligatorio';
+    if (t.ventanaDesdeMin != null || t.ventanaHastaMin != null) {
+      if (!t.conFranja) return 'El horario es obligatorio';
+      if (t.ventanaHastaMin! <= t.ventanaDesdeMin!) {
+        return 'La hora de fin debe ser posterior a la de inicio';
+      }
+    }
+    return null;
+  }
 
   /// Rellena la tarea con los datos de una plantilla.
   void aplicar(Tarea p) => setState(() {
@@ -1119,7 +1131,7 @@ class _TareaFormState extends State<TareaForm> {
       ..tipo = p.tipo
       ..periodicidad = p.periodicidad
       ..competencias = [...p.competencias]
-      ..proximo = widget.fecha ?? (p.periodicidad.repite ? masDias(hoy(), p.periodicidad.dias) : hoy());
+      ..proximo = t.proximo ?? widget.fecha ?? hoy();
     nombre.text = p.nombre;
     marca.text = p.marca;
     modelo.text = p.modelo;
@@ -1129,10 +1141,11 @@ class _TareaFormState extends State<TareaForm> {
   });
 
   void guardar() {
-    if (nombre.text.trim().isEmpty) {
-      setState(() => error = 'Ponle un nombre');
-      return;
-    }
+    setState(() {
+      intentoGuardar = true;
+      error = nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
+    });
+    if (error != null || errorHorario != null) return;
     t
       ..nombre = nombre.text.trim()
       ..marca = marca.text.trim()
@@ -1252,7 +1265,7 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ]),
         Bloque('Cuándo', descripcion: 'Fecha, hora y cada cuánto se repite.', [
-          SelectorCuando(t, () => setState(() {})),
+          SelectorCuando(t, () => setState(() {}), error: errorHorario),
           etiqueta('Criticidad'),
           conMargen(
             SelectorEstado<Criticidad>(
@@ -1683,7 +1696,8 @@ class SelectorTrabajadores extends StatelessWidget {
 class SelectorCuando extends StatefulWidget {
   final Tarea t;
   final VoidCallback onCambio;
-  const SelectorCuando(this.t, this.onCambio, {super.key});
+  final String? error;
+  const SelectorCuando(this.t, this.onCambio, {super.key, this.error});
 
   @override
   State<SelectorCuando> createState() => _SelectorCuandoState();
@@ -1877,9 +1891,8 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                   onPressed: () => cambiar(() {
                     franja = !franja;
                     if (franja) {
-                      t.ventanaDesdeMin = t.inicioMin ?? 8 * 60;
-                      t.ventanaHastaMin = t.ventanaDesdeMin! + 4 * 60;
-                      t.inicioMin = t.ventanaDesdeMin;
+                      t.ventanaDesdeMin = t.inicioMin;
+                      t.ventanaHastaMin = t.inicioMin == null ? null : t.inicioMin! + 4 * 60;
                     } else {
                       t.ventanaDesdeMin = null;
                       t.ventanaHastaMin = null;
@@ -1890,6 +1903,14 @@ class _SelectorCuandoState extends State<SelectorCuando> {
               ),
             ],
           ),
+          if (widget.error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(widget.error!, style: const TextStyle(color: P.rojo, fontSize: 12)),
+              ),
+            ),
         ],
       ),
     );
