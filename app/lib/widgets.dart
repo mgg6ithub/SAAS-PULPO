@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -2186,4 +2187,132 @@ class _OpcionMenuState<T> extends State<_OpcionMenu<T>> {
       ),
     ),
   );
+}
+
+// ── Avance al pasar el ratón ──────────────────────────────
+
+/// Tarjeta blanca que aparece al dejar el ratón encima (sin pulsar), con una puntita hacia el elemento:
+/// lo mínimo para saber qué es sin abrirlo. Debajo del elemento, o encima si está en la mitad de abajo
+/// de la pantalla. Se va al salir o al pulsar (el clic abre la ficha completa).
+class Avance extends StatefulWidget {
+  final Widget child;
+  final WidgetBuilder contenido;
+  const Avance({super.key, required this.child, required this.contenido});
+
+  @override
+  State<Avance> createState() => _AvanceState();
+}
+
+class _AvanceState extends State<Avance> {
+  final _control = OverlayPortalController();
+  final _enlace = LayerLink();
+  Timer? _espera;
+  bool _arriba = false;
+
+  void _mostrar() {
+    final caja = context.findRenderObject() as RenderBox?;
+    if (caja == null || !caja.attached) return;
+    final y = caja.localToGlobal(caja.size.center(Offset.zero)).dy;
+    setState(() => _arriba = y > MediaQuery.sizeOf(context).height / 2);
+    _control.show();
+  }
+
+  void _ocultar() {
+    _espera?.cancel();
+    if (_control.isShowing) _control.hide();
+  }
+
+  @override
+  void dispose() {
+    _espera?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => CompositedTransformTarget(
+    link: _enlace,
+    child: OverlayPortal(
+      controller: _control,
+      overlayChildBuilder: (context) => Positioned(
+        left: 0,
+        top: 0,
+        child: CompositedTransformFollower(
+          link: _enlace,
+          targetAnchor: _arriba ? Alignment.topCenter : Alignment.bottomCenter,
+          followerAnchor: _arriba ? Alignment.bottomCenter : Alignment.topCenter,
+          offset: Offset(0, _arriba ? -4 : 4),
+          child: IgnorePointer(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!_arriba) CustomPaint(size: const Size(14, 7), painter: _Puntita(arriba: true)),
+                Material(
+                  color: P.superficie,
+                  elevation: 10,
+                  shadowColor: Colors.black26,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(P.radioControl),
+                    side: BorderSide(color: P.borde),
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 280),
+                    child: Padding(padding: const EdgeInsets.all(12), child: widget.contenido(context)),
+                  ),
+                ),
+                if (_arriba) CustomPaint(size: const Size(14, 7), painter: _Puntita(arriba: false)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      child: Listener(
+        onPointerDown: (_) => _ocultar(),
+        child: MouseRegion(
+          onEnter: (_) {
+            _espera?.cancel();
+            _espera = Timer(const Duration(milliseconds: 350), _mostrar);
+          },
+          onExit: (_) => _ocultar(),
+          child: widget.child,
+        ),
+      ),
+    ),
+  );
+}
+
+/// Puntita del [Avance], del color de la tarjeta.
+class _Puntita extends CustomPainter {
+  final bool arriba;
+  const _Puntita({required this.arriba});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = arriba
+        ? (Path()
+            ..moveTo(0, size.height)
+            ..lineTo(size.width / 2, 0)
+            ..lineTo(size.width, size.height))
+        : (Path()
+            ..moveTo(0, 0)
+            ..lineTo(size.width / 2, size.height)
+            ..lineTo(size.width, 0));
+    canvas.drawPath(p..close(), Paint()..color = P.superficie);
+    canvas.drawPath(
+      arriba
+          ? (Path()
+              ..moveTo(0, size.height)
+              ..lineTo(size.width / 2, 0)
+              ..lineTo(size.width, size.height))
+          : (Path()
+              ..moveTo(0, 0)
+              ..lineTo(size.width / 2, size.height)
+              ..lineTo(size.width, 0)),
+      Paint()
+        ..color = P.borde
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Puntita old) => old.arriba != arriba;
 }

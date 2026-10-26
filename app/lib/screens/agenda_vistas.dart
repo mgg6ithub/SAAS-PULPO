@@ -20,6 +20,9 @@ import 'vista_dias.dart';
 // Horas visibles en las vistas Día y Semana.
 const _desde = 7, _hasta = 21;
 
+/// Jornada que llena el alto por defecto en la Semana (de 7 a 16); el resto, haciendo scroll.
+const _horasJornada = 9;
+
 /// Tareas que caen en [dia] (hoy incluye lo vencido) y pasan los filtros de la agenda.
 List<Tarea> tareasDe(DateTime dia) => store.tareasDelDia(dia).where((t) => filtroAgenda.pasa(t, dia)).toList();
 
@@ -129,9 +132,8 @@ class BloqueTarea extends StatelessWidget {
   }
 
   Widget _bloque(BuildContext context, Color color, bool hecha, bool vencida, Cliente? cliente) {
-    return Tooltip(
-      message: [t.nombre, cliente?.nombre ?? '', ?t.horario].where((x) => x.isNotEmpty).join(' · '),
-      waitDuration: const Duration(milliseconds: 400),
+    return Avance(
+      contenido: (_) => AvanceTarea(t, dia),
       child: Material(
         color: Color.lerp(P.superficie, color, hecha ? .06 : .12),
         borderRadius: BorderRadius.circular(8),
@@ -149,15 +151,26 @@ class BloqueTarea extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    t.nombre,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      decoration: hecha ? TextDecoration.lineThrough : null,
-                    ),
+                  // Cliente (su cuadradito) y el mantenimiento: lo que hay que reconocer de un vistazo.
+                  Row(
+                    children: [
+                      if (cliente != null) ...[
+                        Avatar(cliente.iniciales, colorPaleta(cliente.color), size: 16, cuadrado: true),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          t.nombre,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            decoration: hecha ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   if (!compacto)
                     Text(
@@ -172,6 +185,59 @@ class BloqueTarea extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Contenido del [Avance] de un trabajo: cliente, mantenimiento, día y hora y, si lo tiene, su técnico.
+class AvanceTarea extends StatelessWidget {
+  final Tarea t;
+  final DateTime dia;
+  const AvanceTarea(this.t, this.dia, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cliente = store.cliente(t.clienteId);
+    final tecnicos = t.trabajadorIds.map(store.trabajador).whereType<Trabajador>().toList();
+    final suave = TextStyle(fontSize: 12.5, color: P.textoSuave);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (cliente != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Avatar(cliente.iniciales, colorPaleta(cliente.color), size: 18, cuadrado: true),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(cliente.nombre, style: suave, overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+        const SizedBox(height: 4),
+        Text(t.nombre, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 2),
+        Text([fecha(dia), ?t.horario].join(' · '), style: suave),
+        if (tecnicos.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final w in tecnicos)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 18),
+                    const SizedBox(width: 5),
+                    Text(w.nombre, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
@@ -389,10 +455,13 @@ class VistaSemana extends StatelessWidget {
       // Solo se reconstruye si cambia el alto: al cambiar el ancho (barra, mapa) solo se recoloca.
       child: SegunTamano(
         clave: (box) => box.maxHeight,
-        builder: (context, box) => _construir(context, max(alto, (box.maxHeight - 100) / (_hasta - _desde))),
+        builder: (context, box) => _construir(context, max(alto, (box.maxHeight - _altoCabecera) / _horasJornada)),
       ),
     ),
   );
+
+  /// Cabecera de días en una sola línea baja («LUN 26»): el alto es para la rejilla.
+  static const _altoCabecera = 40.0;
 
   Widget _construir(BuildContext context, double altoH) {
     final dias = [for (var i = 0; i < 7; i++) masDias(lunes, i)];
@@ -416,27 +485,28 @@ class VistaSemana extends StatelessWidget {
             children: [
               Container(
                 color: P.cabeceraTabla,
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                height: _altoCabecera - 1,
                 child: Row(
                   children: [
                     const SizedBox(width: izq),
                     for (final d in dias)
                       Expanded(
-                        child: Column(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               diasSemana[d.weekday - 1].toUpperCase(),
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: .6,
                                 color: P.textoSuave,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(width: 6),
                             Container(
-                              width: 36,
-                              height: 36,
+                              width: 26,
+                              height: 26,
                               alignment: Alignment.center,
                               decoration: diasHasta(d) == 0
                                   ? BoxDecoration(color: P.morado, shape: BoxShape.circle)
@@ -445,8 +515,8 @@ class VistaSemana extends StatelessWidget {
                                 '${d.day}',
                                 style: TextStyle(
                                   fontFamily: P.titulos,
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
                                   color: diasHasta(d) == 0 ? Colors.white : P.texto,
                                 ),
                               ),
@@ -459,7 +529,7 @@ class VistaSemana extends StatelessWidget {
               ),
               if (PanelSinAsignar.pendientes().isNotEmpty && onSinAsignar != null)
                 Positioned(
-                  top: 4,
+                  top: 2.5,
                   left: 4,
                   child: _AvisoSinAsignar(PanelSinAsignar.pendientes().length, onSinAsignar!),
                 ),
@@ -485,7 +555,7 @@ class VistaSemana extends StatelessWidget {
                                 children: [
                                   for (final (m, fuerte) in [
                                     (0, true),
-                                    if (altoH >= 110) (30, false),
+                                    if (altoH >= 80) (30, false),
                                     if (altoH >= 200) ...[(15, false), (45, false)],
                                   ])
                                     Positioned(
@@ -1028,7 +1098,7 @@ class _LineasHoras extends CustomPainter {
       ..color = color.withValues(alpha: .3)
       ..strokeWidth = 1;
     final marcas = [
-      if (porHora >= 110) 30,
+      if (porHora >= 80) 30,
       if (porHora >= 200) ...[15, 45],
     ];
     void linea(double p, Paint pincel) => vertical

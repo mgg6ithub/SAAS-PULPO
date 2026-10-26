@@ -265,10 +265,12 @@ class _FichaRapida extends StatelessWidget {
                 else
                   FilledButton(
                     onPressed: () {
+                      final aviso = ScaffoldMessenger.of(context);
                       store.marcarHecha(t);
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      aviso.showSnackBar(
                         SnackBar(
+                          behavior: SnackBarBehavior.floating,
                           width: 380,
                           content: Text('«${t.nombre}» marcado como hecho'),
                           action: SnackBarAction(label: 'Deshacer', onPressed: () => store.desmarcarHecha(t)),

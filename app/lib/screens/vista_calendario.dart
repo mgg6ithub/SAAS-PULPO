@@ -115,12 +115,9 @@ class _VistaCalendarioState extends State<VistaCalendario> {
   Widget _celda(DateTime dia, int semana, int col) {
     final delMes = dia.month == mes.month;
     final n = diasHasta(dia);
-    final porCliente = <String, int>{};
-    for (final t in store.tareasDelDia(dia).where((t) => filtroAgenda.pasa(t, dia))) {
-      if (t.clienteId == null) continue;
-      porCliente[t.clienteId!] = (porCliente[t.clienteId!] ?? 0) + 1;
-    }
-    final clientes = porCliente.keys.map(store.cliente).whereType<Cliente>().toList();
+    // Un bloque por mantenimiento (con el cuadradito de su cliente), por hora.
+    final tareas = store.tareasDelDia(dia).where((t) => filtroAgenda.pasa(t, dia)).toList()
+      ..sort((a, b) => (a.inicioMin ?? 9999).compareTo(b.inicioMin ?? 9999));
     return InkWell(
       onTap: () => widget.onDia(dia),
       hoverColor: P.moradoSuave.withValues(alpha: .5),
@@ -136,11 +133,11 @@ class _VistaCalendarioState extends State<VistaCalendario> {
         child: Opacity(
           opacity: n < 0 || !delMes ? .55 : 1,
           child: SegunTamano(
-            clave: (box) => ((box.maxHeight - 34) / 25).floor(),
+            clave: (box) => ((box.maxHeight - 34) / 28).floor(),
             builder: (context, box) {
               // Cuántos bloques caben; el resto se resume en "+N".
-              final caben = ((box.maxHeight - 34) / 25).floor().clamp(0, 99);
-              final visibles = clientes.length > caben ? (caben - 1).clamp(0, 99) : clientes.length;
+              final caben = ((box.maxHeight - 34) / 28).floor().clamp(0, 99);
+              final visibles = tareas.length > caben ? (caben - 1).clamp(0, 99) : tareas.length;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -162,12 +159,12 @@ class _VistaCalendarioState extends State<VistaCalendario> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  for (final c in clientes.take(visibles)) _bloque(c, porCliente[c.id]!),
-                  if (clientes.length > visibles)
+                  for (final t in tareas.take(visibles)) _bloque(t, dia),
+                  if (tareas.length > visibles)
                     Padding(
                       padding: const EdgeInsets.only(left: 4, top: 2),
                       child: Text(
-                        '+${clientes.length - visibles} más',
+                        '+${tareas.length - visibles} más',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: P.textoSuave),
                       ),
                     ),
@@ -180,33 +177,36 @@ class _VistaCalendarioState extends State<VistaCalendario> {
     );
   }
 
-  Widget _bloque(Cliente c, int n) {
-    final color = colorPaleta(c.color);
-    return Container(
-      height: 22,
-      margin: const EdgeInsets.only(bottom: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 7),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border(left: BorderSide(color: color, width: 3)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              c.nombre,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: P.texto),
+  Widget _bloque(Tarea t, DateTime dia) {
+    final c = store.cliente(t.clienteId);
+    final color = t.colorBloque;
+    return Avance(
+      contenido: (_) => AvanceTarea(t, dia),
+      child: Container(
+        height: 25,
+        margin: const EdgeInsets.only(bottom: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border(left: BorderSide(color: color, width: 3)),
+        ),
+        child: Row(
+          children: [
+            if (c != null) ...[
+              Avatar(c.iniciales, colorPaleta(c.color), size: 15, cuadrado: true),
+              const SizedBox(width: 5),
+            ],
+            Expanded(
+              child: Text(
+                t.nombre,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: P.texto),
+              ),
             ),
-          ),
-          if (n > 1)
-            Text(
-              '$n',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
