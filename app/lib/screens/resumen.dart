@@ -628,12 +628,13 @@ class _HeroState extends State<_Hero> {
               const SizedBox(width: 8),
             ],
             // Igual que en el Itinerario.
-            BotonAccion(
-              'Nuevo trabajo',
-              icono: Icons.add_rounded,
-              tooltip: 'Crear un trabajo (N)',
-              onPressed: () => abrirTareaForm(context, null),
-            ),
+            if (hechos == widget.pasos.length)
+              BotonAccion(
+                'Nuevo trabajo',
+                icono: Icons.add_rounded,
+                tooltip: 'Crear un trabajo (N)',
+                onPressed: () => abrirTareaForm(context, null),
+              ),
           ],
         ),
         const SizedBox(height: 6),
