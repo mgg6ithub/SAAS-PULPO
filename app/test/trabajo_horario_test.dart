@@ -41,6 +41,32 @@ void main() {
     expect(store.tareas.where((t) => !t.esPlantilla), isEmpty);
   });
 
+  testWidgets('al guardar sin hora se desplaza hasta el campo de la hora', (tester) async {
+    tester.view.physicalSize = const Size(1440, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) =>
+                TextButton(onPressed: () => abrirTareaForm(context, null), child: const Text('Abrir trabajo')),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Abrir trabajo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Revisión puntual');
+    final hora = find.text('Elegir hora');
+    final antes = tester.getTopLeft(hora).dy;
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    final despues = tester.getTopLeft(hora).dy;
+    expect(despues, lessThan(antes));
+    expect(despues, lessThan(600));
+  });
+
   testWidgets('elegir hora permite guardar hoy sin cliente ni trabajador', (tester) async {
     await abrir(tester);
     await tester.enterText(find.byType(TextField).first, 'Revisión puntual');
