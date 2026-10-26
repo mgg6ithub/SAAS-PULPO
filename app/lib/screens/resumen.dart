@@ -510,8 +510,8 @@ class _Proximos extends StatelessWidget {
 /// Alto común de las tarjetas que van en pareja, para que queden iguales.
 const _alto = 340.0;
 
-/// Cabecera de Inicio: la fecha en morado y las acciones fuera, justo encima de un bloque morado oscuro
-/// (degradado suave) con el saludo, una frase según el momento y tres cifras básicas, sin botones.
+/// Cabecera de Inicio: la fecha en morado y las acciones fuera, justo encima de un bloque morado claro
+/// (degradado desde la izquierda) con el saludo, una frase según el momento y tres cifras, sin botones.
 /// Saludo, fecha y frase siguen a la hora: se revisan cada minuto.
 class _Hero extends StatefulWidget {
   final List<Tarea> conFecha, sinTrabajador;
@@ -558,10 +558,10 @@ class _HeroState extends State<_Hero> {
     final pasos = widget.pasos;
     final quedan = pasos.where((p) => !p).length;
     if (quedan == pasos.length) {
-      return 'Te damos la bienvenida a Pulpo. Sigue los primeros pasos y en unos minutos tendrás tu mantenimiento en marcha.';
+      return 'Te damos la bienvenida a Pulpo. En unos minutos tendrás tu mantenimiento en marcha.';
     }
-    if (quedan == 1) return 'Solo te queda un paso para tener tu mantenimiento en marcha.';
-    if (quedan > 1) return 'Vas bien: te quedan $quedan pasos para tener tu mantenimiento en marcha.';
+    if (quedan == 1) return 'Ya casi está: solo te falta un paso.';
+    if (quedan > 1) return 'Vas bien: en nada tendrás tu mantenimiento en marcha.';
 
     final hoyT = widget.conFecha.where((t) => diasHasta(t.proximo!) == 0).toList();
     final vencidas = widget.conFecha.where((t) => diasHasta(t.proximo!) < 0).length;
@@ -585,37 +585,30 @@ class _HeroState extends State<_Hero> {
   @override
   Widget build(BuildContext context) {
     final sinTrabajador = widget.sinTrabajador;
-    // Con la guía a medias, lo que ya hay; después, lo que pide atención.
-    final List<(int, String)> cifras;
-    if (widget.pasos.contains(false)) {
-      final clientes = store.clientes.length;
-      final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
-      final trabajadores = store.trabajadores.length;
-      cifras = [
-        (clientes, clientes == 1 ? 'cliente' : 'clientes'),
-        (trabajos, trabajos == 1 ? 'trabajo' : 'trabajos'),
-        (trabajadores, trabajadores == 1 ? 'trabajador' : 'trabajadores'),
-      ];
-    } else {
-      final vencidas = widget.conFecha.where((t) => diasHasta(t.proximo!) < 0).length;
-      final disponibles = store.trabajadores.where((w) => w.activo && w.estadoHoy != EstadoHoy.ausente).length;
-      cifras = [
-        (vencidas, vencidas == 1 ? 'vencida' : 'vencidas'),
-        (sinTrabajador.length, 'sin asignar'),
-        (disponibles, disponibles == 1 ? 'trabajador hoy' : 'trabajadores hoy'),
-      ];
-    }
+    // Con la guía a medias, en vez de ceros, la invitación a completarla; después, lo que ya hay.
+    final hechos = widget.pasos.where((p) => p).length;
+    final clientes = store.clientes.length;
+    final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
+    final trabajadores = store.trabajadores.length;
+    final cifras = [
+      (clientes, clientes == 1 ? 'cliente' : 'clientes'),
+      (trabajos, trabajos == 1 ? 'trabajo' : 'trabajos'),
+      (trabajadores, trabajadores == 1 ? 'trabajador' : 'trabajadores'),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // La fecha, pegada al bloque (abajo de la fila de botones).
+        // La fecha, pegada al bloque (abajo de la fila de botones) y alineada con el saludo de dentro.
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Text(
-                fecha,
-                style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600),
+              child: Padding(
+                padding: const EdgeInsets.only(left: _sangriaHero),
+                child: Text(
+                  fecha,
+                  style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
             // Sin botón "Itinerario": ya está "Ir al itinerario" en Próximos mantenimientos (una acción, un sitio).
@@ -650,14 +643,12 @@ class _HeroState extends State<_Hero> {
         ),
         const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+          padding: const EdgeInsets.fromLTRB(_sangriaHero, 18, _sangriaHero, 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
-            // Morado apagado hacia tinta: menos saturado que el morado de acción.
+            // Claro a la izquierda y el morado del logo a la derecha, como la versión antigua.
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color.lerp(P.morado, P.tinta, .35)!, Color.lerp(P.morado, P.tinta, .62)!],
+              colors: [Color.lerp(P.morado, Colors.white, .22)!, Color.lerp(P.morado, Colors.white, .04)!],
             ),
           ),
           child: Column(
@@ -675,29 +666,45 @@ class _HeroState extends State<_Hero> {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .72), fontSize: 15.5)),
+              Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 15.5)),
               const SizedBox(height: 14),
-              Wrap(
-                spacing: 28,
-                runSpacing: 10,
-                children: [
-                  for (final (n, texto) in cifras)
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: '$n ',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                          ),
-                          TextSpan(
-                            text: texto,
-                            style: TextStyle(fontSize: 13.5, color: Colors.white.withValues(alpha: .68)),
-                          ),
-                        ],
+              if (hechos < widget.pasos.length)
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Completa los primeros pasos',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
                       ),
-                    ),
-                ],
-              ),
+                      TextSpan(
+                        text: '  ·  $hechos de ${widget.pasos.length}',
+                        style: TextStyle(fontSize: 13.5, color: Colors.white.withValues(alpha: .82)),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 28,
+                  runSpacing: 10,
+                  children: [
+                    for (final (n, texto) in cifras)
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '$n ',
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                            TextSpan(
+                              text: texto,
+                              style: TextStyle(fontSize: 13.5, color: Colors.white.withValues(alpha: .82)),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -705,6 +712,9 @@ class _HeroState extends State<_Hero> {
     );
   }
 }
+
+/// Margen interior del bloque del saludo; la fecha de encima entra lo mismo para alinearse con él.
+const _sangriaHero = 22.0;
 
 /// Cuatro cifras en tarjetas blancas: punto de color, etiqueta, número grande y una nota.
 class _Kpis extends StatelessWidget {
