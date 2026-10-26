@@ -57,8 +57,10 @@ class VentanaFormulario extends StatefulWidget {
   final VoidCallback onGuardar;
   final VoidCallback? onBorrar;
 
-  /// Aviso en rojo en la barra de abajo, centrado entre Eliminar y Cancelar (p. ej. "El horario es obligatorio").
+  /// Aviso en rojo en la barra de abajo, centrado entre Eliminar y Cancelar (p. ej. "El horario es obligatorio"),
+  /// con el icono del campo que lo causa.
   final String? aviso;
+  final IconData? avisoIcono;
 
   /// Panel fijo dentro de una vista (p. ej. a la derecha del trabajador), no una ventana flotante.
   final bool incrustada;
@@ -74,6 +76,7 @@ class VentanaFormulario extends StatefulWidget {
     required this.onGuardar,
     this.onBorrar,
     this.aviso,
+    this.avisoIcono,
     this.incrustada = false,
   });
 
@@ -317,10 +320,20 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
               ? const SizedBox()
               : Semantics(
                   liveRegion: true,
-                  child: Text(
-                    widget.aviso!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.avisoIcono != null) ...[
+                        Icon(widget.avisoIcono, size: 16, color: P.rojo),
+                        const SizedBox(width: 6),
+                      ],
+                      Flexible(
+                        child: Text(
+                          widget.aviso!,
+                          style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
         ),
@@ -1186,6 +1199,7 @@ class _TareaFormState extends State<TareaForm> {
           : store.cliente(t.clienteId)?.nombre,
       onGuardar: guardar,
       aviso: errorHorario,
+      avisoIcono: Icons.schedule_rounded,
       onBorrar: nueva
           ? null
           : () async {
@@ -1288,6 +1302,21 @@ class _TareaFormState extends State<TareaForm> {
               opciones: [for (final c in Criticidad.values) (c, c.etiqueta, c.color)],
               valor: t.criticidad,
               onChanged: (c) => setState(() => t.criticidad = c),
+            ),
+          ),
+        ]),
+        Bloque('Cuánto', descripcion: 'Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.', [
+          etiqueta('Duración'),
+          conMargen(
+            DropdownButtonFormField<int>(
+              isExpanded: true,
+              initialValue: t.duracionMin,
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.timer_outlined, size: 18)),
+              items: [
+                for (final m in {...duraciones, t.duracionMin}.toList()..sort())
+                  DropdownMenuItem(value: m, child: Text(duracion(m))),
+              ],
+              onChanged: (m) => setState(() => t.duracionMin = m!),
             ),
           ),
         ]),
