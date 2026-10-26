@@ -86,7 +86,10 @@ class BloqueTarea extends StatelessWidget {
 
   /// Se puede arrastrar a otro día u hora (vista Semana).
   final bool arrastrable;
-  const BloqueTarea(this.t, this.dia, {super.key, this.compacto = false, this.arrastrable = false});
+
+  /// Alto del bloque si se conoce (Semana): decide cuántas líneas caben (título entero, técnico, hora).
+  final double? alto;
+  const BloqueTarea(this.t, this.dia, {super.key, this.compacto = false, this.arrastrable = false, this.alto});
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +134,20 @@ class BloqueTarea extends StatelessWidget {
     );
   }
 
+  /// Qué cabe en el bloque, por orden: el título (hasta dos líneas), el técnico y la hora con el cliente.
+  ({int titulo, bool tecnico, bool detalle}) _lineas(bool conTecnico) {
+    if (alto == null) return (titulo: 1, tecnico: false, detalle: !compacto);
+    final n = ((alto! - 9) / 17.5).floor();
+    if (n <= 1) return (titulo: 1, tecnico: false, detalle: false);
+    if (n == 2) {
+      return conTecnico ? (titulo: 1, tecnico: true, detalle: false) : (titulo: 2, tecnico: false, detalle: false);
+    }
+    return (titulo: 2, tecnico: conTecnico, detalle: n >= 3 + (conTecnico ? 1 : 0));
+  }
+
   Widget _bloque(BuildContext context, Color color, bool hecha, bool vencida, Cliente? cliente) {
+    final tecnicos = t.trabajadorIds.map(store.trabajador).whereType<Trabajador>().toList();
+    final lineas = _lineas(tecnicos.isNotEmpty);
     return Avance(
       contenido: (_) => AvanceTarea(t, dia),
       child: Material(
@@ -153,18 +169,23 @@ class BloqueTarea extends StatelessWidget {
                 children: [
                   // Cliente (su cuadradito) y el mantenimiento: lo que hay que reconocer de un vistazo.
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (cliente != null) ...[
-                        Avatar(cliente.iniciales, colorPaleta(cliente.color), size: 16, cuadrado: true),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 1),
+                          child: Avatar(cliente.iniciales, colorPaleta(cliente.color), size: 16, cuadrado: true),
+                        ),
                         const SizedBox(width: 6),
                       ],
                       Expanded(
                         child: Text(
                           t.nombre,
-                          maxLines: 1,
+                          maxLines: lineas.titulo,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13.5,
+                            height: 1.25,
                             fontWeight: FontWeight.w600,
                             decoration: hecha ? TextDecoration.lineThrough : null,
                           ),
@@ -172,12 +193,22 @@ class BloqueTarea extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (!compacto)
+                  if (lineas.tecnico)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        tecnicos.map((w) => w.nombre).join(', '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, height: 1.25, fontWeight: FontWeight.w500, color: P.texto),
+                      ),
+                    ),
+                  if (lineas.detalle)
                     Text(
                       [?t.inicioMin == null ? null : hhmm(t.inicioMin!), cliente?.nombre ?? ''].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: vencida ? P.rojo : P.textoSuave),
+                      style: TextStyle(fontSize: 12, height: 1.25, color: vencida ? P.rojo : P.textoSuave),
                     ),
                 ],
               ),
@@ -588,6 +619,8 @@ class VistaSemana extends StatelessWidget {
   }
 
   Widget _columna(DateTime dia, List<Tarea> ts, double altoH) {
+    double altoBloque(Tarea t) =>
+        max(24, (min(t.finMin!, _hasta * 60) - max(t.inicioMin!, _desde * 60)) / 60 * altoH - 2);
     final conHora = ts.where((t) => t.inicioMin != null).toList()..sort((a, b) => a.inicioMin! - b.inicioMin!);
     // Reparte en carriles las que se solapan, para ponerlas lado a lado.
     final carriles = <List<Tarea>>[];
@@ -645,16 +678,10 @@ class VistaSemana extends StatelessWidget {
                                         if (t.inicioMin! < _hasta * 60 && t.finMin! > _desde * 60)
                                           Positioned(
                                             top: (max(t.inicioMin!, _desde * 60) - _desde * 60) / 60 * altoH + 1,
-                                            height: max(
-                                              24,
-                                              (min(t.finMin!, _hasta * 60) - max(t.inicioMin!, _desde * 60)) /
-                                                      60 *
-                                                      altoH -
-                                                  2,
-                                            ),
+                                            height: altoBloque(t),
                                             left: 0,
                                             right: 0,
-                                            child: BloqueTarea(t, dia, compacto: t.duracionMin < 60, arrastrable: true),
+                                            child: BloqueTarea(t, dia, arrastrable: true, alto: altoBloque(t)),
                                           ),
                                     ],
                                   ),

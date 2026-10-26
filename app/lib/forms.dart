@@ -1385,14 +1385,16 @@ class _TareaFormState extends State<TareaForm> {
                       children: [
                         Expanded(child: etiqueta('Trabajadores')),
                         if (aptos > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Enlace(
-                              'El más adecuado',
-                              onTap: () => setState(() {
-                                final m = store.mejorPara(t);
-                                if (m != null) t.trabajadorIds = [m.id];
-                              }),
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Enlace(
+                                'El más adecuado',
+                                onTap: () => setState(() {
+                                  final m = store.mejorPara(t);
+                                  if (m != null) t.trabajadorIds = [m.id];
+                                }),
+                              ),
                             ),
                           ),
                       ],
