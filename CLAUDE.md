@@ -3,7 +3,7 @@
 SaaS de automatización de mantenimiento para empresas pequeñas de mantenimiento (ascensores, contra incendios…). Gestiona sus clientes (edificios, colegios, hospitales…), sus trabajadores, qué tareas puede hacer cada uno y cuándo toca cada mantenimiento. Objetivo: automatizar el mantenimiento y ganar inteligencia con los datos.
 
 - Nombre provisional "Pulpo" (logo: pulpo morado).
-- Bóveda: `Pulpo Vault/` → empezar por `MOC - Pulpo.md` y `Roadmap/Pendiente.md`.
+- Documentación y plan: Cerebro, `~/Desktop/CEREBRO/Proyectos/Pulpo/` → empezar por `MOC - Pulpo.md` y `Producto/Plan general.md` (fuente: `Plan_PULPO_PULTEC.pdf`).
 - Para documentar usa la skill `documentar-pulpo`.
 - Stack: Flutter desde el prototipo (web primero; SDK en `C:\Users\mgg\flutter`), proyecto en `app/`; datos en local y Supabase después.
 - UI: minimalista pero muy funcional, visual y con color.
@@ -17,4 +17,4 @@ Antes de implementar, cambiar o crear cualquier vista:
 - Pensado para portátil 1080p: lo importante (calendario, mapa) ocupa el alto.
 - **Cuantos menos iconos, mejor**: el color (puntos, barritas) sustituye al icono.
 - Probar en vivo: `cd app && python3 tool/vivo.py` (localhost:8080, recarga al guardar).
-- `Pulpo Vault/Interfaz UI/` (Holded, Jobber, OptimoRoute) queda solo como referencia de funcionalidad, no de estilo.
+- Jobber y OptimoRoute (`Producto/Referencias/` en Cerebro) son referencia de funcionalidad, no de estilo.
