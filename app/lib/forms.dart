@@ -216,7 +216,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
               32,
               acoplada || widget.incrustada ? 16 : 6,
               widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : 120),
-              12,
+              8,
             ),
             child: Column(
               children: [
@@ -310,8 +310,9 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 ],
               ),
             ),
+          // A la altura del título, bajo los botones de ventana.
           if (widget.bajoBotones != null && !widget.incrustada)
-            Positioned(top: 44, right: 12, child: widget.bajoBotones!),
+            Positioned(top: acoplada ? 32 : 34, right: 12, child: widget.bajoBotones!),
         ],
       ),
     ),
@@ -2157,7 +2158,7 @@ class _MenuCriticidad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopupMenuButton<Criticidad>(
-    tooltip: 'Criticidad',
+    tooltip: '¿Cómo de importante es este trabajo?',
     position: PopupMenuPosition.under,
     initialValue: valor,
     onSelected: onChanged,
@@ -2168,25 +2169,24 @@ class _MenuCriticidad extends StatelessWidget {
           child: Row(children: [_punto(c), const SizedBox(width: 10), Text(c.etiqueta)]),
         ),
     ],
-    child: Container(
-      height: 32,
-      padding: const EdgeInsets.only(left: 10, right: 6),
-      decoration: BoxDecoration(
-        color: P.superficie,
-        borderRadius: BorderRadius.circular(P.radioControl),
-        border: Border.all(color: P.borde),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _punto(valor),
-          const SizedBox(width: 8),
-          Text('Criticidad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-          const SizedBox(width: 6),
-          Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 4),
-          Icon(CupertinoIcons.chevron_up_chevron_down, size: 14, color: P.textoSuave),
-        ],
+    // Cursor de mano explícito: el del propio botón se pierde al cerrar el menú.
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Container(
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _punto(valor),
+            const SizedBox(width: 8),
+            Text('Criticidad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+            const SizedBox(width: 6),
+            Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 4),
+            Icon(CupertinoIcons.chevron_up_chevron_down, size: 14, color: P.textoSuave),
+          ],
+        ),
       ),
     ),
   );
