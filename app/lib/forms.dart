@@ -32,13 +32,13 @@ Future<void> abrirPanel(BuildContext context, Widget panel) => showGeneralDialog
   barrierDismissible: true,
   barrierLabel: 'Cerrar',
   barrierColor: P.texto.withValues(alpha: .25),
-  transitionDuration: const Duration(milliseconds: 380),
+  transitionDuration: const Duration(milliseconds: 440),
   pageBuilder: (c, a, b) => panel,
   transitionBuilder: (c, a, b, child) => SlideTransition(
     position: Tween(
       begin: const Offset(0, 1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic)),
+    ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutQuart, reverseCurve: Curves.easeInCubic)),
     child: child,
   ),
 );
