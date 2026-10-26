@@ -212,7 +212,7 @@ class _PlanificacionState extends State<Planificacion> {
                 ],
               );
               final vistas = Pestanas(
-                opciones: const ['Pulpo', 'Calendario'],
+                opciones: const ['Plan', 'Calendario'],
                 seleccion: vista,
                 onChanged: (i) => setState(() => vista = i),
               );

@@ -11,6 +11,60 @@ import 'theme.dart' show competencias;
 class Store extends ChangeNotifier {
   static const _clave = 'pulpo_v2';
   static const _respaldo = 'pulpo_v2_respaldo';
+  static const _nombresSimulados = [
+    'Ane',
+    'Mikel',
+    'Nerea',
+    'Iker',
+    'June',
+    'Unai',
+    'Maialen',
+    'Aitor',
+    'Leire',
+    'Jon',
+    'Nahia',
+    'Asier',
+    'Irati',
+    'Ander',
+    'Miren',
+    'Eneko',
+    'Lorea',
+    'Gorka',
+    'Ainhoa',
+    'Oier',
+  ];
+  static const _apellidosSimulados = [
+    'Etxebarria',
+    'Arrieta',
+    'Goikoetxea',
+    'Agirre',
+    'García',
+    'Martínez',
+    'López',
+    'Sánchez',
+    'González',
+    'Ruiz',
+    'Fernández',
+    'Pérez',
+    'Ortega',
+    'Santos',
+    'Mendizabal',
+    'Aguirre',
+    'Ibarra',
+    'Etxeberria',
+    'Bilbao',
+    'Sola',
+  ];
+  static const _clientesSimulados = [
+    'Comunidad Santa María 11',
+    'Colegio San Ignacio',
+    'Hospital de Basurto · Pabellón B',
+    'Hotel Ercilla',
+    'Polideportivo de Lezama',
+    'Torre Iberdrola · Oficinas',
+    'Residencia Los Robles',
+    'Comunidad Gran Vía 45',
+  ];
 
   /// Hay datos de ejemplo cargados; los reales esperan en el respaldo.
   bool demo = false;
@@ -266,8 +320,8 @@ class Store extends ChangeNotifier {
     demo = true;
     _inicial();
     trabajadores = [
-      Trabajador(id: 'w10', nombre: 'Trabajador', apellidos: '1', color: 1, competencias: [...competencias]),
-      Trabajador(id: 'w11', nombre: 'Trabajador', apellidos: '2', color: 2, competencias: [...competencias]),
+      Trabajador(id: 'w10', nombre: 'Mikel', apellidos: 'Arrieta', color: 1, competencias: [...competencias]),
+      Trabajador(id: 'w11', nombre: 'Nerea', apellidos: 'Etxeberria', color: 2, competencias: [...competencias]),
     ];
     // Tareas largas y algunas con franja de tarde: el día queda repartido de 8:00 a ~18:00.
     const sitios = [
@@ -471,8 +525,8 @@ class Store extends ChangeNotifier {
       for (var i = 0; i < equipo; i++)
         Trabajador(
           id: 'w$i',
-          nombre: 'Trabajador',
-          apellidos: '${i + 1}',
+          nombre: _nombresSimulados[i % _nombresSimulados.length],
+          apellidos: _apellidosSimulados[(i ~/ _nombresSimulados.length) % _apellidosSimulados.length],
           competencias: [...competencias],
           color: i % 8,
         ),
@@ -482,7 +536,8 @@ class Store extends ChangeNotifier {
       for (var i = 0; i < cuentas; i++)
         Cliente(
           id: 'c$i',
-          nombre: 'Cliente ${i + 1}',
+          nombre:
+              '${_clientesSimulados[i % _clientesSimulados.length]}${i >= _clientesSimulados.length ? ' · Sede ${i ~/ _clientesSimulados.length + 1}' : ''}',
           ciudad: 'Bilbao',
           provincia: 'Bizkaia',
           lat: sitios[i % sitios.length].$1,

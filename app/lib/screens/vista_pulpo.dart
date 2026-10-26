@@ -8,6 +8,8 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'agenda_herramientas.dart';
 
+const _quitarTrabajador = '__quitar_trabajador__';
+
 class VistaPulpo extends StatelessWidget {
   final DateTime dia;
   final VoidCallback onCrearTrabajo;
@@ -197,9 +199,20 @@ class _TrabajosDia extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Trabajos asignados',
+                  'Trabajos del día',
                   style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
                 ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.badge_outlined, size: 18, color: P.textoSuave),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Trabajadores',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
+                  ),
+                ],
               ),
               if (!mostrarSinConcretar)
                 IconButton(
@@ -207,11 +220,6 @@ class _TrabajosDia extends StatelessWidget {
                   onPressed: onMostrarSinConcretar,
                   icon: const Icon(Icons.visibility_rounded),
                   visualDensity: VisualDensity.compact,
-                )
-              else
-                Text(
-                  'Trabajadores',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
                 ),
             ],
           ),
@@ -328,6 +336,7 @@ class _FilaTrabajo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tecnico = tarea.trabajadorIds.map(store.trabajador).whereType<Trabajador>().firstOrNull;
+    final asignada = tarea.trabajadorIds.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -365,16 +374,42 @@ class _FilaTrabajo extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Icon(Icons.arrow_forward_rounded, size: 19, color: P.textoSuave),
-          ),
+          if (asignada)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Icon(Icons.arrow_forward_rounded, size: 22, color: P.textoSuave),
+            ),
           SizedBox(
             width: 178,
-            child: PopupMenuButton<String>(
-              tooltip: 'Asignar trabajador',
-              onSelected: (id) => store.guardarTarea(tarea.copia()..trabajadorIds = [id]),
-              itemBuilder: (_) => [for (final w in tecnicos) PopupMenuItem(value: w.id, child: Text(w.nombreCompleto))],
+            child: BotonMenu<String>(
+              tooltip: asignada ? 'Cambiar o quitar trabajador' : 'Elegir trabajador',
+              seleccionado: tecnico?.id,
+              onSelected: (id) =>
+                  store.guardarTarea(tarea.copia()..trabajadorIds = id == _quitarTrabajador ? [] : [id]),
+              opciones: [
+                if (asignada)
+                  (
+                    _quitarTrabajador,
+                    const Row(
+                      children: [
+                        Icon(Icons.person_remove_outlined, size: 18, color: P.rojo),
+                        SizedBox(width: 8),
+                        Text('Quitar trabajador'),
+                      ],
+                    ),
+                  ),
+                for (final w in tecnicos)
+                  (
+                    w.id,
+                    Row(
+                      children: [
+                        Icon(Icons.badge_outlined, size: 18, color: P.morado),
+                        const SizedBox(width: 8),
+                        Text(w.nombreCompleto),
+                      ],
+                    ),
+                  ),
+              ],
               child: Container(
                 height: 58,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -385,7 +420,7 @@ class _FilaTrabajo extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        tecnico?.nombreCompleto ?? 'Seleccionar',
+                        tecnico?.nombreCompleto ?? (asignada ? 'Trabajador no disponible' : 'Sin asignar'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 13, color: tecnico == null ? P.textoSuave : P.texto),
