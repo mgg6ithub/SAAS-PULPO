@@ -233,12 +233,15 @@ class _FilaGrupoHorario extends StatelessWidget {
                 const SizedBox(height: 3),
                 Icon(Icons.arrow_downward_rounded, size: 15, color: P.textoSuave),
                 const SizedBox(height: 3),
-                Text(hhmm(grupo.fin), style: TextStyle(fontSize: 12, color: P.textoSuave)),
+                Text(
+                  hhmm(grupo.fin),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          SizedBox(width: 18, child: CustomPaint(painter: _CorcheteHorario(P.borde))),
+          SizedBox(width: 18, child: CustomPaint(painter: _CorcheteHorario(P.textoSuave))),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -263,22 +266,14 @@ class _CorcheteHorario extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final pintura = Paint()
-      ..color = color.withValues(alpha: .72)
-      ..strokeWidth = 1
+      ..color = color.withValues(alpha: .65)
+      ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
     final path = Path()
       ..moveTo(size.width - 2, 1)
-      ..cubicTo(size.width * .38, 1, size.width * .28, size.height * .08, size.width * .28, size.height * .23)
-      ..cubicTo(size.width * .28, size.height * .42, 2, size.height * .43, 2, size.height * .5)
-      ..cubicTo(2, size.height * .57, size.width * .28, size.height * .58, size.width * .28, size.height * .77)
-      ..cubicTo(
-        size.width * .28,
-        size.height * .92,
-        size.width * .38,
-        size.height - 1,
-        size.width - 2,
-        size.height - 1,
-      );
+      ..lineTo(4, 1)
+      ..lineTo(4, size.height - 1)
+      ..lineTo(size.width - 2, size.height - 1);
     canvas.drawPath(path, pintura);
   }
 
