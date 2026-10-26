@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../forms.dart';
+import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -19,16 +20,19 @@ class _Simulaciones extends StatefulWidget {
 
 class _SimulacionesState extends State<_Simulaciones> {
   final _form = GlobalKey<FormState>();
-  static const _nombres = ['Trabajadores', 'Clientes', 'Trabajos', 'Días a simular'];
-  static const _minimos = [0, 1, 0, 1];
-  static const _maximos = [100, 200, 1000, 90];
-  final _valores = [6, 8, 40, 30];
+  static const _nombres = ['Trabajadores', 'Clientes', 'Trabajos'];
+  static const _minimos = [0, 1, 0];
+  static const _maximos = [100, 200, 1000];
+  final _valores = [6, 8, 40];
   final _campos = [
     TextEditingController(text: '6'),
     TextEditingController(text: '8'),
     TextEditingController(text: '40'),
-    TextEditingController(text: '30'),
   ];
+  final _simultaneos = TextEditingController(text: '2');
+  int _modoFecha = 0; // hoy, un día, intervalo
+  DateTime _desde = hoy(), _hasta = hoy();
+  bool _solapar = false;
   String? _resultado;
 
   @override
@@ -36,73 +40,141 @@ class _SimulacionesState extends State<_Simulaciones> {
     for (final campo in _campos) {
       campo.dispose();
     }
+    _simultaneos.dispose();
     super.dispose();
   }
 
-  void _generar(VoidCallback accion) {
-    accion();
+  Widget _cantidad(int i, double ancho) => SizedBox(
+    width: ancho,
+    child: Tarjeta(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _nombres[i],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+              SizedBox(
+                width: 58,
+                child: TextFormField(
+                  controller: _campos[i],
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8)),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  maxLength: 4,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                  onChanged: (texto) {
+                    final n = int.tryParse(texto);
+                    if (n != null) setState(() => _valores[i] = n.clamp(_minimos[i], _maximos[i]));
+                  },
+                  validator: (texto) {
+                    final n = int.tryParse(texto ?? '');
+                    return n == null || n < _minimos[i] || n > _maximos[i] ? '${_minimos[i]}–${_maximos[i]}' : null;
+                  },
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: _valores[i].toDouble(),
+            min: _minimos[i].toDouble(),
+            max: _maximos[i].toDouble(),
+            divisions: _maximos[i] - _minimos[i],
+            label: '${_valores[i]}',
+            semanticFormatterCallback: (valor) => '${valor.round()} ${_nombres[i].toLowerCase()}',
+            onChanged: (valor) => setState(() {
+              _valores[i] = valor.round();
+              _campos[i].text = '${_valores[i]}';
+            }),
+          ),
+          Text('De ${_minimos[i]} a ${_maximos[i]}', style: TextStyle(color: P.textoSuave, fontSize: 11.5)),
+        ],
+      ),
+    ),
+  );
+
+  Future<void> _elegirFecha({required bool inicio}) async {
+    final seleccionada = await showDatePicker(
+      context: context,
+      initialDate: inicio ? _desde : _hasta,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (seleccionada == null || !mounted) return;
     setState(() {
-      final tareas = store.tareas.where((t) => !t.esPlantilla).length;
-      _resultado =
-          'Simulación activa: ${store.trabajadores.length} trabajadores · '
-          '${store.clientes.length} clientes · $tareas trabajos';
+      if (_modoFecha == 1) {
+        _desde = _hasta = seleccionada;
+      } else if (inicio) {
+        _desde = seleccionada;
+        if (_desde.isAfter(_hasta)) _hasta = _desde;
+      } else {
+        _hasta = seleccionada;
+        if (_hasta.isBefore(_desde)) _desde = _hasta;
+      }
     });
   }
 
-  Widget _cantidad(int i) => Padding(
-    padding: const EdgeInsets.only(bottom: huecoVista),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(_nombres[i], style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-            SizedBox(
-              width: 90,
-              child: TextFormField(
-                controller: _campos[i],
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(isDense: true, contentPadding: const EdgeInsets.symmetric(vertical: 10)),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                maxLength: 4,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-                onChanged: (texto) {
-                  final n = int.tryParse(texto);
-                  if (n != null) setState(() => _valores[i] = n.clamp(_minimos[i], _maximos[i]));
-                },
-                validator: (texto) {
-                  final n = int.tryParse(texto ?? '');
-                  return n == null || n < _minimos[i] || n > _maximos[i] ? '${_minimos[i]}–${_maximos[i]}' : null;
-                },
-              ),
-            ),
-          ],
+  void _cambiarModoFecha(int modo) => setState(() {
+    _modoFecha = modo;
+    if (modo == 0) _desde = _hasta = hoy();
+    if (modo == 1) _hasta = _desde;
+  });
+
+  Widget _botonFecha(String titulo, DateTime valor, {required bool inicio}) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(titulo, style: TextStyle(fontSize: 12, color: P.textoSuave)),
+      const SizedBox(height: 4),
+      SizedBox(
+        height: 40,
+        child: OutlinedButton.icon(
+          onPressed: () => _elegirFecha(inicio: inicio),
+          icon: const Icon(Icons.calendar_today_rounded, size: 16),
+          label: Text(fecha(valor)),
         ),
-        Slider(
-          value: _valores[i].toDouble(),
-          min: _minimos[i].toDouble(),
-          max: _maximos[i].toDouble(),
-          divisions: _maximos[i] - _minimos[i],
-          label: '${_valores[i]}',
-          semanticFormatterCallback: (valor) => '${valor.round()} ${_nombres[i].toLowerCase()}',
-          onChanged: (valor) => setState(() {
-            _valores[i] = valor.round();
-            _campos[i].text = '${_valores[i]}';
-          }),
-        ),
-        Text('De ${_minimos[i]} a ${_maximos[i]}', style: TextStyle(color: P.textoSuave, fontSize: 12)),
-      ],
-    ),
+      ),
+    ],
   );
+
+  void _mostrarResultado(String mensaje) => setState(() => _resultado = mensaje);
+
+  void _crearSimulacion() {
+    if (!_form.currentState!.validate()) {
+      _mostrarResultado('Revisa las cantidades y los trabajos simultáneos.');
+      return;
+    }
+    final valores = _campos.map((c) => int.parse(c.text)).toList();
+    final desde = _modoFecha == 0 ? hoy() : _desde;
+    final hasta = _modoFecha == 2 ? _hasta : desde;
+    store.cargarSimulacion(
+      equipo: valores[0],
+      cuentas: valores[1],
+      cantidadTareas: valores[2],
+      desde: desde,
+      hasta: hasta,
+      permitirSolapes: _solapar,
+      trabajosSimultaneos: _solapar ? int.parse(_simultaneos.text) : 2,
+    );
+    final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
+    _mostrarResultado(
+      'Simulación activa: ${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · '
+      '$trabajos trabajos · ${fecha(desde)}${desde == hasta ? '' : '–${fecha(hasta)}'}',
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Dialog(
     backgroundColor: P.fondo,
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 620),
+      constraints: const BoxConstraints(maxWidth: 820, maxHeight: 820),
       child: SingleChildScrollView(
         padding: margenPagina,
         child: Form(
@@ -145,48 +217,144 @@ class _SimulacionesState extends State<_Simulaciones> {
                 BotonAccion(
                   'Generar datos por defecto',
                   icono: Icons.auto_awesome_outlined,
-                  onPressed: () => _generar(store.cargarDemo),
-                ),
-              ], primero: true),
-              Bloque('A tu medida', [
-                for (var i = 0; i < _campos.length; i++) Semantics(label: _nombres[i], child: _cantidad(i)),
-                BotonPrimario(
-                  'Crear simulación',
                   onPressed: () {
-                    if (!_form.currentState!.validate()) {
-                      setState(() => _resultado = 'Revisa las cantidades: deben estar dentro de los rangos indicados.');
-                      return;
-                    }
-                    final valores = _campos.map((c) => int.parse(c.text)).toList();
-                    _generar(
-                      () => store.cargarSimulacion(
-                        equipo: valores[0],
-                        cuentas: valores[1],
-                        cantidadTareas: valores[2],
-                        dias: valores[3],
-                      ),
-                    );
+                    store.cargarDemo();
+                    _mostrarResultado('Datos de ejemplo cargados.');
                   },
                 ),
-              ]),
+              ], primero: true),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'A tu medida · volumen',
+                      style: TextStyle(fontFamily: P.titulos, fontSize: 15.5, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    LayoutBuilder(
+                      builder: (context, box) {
+                        final columnas = box.maxWidth >= 600
+                            ? 3
+                            : box.maxWidth >= 380
+                            ? 2
+                            : 1;
+                        final ancho = (box.maxWidth - (columnas - 1) * 8) / columnas;
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [for (var i = 0; i < _campos.length; i++) _cantidad(i, ancho)],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Tarjeta(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Cuándo generar los trabajos',
+                      style: TextStyle(fontFamily: P.titulos, fontSize: 15.5, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Pestanas(
+                        opciones: const ['Hoy', 'Un día', 'Intervalo'],
+                        seleccion: _modoFecha,
+                        onChanged: _cambiarModoFecha,
+                      ),
+                    ),
+                    if (_modoFecha != 0) ...[
+                      const SizedBox(height: 10),
+                      if (_modoFecha == 1)
+                        _botonFecha('Día', _desde, inicio: true)
+                      else
+                        Row(
+                          children: [
+                            Expanded(child: _botonFecha('Desde', _desde, inicio: true)),
+                            const SizedBox(width: 10),
+                            Expanded(child: _botonFecha('Hasta', _hasta, inicio: false)),
+                          ],
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Tarjeta(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  children: [
+                    Checkbox(value: _solapar, onChanged: (valor) => setState(() => _solapar = valor ?? false)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Crear trabajos que se solapan', style: TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                            'Mismo día y misma hora para revisar el calendario.',
+                            style: TextStyle(fontSize: 12, color: P.textoSuave),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_solapar) ...[
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 76,
+                        child: TextFormField(
+                          controller: _simultaneos,
+                          textAlign: TextAlign.center,
+                          decoration: const InputDecoration(isDense: true, labelText: 'A la vez'),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          validator: (texto) {
+                            final n = int.tryParse(texto ?? '');
+                            return n == null || n < 2 || n > 20 ? '2–20' : null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: BotonPrimario(
+                  'Crear simulación',
+                  icono: Icons.auto_awesome_outlined,
+                  onPressed: _crearSimulacion,
+                ),
+              ),
               if (_resultado != null)
                 Semantics(
                   liveRegion: true,
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: huecoVista),
+                    padding: const EdgeInsets.only(top: 8),
                     child: Text(_resultado!, style: TextStyle(color: P.texto)),
                   ),
                 ),
-              if (store.demo)
-                BotonAccion(
-                  'Quitar datos de ejemplo',
-                  icono: Icons.undo_rounded,
-                  onPressed: () async {
-                    await store.quitarDemo();
-                    if (mounted) setState(() => _resultado = 'Datos anteriores restaurados.');
-                  },
+              if (store.demo) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: BotonAccion(
+                    'Quitar datos de ejemplo',
+                    icono: Icons.undo_rounded,
+                    onPressed: () async {
+                      await store.quitarDemo();
+                      if (mounted) _mostrarResultado('Datos anteriores restaurados.');
+                    },
+                  ),
                 ),
-              const SizedBox(height: huecoVista),
+              ],
+              const SizedBox(height: 8),
               Text(
                 'Cada simulación sustituye a la anterior. Al quitar los datos de ejemplo se recuperan tus datos originales.',
                 style: TextStyle(color: P.textoSuave, fontSize: 12),

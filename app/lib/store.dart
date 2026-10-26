@@ -438,15 +438,28 @@ class Store extends ChangeNotifier {
   }
 
   /// Cantidades exactas; las plantillas no cuentan como tareas de la simulación.
-  void cargarSimulacion({required int equipo, required int cuentas, required int cantidadTareas, required int dias}) {
+  void cargarSimulacion({
+    required int equipo,
+    required int cuentas,
+    required int cantidadTareas,
+    int dias = 30,
+    DateTime? desde,
+    DateTime? hasta,
+    bool permitirSolapes = false,
+    int trabajosSimultaneos = 2,
+  }) {
+    final fechaInicio = DateUtils.dateOnly(desde ?? hoy());
+    final fechaFin = DateUtils.dateOnly(hasta ?? masDias(fechaInicio, dias - 1));
+    final diasSimulados = fechaFin.difference(fechaInicio).inDays + 1;
     if (equipo < 0 ||
         equipo > 100 ||
         cuentas < 1 ||
         cuentas > 200 ||
         cantidadTareas < 0 ||
         cantidadTareas > 1000 ||
-        dias < 1 ||
-        dias > 90) {
+        (desde == null && (dias < 1 || dias > 90)) ||
+        diasSimulados < 1 ||
+        (permitirSolapes && (trabajosSimultaneos < 2 || trabajosSimultaneos > 20))) {
       throw ArgumentError('Cantidades de simulación fuera de rango');
     }
     if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
@@ -479,13 +492,18 @@ class Store extends ChangeNotifier {
     ];
     for (var i = 0; i < cantidadTareas; i++) {
       final t = plantillas[i % plantillas.length].copia();
+      final grupo = i ~/ trabajosSimultaneos;
+      final diaSimulado = permitirSolapes
+          ? masDias(fechaInicio, grupo % diasSimulados)
+          : masDias(fechaInicio, r.nextInt(diasSimulados));
+      final horaSimulada = permitirSolapes ? (8 + (grupo ~/ diasSimulados) % 9) * 60 : (8 + r.nextInt(9)) * 60;
       t
         ..id = 'd$i'
         ..plantilla = false
         ..clienteId = clientes[i % cuentas].id
-        ..proximo = masDias(hoy(), r.nextInt(dias))
-        ..inicioMin = (8 + r.nextInt(9)) * 60
-        ..duracionMin = [30, 60, 90, 120][r.nextInt(4)]
+        ..proximo = diaSimulado
+        ..inicioMin = horaSimulada
+        ..duracionMin = permitirSolapes ? 60 : [30, 60, 90, 120][r.nextInt(4)]
         ..trabajadorIds = equipo == 0 ? [] : [trabajadores[i % equipo].id];
       tareas.add(t);
     }
