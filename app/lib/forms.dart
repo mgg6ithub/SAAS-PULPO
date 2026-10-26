@@ -57,8 +57,8 @@ class VentanaFormulario extends StatefulWidget {
   final VoidCallback onGuardar;
   final VoidCallback? onBorrar;
 
-  /// Aviso en rojo en la barra de abajo, centrado entre Eliminar y Cancelar (p. ej. "El horario es obligatorio"),
-  /// con el icono del campo que lo causa.
+  /// Aviso en rojo en la barra de abajo, a la izquierda (p. ej. "El horario es obligatorio"), con el icono del
+  /// campo que lo causa.
   final String? aviso;
   final IconData? avisoIcono;
 
@@ -321,8 +321,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
               : Semantics(
                   liveRegion: true,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      if (widget.onBorrar != null) const SizedBox(width: 12),
                       if (widget.avisoIcono != null) ...[
                         Icon(widget.avisoIcono, size: 16, color: P.rojo),
                         const SizedBox(width: 6),
@@ -1168,12 +1168,28 @@ class _TareaFormState extends State<TareaForm> {
     t.trabajadorIds = widget.trabajadorId != null ? [widget.trabajadorId!] : (mejor == null ? [] : [mejor.id]);
   });
 
+  /// Campos obligatorios, en el orden en que aparecen: al guardar con uno vacío se lleva la vista al primero.
+  final _claveNombre = GlobalKey(), _claveCuando = GlobalKey();
+
+  void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final c = clave.currentContext;
+    if (c != null) {
+      Scrollable.ensureVisible(
+        c,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+        alignment: .2,
+      );
+    }
+  });
+
   void guardar() {
     setState(() {
       intentoGuardar = true;
       error = nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
     });
-    if (error != null || errorHorario != null) return;
+    if (error != null) return _irA(_claveNombre);
+    if (errorHorario != null) return _irA(_claveCuando);
     t
       ..nombre = nombre.text.trim()
       ..marca = marca.text.trim()
@@ -1216,13 +1232,16 @@ class _TareaFormState extends State<TareaForm> {
           primero: true,
           descripcion: t.esPlantilla ? 'Cómo se llama y de qué tipo es.' : 'Qué hay que hacer y de qué tipo es.',
           [
-            campo(
-              'Nombre',
-              nombre,
-              hint: t.esPlantilla
-                  ? 'Revisión de ascensor, corte de césped…'
-                  : 'Ascensor portal A, centralita de incendios…',
-              error: error,
+            KeyedSubtree(
+              key: _claveNombre,
+              child: campo(
+                'Nombre',
+                nombre,
+                hint: t.esPlantilla
+                    ? 'Revisión de ascensor, corte de césped…'
+                    : 'Ascensor portal A, centralita de incendios…',
+                error: error,
+              ),
             ),
             // Tipo: plantillas (tarea nueva) o tipos (plantilla).
             if (t.esPlantilla) ...[
@@ -1295,7 +1314,7 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ]),
         Bloque('Cuándo', descripcion: 'Fecha, hora y cada cuánto se repite.', [
-          SelectorCuando(t, () => setState(() {}), error: errorHorario),
+          SelectorCuando(t, () => setState(() {}), error: errorHorario, key: _claveCuando),
           etiqueta('Criticidad'),
           conMargen(
             SelectorEstado<Criticidad>(
