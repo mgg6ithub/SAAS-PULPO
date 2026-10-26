@@ -477,8 +477,8 @@ class _BarraState extends State<_Barra> {
       (Icons.home_outlined, 'Inicio', Seccion.inicio, 0),
       (Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, vencidas),
       (Icons.apartment_outlined, 'Clientes', Seccion.clientes, 0),
-      (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
       (Icons.handyman_outlined, 'Trabajos', Seccion.tareas, 0),
+      (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
     return Stack(
