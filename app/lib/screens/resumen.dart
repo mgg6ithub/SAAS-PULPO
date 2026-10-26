@@ -168,32 +168,41 @@ class _PrimerosPasos extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
+            // Pasitos que caminan hacia la derecha, en onda, por detrás del título (sin ocupar sitio).
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Text(
-                  'Primeros pasos',
-                  style: TextStyle(
-                    fontFamily: P.titulos,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.3,
+                Positioned(
+                  left: 0,
+                  top: -5,
+                  child: ExcludeSemantics(
+                    child: CustomPaint(
+                      size: const Size(290, 30),
+                      painter: _HuellasGuia(P.morado.withValues(alpha: .4)),
+                    ),
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  '${hechos.where((h) => h).length} de ${pasos.length}',
-                  style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                Row(
+                  children: [
+                    Text(
+                      'Primeros pasos',
+                      style: TextStyle(
+                        fontFamily: P.titulos,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -.3,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${hechos.where((h) => h).length} de ${pasos.length}',
+                      style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                    ),
+                  ],
                 ),
               ],
             ),
-            // Pasitos que caminan hacia la derecha, en onda, bajo el título.
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ExcludeSemantics(
-                child: CustomPaint(size: const Size(290, 30), painter: _HuellasGuia(P.morado.withValues(alpha: .4))),
-              ),
-            ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
             for (final (i, (titulo, detalle, ruta, boton)) in pasos.indexed)
               IntrinsicHeight(
                 child: Row(
