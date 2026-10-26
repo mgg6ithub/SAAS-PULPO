@@ -1804,7 +1804,8 @@ class Rejilla extends StatelessWidget {
 class BordeDiscontinuo extends CustomPainter {
   final Color color;
   final BorderRadius radio;
-  const BordeDiscontinuo(this.color, this.radio);
+  final double separacion;
+  const BordeDiscontinuo(this.color, this.radio, {this.separacion = 3});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1814,12 +1815,13 @@ class BordeDiscontinuo extends CustomPainter {
       ..strokeWidth = 1.4;
     final camino = Path()..addRRect(radio.toRRect(Offset.zero & size).deflate(.7));
     for (final m in camino.computeMetrics()) {
-      for (var d = 0.0; d < m.length; d += 7) {
+      for (var d = 0.0; d < m.length; d += 4 + separacion) {
         canvas.drawPath(m.extractPath(d, min(d + 4, m.length)), pincel);
       }
     }
   }
 
   @override
-  bool shouldRepaint(BordeDiscontinuo old) => old.color != color || old.radio != radio;
+  bool shouldRepaint(BordeDiscontinuo old) =>
+      old.color != color || old.radio != radio || old.separacion != separacion;
 }

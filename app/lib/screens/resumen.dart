@@ -156,7 +156,11 @@ class _PrimerosPasos extends StatelessWidget {
     final actual = hechos.indexOf(false);
     // Borde discontinuo: es una guía de paso, no una tarjeta de datos.
     return CustomPaint(
-      foregroundPainter: BordeDiscontinuo(P.textoSuave.withValues(alpha: .45), BorderRadius.circular(P.radio)),
+      foregroundPainter: BordeDiscontinuo(
+        P.gris.withValues(alpha: .4),
+        BorderRadius.circular(P.radio),
+        separacion: 6,
+      ),
       child: Tarjeta(
         color: P.superficie,
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
