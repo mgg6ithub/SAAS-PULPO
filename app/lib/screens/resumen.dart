@@ -385,9 +385,19 @@ class _PrimerosPasos extends StatelessWidget {
                                   ruta.$1,
                                   ruta.$2,
                                   ruta.$3,
-                                  onTap: () {
-                                    ruta.$5(context);
+                                  mas: ruta.$4 != Seccion.planificacion,
+                                  onTap: () async {
+                                    // Itinerario: se prepara la semana antes de entrar.
+                                    if (ruta.$4 == Seccion.planificacion) {
+                                      await ruta.$5(context);
+                                      onIr(ruta.$4);
+                                      return;
+                                    }
+                                    // Crear: primero se entra en la sección y, tras un momento para que se vea
+                                    // dónde estamos, se abre el formulario como si se hubiera pulsado allí.
                                     onIr(ruta.$4);
+                                    await Future.delayed(const Duration(milliseconds: 900));
+                                    if (context.mounted) ruta.$5(context);
                                   },
                                 ),
                               ?boton,
@@ -413,7 +423,10 @@ class _Ruta extends StatelessWidget {
   final IconData icono;
   final String seccion, accion;
   final VoidCallback onTap;
-  const _Ruta(this.icono, this.seccion, this.accion, {required this.onTap});
+
+  /// "+" delante de la acción, como en el botón de la sección.
+  final bool mas;
+  const _Ruta(this.icono, this.seccion, this.accion, {required this.onTap, this.mas = false});
 
   @override
   Widget build(BuildContext context) {
@@ -434,6 +447,7 @@ class _Ruta extends StatelessWidget {
               const SizedBox(width: 6),
               Text(seccion, style: estilo),
               Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
+              if (mas) ...[Icon(Icons.add_rounded, size: 16, color: P.texto), const SizedBox(width: 3)],
               Text(accion, style: estilo),
             ],
           ),
