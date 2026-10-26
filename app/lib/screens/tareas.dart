@@ -171,9 +171,11 @@ class _TareasPaginaState extends State<TareasPagina> {
   }
 
   Widget _tabla(List<Tarea> ts) => SegunTamano(
-    clave: (box) => box.maxWidth > 1000,
+    clave: (box) => (box.maxWidth > 1000, box.maxWidth > 600),
     builder: (context, box) {
       final ancho = box.maxWidth > 1000;
+      // Móvil: solo las columnas clave.
+      final medio = box.maxWidth > 600;
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
@@ -184,11 +186,11 @@ class _TareasPaginaState extends State<TareasPagina> {
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Equipo / trabajo', flex: 4),
-            const Col('Cliente', flex: 3),
+            if (medio) const Col('Cliente', flex: 3),
             if (ancho) const Col('Periodicidad', flex: 2),
             const Col('Próximo', flex: 2),
             if (ancho) const Col('Horario', flex: 2),
-            const Col('Asignado a', ancho: 90),
+            if (medio) const Col('Asignado a', ancho: 90),
             const Col('Estado', ancho: 80, derecha: true),
           ],
           filas: ts.length,
@@ -226,15 +228,16 @@ class _TareasPaginaState extends State<TareasPagina> {
                   ),
                 ],
               ),
-              c == null
-                  ? (t.esPlantilla ? Etiqueta('Plantilla', P.morado) : celdaTexto('Sin cliente', suave: true))
-                  : Row(
-                      children: [
-                        Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
-                        const SizedBox(width: 8),
-                        Flexible(child: celdaTexto(c.nombre)),
-                      ],
-                    ),
+              if (medio)
+                c == null
+                    ? (t.esPlantilla ? Etiqueta('Plantilla', P.morado) : celdaTexto('Sin cliente', suave: true))
+                    : Row(
+                        children: [
+                          Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
+                          const SizedBox(width: 8),
+                          Flexible(child: celdaTexto(c.nombre)),
+                        ],
+                      ),
               if (ancho) celdaTexto(t.periodicidad.etiqueta),
               t.proximo == null
                   ? celdaTexto('', suave: true)
@@ -253,7 +256,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                       ],
                     ),
               if (ancho) celdaTexto(t.horario ?? '', suave: true),
-              t.esPlantilla ? const SizedBox() : AvataresTrabajadores(t.trabajadorIds, size: 24),
+              if (medio) t.esPlantilla ? const SizedBox() : AvataresTrabajadores(t.trabajadorIds, size: 24),
               pillEstado(t),
             ];
           },

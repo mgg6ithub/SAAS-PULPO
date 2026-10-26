@@ -126,9 +126,11 @@ class _TrabajadoresState extends State<Trabajadores> {
       : widget.onAbrir(w.id);
 
   Widget _tabla(List<Trabajador> ws) => SegunTamano(
-    clave: (box) => box.maxWidth > 980,
+    clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
     builder: (context, box) {
       final ancho = box.maxWidth > 980;
+      // Móvil: sin competencias ni tareas.
+      final medio = box.maxWidth > 600;
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
@@ -139,9 +141,9 @@ class _TrabajadoresState extends State<Trabajadores> {
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Nombre', flex: 3),
-            const Col('Competencias', flex: 4),
+            if (medio) const Col('Competencias', flex: 4),
             if (ancho) const Col('Teléfono', flex: 2),
-            const Col('Trabajos', flex: 1),
+            if (medio) const Col('Trabajos', flex: 1),
             const Col('Hoy', ancho: 90, derecha: true),
           ],
           filas: ws.length,
@@ -173,17 +175,18 @@ class _TrabajadoresState extends State<Trabajadores> {
                   ),
                 ],
               ),
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  for (final c in w.competencias.take(3)) Etiqueta(c, P.morado),
-                  if (w.competencias.length > 3)
-                    Text('+${w.competencias.length - 3}', style: TextStyle(fontSize: 12, color: P.textoSuave)),
-                ],
-              ),
+              if (medio)
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    for (final c in w.competencias.take(3)) Etiqueta(c, P.morado),
+                    if (w.competencias.length > 3)
+                      Text('+${w.competencias.length - 3}', style: TextStyle(fontSize: 12, color: P.textoSuave)),
+                  ],
+                ),
               if (ancho) celdaTexto(w.telefono, suave: true),
-              celdaTexto('$asignadas'),
+              if (medio) celdaTexto('$asignadas'),
               w.activo
                   ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)
                   : const Pill('Inactivo', P.gris, punto: true),

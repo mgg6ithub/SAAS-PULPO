@@ -236,9 +236,11 @@ class _Tabla extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SegunTamano(
-    clave: (box) => box.maxWidth > 980,
+    clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
     builder: (context, box) {
       final ancho = box.maxWidth > 980;
+      // Móvil: solo las columnas clave.
+      final medio = box.maxWidth > 600;
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
@@ -249,8 +251,8 @@ class _Tabla extends StatelessWidget {
             if (ancho) const Col('CIF/NIF', flex: 2),
             const Col('Población', flex: 2),
             if (ancho) const Col('Contacto', flex: 3),
-            const Col('Trabajos', flex: 2),
-            const Col('Próximo', flex: 2),
+            if (medio) const Col('Trabajos', flex: 2),
+            if (medio) const Col('Próximo', flex: 2),
             const Col('Estado', ancho: 80, derecha: true),
           ],
           filas: clientes.length,
@@ -272,35 +274,37 @@ class _Tabla extends StatelessWidget {
                 ],
               ),
               if (ancho) celdaTexto(c.cif, suave: true),
-              celdaTexto(c.ciudad),
+              if (medio) celdaTexto(c.ciudad),
               if (ancho)
                 celdaTexto([c.contacto, c.telefonoContacto].where((x) => x.isNotEmpty).join(' · '), suave: true),
-              Row(
-                children: [
-                  for (final tipo in tiposUsados)
-                    Tooltip(
-                      message: tipo,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(right: 4),
-                        decoration: BoxDecoration(color: tipoDe(tipo).color, shape: BoxShape.circle),
+              if (medio)
+                Row(
+                  children: [
+                    for (final tipo in tiposUsados)
+                      Tooltip(
+                        message: tipo,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(right: 4),
+                          decoration: BoxDecoration(color: tipoDe(tipo).color, shape: BoxShape.circle),
+                        ),
                       ),
-                    ),
-                  const SizedBox(width: 4),
-                  Text('${tareas.length}', style: TextStyle(fontSize: 13, color: P.textoSuave)),
-                ],
-              ),
-              fechas.isEmpty
-                  ? celdaTexto('', suave: true)
-                  : Text(
-                      vencidas > 0 ? '$vencidas vencido${vencidas == 1 ? '' : 's'}' : relativo(fechas.first),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: vencidas > 0 ? FontWeight.w600 : FontWeight.w400,
-                        color: vencidas > 0 ? P.rojo : P.texto,
+                    const SizedBox(width: 4),
+                    Text('${tareas.length}', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+                  ],
+                ),
+              if (medio)
+                fechas.isEmpty
+                    ? celdaTexto('', suave: true)
+                    : Text(
+                        vencidas > 0 ? '$vencidas vencido${vencidas == 1 ? '' : 's'}' : relativo(fechas.first),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: vencidas > 0 ? FontWeight.w600 : FontWeight.w400,
+                          color: vencidas > 0 ? P.rojo : P.texto,
+                        ),
                       ),
-                    ),
               c.activa ? const Pill('Activo', P.verde, punto: true) : const Pill('Inactivo', P.gris, punto: true),
             ];
           },
