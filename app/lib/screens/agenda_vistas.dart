@@ -638,7 +638,7 @@ class VistaSemana extends StatelessWidget {
     double altoBloque(Tarea t) =>
         max(24, (min(t.finMin!, _hasta * 60) - max(t.inicioMin!, _desde * 60)) / 60 * altoH - 2);
     final conHora = ts.where((t) => t.inicioMin != null).toList()..sort((a, b) => a.inicioMin! - b.inicioMin!);
-    // Agrupa las tareas que coinciden para mostrarlas apiladas en abanico.
+    // Separa intervalos independientes para que vuelvan a ocupar todo el ancho.
     final grupos = <List<Tarea>>[];
     var finGrupo = -1;
     for (final t in conHora) {
@@ -648,6 +648,22 @@ class VistaSemana extends StatelessWidget {
       }
       grupos.last.add(t);
       finGrupo = max(finGrupo, t.finMin!);
+    }
+    // Dentro de cada grupo, reserva columnas solo para las tareas que coinciden en el tiempo.
+    final disposicion = <(Tarea, int, int)>[];
+    for (final grupo in grupos) {
+      final carriles = <List<Tarea>>[];
+      for (final tarea in grupo) {
+        final libre = carriles.indexWhere((carril) => carril.last.finMin! <= tarea.inicioMin!);
+        if (libre < 0) {
+          carriles.add([tarea]);
+        } else {
+          carriles[libre].add(tarea);
+        }
+      }
+      for (final (indice, carril) in carriles.indexed) {
+        disposicion.addAll([for (final tarea in carril) (tarea, indice, carriles.length)]);
+      }
     }
     return Builder(
       builder: (context) {
@@ -684,16 +700,22 @@ class VistaSemana extends StatelessWidget {
                       Positioned.fill(
                         child: CustomPaint(painter: _LineasHoras(altoH, color: P.borde)),
                       ),
-                      for (final grupo in grupos)
-                        for (final (i, t) in grupo.indexed)
-                          if (t.inicioMin! < _hasta * 60 && t.finMin! > _desde * 60)
-                            Positioned(
-                              top: (max(t.inicioMin!, _desde * 60) - _desde * 60) / 60 * altoH + 1 + i * 30,
-                              height: altoBloque(t),
-                              left: 2 + i * 30,
-                              right: 2,
-                              child: BloqueTarea(t, dia, arrastrable: true, alto: altoBloque(t)),
+                      for (final (tarea, indice, total) in disposicion)
+                        if (tarea.inicioMin! < _hasta * 60 && tarea.finMin! > _desde * 60)
+                          Positioned(
+                            top: (max(tarea.inicioMin!, _desde * 60) - _desde * 60) / 60 * altoH + 1,
+                            height: altoBloque(tarea),
+                            left: 0,
+                            right: 0,
+                            child: FractionallySizedBox(
+                              widthFactor: 1 / total,
+                              alignment: Alignment(total == 1 ? 0 : -1 + 2 * indice / (total - 1), -1),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2),
+                                child: BloqueTarea(tarea, dia, arrastrable: true, alto: altoBloque(tarea)),
+                              ),
                             ),
+                          ),
                     ],
                   ),
                 ),
