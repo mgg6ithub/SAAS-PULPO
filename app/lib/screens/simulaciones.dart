@@ -163,10 +163,42 @@ class _SimulacionesState extends State<_Simulaciones> {
       permitirSolapes: _solapar,
       trabajosSimultaneos: _solapar ? int.parse(_simultaneos.text) : 2,
     );
+    setState(() => _resultado = null);
+  }
+
+  Widget _estadoSimulacion() {
+    final activa = store.demo;
     final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
-    _mostrarResultado(
-      'Simulación activa: ${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · '
-      '$trabajos trabajos · ${fecha(desde)}${desde == hasta ? '' : '–${fecha(hasta)}'}',
+    return Tarjeta(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      color: activa ? Color.lerp(P.superficie, P.verde, .07) : null,
+      child: Row(
+        children: [
+          Icon(
+            activa ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            color: activa ? P.verde : P.textoSuave,
+            size: 21,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activa ? 'Simulación activa' : 'Sin simulación activa',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: activa ? P.verde : P.texto),
+                ),
+                Text(
+                  activa
+                      ? '${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · $trabajos trabajos'
+                      : 'Crea una simulación para cargar datos de prueba.',
+                  style: TextStyle(fontSize: 12, color: P.textoSuave),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -324,14 +356,25 @@ class _SimulacionesState extends State<_Simulaciones> {
                 ),
               ),
               const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: BotonPrimario(
-                  'Crear simulación',
-                  icono: Icons.auto_awesome_outlined,
-                  onPressed: _crearSimulacion,
-                ),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (store.demo)
+                    BotonAccion(
+                      'Quitar datos',
+                      icono: Icons.delete_outline_rounded,
+                      onPressed: () async {
+                        await store.quitarDemo();
+                        if (mounted) _mostrarResultado('Datos anteriores restaurados.');
+                      },
+                    ),
+                  BotonPrimario('Crear simulación', icono: Icons.auto_awesome_outlined, onPressed: _crearSimulacion),
+                ],
               ),
+              const SizedBox(height: 8),
+              _estadoSimulacion(),
               if (_resultado != null)
                 Semantics(
                   liveRegion: true,
@@ -340,20 +383,6 @@ class _SimulacionesState extends State<_Simulaciones> {
                     child: Text(_resultado!, style: TextStyle(color: P.texto)),
                   ),
                 ),
-              if (store.demo) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: BotonAccion(
-                    'Quitar datos de ejemplo',
-                    icono: Icons.undo_rounded,
-                    onPressed: () async {
-                      await store.quitarDemo();
-                      if (mounted) _mostrarResultado('Datos anteriores restaurados.');
-                    },
-                  ),
-                ),
-              ],
               const SizedBox(height: 8),
               Text(
                 'Cada simulación sustituye a la anterior. Al quitar los datos de ejemplo se recuperan tus datos originales.',
