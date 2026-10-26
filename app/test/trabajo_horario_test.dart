@@ -43,7 +43,7 @@ void main() {
     // Abajo, el primero que falta; al escribir el nombre, su aviso se va solo.
     expect(find.text('Te falta el nombre'), findsOneWidget);
     await tester.enterText(find.byType(TextField).first, 'Revisión');
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Ponle un nombre'), findsNothing);
     expect(find.text('Te falta la hora'), findsOneWidget);
   });
@@ -72,6 +72,18 @@ void main() {
     final despues = tester.getTopLeft(hora).dy;
     expect(despues, lessThan(antes));
     expect(despues, lessThan(600));
+  });
+
+  testWidgets('el aviso bajo el nombre no mueve lo de debajo', (tester) async {
+    await abrir(tester);
+    double hueco() =>
+        tester.getTopLeft(find.text('A partir de una plantilla')).dy -
+        tester.getTopLeft(find.byType(TextField).first).dy;
+    final antes = hueco();
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ponle un nombre'), findsOneWidget);
+    expect(hueco(), closeTo(antes, .5));
   });
 
   testWidgets('el menú de criticidad se maneja con las flechas', (tester) async {

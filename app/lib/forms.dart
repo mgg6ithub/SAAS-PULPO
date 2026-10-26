@@ -451,8 +451,17 @@ Widget etiqueta(String t) => Padding(
   ),
 );
 
-Widget campo(String label, TextEditingController c, {String? hint, int lineas = 1, String? error}) => Padding(
-  padding: const EdgeInsets.only(bottom: 16),
+/// [obligatorio]: deja reservada la línea del aviso bajo el campo, para que al aparecer «Ponle un nombre»
+/// no se mueva nada hacia abajo.
+Widget campo(
+  String label,
+  TextEditingController c, {
+  String? hint,
+  int lineas = 1,
+  String? error,
+  bool obligatorio = false,
+}) => Padding(
+  padding: EdgeInsets.only(bottom: obligatorio ? 0 : 16),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -460,7 +469,7 @@ Widget campo(String label, TextEditingController c, {String? hint, int lineas = 
       TextField(
         controller: c,
         maxLines: lineas,
-        decoration: InputDecoration(hintText: hint, errorText: error),
+        decoration: InputDecoration(hintText: hint, errorText: error, helperText: obligatorio ? ' ' : null),
       ),
     ],
   ),
@@ -483,7 +492,9 @@ class Bloque extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
-    child: LayoutBuilder(
+    // Solo se reconstruye al cruzar el umbral de apilar: al acoplar (cambia el ancho) no se rehace el formulario.
+    child: SegunTamano(
+      clave: (box) => box.maxWidth < 640,
       builder: (context, box) {
         final cabeza = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -995,7 +1006,7 @@ class _ClienteFormState extends State<ClienteForm> {
           },
     campos: [
       Bloque('Datos del cliente', primero: true, descripcion: 'Cómo se llama y cómo contactar con él.', [
-        campo('Nombre', nombre, hint: 'Colegio San José', error: error),
+        campo('Nombre', nombre, hint: 'Colegio San José', error: error, obligatorio: true),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ]),
       Bloque('Persona de contacto', descripcion: 'Con quién hablas para coordinar las visitas.', [
@@ -1093,7 +1104,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
           },
     campos: [
       Bloque('Datos personales', primero: true, descripcion: 'Nombre y forma de contacto.', [
-        dos(campo('Nombre', nombre, error: error), campo('Apellidos', apellidos)),
+        dos(campo('Nombre', nombre, error: error, obligatorio: true), campo('Apellidos', apellidos)),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ]),
       Bloque('Competencias', descripcion: 'Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.', [
@@ -1304,6 +1315,7 @@ class _TareaFormState extends State<TareaForm> {
                     ? 'Revisión de ascensor, corte de césped…'
                     : 'Ascensor portal A, centralita de incendios…',
                 error: error,
+                obligatorio: true,
               ),
             ),
             // Tipo: plantillas (tarea nueva) o tipos (plantilla).
@@ -1905,7 +1917,7 @@ class _SelectorCuandoState extends State<SelectorCuando> {
       t.periodicidad,
     };
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2041,11 +2053,14 @@ class _SelectorCuandoState extends State<SelectorCuando> {
               ),
             ],
           ),
-          if (hayError)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, left: 12),
-              child: Text(widget.error!, style: const TextStyle(color: P.rojo, fontSize: 12)),
+          // Línea del aviso siempre reservada: al aparecer «Pon una hora» no se mueve nada.
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 12),
+            child: SizedBox(
+              height: 16,
+              child: hayError ? Text(widget.error!, style: const TextStyle(color: P.rojo, fontSize: 12)) : null,
             ),
+          ),
         ],
       ),
     );
