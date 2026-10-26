@@ -136,8 +136,9 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
       );
     }
     final pantalla = MediaQuery.sizeOf(context);
-    // Ventana amplia (sin llegar a pantalla completa): más aire para los formularios.
-    final ancho = min(acoplada ? 680.0 : 860.0, pantalla.width - (acoplada ? 0 : 48));
+    // Mismo ancho centrada y acoplada: al cambiar de modo solo se mueve el marco y los campos no se
+    // recolocan (cambiar de ancho rehacía todo el formulario de golpe y daba un tirón).
+    final ancho = min(860.0, pantalla.width - 48);
     final alto = acoplada ? pantalla.height : min(pantalla.height * .9, 900.0);
     var left = lado < 0 ? 0.0 : pantalla.width - ancho;
     var top = 0.0;
