@@ -2092,8 +2092,6 @@ class SelectorColorTarea extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Color en el calendario', style: TextStyle(fontSize: 12, color: P.textoSuave)),
-        const SizedBox(height: 8),
         Wrap(
           spacing: 6,
           runSpacing: 6,
