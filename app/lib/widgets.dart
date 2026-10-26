@@ -761,8 +761,9 @@ class _RenderBarra extends RenderBox
     } else if (cabe(f([0]), f([3]))) {
       filas = [
         (f([0]), f([3])),
-        if (cabe(f([1]), f([2])))
-          (f([1]), f([2]))
+        // Buscador a continuación de los filtros si cabe; si no, debajo.
+        if (cabe(f([1, 2]), []))
+          (f([1, 2]), <int>[])
         else ...[
           (f([1]), <int>[]),
           (f([2]), <int>[]),

@@ -80,49 +80,60 @@ class _ShellState extends State<Shell> {
     final compacta = MediaQuery.sizeOf(context).width < 900;
     _visitadas.add(seccion);
     final enDetalle = clienteId != null || trabajadorId != null;
-    return CallbackShortcuts(
-      bindings: {const SingleActivator(LogicalKeyboardKey.keyN): nuevo},
-      child: Focus(
-        autofocus: true,
-        child: Scaffold(
-          backgroundColor: P.fondo,
-          // La barra va a la izquierda o, si se elige en Ajustes, a la derecha.
-          body: Row(
-            textDirection: ajustes.barraDerecha ? TextDirection.rtl : TextDirection.ltr,
-            children: [
-              ListenableBuilder(
-                listenable: Listenable.merge([store, ajustes.cambioBarra]),
-                builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir),
-              ),
-              Expanded(
-                child: RepaintBoundary(
-                  child: ListenableBuilder(
-                    listenable: store,
-                    // Una capa por sección visitada; solo la activa se ve (con fundido de entrada) y recibe
-                    // eventos. La ficha de cliente o trabajador va encima, en su propia capa.
-                    builder: (context, _) => Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        for (final s in Seccion.values)
-                          if (_visitadas.contains(s))
-                            _Capa(
-                              key: ValueKey(s),
-                              activa: s == seccion && !enDetalle,
-                              child: RepaintBoundary(child: _seccion(s)),
-                            ),
-                        if (enDetalle)
+    return Focus(
+      autofocus: true,
+      // "N" solo si no se está escribiendo en un campo de texto (si no, no se podría teclear la n).
+      onKeyEvent: (_, e) {
+        final escribiendo = primaryFocus?.context?.findAncestorStateOfType<EditableTextState>() != null;
+        if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.keyN || escribiendo) {
+          return KeyEventResult.ignored;
+        }
+        if (HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed ||
+            HardwareKeyboard.instance.isAltPressed) {
+          return KeyEventResult.ignored;
+        }
+        nuevo();
+        return KeyEventResult.handled;
+      },
+      child: Scaffold(
+        backgroundColor: P.fondo,
+        // La barra va a la izquierda o, si se elige en Ajustes, a la derecha.
+        body: Row(
+          textDirection: ajustes.barraDerecha ? TextDirection.rtl : TextDirection.ltr,
+          children: [
+            ListenableBuilder(
+              listenable: Listenable.merge([store, ajustes.cambioBarra]),
+              builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir),
+            ),
+            Expanded(
+              child: RepaintBoundary(
+                child: ListenableBuilder(
+                  listenable: store,
+                  // Una capa por sección visitada; solo la activa se ve (con fundido de entrada) y recibe
+                  // eventos. La ficha de cliente o trabajador va encima, en su propia capa.
+                  builder: (context, _) => Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      for (final s in Seccion.values)
+                        if (_visitadas.contains(s))
                           _Capa(
-                            key: ValueKey('detalle-$clienteId-$trabajadorId'),
-                            activa: true,
-                            child: RepaintBoundary(child: _detalle()),
+                            key: ValueKey(s),
+                            activa: s == seccion && !enDetalle,
+                            child: RepaintBoundary(child: _seccion(s)),
                           ),
-                      ],
-                    ),
+                      if (enDetalle)
+                        _Capa(
+                          key: ValueKey('detalle-$clienteId-$trabajadorId'),
+                          activa: true,
+                          child: RepaintBoundary(child: _detalle()),
+                        ),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
