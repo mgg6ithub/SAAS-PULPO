@@ -796,15 +796,14 @@ class _IconoSaludo extends CustomPainter {
     final amanecer = periodo == 0;
     final noche = periodo == 2;
     final centro = Offset(18, amanecer ? 25 : 18);
-    final luz = Paint()..color = Colors.white.withValues(alpha: .08);
-    canvas.drawCircle(const Offset(18, 18), 17, luz);
+    // Sin halo: solo el astro y sus rayos.
     final relleno = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: noche
             ? [Colors.white, Color.lerp(P.gris, Colors.white, .8)!]
-            : [Color.lerp(P.ambar, Colors.white, .75)!, P.ambar],
+            : [const Color(0xFFFFE066), const Color(0xFFFFC21A)],
       ).createShader(const Rect.fromLTWH(6, 6, 24, 26));
     final trazo = Paint()
       ..color = Colors.white.withValues(alpha: .9)
@@ -870,11 +869,8 @@ class _IconoSaludo extends CustomPainter {
       for (var i = 1; i <= 5; i++) {
         final angulo = -pi + i * pi / 6;
         final direccion = Offset(cos(angulo), sin(angulo));
-        canvas.drawLine(
-          centro + direccion * 11.5,
-          centro + direccion * 15,
-          trazo,
-        );
+        // Rayos alternos: largos y cortos.
+        canvas.drawLine(centro + direccion * 11, centro + direccion * (i.isOdd ? 16 : 13.5), trazo);
       }
       canvas.drawLine(const Offset(5, 26), const Offset(31, 26), trazo);
       canvas.drawLine(
@@ -886,17 +882,8 @@ class _IconoSaludo extends CustomPainter {
       canvas.drawCircle(centro, 7.5, relleno);
       for (var i = 0; i < 8; i++) {
         final direccion = Offset(cos(i * pi / 4), sin(i * pi / 4));
-        canvas.drawLine(
-          centro + direccion * 11.5,
-          centro + direccion * 15,
-          trazo,
-        );
+        canvas.drawLine(centro + direccion * 10.5, centro + direccion * (i.isEven ? 16.5 : 13.5), trazo);
       }
-      canvas.drawCircle(
-        const Offset(15.5, 15.5),
-        2.5,
-        Paint()..color = Colors.white.withValues(alpha: .2),
-      );
     }
   }
 
