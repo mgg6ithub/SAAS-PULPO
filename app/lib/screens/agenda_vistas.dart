@@ -535,37 +535,40 @@ class VistaSemana extends StatelessWidget {
                     const SizedBox(width: izq),
                     for (final d in dias)
                       Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              diasSemana[d.weekday - 1].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: .6,
-                                color: P.textoSuave,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              width: 26,
-                              height: 26,
-                              alignment: Alignment.center,
-                              decoration: diasHasta(d) == 0
-                                  ? BoxDecoration(color: P.morado, shape: BoxShape.circle)
-                                  : null,
-                              child: Text(
-                                '${d.day}',
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                diasSemana[d.weekday - 1].toUpperCase(),
                                 style: TextStyle(
-                                  fontFamily: P.titulos,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: diasHasta(d) == 0 ? Colors.white : P.texto,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: .6,
+                                  color: P.textoSuave,
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 26,
+                                height: 26,
+                                alignment: Alignment.center,
+                                decoration: diasHasta(d) == 0
+                                    ? BoxDecoration(color: P.morado, shape: BoxShape.circle)
+                                    : null,
+                                child: Text(
+                                  '${d.day}',
+                                  style: TextStyle(
+                                    fontFamily: P.titulos,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: diasHasta(d) == 0 ? Colors.white : P.texto,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                   ],
