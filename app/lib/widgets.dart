@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 import 'models.dart';
 import 'store.dart';
@@ -2006,4 +2007,127 @@ class BordeDiscontinuo extends CustomPainter {
 
   @override
   bool shouldRepaint(BordeDiscontinuo old) => old.color != color || old.radio != radio || old.separacion != separacion;
+}
+
+// ── Menús ──────────────────────────────────────────────
+
+/// Botón que abre un menú debajo. Regla para todos los menús de la app:
+/// - al pasar el ratón, fondo suave redondeado (sin el destello cuadrado de PopupMenuButton) y cursor de mano;
+/// - al abrir, el fondo se apaga despacio y la opción actual sale resaltada y con el foco;
+/// - con las flechas ↑↓ se recorre, Intro o espacio elige y Esc cierra;
+/// - al cerrar no vuelve el fondo hasta que el ratón sale y entra otra vez.
+class BotonMenu<T> extends StatefulWidget {
+  final String tooltip;
+  final List<(T, Widget)> opciones;
+  final T? seleccionado;
+  final ValueChanged<T> onSelected;
+  final Widget child;
+  const BotonMenu({
+    super.key,
+    required this.tooltip,
+    required this.opciones,
+    required this.onSelected,
+    required this.child,
+    this.seleccionado,
+  });
+
+  @override
+  State<BotonMenu<T>> createState() => _BotonMenuState<T>();
+}
+
+class _BotonMenuState<T> extends State<BotonMenu<T>> {
+  bool hover = false, abierto = false;
+
+  Future<void> _abrir() async {
+    final caja = context.findRenderObject()! as RenderBox;
+    final capa = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final abajo = caja.localToGlobal(caja.size.bottomLeft(const Offset(0, 4)), ancestor: capa);
+    setState(() => abierto = true);
+    final v = await showMenu<T>(
+      context: context,
+      position: RelativeRect.fromRect(abajo & Size(caja.size.width, 0), Offset.zero & capa.size),
+      items: [for (final (valor, hijo) in widget.opciones) _OpcionMenu(valor, valor == widget.seleccionado, hijo)],
+    );
+    if (!mounted) return;
+    // Sin fondo al cerrar: vuelve solo al salir y entrar otra vez con el ratón.
+    setState(() {
+      abierto = false;
+      hover = false;
+    });
+    if (v != null) widget.onSelected(v);
+  }
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: abierto ? '' : widget.tooltip,
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => hover = true),
+      onExit: (_) => setState(() => hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _abrir,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: hover && !abierto ? P.hover : P.hover.withValues(alpha: 0),
+            borderRadius: BorderRadius.circular(P.radioControl),
+          ),
+          child: widget.child,
+        ),
+      ),
+    ),
+  );
+}
+
+/// Opción de [BotonMenu]: la actual empieza resaltada y con el foco; ↑↓ pasan a la anterior o la siguiente.
+class _OpcionMenu<T> extends PopupMenuEntry<T> {
+  final T valor;
+  final bool actual;
+  final Widget child;
+  const _OpcionMenu(this.valor, this.actual, this.child);
+
+  @override
+  double get height => 40;
+
+  @override
+  bool represents(T? value) => value == valor;
+
+  @override
+  State<_OpcionMenu<T>> createState() => _OpcionMenuState<T>();
+}
+
+class _OpcionMenuState<T> extends State<_OpcionMenu<T>> {
+  @override
+  Widget build(BuildContext context) => Shortcuts(
+    // En web las flechas desplazan la página por defecto: aquí mueven el foco entre opciones.
+    shortcuts: const {
+      SingleActivator(LogicalKeyboardKey.arrowDown): NextFocusIntent(),
+      SingleActivator(LogicalKeyboardKey.arrowUp): PreviousFocusIntent(),
+      SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+      SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+    },
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: InkWell(
+        autofocus: widget.actual,
+        borderRadius: BorderRadius.circular(P.radioControl - 2),
+        focusColor: P.hover,
+        hoverColor: P.hover,
+        splashFactory: NoSplash.splashFactory,
+        onTap: () => Navigator.pop(context, widget.valor),
+        child: Container(
+          height: widget.height,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          alignment: Alignment.centerLeft,
+          child: DefaultTextStyle.merge(
+            style: TextStyle(fontSize: 14, fontWeight: widget.actual ? FontWeight.w600 : FontWeight.w400),
+            child: widget.child,
+          ),
+        ),
+      ),
+    ),
+  );
 }

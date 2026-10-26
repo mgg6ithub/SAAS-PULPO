@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/models.dart';
@@ -71,6 +72,19 @@ void main() {
     final despues = tester.getTopLeft(hora).dy;
     expect(despues, lessThan(antes));
     expect(despues, lessThan(600));
+  });
+
+  testWidgets('el menú de criticidad se maneja con las flechas', (tester) async {
+    await abrir(tester);
+    await tester.tap(find.text('Rutinaria'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('Media'), findsOneWidget);
+    expect(find.text('Rutinaria'), findsNothing);
   });
 
   testWidgets('elegir hora permite guardar hoy sin cliente ni trabajador', (tester) async {
