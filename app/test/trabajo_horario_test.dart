@@ -37,8 +37,14 @@ void main() {
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
     expect(find.text('Ponle un nombre'), findsOneWidget);
-    expect(find.text('El horario es obligatorio'), findsOneWidget);
+    expect(find.text('Pon una hora'), findsOneWidget);
     expect(store.tareas.where((t) => !t.esPlantilla), isEmpty);
+    // Abajo, el primero que falta; al escribir el nombre, su aviso se va solo.
+    expect(find.text('Te falta el nombre'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'Revisión');
+    await tester.pump();
+    expect(find.text('Ponle un nombre'), findsNothing);
+    expect(find.text('Te falta la hora'), findsOneWidget);
   });
 
   testWidgets('al guardar sin hora se desplaza hasta el campo de la hora', (tester) async {
@@ -72,13 +78,13 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Revisión puntual');
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
-    expect(find.text('El horario es obligatorio'), findsOneWidget);
+    expect(find.text('Pon una hora'), findsOneWidget);
     await tester.ensureVisible(find.text('Elegir hora'));
     await tester.tap(find.text('Elegir hora'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
-    expect(find.text('El horario es obligatorio'), findsNothing);
+    expect(find.text('Pon una hora'), findsNothing);
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
     final trabajo = store.tareas.singleWhere((t) => !t.esPlantilla);
@@ -98,7 +104,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
-    expect(find.text('El horario es obligatorio'), findsOneWidget);
+    expect(find.text('Pon una hora'), findsOneWidget);
     expect(store.tareas.where((t) => !t.esPlantilla), isEmpty);
   });
 

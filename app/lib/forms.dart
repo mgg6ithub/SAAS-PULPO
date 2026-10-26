@@ -60,10 +60,9 @@ class VentanaFormulario extends StatefulWidget {
   final VoidCallback onGuardar;
   final VoidCallback? onBorrar;
 
-  /// Aviso en rojo en la barra de abajo, a la izquierda (p. ej. "El horario es obligatorio"), con el icono del
-  /// campo que lo causa.
-  final String? aviso;
-  final IconData? avisoIcono;
+  /// Lo que falta para poder guardar, en el orden de los campos, con la acción de ir a cada uno. Abajo a la
+  /// izquierda sale el primero con un triángulo; al pulsarlo, un menú con todos.
+  final List<(String, VoidCallback)> avisos;
 
   /// Panel fijo dentro de una vista (p. ej. a la derecha del trabajador), no una ventana flotante.
   final bool incrustada;
@@ -79,8 +78,7 @@ class VentanaFormulario extends StatefulWidget {
     required this.campos,
     required this.onGuardar,
     this.onBorrar,
-    this.aviso,
-    this.avisoIcono,
+    this.avisos = const [],
     this.incrustada = false,
   });
 
@@ -329,24 +327,13 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             child: const Text('Eliminar'),
           ),
         Expanded(
-          child: widget.aviso == null
+          child: widget.avisos.isEmpty
               ? const SizedBox()
-              : Semantics(
-                  liveRegion: true,
-                  child: Row(
-                    children: [
-                      if (widget.onBorrar != null) const SizedBox(width: 12),
-                      if (widget.avisoIcono != null) ...[
-                        Icon(widget.avisoIcono, size: 16, color: P.rojo),
-                        const SizedBox(width: 6),
-                      ],
-                      Flexible(
-                        child: Text(
-                          widget.aviso!,
-                          style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: widget.onBorrar != null ? 12 : 0),
+                    child: _Avisos(widget.avisos),
                   ),
                 ),
         ),
@@ -360,6 +347,64 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
         ],
         FilledButton(onPressed: widget.onGuardar, child: const Text('Guardar')),
       ],
+    ),
+  );
+}
+
+/// Avisos de la barra de abajo: triángulo, el primero que falta (y cuántos más) y flechas; al pulsarlo,
+/// la lista en orden, y elegir uno lleva la vista a su campo.
+class _Avisos extends StatelessWidget {
+  final List<(String, VoidCallback)> avisos;
+  const _Avisos(this.avisos);
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: PopupMenuButton<int>(
+      tooltip: 'Lo que falta para guardar',
+      position: PopupMenuPosition.over,
+      onSelected: (i) => avisos[i].$2(),
+      itemBuilder: (_) => [
+        for (final (i, (texto, _)) in avisos.indexed)
+          PopupMenuItem(
+            value: i,
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, size: 16, color: P.rojo),
+                const SizedBox(width: 8),
+                Text(texto),
+              ],
+            ),
+          ),
+      ],
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.warning_amber_rounded, size: 17, color: P.rojo),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  avisos.first.$1,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (avisos.length > 1)
+                Text(
+                  '  +${avisos.length - 1}',
+                  style: const TextStyle(color: P.rojo, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              const SizedBox(width: 4),
+              const Icon(CupertinoIcons.chevron_up_chevron_down, size: 13, color: P.rojo),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 }
@@ -1152,16 +1197,18 @@ class _TareaFormState extends State<TareaForm> {
   late final serie = TextEditingController(text: t.numeroSerie);
   late final ubicacion = TextEditingController(text: t.ubicacion);
   late final notas = TextEditingController(text: t.notas);
-  String? error;
   bool intentoGuardar = false;
 
   bool get nueva => widget.original == null;
 
+  // Tras el primer intento de guardar, los avisos se recalculan al escribir: se van al rellenar y vuelven al vaciar.
+  String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
+
   String? get errorHorario {
     if (!intentoGuardar || t.esPlantilla) return null;
-    if (t.inicioMin == null) return 'El horario es obligatorio';
+    if (t.inicioMin == null) return 'Pon una hora';
     if (t.ventanaDesdeMin != null || t.ventanaHastaMin != null) {
-      if (!t.conFranja) return 'El horario es obligatorio';
+      if (!t.conFranja) return 'Pon una hora';
       if (t.ventanaHastaMin! <= t.ventanaDesdeMin!) {
         return 'La hora de fin debe ser posterior a la de inicio';
       }
@@ -1202,10 +1249,7 @@ class _TareaFormState extends State<TareaForm> {
   });
 
   void guardar() {
-    setState(() {
-      intentoGuardar = true;
-      error = nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
-    });
+    setState(() => intentoGuardar = true);
     if (error != null) return _irA(_claveNombre);
     if (errorHorario != null) return _irA(_claveCuando);
     t
@@ -1233,8 +1277,11 @@ class _TareaFormState extends State<TareaForm> {
           : store.cliente(t.clienteId)?.nombre,
       bajoBotones: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
       onGuardar: guardar,
-      aviso: errorHorario,
-      avisoIcono: Icons.schedule_rounded,
+      avisos: [
+        if (error != null) ('Te falta el nombre', () => _irA(_claveNombre)),
+        if (errorHorario != null)
+          (errorHorario == 'Pon una hora' ? 'Te falta la hora' : errorHorario!, () => _irA(_claveCuando)),
+      ],
       onBorrar: nueva
           ? null
           : () async {
@@ -1847,7 +1894,7 @@ class _SelectorCuandoState extends State<SelectorCuando> {
     return h == null ? null : h.hour * 60 + h.minute;
   }
 
-  /// El aviso lo muestra la barra de abajo del formulario; aquí solo se marca en rojo el campo.
+  /// Campo en rojo y, debajo, el aviso corto (la barra de abajo lleva la lista completa).
   bool get hayError => widget.error != null;
 
   @override
@@ -1997,6 +2044,11 @@ class _SelectorCuandoState extends State<SelectorCuando> {
               ),
             ],
           ),
+          if (hayError)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 12),
+              child: Text(widget.error!, style: const TextStyle(color: P.rojo, fontSize: 12)),
+            ),
         ],
       ),
     );
