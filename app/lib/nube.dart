@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models.dart';
@@ -13,9 +14,9 @@ const supabaseUrl = 'https://gvasthxiqckmekwvhtrg.supabase.co';
 /// Clave publicable: está pensada para ir dentro de la app. La secreta (`service_role`) nunca.
 const supabasePublicable = 'sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ';
 
-/// La cuenta pertenece a empresas pero en ninguna es administradora (el trabajador entra en DEV-011).
-class SinAcceso implements Exception {
-  const SinAcceso();
+/// El enlace de invitación ya se usó, caducó o no existe.
+class InvitacionNoValida implements Exception {
+  const InvitacionNoValida();
 }
 
 /// Datos que el [Store] tenía cargados y que se guardan en Supabase.
@@ -23,12 +24,20 @@ typedef _Filas = Map<String, Map<String, Map<String, dynamic>>>;
 
 /// Conexión con Supabase para una cuenta y una empresa: lee todo al entrar y, después, guarda solo lo que cambia.
 class Nube {
-  Nube._(this.empresaId, {required this.nueva, this.nombre = ''});
+  Nube._(this.empresaId, {required this.nueva, this.nombre = '', this.rol = 'admin', this.trabajadorId});
 
   final String empresaId;
 
   /// Nombre de la empresa, para enseñarlo en Mi cuenta.
   final String nombre;
+
+  /// `admin` (todo) o `trabajador` (solo sus trabajos, el resto lo recorta la base de datos).
+  final String rol;
+
+  /// Ficha del trabajador (solo con rol `trabajador`).
+  final String? trabajadorId;
+
+  bool get esTrabajador => rol == 'trabajador';
 
   /// La empresa se acaba de crear: el [Store] la rellena con las plantillas iniciales.
   final bool nueva;
@@ -40,22 +49,71 @@ class Nube {
 
   static Future<void> iniciar() => Supabase.initialize(url: supabaseUrl, publishableKey: supabasePublicable);
 
-  /// Entra en la empresa de la cuenta; si no tiene ninguna, crea una y la hace administradora.
+  /// Código del enlace de invitación (`?invitacion=…`), pendiente de aceptar.
+  static String? invitacion;
+
+  /// Guarda el código del enlace (o recupera el último guardado), por si hay que confirmar el correo
+  /// y volver a entrar antes de aceptarlo.
+  static Future<void> recordarInvitacion(String? delEnlace) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (delEnlace != null && delEnlace.isNotEmpty) await prefs.setString('pulpo_invitacion', delEnlace);
+    invitacion = prefs.getString('pulpo_invitacion');
+  }
+
+  static Future<void> _olvidarInvitacion() async {
+    invitacion = null;
+    await (await SharedPreferences.getInstance()).remove('pulpo_invitacion');
+  }
+
+  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una). Si no tiene ninguna,
+  /// crea una y la hace administradora.
   static Future<Nube> abrir() async {
-    final ms = await _db.from('miembros').select('empresa_id, rol');
-    for (final m in ms) {
-      if (m['rol'] == 'admin') {
-        final id = m['empresa_id'] as String;
-        final e = await _db.from('empresas').select('nombre').eq('id', id).single();
-        return _abierta = Nube._(id, nueva: false, nombre: e['nombre'] as String);
+    if (invitacion != null) {
+      try {
+        await _db.rpc('aceptar_invitacion', params: {'p_codigo': invitacion});
+      } on PostgrestException catch (e) {
+        if (e.code == 'P0001') {
+          await _olvidarInvitacion();
+          throw const InvitacionNoValida();
+        }
+        rethrow;
       }
+      await _olvidarInvitacion();
     }
-    if (ms.isNotEmpty) throw const SinAcceso();
+    final ms = await _db.from('miembros').select('empresa_id, rol, trabajador_id');
+    if (ms.isNotEmpty) {
+      final m = ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first);
+      final id = m['empresa_id'] as String;
+      final e = await _db.from('empresas').select('nombre').eq('id', id).single();
+      return _abierta = Nube._(
+        id,
+        nueva: false,
+        nombre: e['nombre'] as String,
+        rol: m['rol'] as String,
+        trabajadorId: m['trabajador_id'] as String?,
+      );
+    }
     final e = await _db.from('empresas').insert({'nombre': 'Mi empresa'}).select('id').single();
     final id = e['id'] as String;
     await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
     return _abierta = Nube._(id, nueva: true, nombre: 'Mi empresa');
   }
+
+  /// Crea una invitación de un solo uso (7 días) y devuelve su código. Las fichas pendientes de guardar
+  /// se esperan antes, porque la invitación apunta a una.
+  Future<String> crearInvitacion({required String rol, String? trabajadorId}) async {
+    await _cola;
+    final r = await _db
+        .from('invitaciones')
+        .insert({'empresa_id': empresaId, 'rol': rol, if (trabajadorId != null) 'trabajador_id': _u(trabajadorId)})
+        .select('codigo')
+        .single();
+    return r['codigo'] as String;
+  }
+
+  /// Enlace que se manda a quien se invita: abre la app con el código puesto.
+  static String enlace(String codigo) =>
+      Uri.base.removeFragment().replace(queryParameters: {'invitacion': codigo}).toString();
 
   /// La última empresa abierta, para no cerrar la sesión con cambios sin guardar.
   static Nube? _abierta;
@@ -184,6 +242,17 @@ class Nube {
         for (final t in _orden) {
           final filas = subir[t];
           if (filas == null) continue;
+          if (esTrabajador) {
+            // Solo puede cambiar sus trabajos (estado y fechas) y marcarlos como hechos.
+            if (t == 'trabajos') {
+              for (final f in filas) {
+                await _db.from(t).update(f).eq('id', f['id']);
+              }
+            } else if (t == 'trabajo_historial') {
+              await _db.from(t).upsert(filas, onConflict: _clave[t]!, ignoreDuplicates: true);
+            }
+            continue;
+          }
           for (var i = 0; i < filas.length; i += 200) {
             await _db
                 .from(t)
@@ -191,6 +260,7 @@ class Nube {
           }
         }
         for (final t in _orden.reversed) {
+          if (esTrabajador && t != 'trabajo_historial') continue;
           for (final k in borrar[t] ?? const <String>[]) {
             await _borrar(t, k);
           }

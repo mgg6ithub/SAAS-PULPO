@@ -38,6 +38,7 @@ Future<void> main() async {
     if (Uri.base.queryParameters['demo'] == '1' && store.clientes.isEmpty) store.cargarDemo();
   } else {
     await Nube.iniciar();
+    await Nube.recordarInvitacion(Uri.base.queryParameters['invitacion']);
   }
   runApp(PulpoApp(local: local));
 }

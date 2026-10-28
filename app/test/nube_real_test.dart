@@ -269,6 +269,91 @@ void main() {
         await limpio.cargarDesdeNube(n2);
         expect(limpio.clientes, isNotEmpty);
         await limpio.vaciarNube();
+        // ── Invitaciones y roles: trabajador (C) y socio administrador (D) ──
+        final pepe = Trabajador(id: limpio.nuevoId(), nombre: 'Pepe', competencias: ['Calderas (RITE)']);
+        final cli1 = Cliente(id: limpio.nuevoId(), nombre: 'Cliente de Pepe');
+        final cli2 = Cliente(id: limpio.nuevoId(), nombre: 'Cliente ajeno a Pepe');
+        limpio
+          ..guardarTrabajador(pepe)
+          ..guardarCliente(cli1)
+          ..guardarCliente(cli2);
+        final trabajoP = Tarea(
+          id: limpio.nuevoId(),
+          clienteId: cli1.id,
+          nombre: 'Trabajo de Pepe',
+          proximo: hoy(),
+          trabajadorIds: [pepe.id],
+        );
+        final trabajoQ = Tarea(id: limpio.nuevoId(), clienteId: cli2.id, nombre: 'Trabajo de otro', proximo: hoy());
+        limpio
+          ..guardarTarea(trabajoP)
+          ..guardarTarea(trabajoQ);
+        await n2.guardado;
+        final codigoW = await n2.crearInvitacion(rol: 'trabajador', trabajadorId: pepe.id);
+        final codigoA = await n2.crearInvitacion(rol: 'admin');
+        expect(Nube.enlace(codigoW), contains('invitacion=$codigoW'));
+        await Nube.cerrarSesion();
+
+        // Trabajador: acepta, entra con su ficha y ve solo lo suyo.
+        await auth.signInWithPassword(email: _env['SB_CORREO_C']!, password: 'prueba-123456');
+        Nube.invitacion = codigoW;
+        final nC = await Nube.abrir();
+        expect(nC.rol, 'trabajador');
+        expect(nC.trabajadorId, pepe.id);
+        expect(nC.empresaId, n2.empresaId);
+        expect(Nube.invitacion, isNull);
+        final sC = Store();
+        await sC.cargarDesdeNube(nC);
+        expect(sC.tareas.map((t) => t.id), [trabajoP.id], reason: 'solo su trabajo');
+        expect(sC.clientes.map((c) => c.id), [cli1.id], reason: 'solo el cliente de su trabajo');
+        expect(sC.trabajadores.map((w) => w.id), [pepe.id], reason: 'solo su ficha');
+        // Marca su trabajo como hecho; se guarda (estado, fechas e histórico).
+        sC.marcarHecha(sC.tarea(trabajoP.id)!);
+        await nC.guardado;
+        expect(Nube.error.value, isNull);
+        // No puede cambiar nada más del trabajo, ni crear, ni ver lo de otros.
+        final db = Supabase.instance.client;
+        await expectLater(db.from('trabajos').update({'nombre': 'cambiado'}).eq('id', trabajoP.id), throwsA(anything));
+        expect(await _filas('automatizaciones'), 0);
+        expect(await _filas('etiquetas'), 0);
+        expect(await _filas('invitaciones'), 0);
+        // La invitación ya está gastada: con otra cuenta no vale.
+        await Nube.cerrarSesion();
+        await auth.signInWithPassword(email: _env['SB_CORREO_B']!, password: 'prueba-123456');
+        Nube.invitacion = codigoW;
+        await expectLater(Nube.abrir(), throwsA(isA<InvitacionNoValida>()));
+        await Nube.cerrarSesion();
+
+        // Socio: acepta la de administrador y ve y edita todo.
+        await auth.signInWithPassword(email: _env['SB_CORREO_D']!, password: 'prueba-123456');
+        Nube.invitacion = codigoA;
+        final nD = await Nube.abrir();
+        expect(nD.rol, 'admin');
+        expect(nD.empresaId, n2.empresaId);
+        final sD = Store();
+        await sD.cargarDesdeNube(nD);
+        expect(sD.tareas.length, 2);
+        expect(sD.clientes.length, 2);
+        expect(sD.tarea(trabajoP.id)!.historial, isNotEmpty, reason: 'el socio ve lo que marcó el trabajador');
+        expect(sD.tarea(trabajoP.id)!.ultimo, isNotNull);
+        sD.tarea(trabajoQ.id)!.nombre = 'Editado por el socio';
+        sD.guardarTarea(sD.tarea(trabajoQ.id)!);
+        await nD.guardado;
+        expect(Nube.error.value, isNull);
+        expect(await _filas('miembros'), 3);
+        await Nube.cerrarSesion();
+
+        // Vuelve el administrador: ve lo del trabajador y lo del socio.
+        await auth.signInWithPassword(email: _env['SB_CORREO_A']!, password: 'prueba-123456');
+        final nA3 = await Nube.abrir();
+        final sA3 = Store();
+        await sA3.cargarDesdeNube(nA3);
+        expect(sA3.tarea(trabajoQ.id)!.nombre, 'Editado por el socio');
+        expect(sA3.tarea(trabajoP.id)!.historial, isNotEmpty);
+        expect(await _filas('invitaciones'), 2);
+        expect(await _filas('miembros'), 3);
+        await sA3.vaciarNube();
+        // ── El botón de borrar la deja solo con las cuentas ──
         expect(Nube.error.value, isNull);
         expect(await _filas('clientes'), 0);
         expect(await _filas('trabajadores'), 0);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prueba real contra Supabase: crea dos cuentas de prueba, lanza test/nube_real_test.dart y las borra siempre.
+"""Prueba real contra Supabase: crea cuatro cuentas de prueba, lanza test/nube_real_test.dart y las borra siempre.
 
 Uso (desde app/):  python3 tool/probar_nube.py
 Necesita la CLI de Supabase enlazada (supabase/ en la raíz del repo) y SUPABASE_ACCESS_TOKEN
@@ -44,7 +44,7 @@ with n as (
   select gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', e,
     crypt('prueba-123456', gen_salt('bf')), now(), now(), now(),
     '{{"provider":"email","providers":["email"]}}', '{{}}', '', '', '', ''
-  from unnest(array['{a}','{b}']) e returning id, email)
+  from unnest(array['{a}','{b}','{c}','{d}']) e returning id, email)
 insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 select id::text, id, jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true), 'email', now(), now(), now()
 from n;
@@ -52,7 +52,7 @@ from n;
 
 # Primero las empresas de esas cuentas (arrastran todos sus datos) y luego las cuentas.
 BORRAR = """
-with u as (select id from auth.users where email in ('{a}','{b}')),
+with u as (select id from auth.users where email in ('{a}','{b}','{c}','{d}')),
 e as (delete from public.empresas where creada_por in (select id from u) returning id)
 delete from auth.users where id in (select id from u);
 """
@@ -60,14 +60,14 @@ delete from auth.users where id in (select id from u);
 
 def main():
     n = random.randint(10000, 99999)
-    a, b = f"prueba-a-{n}@example.com", f"prueba-b-{n}@example.com"
-    sql(CREAR.format(a=a, b=b))
+    a, b, c, d = (f"prueba-{x}-{n}@example.com" for x in "abcd")
+    sql(CREAR.format(a=a, b=b, c=c, d=d))
     try:
         r = subprocess.run(["flutter", "test", "test/nube_real_test.dart"], cwd=APP, stdin=subprocess.DEVNULL,
-                           env={**ENV, "SB_CORREO_A": a, "SB_CORREO_B": b})
+                           env={**ENV, "SB_CORREO_A": a, "SB_CORREO_B": b, "SB_CORREO_C": c, "SB_CORREO_D": d})
         codigo = r.returncode
     finally:
-        sql(BORRAR.format(a=a, b=b))
+        sql(BORRAR.format(a=a, b=b, c=c, d=d))
     print("Cuentas y datos de prueba borrados." if codigo == 0 else "Prueba FALLIDA (cuentas y datos de prueba borrados).")
     sys.exit(codigo)
 

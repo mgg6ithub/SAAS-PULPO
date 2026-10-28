@@ -6,6 +6,7 @@ import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import 'ajustes_dialogo.dart';
+import 'invitar.dart';
 
 String? _correo() => Supabase.instance.client.auth.currentUser?.email;
 
@@ -53,6 +54,10 @@ Future<void> abrirMiCuenta(BuildContext context) async {
         child: Text('Ajustes', style: TextStyle(color: P.texto, fontSize: 13.5)),
       ),
       PopupMenuItem<String>(
+        value: 'invitar',
+        child: Text('Invitar a un administrador', style: TextStyle(color: P.texto, fontSize: 13.5)),
+      ),
+      PopupMenuItem<String>(
         value: 'salir',
         child: Text('Cerrar sesión', style: TextStyle(color: P.rojo, fontSize: 13.5)),
       ),
@@ -60,5 +65,6 @@ Future<void> abrirMiCuenta(BuildContext context) async {
   );
   if (!context.mounted) return;
   if (elegido == 'ajustes') await abrirAjustes(context);
+  if (elegido == 'invitar') await invitarAdministrador(context);
   if (elegido == 'salir') await Nube.cerrarSesion();
 }

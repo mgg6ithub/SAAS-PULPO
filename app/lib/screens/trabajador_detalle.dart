@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'invitar.dart';
 
 /// Vista de un trabajador: en el centro, su trabajo (tareas asignadas); a la derecha, su ficha.
 class TrabajadorDetalle extends StatelessWidget {
@@ -79,6 +80,11 @@ class TrabajadorDetalle extends StatelessWidget {
                       : const Pill('Inactivo', P.gris, punto: true),
                   if (!conFicha)
                     OutlinedButton(onPressed: () => abrirTrabajadorForm(context, w), child: const Text('Editar ficha')),
+                  if (store.nube != null)
+                    OutlinedButton(
+                      onPressed: () => invitarTrabajador(context, w),
+                      child: const Text('Invitar a la app'),
+                    ),
                   // Sin tareas, el botón está en el centro; arriba solo cuando ya hay alguna.
                   if (tareas.isNotEmpty)
                     BotonPrimario(

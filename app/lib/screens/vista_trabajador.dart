@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../forms.dart';
 import '../models.dart';
+import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -222,12 +223,20 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                               ),
                             ],
                       derecha: [
-                        BotonAccion(
-                          'Vista de administrador',
-                          icono: Icons.swap_horiz_rounded,
-                          tooltip: 'Salir de la vista de ${w.nombre}',
-                          onPressed: () => rolTrabajador.value = null,
-                        ),
+                        if (store.nube?.esTrabajador ?? false)
+                          BotonAccion(
+                            'Cerrar sesión',
+                            icono: Icons.logout_rounded,
+                            tooltip: store.nube!.nombre,
+                            onPressed: Nube.cerrarSesion,
+                          )
+                        else
+                          BotonAccion(
+                            'Vista de administrador',
+                            icono: Icons.swap_horiz_rounded,
+                            tooltip: 'Salir de la vista de ${w.nombre}',
+                            onPressed: () => rolTrabajador.value = null,
+                          ),
                       ],
                     ),
                     const SizedBox(height: huecoVista),

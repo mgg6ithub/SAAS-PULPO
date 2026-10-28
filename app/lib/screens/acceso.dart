@@ -8,6 +8,7 @@ import '../shell.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'vista_trabajador.dart';
 
 /// Entrada de la app con Supabase: sin sesión pide acceso; con sesión carga la empresa y abre Pulpo.
 class PuertaNube extends StatefulWidget {
@@ -17,7 +18,7 @@ class PuertaNube extends StatefulWidget {
   State<PuertaNube> createState() => _PuertaNubeState();
 }
 
-enum _Fase { acceso, cargando, listo, sinAcceso, fallo }
+enum _Fase { acceso, cargando, listo, invitacionMala, fallo }
 
 class _PuertaNubeState extends State<PuertaNube> {
   StreamSubscription<AuthState>? _sub;
@@ -41,6 +42,7 @@ class _PuertaNubeState extends State<PuertaNube> {
     if (s == null) {
       _usuario = null;
       store.vaciar();
+      rolTrabajador.value = null;
       if (mounted) setState(() => _fase = _Fase.acceso);
     } else if (s.user.id != _usuario) {
       _abrir(s.user.id);
@@ -52,9 +54,11 @@ class _PuertaNubeState extends State<PuertaNube> {
     setState(() => _fase = _Fase.cargando);
     try {
       await store.cargarDesdeNube(await Nube.abrir());
+      // Un trabajador entra directo a su vista; un administrador, a la de siempre.
+      rolTrabajador.value = store.nube!.esTrabajador ? store.nube!.trabajadorId : null;
       if (mounted) setState(() => _fase = _Fase.listo);
-    } on SinAcceso {
-      if (mounted) setState(() => _fase = _Fase.sinAcceso);
+    } on InvitacionNoValida {
+      if (mounted) setState(() => _fase = _Fase.invitacionMala);
     } catch (e) {
       debugPrint('Pulpo: no se pudo abrir la empresa: $e');
       if (mounted) setState(() => _fase = _Fase.fallo);
@@ -90,9 +94,10 @@ class _PuertaNubeState extends State<PuertaNube> {
         ),
       ],
     ),
-    _Fase.sinAcceso => _Aviso(
-      'Esta cuenta aún no tiene acceso de administrador. La vista de trabajador llegará pronto.',
-      onReintentar: null,
+    _Fase.invitacionMala => _Aviso(
+      'La invitación ya se usó o ha caducado. Pide a quien te invitó un enlace nuevo.',
+      textoBoton: 'Entrar sin invitación',
+      onReintentar: () => _abrir(_usuario!),
     ),
     _Fase.fallo => _Aviso('No se pudo abrir tu empresa. Comprueba la conexión.', onReintentar: () => _abrir(_usuario!)),
   };
@@ -101,7 +106,8 @@ class _PuertaNubeState extends State<PuertaNube> {
 class _Aviso extends StatelessWidget {
   final String texto;
   final VoidCallback? onReintentar;
-  const _Aviso(this.texto, {required this.onReintentar});
+  final String textoBoton;
+  const _Aviso(this.texto, {required this.onReintentar, this.textoBoton = 'Reintentar'});
 
   @override
   Widget build(BuildContext context) => _Marco(
@@ -113,7 +119,7 @@ class _Aviso extends StatelessWidget {
       ),
       const SizedBox(height: 16),
       if (onReintentar != null) ...[
-        BotonPrimario('Reintentar', icono: Icons.refresh_rounded, conIcono: true, onPressed: onReintentar!),
+        BotonPrimario(textoBoton, icono: Icons.refresh_rounded, conIcono: true, onPressed: onReintentar!),
         const SizedBox(height: 8),
       ],
       TextButton(onPressed: Nube.cerrarSesion, child: const Text('Cerrar sesión')),
@@ -231,6 +237,15 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
   @override
   Widget build(BuildContext context) => _Marco(
     children: [
+      if (Nube.invitacion != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Text(
+            'Te han invitado a una empresa. Entra o crea tu cuenta para unirte.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: P.texto, fontSize: 13.5, height: 1.4),
+          ),
+        ),
       TextField(
         controller: _correo,
         keyboardType: TextInputType.emailAddress,
