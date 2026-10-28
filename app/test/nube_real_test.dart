@@ -367,6 +367,54 @@ void main() {
         expect(r.tareas, isEmpty);
         expect(r.clientes, isEmpty);
         await Nube.cerrarSesion();
+
+        // ── DEV-018: perfil, varias empresas con sus datos y tipo, borrar empresa y cuenta ──
+        // El socio (D) pone su perfil: lo ve el administrador de su empresa (A), no alguien de fuera (B).
+        await auth.signInWithPassword(email: _env['SB_CORREO_D']!, password: 'prueba-123456');
+        await Nube.guardarPerfil(nombre: 'Socio Prueba', foto: null);
+        expect((await Nube.perfil()).nombre, 'Socio Prueba');
+        final idD = auth.currentUser!.id;
+        await Nube.cerrarSesion();
+        await auth.signInWithPassword(email: _env['SB_CORREO_A']!, password: 'prueba-123456');
+        expect((await db.from('perfiles').select().eq('usuario_id', idD)).length, 1);
+        await Nube.cerrarSesion();
+
+        // B: su primera empresa y otra de ascensores, que arranca solo con la plantilla de ascensor.
+        await auth.signInWithPassword(email: _env['SB_CORREO_B']!, password: 'prueba-123456');
+        expect((await db.from('perfiles').select().eq('usuario_id', idD)), isEmpty, reason: 'perfil ajeno');
+        final nB = await Nube.abrir();
+        final sB = Store();
+        await sB.cargarDesdeNube(nB);
+        await nB.guardado;
+        final antes = Nube.reabrir.value;
+        await Nube.crearEmpresa('Ascensores Prueba', 'Ascensores');
+        expect(Nube.reabrir.value, antes + 1, reason: 'la app vuelve a abrir la empresa');
+        final nB2 = await Nube.abrir();
+        expect(nB2.empresaId, isNot(nB.empresaId), reason: 'entra en la recién creada');
+        expect(nB2.nueva, isTrue);
+        expect(nB2.tipo, 'Ascensores');
+        final sB2 = Store();
+        await sB2.cargarDesdeNube(nB2);
+        await nB2.guardado;
+        expect(sB2.tareas.map((t) => t.tipo), ['Ascensor']);
+        expect((await Nube.empresas()).map((e) => e.nombre), ['Ascensores Prueba', 'Mi empresa']);
+        await nB2.guardarEmpresa({'cif': 'B12345678', 'telefono': '944000000', 'direccion': 'Calle Prueba 1'});
+        expect((await nB2.datosEmpresa())['cif'], 'B12345678');
+        // Cambiar de empresa y volver: se recuerda la elegida.
+        await Nube.entrarEn(nB.empresaId);
+        expect((await Nube.abrir()).empresaId, nB.empresaId);
+        await Nube.entrarEn(nB2.empresaId);
+        expect((await Nube.abrir()).empresaId, nB2.empresaId);
+        // Borrar la de ascensores: se va con sus trabajos y queda la otra.
+        await nB2.borrarEmpresa();
+        expect((await Nube.empresas()).map((e) => e.id), [nB.empresaId]);
+        expect((await Nube.abrir()).empresaId, nB.empresaId);
+        // Borrar la cuenta (función borrar-cuenta): se va su empresa y ya no puede entrar.
+        await Nube.borrarCuenta();
+        await expectLater(
+          auth.signInWithPassword(email: _env['SB_CORREO_B']!, password: 'prueba-123456'),
+          throwsA(isA<AuthException>()),
+        );
       });
     },
     timeout: const Timeout(Duration(minutes: 5)),
