@@ -1,12 +1,17 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../informes.dart';
 import '../models.dart';
 import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'informes.dart';
 
 /// Trabajador con el que se ve la app (null = vista de administrador). '' = el primero activo.
 /// Maqueta: con el login de Supabase lo decidirá el rol de la cuenta. `?rol=trabajador&t=<id>` lo abre directo.
@@ -16,28 +21,6 @@ final rolTrabajador = ValueNotifier<String?>(
       : null,
 );
 
-/// Informe de un trabajo hecho por un trabajador. Maqueta: viven en memoria y el envío es simulado.
-class Informe {
-  final String tareaId, trabajadorId, resultado, notas;
-  final DateTime cuando;
-  Informe(this.tareaId, this.trabajadorId, this.resultado, this.notas)
-    : cuando = DateTime.now();
-}
-
-class _Informes extends ChangeNotifier {
-  final lista = <Informe>[];
-  List<Informe> de(String tareaId) =>
-      lista.where((i) => i.tareaId == tareaId).toList().reversed.toList();
-  void anadir(Informe i) {
-    lista.add(i);
-    notifyListeners();
-  }
-}
-
-final informesTrabajador = _Informes();
-
-const _resultados = ['Todo correcto', 'Con incidencias', 'No se pudo hacer'];
-const _coloresResultado = [P.verde, P.ambar, P.rojo];
 const _dias = [
   'lunes',
   'martes',
@@ -180,7 +163,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
     return Scaffold(
       backgroundColor: P.fondo,
       body: ListenableBuilder(
-        listenable: Listenable.merge([store, informesTrabajador]),
+        listenable: Listenable.merge([store, informes]),
         builder: (context, _) {
           if (w == null) {
             return const Vacio(
@@ -733,7 +716,7 @@ class _DetalleTrabajo extends StatelessWidget {
   Widget build(BuildContext context) {
     final cliente = store.cliente(t.clienteId);
     final hecha = t.hechaEl(hoy());
-    final informes = informesTrabajador.de(t.id);
+    final lista = informes.de(t.id);
     final maquina = [t.marca, t.modelo].where((x) => x.isNotEmpty).join(' ');
     return ListView(
       children: [
@@ -829,26 +812,20 @@ class _DetalleTrabajo extends StatelessWidget {
         const SizedBox(height: huecoVista),
         SeccionTarjeta(
           titulo: 'Informes',
-          subtitulo: informes.isEmpty ? null : '${informes.length}',
+          subtitulo: lista == null || lista.isEmpty ? null : '${lista.length}',
           children: [
-            if (informes.isEmpty)
+            if (lista == null)
+              const Padding(padding: EdgeInsets.all(18), child: LinearProgressIndicator())
+            else if (lista.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(18),
                 child: Text(
                   'Aún no has enviado ningún informe de este trabajo.',
                   style: TextStyle(color: P.textoSuave),
                 ),
-              ),
-            for (final i in informes)
-              FilaLista(
-                lider: Icon(Icons.description_outlined, color: P.textoSuave),
-                titulo: i.resultado,
-                subtitulo: i.notas,
-                derecha: Text(
-                  '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
-                  style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-                ),
-              ),
+              )
+            else
+              for (final i in lista) FilaInforme(i, t),
           ],
         ),
       ],
@@ -856,7 +833,7 @@ class _DetalleTrabajo extends StatelessWidget {
   }
 }
 
-/// Informe del trabajo: cómo ha ido y qué se ha hecho. Maqueta: se guarda en memoria y el envío es simulado.
+/// Informe del trabajo: cómo ha ido, qué se ha hecho y fotos. Con sesión se guarda en Supabase.
 class FormularioInforme extends StatefulWidget {
   final Tarea t;
   final Trabajador w;
@@ -868,8 +845,9 @@ class FormularioInforme extends StatefulWidget {
 
 class _FormularioInformeState extends State<FormularioInforme> {
   final notas = TextEditingController();
+  final fotos = <Uint8List>[];
   int resultado = 0;
-  bool intentado = false;
+  bool intentado = false, guardando = false, leyendoFotos = false;
 
   @override
   void dispose() {
@@ -877,32 +855,93 @@ class _FormularioInformeState extends State<FormularioInforme> {
     super.dispose();
   }
 
-  void _guardar() {
+  Future<void> _anadirFotos() async {
+    final r = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true, withData: true);
+    if (r == null) return;
+    setState(() => leyendoFotos = true);
+    for (final f in r.files.take(maxFotosInforme - fotos.length)) {
+      try {
+        final c = await comprimirFoto(f.bytes!);
+        if (mounted) setState(() => fotos.add(c));
+      } catch (e) {
+        debugPrint('Pulpo: no se pudo leer la foto ${f.name}: $e');
+      }
+    }
+    if (mounted) setState(() => leyendoFotos = false);
+  }
+
+  Future<void> _guardar() async {
+    if (guardando || leyendoFotos) return;
     if (notas.text.trim().isEmpty) {
       setState(() => intentado = true);
       return;
     }
-    informesTrabajador.anadir(
-      Informe(
-        widget.t.id,
-        widget.w.id,
-        _resultados[resultado],
-        notas.text.trim(),
-      ),
-    );
-    final cliente = store.cliente(widget.t.clienteId);
+    setState(() => guardando = true);
     final messenger = ScaffoldMessenger.of(context);
-    Navigator.pop(context);
-    messenger.showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        width: 360,
-        content: Text(
-          'Informe guardado${cliente == null ? '' : ' y enviado a ${cliente.nombre}'} (simulado)',
+    void aviso(String texto) =>
+        messenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
+    try {
+      await informes.crear(
+        trabajoId: widget.t.id,
+        trabajadorId: widget.w.id,
+        resultado: resultado,
+        notas: notas.text.trim(),
+        fotos: fotos,
+      );
+    } catch (e) {
+      debugPrint('Pulpo: no se pudo guardar el informe: $e');
+      if (mounted) setState(() => guardando = false);
+      aviso('No se pudo guardar el informe. Inténtalo de nuevo.');
+      return;
+    }
+    if (mounted) Navigator.pop(context);
+    aviso('Informe guardado');
+  }
+
+  Widget _miniatura(int n) => Stack(
+    children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(P.radio),
+        child: Image.memory(fotos[n], width: 84, height: 84, fit: BoxFit.cover),
+      ),
+      Positioned(
+        top: 4,
+        right: 4,
+        child: Tooltip(
+          message: 'Quitar',
+          child: InkWell(
+            onTap: () => setState(() => fotos.removeAt(n)),
+            customBorder: const CircleBorder(),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(color: Colors.black.withValues(alpha: .55), shape: BoxShape.circle),
+              child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+            ),
+          ),
         ),
       ),
-    );
-  }
+    ],
+  );
+
+  Widget _anadir() => Tooltip(
+    message: 'Añadir fotos',
+    child: InkWell(
+      onTap: leyendoFotos ? null : _anadirFotos,
+      borderRadius: BorderRadius.circular(P.radio),
+      child: CustomPaint(
+        painter: BordeDiscontinuo(P.textoSuave.withValues(alpha: .6), BorderRadius.circular(P.radio)),
+        child: SizedBox(
+          width: 84,
+          height: 84,
+          child: Center(
+            child: leyendoFotos
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(Icons.add_photo_alternate_outlined, size: 22, color: P.textoSuave),
+          ),
+        ),
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
@@ -920,7 +959,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
         descripcion: 'Cómo ha ido el trabajo.',
         [
           Pestanas(
-            opciones: _resultados,
+            opciones: resultadosInforme,
             seleccion: resultado,
             onChanged: (i) => setState(() => resultado = i),
           ),
@@ -928,8 +967,8 @@ class _FormularioInformeState extends State<FormularioInforme> {
           Align(
             alignment: Alignment.centerLeft,
             child: Pill(
-              _resultados[resultado],
-              _coloresResultado[resultado],
+              resultadosInforme[resultado],
+              coloresResultado[resultado],
               punto: true,
             ),
           ),
@@ -948,6 +987,20 @@ class _FormularioInformeState extends State<FormularioInforme> {
             error: intentado && notas.text.trim().isEmpty
                 ? 'Escribe qué has hecho'
                 : null,
+          ),
+        ],
+      ),
+      Bloque(
+        'Fotos',
+        descripcion: 'Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.',
+        [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var n = 0; n < fotos.length; n++) _miniatura(n),
+              if (fotos.length < maxFotosInforme) _anadir(),
+            ],
           ),
         ],
       ),
