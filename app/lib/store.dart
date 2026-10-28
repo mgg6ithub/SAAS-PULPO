@@ -259,6 +259,9 @@ class Store extends ChangeNotifier {
     n.vincular(this, vacio: n.nueva);
     if (n.nueva) {
       _inicial();
+      // Solo las plantillas de lo que hace la empresa (si eligió un tipo concreto).
+      final tipo = Nube.tiposEmpresa[n.tipo];
+      if (tipo != null) tareas.removeWhere((t) => t.tipo != tipo);
       for (final t in tareas) {
         t.id = nuevoId();
       }
