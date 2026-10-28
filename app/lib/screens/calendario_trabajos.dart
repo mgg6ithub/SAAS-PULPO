@@ -36,8 +36,6 @@ class CalendarioTrabajos extends StatefulWidget {
 class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
   // Los filtros pertenecen al calendario: no cambian el Plan.
   final filtro = FiltroAgenda();
-  final busqueda = TextEditingController();
-  Timer? espera;
   Map<DateTime, List<VisitaCalendario>> visitas = {};
   String? detalle;
   late DateTime desde, hasta;
@@ -80,8 +78,6 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
   void dispose() {
     store.removeListener(_actualizar);
     filtro.removeListener(_actualizar);
-    espera?.cancel();
-    busqueda.dispose();
     filtro.dispose();
     super.dispose();
   }
@@ -121,25 +117,25 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
 
   @override
   Widget build(BuildContext context) {
-    final total = visitas.values.fold(0, (n, v) => n + v.length);
     final contenido = Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          padding: const EdgeInsets.only(bottom: 6, right: 8),
+          child: Row(
             children: [
-              Pestanas(
-                opciones: const ['Mes', 'Semana', 'Día'],
-                seleccion: widget.modo.index,
-                onChanged: (i) => widget.onModo(ModoCalendario.values[i]),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Pestanas(
+                    opciones: const ['Mes', 'Semana', 'Día'],
+                    seleccion: widget.modo.index,
+                    onChanged: (i) => widget.onModo(ModoCalendario.values[i]),
+                  ),
+                ),
               ),
+              const SizedBox(width: 8),
               _menu<String>(
-                filtro.tecnicos.isEmpty
-                    ? 'Equipo'
-                    : store.trabajador(filtro.tecnicos.first)?.nombreCompleto ?? 'Equipo',
+                filtro.tecnicos.isEmpty ? 'Equipo' : 'Filtrado',
                 Icons.people_outline_rounded,
                 [
                   ('', const Text('Todo el equipo')),
@@ -152,75 +148,13 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
                   _actualizar();
                 },
               ),
-              _menu<EstadoFiltro>(
-                switch (filtro.estado) {
-                  EstadoFiltro.todas => 'Estado',
-                  EstadoFiltro.pendientes => 'Pendientes',
-                  EstadoFiltro.vencidas => 'Vencidos',
-                  EstadoFiltro.sinAsignar => 'Sin asignar',
-                },
-                Icons.filter_list_rounded,
-                const [
-                  (EstadoFiltro.todas, Text('Todos los estados')),
-                  (EstadoFiltro.pendientes, Text('Pendientes')),
-                  (EstadoFiltro.vencidas, Text('Vencidos')),
-                  (EstadoFiltro.sinAsignar, Text('Sin asignar')),
-                ],
-                filtro.estado,
-                filtro.ponerEstado,
-              ),
-              _menu<String>(
-                filtro.tipo ?? 'Tipo',
-                Icons.category_outlined,
-                [
-                  ('', const Text('Todos los tipos')),
-                  for (final tipo in (store.tareas.map((t) => t.tipo).toSet().toList()..sort()))
-                    (tipo, Text(tipo)),
-                ],
-                filtro.tipo ?? '',
-                (s) => filtro.ponerTipo(s.isEmpty ? null : s),
-              ),
-              SizedBox(
-                width: 190,
-                height: 40,
-                child: TextField(
-                  controller: busqueda,
-                  decoration: const InputDecoration(
-                    hintText: 'Buscar trabajos',
-                    prefixIcon: Icon(Icons.search, size: 18),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  onChanged: (s) {
-                    espera?.cancel();
-                    espera = Timer(const Duration(milliseconds: 180), () => filtro.buscar(s));
-                  },
-                ),
-              ),
-              if (filtro.activo)
-                IconButton(
-                  tooltip: 'Limpiar filtros',
-                  onPressed: () {
-                    espera?.cancel();
-                    busqueda.clear();
-                    filtro.limpiar();
-                  },
-                  icon: const Icon(Icons.filter_alt_off_outlined, size: 20),
-                ),
-              Text(
-                '$total ${total == 1 ? 'visita' : 'visitas'}',
-                style: TextStyle(fontSize: 12, color: P.textoSuave),
-              ),
             ],
           ),
         ),
         Expanded(
           child: Container(
             clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
-            foregroundDecoration: BoxDecoration(
-              border: Border.all(color: P.borde),
-              borderRadius: BorderRadius.circular(P.radio),
-            ),
+            decoration: BoxDecoration(color: P.superficie),
             child: switch (widget.modo) {
               ModoCalendario.mes => _MesCalendario(
                 dia: widget.dia,
@@ -244,21 +178,6 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
                 onDetalle: _detalle,
               ),
             },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Row(
-            children: [
-              Icon(Icons.schedule_rounded, size: 13, color: P.textoSuave),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  '24 horas · Jornada destacada de 08:00 a 17:00',
-                  style: TextStyle(fontSize: 11, color: P.textoSuave),
-                ),
-              ),
-            ],
           ),
         ),
       ],
@@ -395,17 +314,7 @@ class _MesCalendario extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _NumeroDia(d),
-                    if (lista.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Text('${lista.length}', style: TextStyle(fontSize: 10, color: P.textoSuave)),
-                      ),
-                  ],
-                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [_NumeroDia(d)]),
               ),
             ),
           ),
@@ -486,7 +395,7 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final ancho = max(box.maxWidth, margen + 7 * 125);
+      final ancho = max(box.maxWidth, margen + 7 * 40);
       final columna = (ancho - margen) / 7;
       final dias = [for (var i = 0; i < 7; i++) masDias(widget.desde, i)];
       final grupos = [for (final d in dias) distribuirVisitas(widget.visitas[d] ?? [], minimoMin: 24)];
@@ -502,7 +411,7 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
             child: Column(
               children: [
                 SizedBox(
-                  height: 48,
+                  height: 40,
                   child: Row(
                     children: [
                       const SizedBox(width: margen),
@@ -521,54 +430,9 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
                                   ),
                                   const SizedBox(width: 5),
                                   _NumeroDia(d),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    '${widget.visitas[d]?.length ?? 0}',
-                                    style: TextStyle(fontSize: 10, color: P.textoSuave),
-                                  ),
                                 ],
                               ),
                             ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: 38,
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: margen,
-                        child: Center(
-                          child: Text(
-                            'Sin hora',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 10, color: P.textoSuave),
-                          ),
-                        ),
-                      ),
-                      for (final d in dias)
-                        Expanded(
-                          child: Builder(
-                            builder: (context) {
-                              final sinHora = (widget.visitas[d] ?? [])
-                                  .where((v) => v.inicio == null)
-                                  .toList();
-                              return sinHora.isEmpty
-                                  ? const SizedBox()
-                                  : Padding(
-                                      padding: const EdgeInsets.all(3),
-                                      child: TextButton(
-                                        onPressed: () => widget.onDia(d),
-                                        child: Text(
-                                          '${sinHora.length} sin hora',
-                                          style: const TextStyle(fontSize: 11),
-                                        ),
-                                      ),
-                                    );
-                            },
                           ),
                         ),
                     ],

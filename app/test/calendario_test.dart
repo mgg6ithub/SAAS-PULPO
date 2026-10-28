@@ -122,7 +122,7 @@ void main() {
       });
     }
   }
-  testWidgets('resumen por hover, detalles, cerrar y buscar', (tester) async {
+  testWidgets('resumen por hover, detalles y cerrar', (tester) async {
     store.tareas.add(trabajo('caldera', hoy(), 540));
     await montar(tester, ModoCalendario.dia);
     final evento = find.text('Revisión caldera');
@@ -141,12 +141,6 @@ void main() {
     await tester.tap(find.byTooltip('Cerrar detalles'));
     await tester.pumpAndSettle();
     expect(find.text('Detalles del trabajo'), findsNothing);
-    await tester.enterText(find.byType(TextField).first, 'inexistente');
-    await tester.pump(const Duration(milliseconds: 250));
-    expect(find.text('0 visitas'), findsOneWidget);
-    await tester.tap(find.byTooltip('Limpiar filtros'));
-    await tester.pumpAndSettle();
-    expect(find.text('1 visita'), findsOneWidget);
     await raton.removePointer();
     await tester.pumpWidget(const SizedBox());
     expect(tester.takeException(), isNull);
@@ -157,7 +151,7 @@ void main() {
     expect(find.text('2000 trabajos →'), findsOneWidget);
     await tester.tap(find.text('2000 trabajos →'));
     await tester.pumpAndSettle();
-    expect(find.text('2000 visitas'), findsOneWidget);
+    expect(find.text('Equipo'), findsWidgets);
     expect(find.byType(OverlayPortal).evaluate().length, lessThan(50));
     expect(tester.takeException(), isNull);
   });
@@ -192,6 +186,17 @@ void main() {
     expect(find.byTooltip('Día siguiente'), findsOneWidget);
     await tester.tap(find.byTooltip('Día siguiente'));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('semana compacta sin contadores, franja ni pie y con siete días visibles', (tester) async {
+    await montar(tester, ModoCalendario.semana, ancho: 600);
+    expect(find.text('Sin hora'), findsNothing);
+    expect(find.text('0'), findsNothing);
+    expect(find.textContaining('Jornada destacada'), findsNothing);
+    expect(find.text('Estado'), findsNothing);
+    expect(find.text('Tipo'), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    expect(tester.getBottomRight(find.text('DOM')).dx, lessThanOrEqualTo(600));
     expect(tester.takeException(), isNull);
   });
 }
