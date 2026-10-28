@@ -1179,10 +1179,12 @@ Future<void> abrirTareaForm(
   int? horaMin,
   String? trabajadorId,
   Tarea? padre,
+  Tarea? borrador,
 }) => abrirPanel(
   context,
   TareaForm(
     padre: padre,
+    borrador: borrador,
     original: t,
     clienteId: clienteId,
     plantilla: plantilla,
@@ -1191,6 +1193,114 @@ Future<void> abrirTareaForm(
     trabajadorId: trabajadorId,
   ),
 );
+
+/// Subtrabajo nuevo con lo mínimo: nombre, fecha, quién lo hace y color. El resto se hereda del trabajo y
+/// «Más información» abre el formulario completo con lo ya escrito.
+Future<void> abrirSubtrabajoRapido(BuildContext context, Tarea padre) => showDialog(
+  context: context,
+  routeSettings: const RouteSettings(name: rutaPanel),
+  builder: (_) =>
+      _SubtrabajoRapido(padre, (borrador) => abrirTareaForm(context, null, padre: padre, borrador: borrador)),
+);
+
+class _SubtrabajoRapido extends StatefulWidget {
+  final Tarea padre;
+  final void Function(Tarea borrador) onMas;
+  const _SubtrabajoRapido(this.padre, this.onMas);
+
+  @override
+  State<_SubtrabajoRapido> createState() => _SubtrabajoRapidoState();
+}
+
+class _SubtrabajoRapidoState extends State<_SubtrabajoRapido> {
+  late final Tarea t = Tarea(
+    id: store.nuevoId(),
+    clienteId: widget.padre.clienteId,
+    padreId: widget.padre.id,
+    plantilla: false,
+    tipo: widget.padre.tipo,
+    proximo: widget.padre.proximo ?? hoy(),
+    periodicidad: Periodicidad.unica,
+    inicioMin: widget.padre.inicioMin ?? 9 * 60,
+    criticidad: widget.padre.criticidad,
+    competencias: [...widget.padre.competencias],
+    trabajadorIds: [...widget.padre.trabajadorIds],
+  );
+  final nombre = TextEditingController();
+  bool intento = false;
+
+  @override
+  void dispose() {
+    nombre.dispose();
+    super.dispose();
+  }
+
+  void _anadir() {
+    setState(() => intento = true);
+    if (nombre.text.trim().isEmpty) return;
+    t.nombre = nombre.text.trim();
+    store.guardarTarea(t);
+    Navigator.pop(context);
+  }
+
+  void _mas() {
+    t.nombre = nombre.text.trim();
+    Navigator.pop(context);
+    widget.onMas(t);
+  }
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 440),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'SUBTRABAJO',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.morado),
+            ),
+            Text(
+              'Nuevo subtrabajo',
+              style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            Text('Dentro de ${widget.padre.nombre}', style: TextStyle(color: P.textoSuave, fontSize: 13)),
+            const SizedBox(height: 16),
+            campo(
+              'Nombre',
+              nombre,
+              hint: 'Caldera 3, extintores de CO2…',
+              obligatorio: true,
+              error: intento && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null,
+            ),
+            dos(
+              CampoFecha('Fecha', t.proximo, (d) => setState(() => t.proximo = d)),
+              conMargen(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [etiqueta('Asignado a'), SelectorTrabajadores(t, () => setState(() {}))],
+                ),
+              ),
+            ),
+            etiqueta('Color'),
+            SelectorColorTarea(t, () => setState(() {})),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                TextButton(onPressed: _mas, child: const Text('Más información')),
+                const Spacer(),
+                BotonPrimario('Añadir', onPressed: _anadir),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
 class TareaForm extends StatefulWidget {
   final Tarea? original;
@@ -1202,6 +1312,9 @@ class TareaForm extends StatefulWidget {
   /// Crear un subtrabajo de este trabajo: hereda su cliente, tipo y fecha.
   final Tarea? padre;
 
+  /// Tarea a medio hacer (p. ej. desde el subtrabajo rápido) con la que empieza el formulario de una nueva.
+  final Tarea? borrador;
+
   /// Crear una plantilla (sin cliente) en vez de una tarea.
   final bool plantilla;
 
@@ -1211,6 +1324,7 @@ class TareaForm extends StatefulWidget {
     super.key,
     this.incrustada = false,
     this.padre,
+    this.borrador,
     this.original,
     this.clienteId,
     this.plantilla = false,
@@ -1226,6 +1340,7 @@ class TareaForm extends StatefulWidget {
 class _TareaFormState extends State<TareaForm> {
   late final Tarea t =
       widget.original?.copia() ??
+      widget.borrador ??
       Tarea(
         id: store.nuevoId(),
         clienteId: widget.padre?.clienteId ?? widget.clienteId,
