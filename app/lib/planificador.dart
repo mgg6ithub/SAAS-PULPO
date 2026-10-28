@@ -14,7 +14,7 @@ import 'store.dart';
 ///  1. Se reparten primero las tareas más críticas y, a igual criticidad, las de franja más estrecha.
 ///  2. Cada tarea va a un técnico apto (competencias). Si ya tenía técnico, se respeta.
 ///  3. Se inserta en el hueco de su ruta que menos desplazamiento añade, respetando su franja
-///     horaria y la jornada del técnico (8:00–17:00, saliendo del almacén).
+///     horaria y la jornada del técnico (8:00–17:00, saliendo de su punto de salida o del almacén).
 ///  4. Al final se mejora cada ruta (mover paradas, 2-opt) si baja el coste: viaje + retraso de
 ///     cada tarea pesado por su criticidad.
 ///  5. Lo que no cabe queda "Sin programar", con el motivo.
@@ -27,6 +27,13 @@ const inicioJornada = 8 * 60, finJornada = 18 * 60;
 
 /// Velocidad media urbana y factor de rodeo sobre la línea recta.
 const _kmh = 28.0, _rodeo = 1.35;
+
+/// De dónde sale y adónde vuelve un técnico: su punto de salida si está ubicado; si no, el almacén.
+LatLng salidaDe(Trabajador w) =>
+    w.salidaLat != null && w.salidaLng != null ? LatLng(w.salidaLat!, w.salidaLng!) : almacen;
+
+/// Nombre del punto de salida, para las vistas («Almacén» o «Salida»).
+String nombreSalida(Trabajador w) => w.salidaLat != null && w.salidaLng != null ? 'Salida' : 'Almacén';
 
 double kmEntre(LatLng a, LatLng b) => const Distance().as(LengthUnit.Meter, a, b) / 1000 * _rodeo;
 int minutosEntre(LatLng a, LatLng b) => (kmEntre(a, b) / _kmh * 60).ceil();
@@ -46,7 +53,8 @@ class Ruta {
   final List<Parada> paradas;
   Ruta(this.trabajador, this.paradas);
 
-  double get km => paradas.fold(0.0, (s, p) => s + p.km) + (paradas.isEmpty ? 0 : kmEntre(paradas.last.punto, almacen));
+  double get km =>
+      paradas.fold(0.0, (s, p) => s + p.km) + (paradas.isEmpty ? 0 : kmEntre(paradas.last.punto, salidaDe(trabajador)));
   int get minutosViaje => paradas.fold(0, (s, p) => s + p.viajeMin);
   int get fin => paradas.isEmpty ? inicioJornada : paradas.last.fin;
 }
@@ -66,9 +74,9 @@ final planActual = ValueNotifier<Plan?>(null);
 final rutaPorCarretera = ValueNotifier<bool>(true);
 
 /// Simula una ruta con las paradas en ese orden. Devuelve null si alguna no cabe.
-List<Parada>? _simular(List<Parada> ps) {
+List<Parada>? _simular(List<Parada> ps, LatLng salida) {
   var hora = inicioJornada;
-  var donde = almacen;
+  var donde = salida;
   for (final p in ps) {
     final viaje = minutosEntre(donde, p.punto);
     p
@@ -83,7 +91,7 @@ List<Parada>? _simular(List<Parada> ps) {
     hora = p.fin;
     donde = p.punto;
   }
-  if (hora + minutosEntre(donde, almacen) > finJornada + 30) return null; // vuelta con algo de margen
+  if (hora + minutosEntre(donde, salida) > finJornada + 30) return null; // vuelta con algo de margen
   return ps;
 }
 
@@ -92,20 +100,21 @@ bool _fija(Tarea t) => t.fijado && t.inicioMin != null && t.trabajadorIds.isNotE
 
 /// Coste de una ruta: minutos de viaje + lo tarde que empieza cada tarea, pesado por su criticidad
 /// (una crítica a las 15:00 cuesta mucho más que una rutinaria a las 15:00). Null si no cabe.
-double? _coste(List<Parada> ps) {
-  final sim = _simular([for (final p in ps) Parada(p.tarea, p.punto)]);
+double? _coste(List<Parada> ps, LatLng salida) {
+  final sim = _simular([for (final p in ps) Parada(p.tarea, p.punto)], salida);
   if (sim == null) return null;
-  return _viaje(ps) + sim.fold(0.0, (s, p) => s + (p.inicio - inicioJornada) / 60 * p.tarea.criticidad.peso * 6);
+  return _viaje(ps, salida) +
+      sim.fold(0.0, (s, p) => s + (p.inicio - inicioJornada) / 60 * p.tarea.criticidad.peso * 6);
 }
 
-int _viaje(List<Parada> ps) {
+int _viaje(List<Parada> ps, LatLng salida) {
   var total = 0;
-  var donde = almacen;
+  var donde = salida;
   for (final p in ps) {
     total += minutosEntre(donde, p.punto);
     donde = p.punto;
   }
-  return total + minutosEntre(donde, almacen);
+  return total + minutosEntre(donde, salida);
 }
 
 /// Planifica las tareas de [dia] (las que tienen ubicación) entre los técnicos activos.
@@ -141,10 +150,10 @@ Plan planificar(DateTime dia) {
     (String, int, double)? mejor;
     for (final w in candidatos) {
       final r = rutas[w.id]!;
-      final base = _coste(r) ?? 0;
+      final base = _coste(r, salidaDe(w)) ?? 0;
       for (var i = 0; i <= r.length; i++) {
         final prueba = [...r]..insert(i, Parada(t, punto));
-        final c = _coste(prueba);
+        final c = _coste(prueba, salidaDe(w));
         if (c == null) continue;
         final coste = c - base;
         if (mejor == null || coste < mejor.$3) mejor = (w.id, i, coste);
@@ -167,8 +176,9 @@ Plan planificar(DateTime dia) {
   // 4. Mejora local: mover una parada a otro sitio o invertir un tramo (2-opt) si baja el coste
   //    (menos viaje y las críticas antes) y todo sigue cabiendo.
   for (final id in rutas.keys) {
+    final salida = salidaDe(ws.firstWhere((w) => w.id == id));
     var r = rutas[id]!;
-    var actual = _coste(r) ?? double.infinity;
+    var actual = _coste(r, salida) ?? double.infinity;
     var mejora = true;
     while (mejora) {
       mejora = false;
@@ -181,7 +191,7 @@ Plan planificar(DateTime dia) {
             [...r.sublist(0, i), ...r.sublist(i, j + 1).reversed, ...r.sublist(j + 1)],
       ];
       for (final v in vecinos) {
-        final c = _coste(v);
+        final c = _coste(v, salida);
         if (c != null && c < actual - .01) {
           r = v;
           actual = c;
@@ -190,7 +200,7 @@ Plan planificar(DateTime dia) {
         }
       }
     }
-    rutas[id] = _simular(r)!;
+    rutas[id] = _simular(r, salida)!;
   }
 
   // Razones de cada parada (para la vista "Por qué esta ruta").
@@ -209,7 +219,7 @@ Plan planificar(DateTime dia) {
         if (t.ventanaDesdeMin != null) 'Franja ${hhmm(t.ventanaDesdeMin!)}–${hhmm(t.ventanaHastaMin!)}',
         if (p.inicio > p.llegada) 'Espera ${p.inicio - p.llegada} min a que abra su franja',
         i == 0
-            ? 'Sale del almacén: ${p.km.toStringAsFixed(1)} km'
+            ? 'Sale ${nombreSalida(w) == 'Salida' ? 'de su punto de salida' : 'del almacén'}: ${p.km.toStringAsFixed(1)} km'
             : 'A ${p.km.toStringAsFixed(1)} km de la anterior (la más cercana que cabe)',
       ];
       p.razon = motivos.join(' · ');
@@ -250,10 +260,11 @@ int _colorDe(Trabajador w) =>
 
 final _cache = <String, List<LatLng>>{};
 
-/// Trazado por calles de una ruta (almacén → paradas → almacén). Null si no hay red.
+/// Trazado por calles de una ruta (salida → paradas → salida). Null si no hay red.
 Future<List<LatLng>?> trazadoCarretera(Ruta r) async {
   if (r.paradas.isEmpty) return null;
-  final puntos = [almacen, ...r.paradas.map((p) => p.punto), almacen];
+  final salida = salidaDe(r.trabajador);
+  final puntos = [salida, ...r.paradas.map((p) => p.punto), salida];
   final clave = puntos.map((p) => '${p.longitude},${p.latitude}').join(';');
   if (_cache[clave] case final c?) return c;
   try {

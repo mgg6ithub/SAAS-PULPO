@@ -41,4 +41,24 @@ void main() {
     expect(ruta.trabajador.id, w.id);
     expect(ruta.paradas.firstWhere((p) => p.tarea.id == t.id).inicio, 11 * 60);
   });
+
+  test('cada técnico sale de su punto de salida si lo tiene', () async {
+    SharedPreferences.setMockInitialValues({});
+    await store.cargar();
+    store.cargarDemoRutas();
+    final dia = hoy();
+    for (final w in store.trabajadores) {
+      store.guardarTrabajador(
+        w.copia()
+          ..salida = 'Getxo'
+          ..salidaLat = 43.35
+          ..salidaLng = -3.01,
+      );
+    }
+    final plan = planificar(dia);
+    final ruta = plan.rutas.firstWhere((r) => r.paradas.isNotEmpty);
+    final primera = ruta.paradas.first;
+    expect(salidaDe(ruta.trabajador).latitude, 43.35);
+    expect(primera.km, closeTo(kmEntre(salidaDe(ruta.trabajador), primera.punto), .001));
+  });
 }

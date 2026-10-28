@@ -1071,6 +1071,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
   late final email = TextEditingController(text: w.email);
   late final titulos = TextEditingController(text: w.titulos);
   late final info = TextEditingController(text: w.info);
+  late final salida = TextEditingController(text: w.salida);
   bool intentoGuardar = false;
   final _claveNombre = GlobalKey(), _claveCompetencias = GlobalKey();
 
@@ -1099,7 +1100,25 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
       ..telefono = telefono.text.trim()
       ..email = email.text.trim()
       ..titulos = titulos.text.trim()
-      ..info = info.text.trim();
+      ..info = info.text.trim()
+      ..salida = salida.text.trim();
+    // Punto de salida nuevo o cambiado: se ubica en segundo plano (vacío = el almacén).
+    if (w.salida != (widget.original?.salida ?? '') || (w.salida.isNotEmpty && w.salidaLat == null)) {
+      w
+        ..salidaLat = null
+        ..salidaLng = null;
+      final id = w.id, direccion = w.salida;
+      coordenadas(direccion).then((g) {
+        final actual = store.trabajador(id);
+        if (g != null && actual != null && actual.salida == direccion) {
+          store.guardarTrabajador(
+            actual.copia()
+              ..salidaLat = g.$1
+              ..salidaLng = g.$2,
+          );
+        }
+      });
+    }
     if (widget.original == null && store.trabajadores.isEmpty) ajustes.reiniciarGuiaOrganizar();
     store.guardarTrabajador(w.copia());
     if (widget.incrustada) {
@@ -1173,6 +1192,9 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         ),
         const SizedBox(height: 12),
         campo('Títulos y carnés', titulos, hint: 'Carné RITE, PRL 60 h…'),
+      ]),
+      Bloque('Punto de salida', descripcion: 'De dónde sale y adónde vuelve cada día. Vacío = el almacén.', [
+        campo('Dirección', salida, hint: 'Su casa o la oficina'),
       ]),
       Bloque('Notas', [
         campo('Información básica', info, lineas: 2),

@@ -366,6 +366,9 @@ class Nube {
         'competencias': w.competencias,
         'activo': w.activo,
         'estado_hoy': w.estadoHoy.index,
+        'salida': w.salida,
+        'salida_lat': w.salidaLat,
+        'salida_lng': w.salidaLng,
         'color': w.color,
       };
     }
@@ -491,6 +494,9 @@ Trabajador _trabajador(Map x) => Trabajador(
   competencias: List<String>.from(x['competencias'] as List),
   activo: x['activo'],
   estadoHoy: EstadoHoy.values[x['estado_hoy'] as int],
+  salida: x['salida'] as String? ?? '',
+  salidaLat: (x['salida_lat'] as num?)?.toDouble(),
+  salidaLng: (x['salida_lng'] as num?)?.toDouble(),
   color: (x['color'] as num).toInt(),
 );
 
