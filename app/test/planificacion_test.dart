@@ -59,18 +59,23 @@ void main() {
     expect(store.automatizar(actual), 0); // lo que queda no lo puede hacer nadie
   });
 
-  for (final nombre in ['Plan', 'Calendario']) {
-    testWidgets('La agenda se pinta en la vista $nombre', (tester) async {
+  // El itinerario tiene dos vistas: Plan (columnas) y Calendario (mes, semana o día).
+  for (final nombre in ['Plan', 'Mes', 'Semana', 'Día']) {
+    testWidgets('El itinerario se pinta en la vista $nombre', (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Planificacion(mapa: false))));
+      if (nombre != 'Plan') {
+        await tester.tap(find.text('Calendario'));
+        await tester.pumpAndSettle();
+      }
       await tester.tap(find.text(nombre));
       await tester.pumpAndSettle();
       expect(find.text('Hoy'), findsWidgets);
       // El mapa va apagado al entrar; solo en Calendario está su botón.
-      expect(find.byTooltip('Mostrar mapa'), nombre == 'Calendario' ? findsOneWidget : findsNothing);
-      if (nombre == 'Calendario') {
+      expect(find.byTooltip('Mostrar mapa'), nombre != 'Plan' ? findsOneWidget : findsNothing);
+      if (nombre != 'Plan') {
         await tester.tap(find.byTooltip('Mostrar mapa'));
         await tester.pump(const Duration(milliseconds: 400));
         expect(find.byType(MapaAgenda), findsOneWidget);

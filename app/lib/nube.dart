@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:ui' show Color;
 
 import 'package:crypto/crypto.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'informes.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart' show TipoInfo, tipos, competencias;
@@ -26,12 +28,33 @@ typedef _Filas = Map<String, Map<String, Map<String, dynamic>>>;
 
 /// Conexión con Supabase para una cuenta y una empresa: lee todo al entrar y, después, guarda solo lo que cambia.
 class Nube {
-  Nube._(this.empresaId, {required this.nueva, this.nombre = '', this.rol = 'admin', this.trabajadorId});
+  Nube._(
+    this.empresaId, {
+    required this.nueva,
+    this.nombre = '',
+    this.tipo = '',
+    this.rol = 'admin',
+    this.trabajadorId,
+  });
 
   final String empresaId;
 
   /// Nombre de la empresa, para enseñarlo en Mi cuenta.
   final String nombre;
+
+  /// A qué se dedica (clave de [tiposEmpresa]): una empresa nueva arranca solo con sus plantillas.
+  final String tipo;
+
+  /// Tipos de empresa al crearla → tipo de las plantillas con las que arranca (null = todas).
+  static const tiposEmpresa = <String, String?>{
+    'Ascensores': 'Ascensor',
+    'Calderas': 'Caldera',
+    'Jardinería': 'Jardinería',
+    'Limpieza': 'Limpieza',
+    'Varios': null,
+  };
+
+  bool get esAdmin => rol == 'admin';
 
   /// `admin` (todo) o `trabajador` (solo sus trabajos, el resto lo recorta la base de datos).
   final String rol;
@@ -67,8 +90,14 @@ class Nube {
     await (await SharedPreferences.getInstance()).remove('pulpo_invitacion');
   }
 
-  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una). Si no tiene ninguna,
-  /// crea una y la hace administradora.
+  /// Cambia cada vez que hay que volver a abrir la empresa (se ha cambiado, creado o borrado una).
+  static final reabrir = ValueNotifier<int>(0);
+
+  /// Empresa recién creada desde la cuenta: al abrirla arranca con sus plantillas.
+  static String? _recienCreada;
+
+  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una): la última elegida o, si no,
+  /// una donde sea administradora. Si no tiene ninguna, crea una y la hace administradora.
   static Future<Nube> abrir() async {
     if (invitacion != null) {
       try {
@@ -82,15 +111,25 @@ class Nube {
       }
       await _olvidarInvitacion();
     }
-    final ms = await _db.from('miembros').select('empresa_id, rol, trabajador_id');
+    final ms = await _db
+        .from('miembros')
+        .select('empresa_id, rol, trabajador_id')
+        .eq('usuario_id', _db.auth.currentUser!.id);
     if (ms.isNotEmpty) {
-      final m = ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first);
+      final elegida = (await SharedPreferences.getInstance()).getString('pulpo_empresa');
+      final m = ms.firstWhere(
+        (x) => x['empresa_id'] == elegida,
+        orElse: () => ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first),
+      );
       final id = m['empresa_id'] as String;
-      final e = await _db.from('empresas').select('nombre').eq('id', id).single();
+      final e = await _db.from('empresas').select('nombre, tipo').eq('id', id).single();
+      final nueva = id == _recienCreada;
+      _recienCreada = null;
       return _abierta = Nube._(
         id,
-        nueva: false,
+        nueva: nueva,
         nombre: e['nombre'] as String,
+        tipo: e['tipo'] as String,
         rol: m['rol'] as String,
         trabajadorId: m['trabajador_id'] as String?,
       );
@@ -121,6 +160,99 @@ class Nube {
       .order('created_at', ascending: false)
       .limit(30);
 
+  // ── Informes y fotos ──
+
+  static const _bucket = 'fotos';
+
+  /// La foto ya está en Storage (ruta del bucket) y no en base64. El base64 nunca lleva puntos.
+  static bool esRutaFoto(String foto) => foto.endsWith('.png') || foto.endsWith('.jpg');
+
+  static final _fotos = <String, Future<Uint8List>>{};
+
+  /// Bytes de una foto del bucket (se descargan una sola vez).
+  Future<Uint8List> foto(String ruta) =>
+      _fotos[ruta] ??= _db.storage.from(_bucket).download(ruta).catchError((Object e) {
+        _fotos.remove(ruta);
+        throw e;
+      });
+
+  Future<List<Informe>> informes(String trabajoId) async {
+    final r = await _db
+        .from('informes')
+        .select('id, trabajador_id, resultado, notas, material, minutos, fotos, firma, firmante, created_at')
+        .eq('trabajo_id', _u(trabajoId))
+        .order('created_at', ascending: false);
+    return [
+      for (final x in r)
+        Informe(
+          id: x['id'],
+          trabajoId: trabajoId,
+          trabajadorId: x['trabajador_id'],
+          resultado: x['resultado'],
+          notas: x['notas'],
+          material: x['material'],
+          minutos: x['minutos'],
+          fotos: List<String>.from(x['fotos'] as List),
+          firma: x['firma'],
+          firmante: x['firmante'],
+          cuando: DateTime.parse(x['created_at'] as String).toLocal(),
+        ),
+    ];
+  }
+
+  /// Sube las fotos (JPEG) y la firma (PNG) a `<empresa>/informes/<informe>/` y guarda el informe. Espera
+  /// antes a que el trabajo esté guardado, porque el informe apunta a él.
+  Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma) async {
+    await _cola;
+    final id = _uuidNuevo();
+    Future<String> subir(String nombre, Uint8List bytes, String tipo) async {
+      final ruta = '$empresaId/informes/$id/$nombre';
+      await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
+      _fotos[ruta] = Future.value(bytes);
+      return ruta;
+    }
+
+    final rutas = [for (var n = 0; n < fotos.length; n++) await subir('$n.jpg', fotos[n], 'image/jpeg')];
+    final rutaFirma = firma == null ? null : await subir('firma.png', firma, 'image/png');
+    final x = await _db
+        .from('informes')
+        .insert({
+          'id': id,
+          'empresa_id': empresaId,
+          'trabajo_id': _u(i.trabajoId),
+          'trabajador_id': i.trabajadorId == null ? null : _u(i.trabajadorId!),
+          'resultado': i.resultado,
+          'notas': i.notas,
+          'material': i.material,
+          'minutos': i.minutos,
+          'fotos': rutas,
+          'firma': rutaFirma,
+          'firmante': i.firmante,
+        })
+        .select('created_at')
+        .single();
+    return i.guardado(
+      id: id,
+      fotos: rutas,
+      firma: rutaFirma,
+      cuando: DateTime.parse(x['created_at'] as String).toLocal(),
+    );
+  }
+
+  /// Sube a Storage la foto en base64 de una fila de `clientes` o `trabajadores` y devuelve la fila con la
+  /// ruta. El nombre sale del contenido, así que reintentar no duplica.
+  Future<Map<String, dynamic>> _conFotoSubida(String tabla, Map<String, dynamic> f) async {
+    final foto = f['foto'] as String;
+    if (foto.isEmpty || esRutaFoto(foto)) return f;
+    final bytes = base64Decode(foto);
+    final ruta = '$empresaId/$tabla/${md5.convert(bytes)}.png';
+    await _db.storage
+        .from(_bucket)
+        .uploadBinary(ruta, bytes, fileOptions: const FileOptions(contentType: 'image/png', upsert: true));
+    _fotos[ruta] = Future.value(bytes);
+    return {...f, 'foto': ruta};
+  }
+
   /// Enlace que se manda a quien se invita: abre la app con el código puesto.
   static String enlace(String codigo) =>
       Uri.base.removeFragment().replace(queryParameters: {'invitacion': codigo}).toString();
@@ -128,9 +260,87 @@ class Nube {
   /// La última empresa abierta, para no cerrar la sesión con cambios sin guardar.
   static Nube? _abierta;
 
-  static Future<void> cerrarSesion() async {
+  static Future<void> cerrarSesion({bool enTodos = false}) async {
     await _abierta?._cola;
-    await _db.auth.signOut();
+    await _db.auth.signOut(scope: enTodos ? SignOutScope.global : SignOutScope.local);
+  }
+
+  // ── Cuenta ──
+
+  static String? get correo => _db.auth.currentUser?.email;
+
+  /// Nombre y foto de la cuenta (vacío si aún no los ha puesto).
+  static Future<({String nombre, String? foto})> perfil() async {
+    final r = await _db.from('perfiles').select('nombre, foto').eq('usuario_id', _db.auth.currentUser!.id);
+    return r.isEmpty ? (nombre: '', foto: null) : (nombre: r.first['nombre'] as String, foto: r.first['foto'] as String?);
+  }
+
+  static Future<void> guardarPerfil({required String nombre, String? foto}) =>
+      _db.from('perfiles').upsert({'usuario_id': _db.auth.currentUser!.id, 'nombre': nombre, 'foto': foto});
+
+  static Future<void> cambiarClave(String nueva) => _db.auth.updateUser(UserAttributes(password: nueva));
+
+  /// Supabase manda un enlace al correo nuevo; el cambio vale al pulsarlo.
+  static Future<void> cambiarCorreo(String nuevo) =>
+      _db.auth.updateUser(UserAttributes(email: nuevo), emailRedirectTo: _aqui());
+
+  /// Manda el correo de «olvidé mi contraseña»; el enlace vuelve a la app para poner una nueva.
+  static Future<void> recuperarClave(String correo) => _db.auth.resetPasswordForEmail(correo, redirectTo: _aqui());
+
+  static String _aqui() => Uri.base.removeFragment().replace(queryParameters: {}).toString();
+
+  /// Borra la cuenta y las empresas donde es el único miembro (función `borrar-cuenta`), y cierra la sesión.
+  static Future<void> borrarCuenta() async {
+    await _abierta?._cola;
+    await _db.functions.invoke('borrar-cuenta');
+    await _db.auth.signOut(scope: SignOutScope.local);
+  }
+
+  // ── Empresas ──
+
+  /// Empresas de la cuenta con su rol, por nombre.
+  static Future<List<({String id, String nombre, String rol})>> empresas() async {
+    final ms = await _db
+        .from('miembros')
+        .select('empresa_id, rol, empresas(nombre)')
+        .eq('usuario_id', _db.auth.currentUser!.id);
+    return [
+      for (final m in ms)
+        (id: m['empresa_id'] as String, nombre: (m['empresas'] as Map)['nombre'] as String, rol: m['rol'] as String),
+    ]..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+  }
+
+  /// Cambia a otra empresa de la cuenta (se recuerda para la próxima vez).
+  static Future<void> entrarEn(String empresaId) async {
+    await _abierta?._cola;
+    await (await SharedPreferences.getInstance()).setString('pulpo_empresa', empresaId);
+    reabrir.value++;
+  }
+
+  /// Crea otra empresa, la hace administradora y entra en ella.
+  static Future<void> crearEmpresa(String nombre, String tipo) async {
+    final e = await _db.from('empresas').insert({'nombre': nombre, 'tipo': tipo}).select('id').single();
+    final id = e['id'] as String;
+    await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
+    _recienCreada = id;
+    await entrarEn(id);
+  }
+
+  /// Nombre, tipo, CIF, dirección, teléfono y logo de la empresa abierta.
+  Future<Map<String, dynamic>> datosEmpresa() =>
+      _db.from('empresas').select('nombre, tipo, cif, direccion, telefono, logo').eq('id', empresaId).single();
+
+  Future<void> guardarEmpresa(Map<String, dynamic> datos) async {
+    await _db.from('empresas').update(datos).eq('id', empresaId);
+    reabrir.value++; // el nombre sale en Mi cuenta y en la barra
+  }
+
+  /// Borra la empresa abierta con todo lo suyo y pasa a otra (o a una nueva si no queda ninguna).
+  Future<void> borrarEmpresa() async {
+    await _cola;
+    await _db.from('empresas').delete().eq('id', empresaId);
+    await (await SharedPreferences.getInstance()).remove('pulpo_empresa');
+    reabrir.value++;
   }
 
   // ── Leer ──
@@ -227,8 +437,20 @@ class Nube {
     _store = s;
     _enviado.clear();
     if (!vacio) {
-      _filas(s).forEach((t, filas) => _enviado[t] = {for (final e in filas.entries) e.key: jsonEncode(e.value)});
+      _filas(s).forEach(
+        (t, filas) => _enviado[t] = {
+          for (final e in filas.entries)
+            // Fotos antiguas en base64: se dejan sin guardar para que se suban a Storage.
+            if (esTrabajador || !_fotoEnBase64(e.value)) e.key: jsonEncode(e.value),
+        },
+      );
+      if (!esTrabajador) sincronizar();
     }
+  }
+
+  static bool _fotoEnBase64(Map<String, dynamic> f) {
+    final foto = f['foto'];
+    return foto is String && foto.isNotEmpty && !esRutaFoto(foto);
   }
 
   static const _orden = [
@@ -269,7 +491,7 @@ class Nube {
     _cola = _cola.then((_) async {
       try {
         for (final t in _orden) {
-          final filas = subir[t];
+          var filas = subir[t];
           if (filas == null) continue;
           if (esTrabajador) {
             // Solo puede cambiar sus trabajos (estado y fechas) y marcarlos como hechos.
@@ -281,6 +503,9 @@ class Nube {
               await _db.from(t).upsert(filas, onConflict: _clave[t]!, ignoreDuplicates: true);
             }
             continue;
+          }
+          if (t == 'clientes' || t == 'trabajadores') {
+            filas = [for (final f in filas) await _conFotoSubida(t, f)];
           }
           for (var i = 0; i < filas.length; i += 200) {
             await _db
@@ -477,6 +702,16 @@ class Nube {
     }
     return r;
   }
+}
+
+/// Uuid v4 aleatorio, para dar nombre a la carpeta de fotos antes de guardar el informe.
+String _uuidNuevo() {
+  final r = Random.secure();
+  final b = [for (var i = 0; i < 16; i++) r.nextInt(256)];
+  b[6] = b[6] & 0x0f | 0x40;
+  b[8] = b[8] & 0x3f | 0x80;
+  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }
 
 /// Lo que se lee de la base al entrar.

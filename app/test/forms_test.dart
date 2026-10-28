@@ -57,9 +57,14 @@ void main() {
 
   testWidgets('desde Tareas se puede elegir cliente', (tester) async {
     await pintar(tester, const TareaForm());
-    // Una tarea nueva empieza sin cliente; el menú lista los clientes y ofrece crear uno nuevo.
+    // Un trabajo nuevo no propone cliente y empieza hoy.
+    expect(find.text('Elegir cliente'), findsOneWidget);
+    expect(find.textContaining('· hoy'), findsOneWidget);
+
+    // El menú de clientes lista los clientes y ofrece crear uno nuevo.
     await tester.tap(find.text('Elegir cliente'));
     await tester.pumpAndSettle();
+    expect(find.text('Ascensores Altura'), findsOneWidget);
     expect(find.text('Crear nuevo cliente'), findsOneWidget);
     await tester.tap(find.text('Ascensores Altura').last);
     await tester.pumpAndSettle();
