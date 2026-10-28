@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/ajustes.dart';
+import 'package:pulpo/models.dart';
 import 'package:pulpo/shell.dart';
 import 'package:pulpo/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -131,5 +132,47 @@ void main() {
       }
     }
     expect(borde, isNonNegative);
+  });
+
+  // Con muchos datos: 3000 trabajos repartidos en 60 días entre los técnicos de ejemplo.
+  testWidgets('rendimiento con 3000 trabajos', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final clientes = store.clientes.map((c) => c.id).toList();
+    final tecnicos = store.trabajadores.map((w) => w.id).toList();
+    store.tareas.addAll(List.generate(3000, (i) => Tarea(
+      id: 'm$i',
+      plantilla: false,
+      clienteId: clientes[i % clientes.length],
+      nombre: 'Revisión $i',
+      proximo: masDias(hoy(), i % 60 - 10),
+      inicioMin: 480 + (i % 20) * 30,
+      trabajadorIds: i % 7 == 0 ? [] : [tecnicos[i % tecnicos.length]],
+      periodicidad: Periodicidad.unica,
+    )));
+    final sw = Stopwatch()..start();
+    await tester.pumpWidget(const MaterialApp(home: Shell()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Itinerario').first);
+    await tester.pumpAndSettle();
+    debugPrint('== 3000 trabajos · abrir itinerario: ${sw.elapsedMilliseconds} ms');
+    for (final v in ['Calendario', 'Mes', 'Día', 'Semana', 'Plan']) {
+      sw.reset();
+      final c = await contar(() async {
+        await tester.tap(find.text(v).first);
+        for (var i = 0; i < 20; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+      });
+      informe('3000 trabajos · vista $v (${sw.elapsedMilliseconds} ms)', c, 20);
+      await tester.pumpAndSettle();
+    }
+    for (final seccion in ['Trabajos', 'Clientes', 'Inicio']) {
+      sw.reset();
+      await tester.tap(find.text(seccion).first);
+      await tester.pumpAndSettle();
+      debugPrint('== 3000 trabajos · abrir $seccion: ${sw.elapsedMilliseconds} ms');
+    }
   });
 }
