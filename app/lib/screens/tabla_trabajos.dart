@@ -12,8 +12,11 @@ class TablaTrabajos extends StatefulWidget {
   final List<Tarea> trabajos;
   final ValueChanged<String> onAbrir;
 
-  /// Columna de cliente: sobra en los subtrabajos, que comparten el de su trabajo.
+  /// Columna de cliente.
   final bool conCliente;
+
+  /// Ancho a partir del cual salen todas las columnas (la ficha de un trabajo es más estrecha que la página).
+  final double umbralAncho;
 
   /// Cómo se llama cada fila, en singular ('trabajo', 'subtrabajo').
   final String nombre;
@@ -22,6 +25,7 @@ class TablaTrabajos extends StatefulWidget {
     super.key,
     required this.onAbrir,
     this.conCliente = true,
+    this.umbralAncho = 1000,
     this.nombre = 'trabajo',
   });
 
@@ -45,6 +49,19 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
       store.borrarTarea(id);
     }
     salirSeleccion();
+  }
+
+  /// Cuántos subtrabajos tiene el trabajo.
+  Widget _subtrabajos(Tarea t) {
+    final n = store.hijas(t.id).length;
+    if (n == 0) return celdaTexto('', suave: true);
+    return Row(
+      children: [
+        Icon(Icons.account_tree_outlined, size: 14, color: P.textoSuave),
+        const SizedBox(width: 6),
+        celdaTexto('$n'),
+      ],
+    );
   }
 
   @override
@@ -80,9 +97,9 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   }
 
   Widget _tabla(List<Tarea> ts) => SegunTamano(
-    clave: (box) => (box.maxWidth > 1000, box.maxWidth > 600),
+    clave: (box) => (box.maxWidth > widget.umbralAncho, box.maxWidth > 600),
     builder: (context, box) {
-      final ancho = box.maxWidth > 1000;
+      final ancho = box.maxWidth > widget.umbralAncho;
       // Móvil: solo las columnas clave.
       final medio = box.maxWidth > 600;
       return Align(
@@ -96,6 +113,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Equipo / trabajo', flex: 4),
             if (medio && widget.conCliente) const Col('Cliente', flex: 3),
+            if (medio) const Col('Subtrabajos', ancho: 100),
             if (ancho) const Col('Periodicidad', flex: 2),
             const Col('Próximo', flex: 2),
             if (ancho) const Col('Horario', flex: 2),
@@ -147,6 +165,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                           Flexible(child: celdaTexto(c.nombre)),
                         ],
                       ),
+              if (medio) _subtrabajos(t),
               if (ancho) celdaTexto(t.periodicidad.etiqueta),
               t.proximo == null
                   ? celdaTexto('', suave: true)

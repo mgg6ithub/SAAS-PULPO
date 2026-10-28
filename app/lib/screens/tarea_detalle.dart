@@ -183,7 +183,7 @@ class _Resumen extends StatelessWidget {
         ),
       );
     }
-    final tabla = TablaTrabajos(hijas, onAbrir: onAbrir, conCliente: false, nombre: 'subtrabajo');
+    final tabla = TablaTrabajos(hijas, onAbrir: onAbrir, umbralAncho: 760, nombre: 'subtrabajo');
     // En vertical no hay alto que repartir: tanto como filas, hasta un tope.
     return fija ? SizedBox(height: (hijas.length * 52 + 96).clamp(140, 380).toDouble(), child: tabla) : tabla;
   }
