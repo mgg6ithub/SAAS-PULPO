@@ -273,13 +273,13 @@ void main() {
         expect(await _filas('clientes'), 0);
         expect(await _filas('trabajadores'), 0);
         expect(await _filas('etiquetas'), 0);
-        expect(await _filas('trabajos'), 4, reason: 'solo las plantillas iniciales');
+        expect(await _filas('trabajos'), 0);
         expect(await _filas('automatizaciones'), 0);
         expect(await _filas('trabajo_trabajadores'), 0);
         expect(await _filas('trabajo_historial'), 0);
         r = await _recargar();
-        expect(r.tareas.length, 4);
-        expect(r.tareas.every((t) => t.esPlantilla), isTrue);
+        expect(r.tareas, isEmpty);
+        expect(r.clientes, isEmpty);
         await Nube.cerrarSesion();
       });
     },

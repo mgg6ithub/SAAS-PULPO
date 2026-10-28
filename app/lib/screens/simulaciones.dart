@@ -156,7 +156,11 @@ class _SimulacionesState extends State<_Simulaciones> {
       await confirmar(context, 'Esto sustituye los datos de tu empresa en la base de datos. ¿Continuar?');
 
   Future<void> _vaciarNube() async {
-    if (!await confirmar(context, '¿Borrar de la base de datos todos los clientes, trabajadores y trabajos?')) return;
+    if (!await confirmar(
+      context,
+      '¿Borrar de la base de datos todos los clientes, trabajadores, trabajos y plantillas? Las cuentas se quedan.',
+    ))
+      return;
     await store.vaciarNube();
     if (mounted) _mostrarResultado('Base de datos limpia.');
   }
