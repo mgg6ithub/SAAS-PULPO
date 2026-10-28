@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
@@ -23,6 +25,9 @@ class TareaDetalle extends StatefulWidget {
 
 class _TareaDetalleState extends State<TareaDetalle> {
   int pestana = 0;
+
+  /// En Datos, el formulario solo se puede cambiar tras pulsar «Editar».
+  bool editando = false;
 
   @override
   Widget build(BuildContext context) {
@@ -62,20 +67,33 @@ class _TareaDetalleState extends State<TareaDetalle> {
             acciones: [
               t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
               const SizedBox(width: 4),
-              BotonPrimario(
-                'Subtrabajo',
-                conIcono: true,
-                icono: Icons.add_rounded,
-                tecla: 'N',
-                onPressed: () => abrirSubtrabajoRapido(context, t),
-              ),
+              if (pestana == 1)
+                (editando
+                    ? const SizedBox()
+                    : BotonPrimario(
+                        'Editar',
+                        conIcono: true,
+                        icono: Icons.edit_outlined,
+                        onPressed: () => setState(() => editando = true),
+                      ))
+              else
+                BotonPrimario(
+                  'Subtrabajo',
+                  conIcono: true,
+                  icono: Icons.add_rounded,
+                  tecla: 'N',
+                  onPressed: () => abrirSubtrabajoRapido(context, t),
+                ),
             ],
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
             opciones: const ['Resumen', 'Datos', 'Histórico'],
             seleccion: pestana,
-            onChanged: (i) => setState(() => pestana = i),
+            onChanged: (i) => setState(() {
+              pestana = i;
+              editando = false;
+            }),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -90,7 +108,15 @@ class _TareaDetalleState extends State<TareaDetalle> {
                     alignment: Alignment.topLeft,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 860),
-                      child: TareaForm(key: ValueKey(t.id), original: t, incrustada: true),
+                      // Al solo mirar, se rehace con cada cambio (cliente, asignado… hechos en otra pestaña);
+                      // al editar se conserva, para no perder lo escrito.
+                      child: TareaForm(
+                        key: ValueKey(editando ? '${t.id}-edicion' : '${t.id}-${jsonEncode(t.toJson()).hashCode}'),
+                        original: t,
+                        incrustada: true,
+                        soloLectura: !editando,
+                        onTerminar: () => setState(() => editando = false),
+                      ),
                     ),
                   ),
                   _ => Align(

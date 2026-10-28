@@ -74,6 +74,12 @@ class VentanaFormulario extends StatefulWidget {
 
   /// Incrustada sin cabecera (ni etiqueta ni título): solo los campos y el pie.
   final bool sinCabecera;
+
+  /// Incrustada solo para ver: no se puede escribir ni pulsar nada y no hay pie con Guardar.
+  final bool soloLectura;
+
+  /// Incrustada: cancela lo que se estaba editando (sale «Cancelar» junto a Guardar).
+  final VoidCallback? onCancelar;
   const VentanaFormulario({
     super.key,
     required this.titulo,
@@ -89,6 +95,8 @@ class VentanaFormulario extends StatefulWidget {
     this.avisos = const [],
     this.incrustada = false,
     this.sinCabecera = false,
+    this.soloLectura = false,
+    this.onCancelar,
   });
 
   @override
@@ -140,11 +148,16 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
               child: SingleChildScrollView(
                 controller: scroll,
                 padding: const EdgeInsets.fromLTRB(32, 6, 32, 32),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                child: AbsorbPointer(
+                  absorbing: widget.soloLectura,
+                  child: ExcludeFocus(
+                    excluding: widget.soloLectura,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                  ),
+                ),
               ),
             ),
-            const Divider(),
-            _pie(),
+            if (!widget.soloLectura) ...[const Divider(), _pie()],
           ],
         ),
       );
@@ -352,10 +365,10 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                   ),
                 ),
         ),
-        if (!widget.incrustada) ...[
+        if (!widget.incrustada || widget.onCancelar != null) ...[
           TextButton(
             style: TextButton.styleFrom(foregroundColor: P.textoSuave),
-            onPressed: () => Navigator.pop(context),
+            onPressed: widget.onCancelar ?? () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
           const SizedBox(width: 8),
@@ -1320,9 +1333,17 @@ class TareaForm extends StatefulWidget {
 
   /// Dentro de la ficha del trabajo: sin cabecera ni ventana, guarda sin cerrar.
   final bool incrustada;
+
+  /// Incrustada: solo se ve, hasta que se pasa a editar.
+  final bool soloLectura;
+
+  /// Incrustada: se llama al guardar o cancelar, para salir del modo edición.
+  final VoidCallback? onTerminar;
   const TareaForm({
     super.key,
     this.incrustada = false,
+    this.soloLectura = false,
+    this.onTerminar,
     this.padre,
     this.borrador,
     this.original,
@@ -1448,6 +1469,8 @@ class _TareaFormState extends State<TareaForm> {
       bajoBotones: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
       incrustada: widget.incrustada,
       sinCabecera: widget.incrustada,
+      soloLectura: widget.soloLectura,
+      onCancelar: widget.incrustada ? widget.onTerminar : null,
       onGuardar: guardar,
       avisos: [
         if (error != null) ('Te falta el nombre', () => _irA(_claveNombre)),
