@@ -5,13 +5,17 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'tabla_trabajos.dart';
 
 /// Ficha de un trabajo con pestañas, como la de un cliente: Resumen (cifras, subtrabajos e histórico)
 /// y Datos (el formulario del trabajo, editable directamente).
 class TareaDetalle extends StatefulWidget {
   final String tareaId;
   final VoidCallback onVolver;
-  const TareaDetalle({super.key, required this.tareaId, required this.onVolver});
+
+  /// Entrar en otro trabajo (un subtrabajo, o el trabajo del que cuelga).
+  final ValueChanged<String> onAbrir;
+  const TareaDetalle({super.key, required this.tareaId, required this.onVolver, required this.onAbrir});
 
   @override
   State<TareaDetalle> createState() => _TareaDetalleState();
@@ -20,23 +24,16 @@ class TareaDetalle extends StatefulWidget {
 class _TareaDetalleState extends State<TareaDetalle> {
   int pestana = 0;
 
-  Future<void> _nuevoSubtrabajo(Tarea t) async {
-    final nombre = await showDialog<String>(context: context, builder: (_) => const _NombreSubtrabajo());
-    if (nombre == null || nombre.isEmpty) return;
-    t.subtrabajos.add(Subtrabajo(id: store.nuevoId(), nombre: nombre));
-    store.guardarTarea(t);
-    setState(() => pestana = 0);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final t = store.tareas.where((x) => x.id == widget.tareaId).firstOrNull;
+    final t = store.tarea(widget.tareaId);
     if (t == null) {
       // Se acaba de borrar: volvemos a la lista.
       WidgetsBinding.instance.addPostFrameCallback((_) => widget.onVolver());
       return const SizedBox();
     }
     final cliente = store.cliente(t.clienteId);
+    final padre = store.tarea(t.padreId);
 
     return Padding(
       padding: margenPagina,
@@ -48,8 +45,8 @@ class _TareaDetalleState extends State<TareaDetalle> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  tooltip: 'Volver a Trabajos',
-                  onPressed: widget.onVolver,
+                  tooltip: padre == null ? 'Volver a Trabajos' : 'Volver a ${padre.nombre}',
+                  onPressed: padre == null ? widget.onVolver : () => widget.onAbrir(padre.id),
                   icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                 ),
                 const SizedBox(width: 4),
@@ -57,11 +54,19 @@ class _TareaDetalleState extends State<TareaDetalle> {
               ],
             ),
             titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
-            subtitulo: [t.tipo, cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : 'Sin cliente')].join(' · '),
+            subtitulo: [
+              t.tipo,
+              if (padre != null) 'Subtrabajo de ${padre.nombre}',
+              cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : 'Sin cliente'),
+            ].join(' · '),
             acciones: [
               pillEstado(t),
               const SizedBox(width: 4),
-              BotonPrimario('Subtrabajo', icono: Icons.add_rounded, onPressed: () => _nuevoSubtrabajo(t)),
+              BotonPrimario(
+                'Subtrabajo',
+                icono: Icons.add_rounded,
+                onPressed: () => abrirTareaForm(context, null, padre: t),
+              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -78,7 +83,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
               child: KeyedSubtree(
                 key: ValueKey(pestana),
                 child: pestana == 0
-                    ? _Resumen(t)
+                    ? _Resumen(t, widget.onAbrir)
                     : Align(
                         alignment: Alignment.topLeft,
                         child: ConstrainedBox(
@@ -97,7 +102,8 @@ class _TareaDetalleState extends State<TareaDetalle> {
 
 class _Resumen extends StatelessWidget {
   final Tarea t;
-  const _Resumen(this.t);
+  final ValueChanged<String> onAbrir;
+  const _Resumen(this.t, this.onAbrir);
 
   Widget _cifra(String etiqueta, String valor, String nota) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,53 +152,20 @@ class _Resumen extends StatelessWidget {
     ),
   );
 
+  /// Los subtrabajos, en la misma lista que los trabajos; se entra en cada uno para añadirle más.
   Widget _subtrabajos() {
-    if (t.subtrabajos.isEmpty) {
-      return const Consejo(
-        'Un trabajo grande se puede dividir en partes. Pulsa «Subtrabajo» arriba para añadir la primera.',
+    final hijas = store.hijas(t.id)
+      ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
+    if (hijas.isEmpty) {
+      return const Align(
+        alignment: Alignment.topLeft,
+        child: Consejo(
+          'Un trabajo grande se puede dividir en subtrabajos, cada uno con su fecha, color y equipo. '
+          'Pulsa «Subtrabajo» arriba para añadir el primero.',
+        ),
       );
     }
-    return SeccionTarjeta(
-      titulo: 'Subtrabajos',
-      subtitulo: '${t.subtrabajos.where((x) => x.hecho).length} de ${t.subtrabajos.length} hechos',
-      children: [
-        for (final x in t.subtrabajos)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 2, 6, 2),
-            child: Row(
-              children: [
-                Checkbox(
-                  visualDensity: VisualDensity.compact,
-                  value: x.hecho,
-                  onChanged: (v) {
-                    x.hecho = v ?? false;
-                    store.guardarTarea(t);
-                  },
-                ),
-                Expanded(
-                  child: Text(
-                    x.nombre,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      color: x.hecho ? P.textoSuave : P.texto,
-                      decoration: x.hecho ? TextDecoration.lineThrough : null,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Quitar subtrabajo',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {
-                    t.subtrabajos.remove(x);
-                    store.guardarTarea(t);
-                  },
-                  icon: Icon(Icons.close_rounded, size: 16, color: P.textoSuave),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
+    return TablaTrabajos(hijas, onAbrir: onAbrir, conCliente: false, nombre: 'subtrabajo');
   }
 
   @override
@@ -200,7 +173,13 @@ class _Resumen extends StatelessWidget {
     builder: (context, box) {
       if (box.maxWidth <= 900) {
         return ListView(
-          children: [_resumen(), const SizedBox(height: 16), _subtrabajos(), const SizedBox(height: 16), _Historico(t)],
+          children: [
+            _resumen(),
+            const SizedBox(height: 16),
+            SizedBox(height: 360, child: _subtrabajos()),
+            const SizedBox(height: 16),
+            _Historico(t),
+          ],
         );
       }
       // El resumen, compacto; todo el alto restante para la lista de subtrabajos y el histórico.
@@ -213,7 +192,7 @@ class _Resumen extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: SingleChildScrollView(child: _subtrabajos())),
+                Expanded(child: _subtrabajos()),
                 const SizedBox(width: 16),
                 SizedBox(width: 340, child: SingleChildScrollView(child: _Historico(t))),
               ],
@@ -258,54 +237,4 @@ class _Historico extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Pide el nombre del subtrabajo nuevo.
-class _NombreSubtrabajo extends StatefulWidget {
-  const _NombreSubtrabajo();
-
-  @override
-  State<_NombreSubtrabajo> createState() => _NombreSubtrabajoState();
-}
-
-class _NombreSubtrabajoState extends State<_NombreSubtrabajo> {
-  final nombre = TextEditingController();
-
-  @override
-  void dispose() {
-    nombre.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Dialog(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Nuevo subtrabajo',
-              style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: nombre,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Nombre', hintText: 'Caldera 3, extintor del pasillo…'),
-              onSubmitted: (v) => Navigator.pop(context, v.trim()),
-            ),
-            const SizedBox(height: 18),
-            Align(
-              alignment: Alignment.centerRight,
-              child: BotonPrimario('Añadir', onPressed: () => Navigator.pop(context, nombre.text.trim())),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }

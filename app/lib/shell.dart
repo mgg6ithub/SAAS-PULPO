@@ -164,7 +164,11 @@ class _ShellState extends State<Shell> {
   Widget _detalle() => clienteId != null
       ? ClienteDetalle(clienteId: clienteId!, onVolver: () => setState(() => clienteId = null))
       : tareaId != null
-      ? TareaDetalle(tareaId: tareaId!, onVolver: () => setState(() => tareaId = null))
+      ? TareaDetalle(
+          tareaId: tareaId!,
+          onVolver: () => setState(() => tareaId = null),
+          onAbrir: (id) => setState(() => tareaId = id),
+        )
       : TrabajadorDetalle(trabajadorId: trabajadorId!, onVolver: () => setState(() => trabajadorId = null));
 
   // Sin const: si no, el ListenableBuilder del store no las repinta al cambiar los datos.

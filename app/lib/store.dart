@@ -72,6 +72,10 @@ class Store extends ChangeNotifier {
   List<Cliente> clientes = [];
   List<Trabajador> trabajadores = [];
   List<Tarea> tareas = [];
+
+  /// Subtrabajos de cualquier nivel (cada uno apunta a su padre con `padreId`). Aparte de `tareas` para que
+  /// el calendario, el planificador y las cifras sigan viendo solo los trabajos.
+  List<Tarea> subtareas = [];
   List<EtiquetaTrabajo> etiquetas = [];
   SharedPreferences? _prefs;
 
@@ -86,6 +90,7 @@ class Store extends ChangeNotifier {
       clientes = [for (final x in j['clientes'] as List) Cliente.fromJson(x)];
       trabajadores = [for (final x in j['trabajadores'] as List) Trabajador.fromJson(x)];
       tareas = [for (final x in j['tareas'] as List) Tarea.fromJson(x)];
+      subtareas = [for (final x in j['subtareas'] as List? ?? []) Tarea.fromJson(x)];
       // Datos de ejemplo cargados antes de existir la marca: se reconocen por sus ids.
       demo = (j['demo'] as bool? ?? false) || _hayDemo;
       usoPlantillas = List<String>.from(j['usoPlantillas'] as List? ?? []);
@@ -109,6 +114,7 @@ class Store extends ChangeNotifier {
       'clientes': [for (final x in clientes) x.toJson()],
       'trabajadores': [for (final x in trabajadores) x.toJson()],
       'tareas': [for (final x in tareas) x.toJson()],
+      'subtareas': [for (final x in subtareas) x.toJson()],
       'demo': demo,
       'usoPlantillas': usoPlantillas,
       'etiquetas': [for (final x in etiquetas) x.toJson()],
@@ -149,6 +155,7 @@ class Store extends ChangeNotifier {
   void borrarCliente(String id) {
     clientes.removeWhere((c) => c.id == id);
     tareas.removeWhere((t) => t.clienteId == id);
+    subtareas.removeWhere((t) => t.clienteId == id);
     _cambio();
   }
 
@@ -206,17 +213,50 @@ class Store extends ChangeNotifier {
   bool esRecien(String id) =>
       id == recienId && recienEn != null && DateTime.now().difference(recienEn!).inMilliseconds < 2500;
 
-  void guardarTarea(Tarea t) {
-    if (!tareas.any((x) => x.id == t.id)) {
-      recienId = t.id;
-      recienEn = DateTime.now();
+  /// Un trabajo o un subtrabajo, de la lista que toque.
+  Tarea? tarea(String? id) {
+    for (final t in tareas) {
+      if (t.id == id) return t;
     }
-    _poner(tareas, t, (x) => x.id == t.id);
+    for (final t in subtareas) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  /// Subtrabajos directos de un trabajo o subtrabajo.
+  List<Tarea> hijas(String id) => subtareas.where((s) => s.padreId == id).toList();
+
+  void guardarTarea(Tarea t) {
+    if (t.padreId != null) {
+      // El subtrabajo comparte el cliente de su padre.
+      t.clienteId = tarea(t.padreId)?.clienteId;
+      _poner(subtareas, t, (x) => x.id == t.id);
+    } else {
+      if (!tareas.any((x) => x.id == t.id)) {
+        recienId = t.id;
+        recienEn = DateTime.now();
+      }
+      _poner(tareas, t, (x) => x.id == t.id);
+    }
+    _compartirCliente(t);
     _cambio();
   }
 
+  /// Los subtrabajos, a cualquier profundidad, siguen el cliente del trabajo.
+  void _compartirCliente(Tarea t) {
+    for (final h in hijas(t.id)) {
+      h.clienteId = t.clienteId;
+      _compartirCliente(h);
+    }
+  }
+
   void borrarTarea(String id) {
+    for (final h in hijas(id)) {
+      borrarTarea(h.id);
+    }
     tareas.removeWhere((t) => t.id == id);
+    subtareas.removeWhere((t) => t.id == id);
     _cambio();
   }
 
@@ -593,7 +633,7 @@ class Store extends ChangeNotifier {
   };
 
   /// Los ids de ejemplo son cortos (c0, w3, d17); los reales son marcas de tiempo largas.
-  static final _idDemo = RegExp(r'^[cwd]\d{1,3}$');
+  static final _idDemo = RegExp(r'^[cwds]\d{1,4}$');
   bool get _hayDemo => clientes.any((c) => _idDemo.hasMatch(c.id)) || trabajadores.any((w) => _idDemo.hasMatch(w.id));
 
   /// Quita los datos de ejemplo y deja la cuenta como estaba antes de cargarlos.
@@ -610,6 +650,7 @@ class Store extends ChangeNotifier {
     clientes.removeWhere((c) => _idDemo.hasMatch(c.id));
     trabajadores.removeWhere((w) => _idDemo.hasMatch(w.id));
     tareas.removeWhere((t) => _idDemo.hasMatch(t.id) || (t.clienteId != null && cliente(t.clienteId) == null));
+    subtareas.removeWhere((t) => tarea(t.padreId) == null || _idDemo.hasMatch(t.id));
     for (final t in tareas) {
       t.trabajadorIds.removeWhere((id) => trabajador(id) == null);
     }
@@ -620,6 +661,7 @@ class Store extends ChangeNotifier {
   void _inicial() {
     clientes = [];
     trabajadores = [];
+    subtareas = [];
     tareas = [
       Tarea(
         id: 'p1',

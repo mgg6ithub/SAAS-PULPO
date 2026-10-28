@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'tabla_trabajos.dart';
 import 'tarea_card.dart';
 
 /// Todas las tareas: las de cada cliente y las plantillas (sin cliente).
@@ -21,22 +22,6 @@ class _TareasPaginaState extends State<TareasPagina> {
   int pestana = 0; // 0 de clientes, 1 plantillas, 2 todas
   String? tipo;
   bool lista = true;
-  bool seleccionando = false;
-  final seleccion = <String>{};
-
-  void salirSeleccion() => setState(() {
-    seleccionando = false;
-    seleccion.clear();
-  });
-
-  Future<void> eliminarSeleccion() async {
-    final n = seleccion.length;
-    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'trabajo' : 'trabajos'}?')) return;
-    for (final id in seleccion) {
-      store.borrarTarea(id);
-    }
-    salirSeleccion();
-  }
 
   Future<void> _editarEtiqueta(EtiquetaTrabajo? e) => showDialog(context: context, builder: (_) => _EtiquetaDialogo(e));
 
@@ -80,14 +65,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                     width: 280,
                     onChanged: (v) => setState(() => q = v),
                   ),
-                  SelectorVista(
-                    lista: lista,
-                    onChanged: (v) => setState(() {
-                      lista = v;
-                      seleccionando = false;
-                      seleccion.clear();
-                    }),
-                  ),
+                  SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
                 ],
                 principal: BotonPrimario(
                   pestana == 1 ? 'Nueva plantilla' : 'Nuevo trabajo',
@@ -148,7 +126,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                             : null,
                       )
                     : lista
-                    ? _tabla(filtradas)
+                    ? TablaTrabajos(filtradas, onAbrir: widget.onAbrir)
                     // Solo se reconstruye al cambiar el nº de columnas; el ancho de cada tarjeta lo pone la Rejilla.
                     : ListaRejilla(
                         anchoMin: 420,
@@ -161,126 +139,9 @@ class _TareasPaginaState extends State<TareasPagina> {
             ],
           ),
         ),
-        if (seleccionando)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 24,
-            child: Center(
-              child: BarraSeleccion(
-                seleccionados: seleccion.length,
-                total: filtradas.length,
-                nombre: 'trabajos',
-                onTodos: () => setState(() {
-                  if (filtradas.every((t) => seleccion.contains(t.id))) {
-                    seleccion.removeAll(filtradas.map((t) => t.id));
-                  } else {
-                    seleccion.addAll(filtradas.map((t) => t.id));
-                  }
-                }),
-                onEliminar: eliminarSeleccion,
-                onSalir: salirSeleccion,
-              ),
-            ),
-          ),
       ],
     );
   }
-
-  Widget _tabla(List<Tarea> ts) => SegunTamano(
-    clave: (box) => (box.maxWidth > 1000, box.maxWidth > 600),
-    builder: (context, box) {
-      final ancho = box.maxWidth > 1000;
-      // Móvil: solo las columnas clave.
-      final medio = box.maxWidth > 600;
-      return Align(
-        alignment: Alignment.topCenter,
-        child: Tabla(
-          seleccionCabecera: BotonSeleccionLista(
-            activo: seleccionando,
-            onTap: () => seleccionando ? salirSeleccion() : setState(() => seleccionando = true),
-          ),
-          columnas: [
-            if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
-            const Col('Equipo / trabajo', flex: 4),
-            if (medio) const Col('Cliente', flex: 3),
-            if (ancho) const Col('Periodicidad', flex: 2),
-            const Col('Próximo', flex: 2),
-            if (ancho) const Col('Horario', flex: 2),
-            if (medio) const Col('Asignado a', ancho: 90),
-            const Col('Estado', ancho: 80, derecha: true),
-          ],
-          filas: ts.length,
-          onTap: (i) {
-            if (seleccionando) {
-              setState(() => seleccion.contains(ts[i].id) ? seleccion.remove(ts[i].id) : seleccion.add(ts[i].id));
-            } else {
-              widget.onAbrir(ts[i].id);
-            }
-          },
-          pie: pieTabla(ts.length, ts.length == 1 ? 'trabajo' : 'trabajos'),
-          celdas: (i) {
-            final t = ts[i];
-            final c = store.cliente(t.clienteId);
-            final vencida = t.proximo != null && diasHasta(t.proximo!) < 0;
-            return [
-              if (seleccionando) CirculoSeleccion(seleccion.contains(t.id)),
-              Row(
-                children: [
-                  BarraTipo(t.tipo, alto: 28, color: t.colorBloque),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        celdaTexto(t.nombre, negrita: true),
-                        Text(
-                          [t.tipo, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11.5, color: P.textoSuave),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (medio)
-                c == null
-                    ? (t.esPlantilla ? Etiqueta('Plantilla', P.morado) : celdaTexto('Sin cliente', suave: true))
-                    : Row(
-                        children: [
-                          Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
-                          const SizedBox(width: 8),
-                          Flexible(child: celdaTexto(c.nombre)),
-                        ],
-                      ),
-              if (ancho) celdaTexto(t.periodicidad.etiqueta),
-              t.proximo == null
-                  ? celdaTexto('', suave: true)
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          fecha(t.proximo),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: vencida ? P.rojo : P.texto,
-                            fontWeight: vencida ? FontWeight.w600 : FontWeight.w400,
-                          ),
-                        ),
-                        Text(relativo(t.proximo!), style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
-                      ],
-                    ),
-              if (ancho) celdaTexto(t.horario ?? '', suave: true),
-              if (medio) t.esPlantilla ? const SizedBox() : AvataresTrabajadores(t.trabajadorIds, size: 24),
-              pillEstado(t),
-            ];
-          },
-        ),
-      );
-    },
-  );
 }
 
 /// Filtro por tipo: píldora con el punto de color del tipo; la elegida, con borde de su color.

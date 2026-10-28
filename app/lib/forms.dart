@@ -1178,9 +1178,11 @@ Future<void> abrirTareaForm(
   DateTime? fecha,
   int? horaMin,
   String? trabajadorId,
+  Tarea? padre,
 }) => abrirPanel(
   context,
   TareaForm(
+    padre: padre,
     original: t,
     clienteId: clienteId,
     plantilla: plantilla,
@@ -1197,6 +1199,9 @@ class TareaForm extends StatefulWidget {
   final int? horaMin;
   final String? trabajadorId;
 
+  /// Crear un subtrabajo de este trabajo: hereda su cliente, tipo y fecha.
+  final Tarea? padre;
+
   /// Crear una plantilla (sin cliente) en vez de una tarea.
   final bool plantilla;
 
@@ -1205,6 +1210,7 @@ class TareaForm extends StatefulWidget {
   const TareaForm({
     super.key,
     this.incrustada = false,
+    this.padre,
     this.original,
     this.clienteId,
     this.plantilla = false,
@@ -1222,9 +1228,11 @@ class _TareaFormState extends State<TareaForm> {
       widget.original?.copia() ??
       Tarea(
         id: store.nuevoId(),
-        clienteId: widget.clienteId,
+        clienteId: widget.padre?.clienteId ?? widget.clienteId,
+        padreId: widget.padre?.id,
+        tipo: widget.padre?.tipo ?? 'Otro',
         plantilla: widget.plantilla,
-        proximo: widget.fecha ?? hoy(),
+        proximo: widget.fecha ?? widget.padre?.proximo ?? hoy(),
         periodicidad: widget.plantilla ? Periodicidad.mensual : Periodicidad.unica,
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
@@ -1314,8 +1322,10 @@ class _TareaFormState extends State<TareaForm> {
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
-      etiqueta: t.esPlantilla ? 'Plantillas' : 'Trabajos',
-      titulo: nueva ? (t.esPlantilla ? 'Nueva plantilla' : 'Nuevo trabajo') : nombre.text,
+      etiqueta: t.esPlantilla ? 'Plantillas' : (t.padreId != null ? 'Subtrabajos' : 'Trabajos'),
+      titulo: nueva
+          ? (t.esPlantilla ? 'Nueva plantilla' : (t.padreId != null ? 'Nuevo subtrabajo' : 'Nuevo trabajo'))
+          : nombre.text,
       tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
           ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
@@ -1407,7 +1417,16 @@ class _TareaFormState extends State<TareaForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     etiqueta('Cliente'),
-                    SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id)),
+                    // Un subtrabajo comparte el cliente de su trabajo.
+                    if (t.padreId != null)
+                      conMargen(
+                        Text(
+                          store.cliente(t.clienteId)?.nombre ?? 'Sin cliente',
+                          style: TextStyle(color: P.textoSuave),
+                        ),
+                      )
+                    else
+                      SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id)),
                   ],
                 ),
               ),
