@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:video_player/video_player.dart';
 
 import '../ajustes.dart';
+import '../forms.dart';
 import '../models.dart';
 import '../planificador.dart';
 import '../store.dart';
@@ -143,7 +144,8 @@ class ControlesRuta extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '${r.trabajador.nombreCompleto} · ${r.paradas.length} paradas · ${r.km.toStringAsFixed(1)} km',
+                          '${r.trabajador.nombreCompleto} · ${r.paradas.length} paradas · ${r.km.toStringAsFixed(1)} km · '
+                          '${duracion(r.minutosViaje)} de viaje',
                           style: const TextStyle(fontSize: 11.5),
                         ),
                       ],

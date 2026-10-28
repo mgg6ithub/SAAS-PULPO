@@ -753,6 +753,25 @@ class _MapaAgendaState extends State<MapaAgenda> {
   /// Color de las chinchetas: 0 cliente, 1 técnico, 2 tipo de mantenimiento.
   int colorPor = 0;
 
+  /// Zoom redondeado: al cambiar, se rehacen los grupos de chinchetas cercanas.
+  int zoom = 12;
+
+  /// Clientes cuyas chinchetas se tocarían a este zoom, juntos (agrupado simple, de uno en uno).
+  List<List<Cliente>> _grupos(List<Cliente> cs) {
+    const crs = Epsg3857();
+    final grupos = <(Offset, List<Cliente>)>[];
+    for (final c in cs) {
+      final p = crs.latLngToOffset(LatLng(c.lat!, c.lng!), zoom.toDouble());
+      final i = grupos.indexWhere((g) => (g.$1 - p).distance < 44);
+      if (i < 0) {
+        grupos.add((p, [c]));
+      } else {
+        grupos[i].$2.add(c);
+      }
+    }
+    return [for (final g in grupos) g.$2];
+  }
+
   Color _color(Cliente c, List<Tarea> ts) => switch (colorPor) {
     1 => () {
       final w = ts.expand((t) => t.trabajadorIds).map(store.trabajador).whereType<Trabajador>().firstOrNull;
@@ -824,6 +843,10 @@ class _MapaAgendaState extends State<MapaAgenda> {
               initialCenter: centro,
               initialZoom: ubicados.length > 1 ? 11.5 : 13,
               onTap: (_, _) => setState(() => elegido = null),
+              onMapReady: () => setState(() => zoom = mapa.camera.zoom.round()),
+              onPositionChanged: (camara, _) {
+                if (camara.zoom.round() != zoom) setState(() => zoom = camara.zoom.round());
+              },
               // Solo Bilbao y alrededores (Bizkaia).
               minZoom: 9.5,
               cameraConstraint: CameraConstraint.containCenter(
@@ -852,21 +875,46 @@ class _MapaAgendaState extends State<MapaAgenda> {
               if (planActual.value == null)
                 MarkerLayer(
                   markers: [
-                    for (final c in ubicados)
-                      Marker(
-                        point: LatLng(c.lat!, c.lng!),
-                        width: 40,
-                        height: 40,
-                        child: GestureDetector(
-                          onTap: () => setState(() => elegido = c.id),
-                          child: _Chincheta(
-                            _color(c, porCliente[c.id]!),
-                            porCliente[c.id]!.length,
-                            elegido == c.id,
-                            vencida: porCliente[c.id]!.any((t) => t.proximo != null && diasHasta(t.proximo!) < 0),
+                    for (final g in _grupos(ubicados))
+                      if (g.length > 1)
+                        // Varios clientes muy juntos: un círculo con cuántos son; al pulsarlo, se acerca.
+                        Marker(
+                          point: LatLng(
+                            g.map((c) => c.lat!).reduce((a, b) => a + b) / g.length,
+                            g.map((c) => c.lng!).reduce((a, b) => a + b) / g.length,
                           ),
-                        ),
-                      ),
+                          width: 44,
+                          height: 44,
+                          child: GestureDetector(
+                            onTap: () => mapa.fitCamera(
+                              CameraFit.bounds(
+                                bounds: LatLngBounds.fromPoints([for (final c in g) LatLng(c.lat!, c.lng!)]),
+                                padding: const EdgeInsets.all(80),
+                                maxZoom: 18,
+                              ),
+                            ),
+                            child: Tooltip(
+                              message: '${g.length} clientes · acercar',
+                              child: _Chincheta(P.morado, g.length, false, grupo: true),
+                            ),
+                          ),
+                        )
+                      else
+                        for (final c in g)
+                          Marker(
+                            point: LatLng(c.lat!, c.lng!),
+                            width: 40,
+                            height: 40,
+                            child: GestureDetector(
+                              onTap: () => setState(() => elegido = c.id),
+                              child: _Chincheta(
+                                _color(c, porCliente[c.id]!),
+                                porCliente[c.id]!.length,
+                                elegido == c.id,
+                                vencida: porCliente[c.id]!.any((t) => t.proximo != null && diasHasta(t.proximo!) < 0),
+                              ),
+                            ),
+                          ),
                   ],
                 ),
               const CapaRutas(),
@@ -955,7 +1003,10 @@ class _Chincheta extends StatelessWidget {
   final Color color;
   final int n;
   final bool elegida, vencida;
-  const _Chincheta(this.color, this.n, this.elegida, {this.vencida = false});
+
+  /// Grupo de varios clientes: con un anillo morado claro alrededor.
+  final bool grupo;
+  const _Chincheta(this.color, this.n, this.elegida, {this.vencida = false, this.grupo = false});
 
   @override
   Widget build(BuildContext context) => AnimatedScale(
@@ -966,7 +1017,14 @@ class _Chincheta extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        border: Border.all(color: vencida ? P.rojo : Colors.white, width: 3),
+        border: Border.all(
+          color: vencida
+              ? P.rojo
+              : grupo
+              ? P.moradoSuave
+              : Colors.white,
+          width: grupo ? 5 : 3,
+        ),
         boxShadow: [BoxShadow(color: color.withValues(alpha: .45), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Text(
