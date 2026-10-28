@@ -46,11 +46,12 @@ class _PlanificacionState extends State<Planificacion> {
   // y guardar), el itinerario sigue exactamente donde estaba.
   static int? _vista;
   static DateTime? _dia;
-  int get vista => _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? ajustes.vistaInicio).clamp(0, 1);
+  int get vista =>
+      _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? ajustes.vistaInicio).clamp(0, 1);
   set vista(int v) => _vista = v;
   DateTime get dia => _dia ??= hoy();
   set dia(DateTime d) => _dia = d;
-  late bool mapa = widget.mapa && Uri.base.queryParameters['mapa'] != '0';
+  late bool mapa = false;
 
   /// Ancho del mapa (se ajusta arrastrando el separador); null = el de por defecto. Va en un
   /// ValueNotifier: arrastrar solo maqueta de nuevo la fila del calendario y el mapa, no toda la página.
@@ -67,9 +68,13 @@ class _PlanificacionState extends State<Planificacion> {
   /// Panel lateral con los trabajos sin técnico.
   bool sinAsignar = false;
   ModoCalendario modoCalendario = ModoCalendario.semana;
-  int get escala => vista == 0 ? 0 : switch (modoCalendario) {
-    ModoCalendario.dia => 0, ModoCalendario.semana => 1, ModoCalendario.mes => 2,
-  };
+  int get escala => vista == 0
+      ? 0
+      : switch (modoCalendario) {
+          ModoCalendario.dia => 0,
+          ModoCalendario.semana => 1,
+          ModoCalendario.mes => 2,
+        };
 
   DateTime get lunes => lunesDe(dia);
 
@@ -102,7 +107,11 @@ class _PlanificacionState extends State<Planificacion> {
   (DateTime, DateTime, String) get periodo => switch (escala) {
     0 => (dia, dia, diasHasta(dia) == 0 ? 'hoy' : '${diasSemana[dia.weekday - 1].toLowerCase()} ${dia.day}'),
     1 => (lunes, masDias(lunes, 6), 'semana ${rangoSemana(lunes)}'),
-    2 => (DateTime(dia.year, dia.month), DateTime(dia.year, dia.month + 1, 0), meses[dia.month - 1].toLowerCase()),
+    2 => (
+      DateTime(dia.year, dia.month),
+      DateTime(dia.year, dia.month + 1, 0),
+      meses[dia.month - 1].toLowerCase(),
+    ),
     3 => (hoy(), masDias(hoy(), 7), 'próximos 7 días'),
     _ => (masDias(hoy(), -1), masDias(hoy(), 2), 'de ayer a pasado mañana'),
   };
@@ -119,7 +128,11 @@ class _PlanificacionState extends State<Planificacion> {
     final corto = mes.substring(0, 3).toLowerCase();
     return switch (escala) {
       0 => [titulo, '${dia.day} de ${mes.toLowerCase()}', '${dia.day} $corto', '${dia.day}'],
-      1 => [titulo, rangoSemana(lunes), '${lunes.day} ${meses[lunes.month - 1].substring(0, 3).toLowerCase()}'],
+      1 => [
+        titulo,
+        rangoSemana(lunes),
+        '${lunes.day} ${meses[lunes.month - 1].substring(0, 3).toLowerCase()}',
+      ],
       2 => [titulo, mes, corto],
       3 => ['Próximos 7 días', '7 días'],
       _ => ['De ayer a pasado mañana', '3 días'],
@@ -152,21 +165,31 @@ class _PlanificacionState extends State<Planificacion> {
         },
       ),
       _ => CalendarioTrabajos(
-        dia: dia, modo: modoCalendario,
+        dia: dia,
+        modo: modoCalendario,
         onModo: (m) => setState(() => modoCalendario = m),
-        onDia: (d) => setState(() { dia = d; modoCalendario = ModoCalendario.dia; }),
+        onDia: (d) => setState(() {
+          dia = d;
+          modoCalendario = ModoCalendario.dia;
+        }),
       ),
     };
     final calendario = RepaintBoundary(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
-        layoutBuilder: (actual, anteriores) => Stack(fit: StackFit.expand, children: [...anteriores, ?actual]),
+        layoutBuilder: (actual, anteriores) =>
+            Stack(fit: StackFit.expand, children: [...anteriores, ?actual]),
         child: contenido,
       ),
     );
     final panel = RepaintBoundary(child: PanelSinAsignar(onCerrar: () => setState(() => sinAsignar = false)));
     final mapaVista = RepaintBoundary(
-      child: MapaAgenda(key: ValueKey('mapa-$desde-$hasta'), desde: desde, hasta: hasta, periodo: nombrePeriodo),
+      child: MapaAgenda(
+        key: ValueKey('mapa-$desde-$hasta'),
+        desde: desde,
+        hasta: hasta,
+        periodo: nombrePeriodo,
+      ),
     );
     // Más sitio para el calendario y el mapa: márgenes estrechos y una sola barra compacta.
     final pagina = Padding(
@@ -183,8 +206,16 @@ class _PlanificacionState extends State<Planificacion> {
                 children: [
                   ...[
                     NavegadorFecha(
-                      anterior: escala == 0 ? 'Día anterior' : escala == 1 ? 'Semana anterior' : 'Mes anterior',
-                      siguiente: escala == 0 ? 'Día siguiente' : escala == 1 ? 'Semana siguiente' : 'Mes siguiente',
+                      anterior: escala == 0
+                          ? 'Día anterior'
+                          : escala == 1
+                          ? 'Semana anterior'
+                          : 'Mes anterior',
+                      siguiente: escala == 0
+                          ? 'Día siguiente'
+                          : escala == 1
+                          ? 'Semana siguiente'
+                          : 'Mes siguiente',
                       onAnterior: () => mover(-1),
                       onHoy: () => setState(() => dia = hoy()),
                       onSiguiente: () => mover(1),
@@ -250,14 +281,14 @@ class _PlanificacionState extends State<Planificacion> {
                         final t = store.tareas.where((x) => store.esRecien(x.id)).firstOrNull;
                         if (t?.proximo != null && mounted) {
                           final (d, h, _) = periodo;
-                          if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h)) setState(() => dia = t.proximo!);
+                          if (t!.proximo!.isBefore(d) || t.proximo!.isAfter(h))
+                            setState(() => dia = t.proximo!);
                         }
                       },
                     ),
                   if (vista == 1) const SizedBox(width: 8),
                   // El pulpo: organiza el día que estás viendo.
                   BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = true)),
-                  if (vista == 1) ...[const SizedBox(width: 8), _BotonMapa(mapa, () => setState(() => mapa = !mapa))],
                 ],
               );
               // Con menos de 900 los botones van solo con icono: así caben junto a la fecha sin solaparse.
@@ -275,7 +306,7 @@ class _PlanificacionState extends State<Planificacion> {
               // Calendario y mapa se crean fuera (más arriba): al redimensionar o arrastrar el separador,
               // aquí solo se recoloca la fila con las mismas instancias, sin reconstruirlas.
               builder: (context, box) {
-                final conMapa = vista == 1 && mapa && box.maxWidth > 760;
+                final conMapa = false;
                 final maxMapa = max(260.0, box.maxWidth - 360);
                 // El mapa se monta la primera vez que se muestra y luego ya no se desmonta.
                 if (conMapa) mapaVisto = true;
@@ -316,7 +347,8 @@ class _PlanificacionState extends State<Planificacion> {
                                 children: [
                                   _Separador(
                                     onInicio: () => anchoMapa.value = ancho(a),
-                                    onMover: (dx) => anchoMapa.value = (anchoMapa.value! - dx).clamp(260.0, maxMapa),
+                                    onMover: (dx) =>
+                                        anchoMapa.value = (anchoMapa.value! - dx).clamp(260.0, maxMapa),
                                   ),
                                   SizedBox(width: ancho(a), child: mapaVista),
                                 ],
@@ -368,7 +400,10 @@ class _GuiaOrganizarPainter extends CustomPainter {
     final foco = boton.inflate(7);
     canvas.saveLayer(limites, Paint());
     canvas.drawRect(limites, Paint()..color = Colors.black.withValues(alpha: .48));
-    canvas.drawRRect(RRect.fromRectAndRadius(foco, const Radius.circular(14)), Paint()..blendMode = BlendMode.clear);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(foco, const Radius.circular(14)),
+      Paint()..blendMode = BlendMode.clear,
+    );
     canvas.restore();
 
     canvas.drawRRect(
@@ -458,7 +493,9 @@ class _Tablero extends StatelessWidget {
   Widget build(BuildContext context) {
     final activas = store.tareas.where((t) => !t.esPlantilla && t.activa).toList();
     final realizadas =
-        activas.where((t) => t.ultimo != null && diasHasta(t.ultimo!) >= -30 && diasHasta(t.ultimo!) <= 0).toList()
+        activas
+            .where((t) => t.ultimo != null && diasHasta(t.ultimo!) >= -30 && diasHasta(t.ultimo!) <= 0)
+            .toList()
           ..sort((a, b) => b.ultimo!.compareTo(a.ultimo!));
     final actual = activas.where((t) => t.proximo != null && diasHasta(t.proximo!) <= 7).toList()
       ..sort((a, b) => a.proximo!.compareTo(b.proximo!));
@@ -474,7 +511,15 @@ class _Tablero extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Columna('Realizadas', 'Últimos 30 días', P.verde, realizadas, w, box.maxHeight, realizada: true),
+                _Columna(
+                  'Realizadas',
+                  'Últimos 30 días',
+                  P.verde,
+                  realizadas,
+                  w,
+                  box.maxHeight,
+                  realizada: true,
+                ),
                 const SizedBox(width: 16),
                 _Columna(
                   'Actual',
@@ -581,7 +626,10 @@ class _Columna extends StatelessWidget {
     width: width,
     height: height,
     padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(color: P.hover.withValues(alpha: .5), borderRadius: BorderRadius.circular(P.radio + 4)),
+    decoration: BoxDecoration(
+      color: P.hover.withValues(alpha: .5),
+      borderRadius: BorderRadius.circular(P.radio + 4),
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -645,7 +693,10 @@ class _BotonSinAsignar extends StatelessWidget {
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-            decoration: BoxDecoration(color: P.ambar.withValues(alpha: .14), borderRadius: BorderRadius.circular(99)),
+            decoration: BoxDecoration(
+              color: P.ambar.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(99),
+            ),
             child: Text(
               '$n',
               style: const TextStyle(color: P.ambar, fontSize: 12, fontWeight: FontWeight.w700),
@@ -695,7 +746,10 @@ class _SeparadorState extends State<_Separador> {
                 duration: const Duration(milliseconds: 150),
                 width: activo ? 4 : 2,
                 height: activo ? caja.maxHeight : 40,
-                decoration: BoxDecoration(color: activo ? P.morado : P.borde, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(
+                  color: activo ? P.morado : P.borde,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
           ),

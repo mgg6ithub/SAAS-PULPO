@@ -15,10 +15,24 @@ Future<void> main() async {
   final barra = double.tryParse(Uri.base.queryParameters['barra'] ?? '');
   if (barra != null) ajustes.anchoBarra = barra;
   final oscuro = Uri.base.queryParameters['oscuro'];
-  if (oscuro != null) ajustes.tema = oscuro == '1' ? ThemeMode.dark : ThemeMode.light;
+  if (oscuro != null)
+    ajustes.tema = oscuro == '1' ? ThemeMode.dark : ThemeMode.light;
   await store.cargar();
+  // La rama de revisión del calendario abre con veinte trabajos simultáneos para verificar el día.
+  if (Uri.base.queryParameters['calendarioDemo'] == '1') {
+    store.cargarSimulacion(
+      equipo: 1,
+      cuentas: 20,
+      cantidadTareas: 20,
+      desde: DateTime(2026, 10, 28),
+      hasta: DateTime(2026, 10, 28),
+      permitirSolapes: true,
+      trabajosSimultaneos: 20,
+    );
+  }
   // ?demo=1 carga la empresa de ejemplo si la cuenta está vacía (útil para capturas).
-  if (Uri.base.queryParameters['demo'] == '1' && store.clientes.isEmpty) store.cargarDemo();
+  if (Uri.base.queryParameters['demo'] == '1' && store.clientes.isEmpty)
+    store.cargarDemo();
   runApp(const PulpoApp());
 }
 
@@ -74,12 +88,17 @@ class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
     // Arrastrar con el ratón para el scroll horizontal de la vista principal. Sin rebote: en el Mac la web
     // rebotaba y dejaba "desplazar" vistas que ya caben enteras.
     scrollBehavior: const MaterialScrollBehavior().copyWith(
-      dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
+      dragDevices: {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      },
       physics: const ClampingScrollPhysics(),
     ),
     // Tamaño de letra de Ajustes (accesibilidad): escala todo el texto, ventanas incluidas.
     builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(ajustes.escalaTexto)),
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: TextScaler.linear(ajustes.escalaTexto)),
       child: child!,
     ),
     home: const Shell(),

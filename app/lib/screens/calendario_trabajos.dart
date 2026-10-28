@@ -82,39 +82,6 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
     super.dispose();
   }
 
-  Widget _menu<T>(
-    String texto,
-    IconData icono,
-    List<(T, Widget)> opciones,
-    T? valor,
-    ValueChanged<T> cambiar,
-  ) => BotonMenu<T>(
-    tooltip: texto,
-    opciones: opciones,
-    seleccionado: valor,
-    onSelected: cambiar,
-    child: Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: P.borde),
-        borderRadius: BorderRadius.circular(P.radioControl),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icono, size: 17),
-          const SizedBox(width: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 130),
-            child: Text(texto, overflow: TextOverflow.ellipsis),
-          ),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-        ],
-      ),
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     final contenido = Column(
@@ -132,21 +99,6 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
                     onChanged: (i) => widget.onModo(ModoCalendario.values[i]),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              _menu<String>(
-                filtro.tecnicos.isEmpty ? 'Equipo' : 'Filtrado',
-                Icons.people_outline_rounded,
-                [
-                  ('', const Text('Todo el equipo')),
-                  for (final w in store.trabajadores.where((w) => w.activo)) (w.id, Text(w.nombreCompleto)),
-                ],
-                filtro.tecnicos.firstOrNull ?? '',
-                (id) {
-                  filtro.tecnicos.clear();
-                  if (id.isNotEmpty) filtro.tecnicos.add(id);
-                  _actualizar();
-                },
               ),
             ],
           ),
@@ -174,7 +126,6 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
                 key: ValueKey('dia-$desde'),
                 dia: desde,
                 visitas: visitas[desde] ?? [],
-                tecnicos: filtro.tecnicos,
                 onDetalle: _detalle,
               ),
             },
@@ -557,21 +508,14 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
 class _DiaCalendario extends StatefulWidget {
   final DateTime dia;
   final List<VisitaCalendario> visitas;
-  final Set<String> tecnicos;
   final ValueChanged<String> onDetalle;
-  const _DiaCalendario({
-    super.key,
-    required this.dia,
-    required this.visitas,
-    required this.tecnicos,
-    required this.onDetalle,
-  });
+  const _DiaCalendario({super.key, required this.dia, required this.visitas, required this.onDetalle});
   @override
   State<_DiaCalendario> createState() => _DiaCalendarioState();
 }
 
 class _DiaCalendarioState extends State<_DiaCalendario> {
-  static const hora = 130.0;
+  static const hora = 130.0, lateralFijo = 180.0;
   final horizontal = ScrollController(initialScrollOffset: 7.5 * hora);
   final desplazamiento = ValueNotifier<double>(7.5 * hora);
   final vertical = ScrollController();
@@ -593,19 +537,16 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
   void _filas() {
     filas = [];
     final equipos = <String, List<VisitaCalendario>>{'': []};
-    for (final w in store.trabajadores.where(
-      (w) => w.activo && (widget.tecnicos.isEmpty || widget.tecnicos.contains(w.id)),
-    )) {
+    for (final w in store.trabajadores.where((w) => w.activo)) {
       equipos[w.id] = [];
     }
     for (final v in widget.visitas) {
       final ids = v.tarea.trabajadorIds.where((id) => store.trabajador(id) != null).toList();
       for (final id in ids.isEmpty ? [''] : ids) {
-        if (widget.tecnicos.isEmpty || widget.tecnicos.contains(id)) (equipos[id] ??= []).add(v);
+        (equipos[id] ??= []).add(v);
       }
     }
     for (final e in equipos.entries) {
-      if (e.key.isEmpty && widget.tecnicos.isNotEmpty) continue;
       final nombre = e.key.isEmpty ? 'Sin asignar' : store.trabajador(e.key)!.nombreCompleto;
       final sinHora = e.value.where((v) => v.inicio == null).toList();
       for (final v in sinHora) {
@@ -636,7 +577,7 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final lateral = box.maxWidth < 600 ? 110.0 : 180.0;
+      const lateral = lateralFijo;
       final escala = MediaQuery.textScalerOf(context).scale(1);
       final alto = 76.0 * escala;
       return Column(
@@ -662,8 +603,9 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                     child: SingleChildScrollView(
                       controller: horizontal,
                       scrollDirection: Axis.horizontal,
+                      physics: const ClampingScrollPhysics(),
                       child: SizedBox(
-                        width: 24 * hora,
+                        width: max(box.maxWidth - lateral, 24 * hora),
                         child: Row(
                           children: [
                             for (var h = 0; h < 24; h++)
@@ -733,7 +675,11 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                             builder: (context, offset, _) => LayoutBuilder(
                               builder: (context, espacio) => Stack(
                                 children: [
-                                  Positioned.fill(
+                                  Positioned(
+                                    left: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: 24 * hora,
                                     child: CustomPaint(
                                       painter: _RejillaCalendario(
                                         horizontal: true,
@@ -743,7 +689,11 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                                       ),
                                     ),
                                   ),
-                                  Positioned.fill(
+                                  Positioned(
+                                    left: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: 24 * hora,
                                     child: GestureDetector(
                                       behavior: HitTestBehavior.translucent,
                                       onTapUp: (e) => abrirTareaForm(
@@ -751,21 +701,20 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                                         null,
                                         fecha: widget.dia,
                                         trabajadorId: f.id,
-                                        horaMin: (((e.localPosition.dx + offset) / hora * 60) ~/ 15 * 15)
-                                            .clamp(0, 1425),
+                                        horaMin: ((e.localPosition.dx / hora * 60) ~/ 15 * 15).clamp(0, 1425),
                                       ),
                                     ),
                                   ),
                                   for (final v in f.visitas)
                                     if (f.sinHora ||
-                                        (v.fin! / 60 * hora > offset &&
-                                            v.inicio! / 60 * hora < offset + espacio.maxWidth))
+                                        (v.inicio! / 60 * hora < offset + espacio.maxWidth &&
+                                            v.fin! / 60 * hora > offset))
                                       Positioned(
-                                        left: f.sinHora ? 6 : v.inicio! / 60 * hora - offset + 2,
+                                        left: f.sinHora ? 6 : v.inicio! / 60 * hora + 2,
                                         top: 7,
                                         height: alto - 14,
                                         width: f.sinHora
-                                            ? max(40, espacio.maxWidth - 12)
+                                            ? max(40, 24 * hora - 12)
                                             : max(hora / 2 - 4, (v.fin! - v.inicio!) / 60 * hora - 4),
                                         child: _EventoCalendario(v, onDetalle: widget.onDetalle),
                                       ),
