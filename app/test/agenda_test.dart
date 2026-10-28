@@ -77,7 +77,8 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Revisión urgente');
     await tester.pumpAndSettle();
     expect(find.textContaining('10:30'), findsWidgets);
-    expect(find.textContaining(fecha(masDias(hoy(), 2))), findsOneWidget);
+    final d = masDias(hoy(), 2);
+    expect(find.textContaining(RegExp('^\\S+ ${d.day} \\S+ · ${relativo(d).toLowerCase()}\$')), findsOneWidget);
   });
 
   testWidgets('una tarea nueva aparece al momento en el itinerario', (tester) async {
