@@ -61,7 +61,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
             acciones: [
               pillEstado(t),
               const SizedBox(width: 4),
-              BotonPrimario('Subtrabajo', onPressed: () => _nuevoSubtrabajo(t)),
+              BotonPrimario('Subtrabajo', icono: Icons.add_rounded, onPressed: () => _nuevoSubtrabajo(t)),
             ],
           ),
           const SizedBox(height: 18),
