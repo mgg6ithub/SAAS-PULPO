@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/models.dart';
+import 'package:pulpo/screens/agenda_vistas.dart';
 import 'package:pulpo/screens/planificacion.dart';
 import 'package:pulpo/screens/vista_dias.dart';
 import 'package:pulpo/store.dart';
@@ -58,7 +59,7 @@ void main() {
     expect(store.automatizar(actual), 0); // lo que queda no lo puede hacer nadie
   });
 
-  for (final (i, nombre) in ['Día', 'Semana', 'Mes', 'Tablero', 'Línea'].indexed) {
+  for (final nombre in ['Plan', 'Calendario']) {
     testWidgets('La agenda se pinta en la vista $nombre', (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1;
@@ -66,7 +67,15 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Planificacion(mapa: false))));
       await tester.tap(find.text(nombre));
       await tester.pumpAndSettle();
-      expect(find.text(i == 3 ? 'Actual' : 'Hoy'), findsWidgets);
+      expect(find.text('Hoy'), findsWidgets);
+      // El mapa va apagado al entrar; solo en Calendario está su botón.
+      expect(find.byTooltip('Mostrar mapa'), nombre == 'Calendario' ? findsOneWidget : findsNothing);
+      if (nombre == 'Calendario') {
+        await tester.tap(find.byTooltip('Mostrar mapa'));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(MapaAgenda), findsOneWidget);
+        expect(find.byTooltip('Ocultar mapa'), findsOneWidget);
+      }
     });
   }
 
