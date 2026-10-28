@@ -756,6 +756,16 @@ class _MapaAgendaState extends State<MapaAgenda> {
   /// Zoom redondeado: al cambiar, se rehacen los grupos de chinchetas cercanas.
   int zoom = 12;
 
+  /// Ruta a mano: clientes pulsados, en orden (null = no se está armando).
+  List<String>? ruta;
+
+  /// Asigna los trabajos de los clientes elegidos, en ese orden, a [w] y dibuja la ruta.
+  void _asignarRuta(Trabajador w, Map<String, List<Tarea>> porCliente) {
+    final orden = [for (final id in ruta!) ...porCliente[id]!.where((t) => !t.hechaEl(widget.desde))];
+    aplicar(rutaManual(widget.desde, w, orden));
+    setState(() => ruta = null);
+  }
+
   /// Clientes cuyas chinchetas se tocarían a este zoom, juntos (agrupado simple, de uno en uno).
   List<List<Cliente>> _grupos(List<Cliente> cs) {
     const crs = Epsg3857();
@@ -906,11 +916,18 @@ class _MapaAgendaState extends State<MapaAgenda> {
                             width: 40,
                             height: 40,
                             child: GestureDetector(
-                              onTap: () => setState(() => elegido = c.id),
+                              // Armando una ruta: cada toque añade o quita el cliente; el número es su orden.
+                              onTap: () => setState(() {
+                                if (ruta == null) {
+                                  elegido = c.id;
+                                } else if (!ruta!.remove(c.id)) {
+                                  ruta!.add(c.id);
+                                }
+                              }),
                               child: _Chincheta(
-                                _color(c, porCliente[c.id]!),
-                                porCliente[c.id]!.length,
-                                elegido == c.id,
+                                ruta != null && !ruta!.contains(c.id) ? P.gris : _color(c, porCliente[c.id]!),
+                                ruta?.contains(c.id) == true ? ruta!.indexOf(c.id) + 1 : porCliente[c.id]!.length,
+                                elegido == c.id || ruta?.contains(c.id) == true,
                                 vencida: porCliente[c.id]!.any((t) => t.proximo != null && diasHasta(t.proximo!) < 0),
                               ),
                             ),
@@ -948,7 +965,18 @@ class _MapaAgendaState extends State<MapaAgenda> {
             ),
           ),
           // Herramientas: color de las chinchetas, leyenda y encuadrar.
-          if (sel == null)
+          if (ruta != null)
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: _ArmarRuta(
+                paradas: ruta!.length,
+                onAsignar: (w) => _asignarRuta(w, porCliente),
+                onCancelar: () => setState(() => ruta = null),
+              ),
+            )
+          else if (sel == null)
             Positioned(
               left: 12,
               right: 12,
@@ -957,6 +985,13 @@ class _MapaAgendaState extends State<MapaAgenda> {
                 colorPor: colorPor,
                 onColor: (i) => setState(() => colorPor = i),
                 onEncuadrar: () => encuadrar(ubicados),
+                // Solo con un día a la vista y sin un plan dibujado.
+                onArmarRuta: diasHasta(widget.desde) == diasHasta(widget.hasta) && planActual.value == null
+                    ? () => setState(() {
+                        elegido = null;
+                        ruta = [];
+                      })
+                    : null,
                 leyenda: switch (colorPor) {
                   1 => [
                     for (final w in store.trabajadores.where(
@@ -1099,16 +1134,87 @@ class _FichaMapa extends StatelessWidget {
 }
 
 /// Barra flotante bajo el mapa: colorear por cliente / técnico / tipo, leyenda y encuadrar.
+/// Barra mientras se arma una ruta a mano: cuántas paradas, a quién se asigna y cancelar.
+class _ArmarRuta extends StatelessWidget {
+  final int paradas;
+  final ValueChanged<Trabajador> onAsignar;
+  final VoidCallback onCancelar;
+  const _ArmarRuta({required this.paradas, required this.onAsignar, required this.onCancelar});
+
+  @override
+  Widget build(BuildContext context) {
+    final tecnicos = store.trabajadores.where((w) => w.activo).toList();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: P.superficie,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .12), blurRadius: 12)],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              paradas == 0 ? 'Pulsa los clientes en el orden de la ruta' : '$paradas paradas',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Enlace('Cancelar', onTap: onCancelar),
+          const SizedBox(width: 6),
+          if (paradas > 0 && tecnicos.isNotEmpty)
+            BotonMenu<String>(
+              tooltip: 'Elegir el técnico de esta ruta',
+              onSelected: (id) => onAsignar(tecnicos.firstWhere((w) => w.id == id)),
+              opciones: [
+                for (final w in tecnicos)
+                  (
+                    w.id,
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(color: colorPaleta(w.color), shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(w.nombreCompleto),
+                      ],
+                    ),
+                  ),
+              ],
+              child: Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(color: P.morado, borderRadius: BorderRadius.circular(P.radioControl)),
+                alignment: Alignment.center,
+                child: const Text(
+                  'Asignar a…',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HerramientasMapa extends StatelessWidget {
   final int colorPor;
   final ValueChanged<int> onColor;
   final VoidCallback onEncuadrar;
+
+  /// Empezar una ruta a mano (null = no se puede: más de un día a la vista o ya hay un plan).
+  final VoidCallback? onArmarRuta;
   final List<(String, Color)> leyenda;
   const _HerramientasMapa({
     required this.colorPor,
     required this.onColor,
     required this.onEncuadrar,
     required this.leyenda,
+    this.onArmarRuta,
   });
 
   @override
@@ -1139,6 +1245,15 @@ class _HerramientasMapa extends StatelessWidget {
                 ),
               ),
             ),
+            if (onArmarRuta != null)
+              Tooltip(
+                message: 'Armar una ruta a mano: pulsa los clientes en orden',
+                child: IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onArmarRuta,
+                  icon: Icon(Icons.route_outlined, size: 19, color: P.textoSuave),
+                ),
+              ),
             Tooltip(
               message: 'Encuadrar todo',
               child: IconButton(

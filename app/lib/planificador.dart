@@ -229,6 +229,34 @@ Plan planificar(DateTime dia) {
   return Plan(dia, [for (final w in ws) Ruta(w, rutas[w.id]!)], sinProgramar, antes);
 }
 
+/// Ruta hecha a mano: [w] visita [orden] en ese orden, saliendo de su punto de salida. Lo que ya no cabe
+/// en la jornada (o en su franja) queda «Sin programar». Se aplica con [aplicar] y se deshace igual.
+Plan rutaManual(DateTime dia, Trabajador w, List<Tarea> orden) {
+  final salida = salidaDe(w);
+  final paradas = <Parada>[];
+  final sinProgramar = <(Tarea, String)>[];
+  for (final t in orden) {
+    final c = store.cliente(t.clienteId);
+    if (c == null || !c.ubicado) {
+      sinProgramar.add((t, 'Su cliente no está ubicado en el mapa'));
+      continue;
+    }
+    final prueba = [...paradas, Parada(t, LatLng(c.lat!, c.lng!))];
+    if (_simular(prueba, salida) == null) {
+      sinProgramar.add((t, 'Ya no cabe en la jornada (${hhmm(inicioJornada)}–${hhmm(finJornada)}) en este orden'));
+    } else {
+      paradas.add(prueba.last);
+    }
+  }
+  _simular(paradas, salida);
+  for (final (i, p) in paradas.indexed) {
+    p.razon = i == 0
+        ? 'Elegido a mano: primera parada (${p.km.toStringAsFixed(1)} km desde la salida)'
+        : 'Elegido a mano: parada ${i + 1} (${p.km.toStringAsFixed(1)} km desde la anterior)';
+  }
+  return Plan(dia, [Ruta(w, paradas)], sinProgramar, {for (final t in orden) t.id: t.copia()});
+}
+
 /// Guarda el plan en las tareas: técnico, hora de inicio y color del técnico.
 void aplicar(Plan plan) {
   for (final r in plan.rutas) {
