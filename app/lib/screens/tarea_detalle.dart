@@ -207,14 +207,72 @@ class _Resumen extends StatelessWidget {
   );
 }
 
-/// Cuándo se ha hecho el trabajo, lo último primero, y cuándo toca de nuevo.
+/// Arriba, si el trabajo es único o periódico (se cambia aquí mismo); debajo, cuándo se ha hecho, lo último
+/// primero, con su check, y cuándo toca de nuevo.
 class _Historico extends StatelessWidget {
   final Tarea t;
   const _Historico(this.t);
 
+  /// Una vez hecho, un trabajo único se queda sin próxima fecha: al hacerlo periódico, la siguiente cuenta desde
+  /// la última vez.
+  void _periodicidad(Periodicidad p) {
+    t.periodicidad = p;
+    if (p.repite && t.proximo == null) t.proximo = masDias(t.ultimo ?? hoy(), p.dias);
+    store.guardarTarea(t);
+  }
+
+  Widget _periodicidadCampo() => Tarjeta(
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Periodicidad', style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                t.periodicidad.repite ? 'Se repite: ${t.periodicidad.etiqueta.toLowerCase()}' : 'Se hace una sola vez',
+                style: TextStyle(fontSize: 12, color: P.textoSuave),
+              ),
+            ],
+          ),
+        ),
+        BotonMenu<Periodicidad>(
+          tooltip: 'Cada cuánto se repite',
+          seleccionado: t.periodicidad,
+          onSelected: _periodicidad,
+          opciones: [for (final p in Periodicidad.values) (p, Text(p.etiqueta))],
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: P.borde),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(t.periodicidad.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(width: 8),
+                Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final dias = {...t.historial, ?t.ultimo}.toList()..sort((a, b) => b.compareTo(a));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [_periodicidadCampo(), const SizedBox(height: 12), _lista(dias)],
+    );
+  }
+
+  Widget _lista(List<DateTime> dias) {
     return SeccionTarjeta(
       titulo: 'Histórico',
       subtitulo: dias.isEmpty ? null : '${dias.length} ${dias.length == 1 ? 'vez' : 'veces'} hecho',
@@ -222,7 +280,7 @@ class _Historico extends StatelessWidget {
         if (t.proximo != null)
           FilaLista(
             lider: Icon(Icons.event_outlined, size: 18, color: P.morado),
-            titulo: 'Próximo',
+            titulo: 'Pendiente',
             subtitulo: '${fecha(t.proximo)} · ${relativo(t.proximo!)}',
           ),
         if (dias.isEmpty)
