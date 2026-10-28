@@ -22,13 +22,13 @@ void main() {
     'Inicio': () => Resumen(onIr: (_) {}, onTrabajador: (_) {}),
     'Clientes': () => Clientes(onAbrir: (_) {}),
     'Trabajadores': () => Trabajadores(onAbrir: (_) {}),
-    'Tareas': () => const TareasPagina(),
+    'Tareas': () => TareasPagina(onAbrir: (_) {}),
     'Agenda': () => const Planificacion(mapa: false),
     'Ficha de cliente': () => ClienteDetalle(clienteId: 'c1', onVolver: () {}),
     'Ficha de trabajador': () => TrabajadorDetalle(trabajadorId: 'w1', onVolver: () {}),
   };
 
-  for (final ancho in [1600.0, 820.0]) {
+  for (final ancho in [1440.0, 980.0, 700.0, 600.0, 420.0, 360.0]) {
     for (final e in pantallas.entries) {
       testWidgets('${e.key} se pinta a ${ancho.round()} px', (tester) async {
         tester.view.physicalSize = Size(ancho, 1000);
