@@ -31,6 +31,14 @@ extension CriticidadX on Criticidad {
   int get peso => const [8, 4, 2, 1][index];
 }
 
+/// En qué punto está un trabajo (se cambia a mano desde listas, bloques y la ficha).
+enum EstadoTrabajo { pendiente, enCurso, realizado, noRealizado }
+
+extension EstadoTrabajoX on EstadoTrabajo {
+  String get etiqueta => const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
+  Color get color => const [P.ambar, P.azul, P.verde, P.rojo][index];
+}
+
 enum EstadoMaquina { operativa, revision, averiada }
 
 extension EstadoMaquinaX on EstadoMaquina {
@@ -232,6 +240,7 @@ class Tarea {
   /// Lo que se calcula que dura, en minutos.
   int duracionMin;
   EstadoMaquina estadoMaquina;
+  EstadoTrabajo estado;
   Criticidad criticidad;
   Periodicidad periodicidad;
   bool activa;
@@ -266,6 +275,7 @@ class Tarea {
     this.ventanaHastaMin,
     this.duracionMin = 60,
     this.estadoMaquina = EstadoMaquina.operativa,
+    this.estado = EstadoTrabajo.pendiente,
     this.criticidad = Criticidad.media,
     this.periodicidad = Periodicidad.mensual,
     this.activa = true,
@@ -320,6 +330,7 @@ class Tarea {
     'ventanaHastaMin': ventanaHastaMin,
     'duracionMin': duracionMin,
     'estadoMaquina': estadoMaquina.index,
+    'estado': estado.index,
     'criticidad': criticidad.index,
     'periodicidad': periodicidad.index,
     'activa': activa,
@@ -351,6 +362,7 @@ class Tarea {
     ventanaHastaMin: j['ventanaHastaMin'] as int?,
     duracionMin: j['duracionMin'] as int? ?? 60,
     estadoMaquina: EstadoMaquina.values[j['estadoMaquina'] as int? ?? 0],
+    estado: EstadoTrabajo.values[j['estado'] as int? ?? 0],
     criticidad: Criticidad.values[j['criticidad'] as int? ?? 2],
     periodicidad: Periodicidad.values[j['periodicidad'] as int? ?? 1],
     activa: j['activa'] as bool? ?? true,

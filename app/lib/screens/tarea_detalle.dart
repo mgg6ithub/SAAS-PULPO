@@ -60,7 +60,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
               cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : 'Sin cliente'),
             ].join(' · '),
             acciones: [
-              pillEstado(t),
+              t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
               const SizedBox(width: 4),
               BotonPrimario(
                 'Subtrabajo',

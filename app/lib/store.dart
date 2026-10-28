@@ -437,7 +437,7 @@ class Store extends ChangeNotifier {
 
   /// El mantenimiento se ha hecho hoy: se calcula el siguiente.
   /// Cómo estaba cada tarea antes de marcarla hecha, para poder desmarcarla (durante la sesión).
-  final _antesDeHecha = <String, (DateTime?, DateTime?, EstadoMaquina)>{};
+  final _antesDeHecha = <String, (DateTime?, DateTime?, EstadoMaquina, EstadoTrabajo)>{};
 
   bool puedeDesmarcar(Tarea t) => _antesDeHecha.containsKey(t.id);
 
@@ -448,13 +448,16 @@ class Store extends ChangeNotifier {
     t
       ..ultimo = antes.$1
       ..proximo = antes.$2
-      ..estadoMaquina = antes.$3;
+      ..estadoMaquina = antes.$3
+      ..estado = antes.$4;
     _cambio();
   }
 
   void marcarHecha(Tarea t) {
-    _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina);
+    _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina, t.estado);
     t.ultimo = hoy();
+    // Si se repite, la siguiente vez vuelve a estar pendiente; si es única, se queda realizada.
+    t.estado = t.periodicidad.repite ? EstadoTrabajo.pendiente : EstadoTrabajo.realizado;
     if (!t.historial.any((d) => DateUtils.isSameDay(d, hoy()))) t.historial.add(hoy());
     // Una tarea única, al hacerse, ya no tiene próxima.
     t.proximo = t.periodicidad.repite ? masDias(hoy(), t.periodicidad.dias) : null;

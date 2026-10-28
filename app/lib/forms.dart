@@ -1859,7 +1859,7 @@ class _CajaMenu extends StatelessWidget {
       ),
       child: Row(
         children: [
-          compacta ? child : Expanded(child: child),
+          compacta ? Flexible(child: child) : Expanded(child: child),
           if (compacta) const SizedBox(width: 2),
           Icon(Icons.unfold_more_rounded, size: compacta ? 16 : 18, color: P.textoSuave),
         ],
@@ -1873,7 +1873,10 @@ class _CajaMenu extends StatelessWidget {
 class SelectorCliente extends StatelessWidget {
   final String? valor;
   final ValueChanged<String> onChanged;
-  const SelectorCliente(this.valor, this.onChanged, {super.key});
+
+  /// En listas: más bajo y con letra normal.
+  final bool compacto;
+  const SelectorCliente(this.valor, this.onChanged, {super.key, this.compacto = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1914,19 +1917,28 @@ class SelectorCliente extends StatelessWidget {
       ],
       builder: (context, menu, _) => _CajaMenu(
         abierto: menu.isOpen,
+        compacta: compacto,
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
         child: c == null
-            ? Text('Elegir cliente', style: TextStyle(color: P.textoSuave))
+            ? Text(
+                'Elegir cliente',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: P.textoSuave),
+              )
             : Row(
                 children: [
-                  Avatar(c.iniciales, colorPaleta(c.color), size: 24, cuadrado: true),
-                  const SizedBox(width: 10),
+                  Avatar(c.iniciales, colorPaleta(c.color), size: compacto ? 20 : 24, cuadrado: true),
+                  SizedBox(width: compacto ? 8 : 10),
                   Flexible(
                     child: Text(
                       c.nombre,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontWeight: compacto ? FontWeight.w400 : FontWeight.w600,
+                        fontSize: compacto ? 13 : null,
+                      ),
                     ),
                   ),
                 ],
@@ -1934,6 +1946,59 @@ class SelectorCliente extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Estado del trabajo en una pastilla con doble chevron: se cambia desde la propia lista, bloque o ficha.
+/// «Realizado» lo marca como hecho (entra en el histórico y, si se repite, calcula la siguiente fecha).
+class SelectorEstado extends StatelessWidget {
+  final Tarea t;
+  const SelectorEstado(this.t, {super.key});
+
+  void _elegir(BuildContext context, EstadoTrabajo e) {
+    if (e == t.estado) return;
+    if (e == EstadoTrabajo.realizado) {
+      store.marcarHecha(t);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          width: 360,
+          content: Text(t.periodicidad.repite ? 'Hecho · próxima vez el ${fecha(t.proximo)}' : 'Hecho · ${t.nombre}'),
+          action: SnackBarAction(label: 'Deshacer', onPressed: () => store.desmarcarHecha(t)),
+        ),
+      );
+    } else {
+      t.estado = e;
+      store.guardarTarea(t);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    alignmentOffset: const Offset(0, 4),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      for (final e in EstadoTrabajo.values)
+        MenuItemButton(
+          leadingIcon: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
+          ),
+          trailingIcon: e == t.estado ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
+          onPressed: () => _elegir(context, e),
+          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 110), child: Text(e.etiqueta)),
+        ),
+    ],
+    builder: (context, menu, _) => _CajaMenu(
+      abierto: menu.isOpen,
+      compacta: true,
+      onTap: () => menu.isOpen ? menu.close() : menu.open(),
+      child: Tooltip(message: 'Cambiar el estado', child: Pill(t.estado.etiqueta, t.estado.color, punto: true)),
+    ),
+  );
 }
 
 /// Menú de trabajadores: se marcan uno o varios (no se cierra al marcar). Los que no son aptos

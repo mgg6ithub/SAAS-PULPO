@@ -115,10 +115,10 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (medio && widget.conCliente) const Col('Cliente', flex: 3),
             if (medio) const Col('Subtrabajos', ancho: 100),
             if (ancho) const Col('Periodicidad', flex: 2),
-            const Col('Próximo', flex: 2),
+            const Col('Fecha', flex: 2),
             if (ancho) const Col('Horario', flex: 2),
             if (medio) const Col('Asignado a', ancho: 120),
-            const Col('Estado', ancho: 80, derecha: true),
+            const Col('Estado', ancho: 150, derecha: true),
           ],
           filas: ts.length,
           onTap: (i) {
@@ -155,9 +155,17 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                   ),
                 ],
               ),
+              // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
               if (medio && widget.conCliente)
-                c == null
-                    ? (t.esPlantilla ? Etiqueta('Plantilla', P.morado) : celdaTexto('Sin cliente', suave: true))
+                t.esPlantilla
+                    ? Etiqueta('Plantilla', P.morado)
+                    : t.padreId == null
+                    ? SelectorCliente(t.clienteId, (id) {
+                        t.clienteId = id;
+                        store.guardarTarea(t);
+                      }, compacto: true)
+                    : c == null
+                    ? celdaTexto('Sin cliente', suave: true)
                     : Row(
                         children: [
                           Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
@@ -188,7 +196,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                 t.esPlantilla
                     ? const SizedBox()
                     : SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: true),
-              pillEstado(t),
+              t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
             ];
           },
         ),
