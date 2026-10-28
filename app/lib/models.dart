@@ -57,6 +57,73 @@ extension PeriodicidadX on Periodicidad {
   bool get repite => this != Periodicidad.unica;
 }
 
+/// Cuándo se dispara una automatización de un trabajo.
+enum Disparador { antes, alCompletar, noHecho, alAsignar }
+
+extension DisparadorX on Disparador {
+  String get etiqueta => const ['Antes del trabajo', 'Al completarse', 'Si no se hace a tiempo', 'Al asignar'][index];
+
+  /// Los que llevan un margen en horas o días respecto a la fecha del trabajo.
+  bool get llevaMargen => this == Disparador.antes || this == Disparador.noHecho;
+}
+
+/// Regla de un trabajo: cuando pasa [disparador] se manda un email a los [destinatarios].
+/// Por ahora solo email, y el envío es simulado.
+class Automatizacion {
+  String id, nombre, asunto, cuerpo;
+  bool activa, aTrabajadores, aCliente;
+  Disparador disparador;
+
+  /// Margen respecto a la fecha del trabajo: [cantidad] días (o horas si [enHoras]).
+  int cantidad;
+  bool enHoras;
+
+  /// Direcciones fijas, además de trabajadores y cliente.
+  List<String> extras;
+
+  Automatizacion({
+    required this.id,
+    this.nombre = '',
+    this.asunto = '',
+    this.cuerpo = '',
+    this.activa = true,
+    this.aTrabajadores = true,
+    this.aCliente = false,
+    this.disparador = Disparador.antes,
+    this.cantidad = 1,
+    this.enHoras = false,
+    List<String>? extras,
+  }) : extras = extras ?? [];
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'nombre': nombre,
+    'asunto': asunto,
+    'cuerpo': cuerpo,
+    'activa': activa,
+    'aTrabajadores': aTrabajadores,
+    'aCliente': aCliente,
+    'disparador': disparador.index,
+    'cantidad': cantidad,
+    'enHoras': enHoras,
+    'extras': extras,
+  };
+
+  factory Automatizacion.fromJson(Map<String, dynamic> j) => Automatizacion(
+    id: j['id'] as String,
+    nombre: j['nombre'] as String? ?? '',
+    asunto: j['asunto'] as String? ?? '',
+    cuerpo: j['cuerpo'] as String? ?? '',
+    activa: j['activa'] as bool? ?? true,
+    aTrabajadores: j['aTrabajadores'] as bool? ?? true,
+    aCliente: j['aCliente'] as bool? ?? false,
+    disparador: Disparador.values[j['disparador'] as int? ?? 0],
+    cantidad: j['cantidad'] as int? ?? 1,
+    enHoras: j['enHoras'] as bool? ?? false,
+    extras: List<String>.from(j['extras'] as List? ?? []),
+  );
+}
+
 /// Cliente al que se le da mantenimiento: comunidad, colegio, hospital, empresa...
 /// Etiqueta con nombre y color, creada por el usuario para marcar trabajos.
 class EtiquetaTrabajo {
@@ -253,6 +320,9 @@ class Tarea {
   /// Días en que se hizo (el más reciente al final).
   List<DateTime> historial;
 
+  /// Reglas que mandan emails cuando pasa algo de este trabajo.
+  List<Automatizacion> automatizaciones;
+
   Tarea({
     required this.id,
     this.clienteId,
@@ -283,10 +353,12 @@ class Tarea {
     List<String>? trabajadorIds,
     this.padreId,
     List<DateTime>? historial,
+    List<Automatizacion>? automatizaciones,
   }) : plantilla = plantilla ?? clienteId == null,
        competencias = competencias ?? [],
        trabajadorIds = trabajadorIds ?? [],
-       historial = historial ?? [];
+       historial = historial ?? [],
+       automatizaciones = automatizaciones ?? [];
 
   /// Es una plantilla (modelo para crear tareas). Antes se deducía de no tener cliente;
   /// ahora es un dato propio, así una tarea puede existir sin cliente.
@@ -338,6 +410,7 @@ class Tarea {
     'trabajadorIds': trabajadorIds,
     'padreId': padreId,
     'historial': [for (final d in historial) _f(d)],
+    'automatizaciones': [for (final a in automatizaciones) a.toJson()],
   };
 
   factory Tarea.fromJson(Map<String, dynamic> j) => Tarea(
@@ -370,6 +443,7 @@ class Tarea {
     trabajadorIds: List<String>.from(j['trabajadorIds'] as List? ?? []),
     padreId: j['padreId'] as String?,
     historial: [for (final x in j['historial'] as List? ?? []) DateTime.parse(x as String)],
+    automatizaciones: [for (final x in j['automatizaciones'] as List? ?? []) Automatizacion.fromJson(x)],
   );
 
   Tarea copia() => Tarea.fromJson(toJson());

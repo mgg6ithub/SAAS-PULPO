@@ -8,6 +8,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'tabla_trabajos.dart';
+import 'tarea_automatizaciones.dart';
 
 /// Ficha de un trabajo con pestañas, como la de un cliente: Resumen (cifras, subtrabajos e histórico)
 /// y Datos (el formulario del trabajo, editable directamente).
@@ -64,7 +65,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
               if (padre != null) 'Subtrabajo de ${padre.nombre}',
               cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : 'Sin cliente'),
             ].join(' · '),
-            // Resumen: añadir subtrabajo; Datos: editar; Histórico: nada.
+            // Resumen: añadir subtrabajo; Datos: editar; Histórico: nada; Automatizaciones: añadir regla.
             acciones: [
               if (pestana == 0)
                 BotonPrimario(
@@ -80,12 +81,19 @@ class _TareaDetalleState extends State<TareaDetalle> {
                   conIcono: true,
                   icono: Icons.edit_outlined,
                   onPressed: () => setState(() => editando = true),
+                )
+              else if (pestana == 3)
+                BotonPrimario(
+                  'Automatización',
+                  conIcono: true,
+                  icono: Icons.add_rounded,
+                  onPressed: () => abrirAutomatizacion(context, t),
                 ),
             ],
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
-            opciones: const ['Resumen', 'Datos', 'Histórico'],
+            opciones: const ['Resumen', 'Datos', 'Histórico', 'Automatizaciones'],
             seleccion: pestana,
             onChanged: (i) => setState(() {
               pestana = i;
@@ -110,7 +118,8 @@ class _TareaDetalleState extends State<TareaDetalle> {
                     soloLectura: !editando,
                     onTerminar: () => setState(() => editando = false),
                   ),
-                  _ => _Historico(t),
+                  2 => _Historico(t),
+                  _ => TareaAutomatizaciones(t),
                 },
               ),
             ),
