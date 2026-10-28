@@ -32,6 +32,26 @@ class Store extends ChangeNotifier {
     'Gorka',
     'Ainhoa',
     'Oier',
+    'Amaia',
+    'Julen',
+    'Garazi',
+    'Beñat',
+    'Uxue',
+    'Xabier',
+    'Estibaliz',
+    'Koldo',
+    'Idoia',
+    'Imanol',
+    'Ziortza',
+    'Aratz',
+    'Naiara',
+    'Ekain',
+    'Itziar',
+    'Josu',
+    'Olatz',
+    'Peru',
+    'Saioa',
+    'Haritz',
   ];
   static const _apellidosSimulados = [
     'Etxebarria',
@@ -54,17 +74,159 @@ class Store extends ChangeNotifier {
     'Etxeberria',
     'Bilbao',
     'Sola',
+    'Zubiaur',
+    'Urrutia',
+    'Lasa',
+    'Otxoa',
+    'Garmendia',
+    'Uriarte',
+    'Larrañaga',
+    'Elorza',
+    'Zabala',
+    'Landa',
+    'Iturbe',
+    'Mujika',
+    'Aranburu',
+    'Berasategi',
+    'Olabarria',
+    'Gallastegi',
+    'Axpe',
+    'Barrenetxea',
+    'Zuazo',
+    'Ugarte',
   ];
-  static const _clientesSimulados = [
-    'Comunidad Santa María 11',
-    'Colegio San Ignacio',
-    'Hospital de Basurto · Pabellón B',
-    'Hotel Ercilla',
-    'Polideportivo de Lezama',
-    'Torre Iberdrola · Oficinas',
-    'Residencia Los Robles',
-    'Comunidad Gran Vía 45',
+
+  // 10 tipos × 20 lugares, repartidos para que no se repita ninguno hasta 200 clientes.
+  static const _tiposClienteSimulados = [
+    'Colegio',
+    'Hospital',
+    'Residencia',
+    'Comunidad',
+    'Hotel',
+    'Polideportivo',
+    'Centro comercial',
+    'Clínica',
+    'Oficinas',
+    'Gimnasio',
   ];
+  static const _lugaresClienteSimulados = [
+    'San Ignacio',
+    'Los Pinos',
+    'Santa María',
+    'Ercilla',
+    'Begoña',
+    'Las Arenas',
+    'Gran Vía',
+    'Mirador',
+    'El Pilar',
+    'Zorrotza',
+    'Deusto',
+    'Abando',
+    'Basurto',
+    'Lezama',
+    'Rekalde',
+    'Indautxu',
+    'Casco Viejo',
+    'Artxanda',
+    'Sarriko',
+    'Uribarri',
+  ];
+  static String _clienteSimulado(int i) =>
+      '${_tiposClienteSimulados[i % 10]} ${_lugaresClienteSimulados[(i * 7 + i ~/ 10) % 20]}';
+  static String _trabajadorSimulado(int i) =>
+      '${_nombresSimulados[i % 40]} ${_apellidosSimulados[(i * 7 + i ~/ 40) % 40]}';
+
+  static const _ubicacionesSimuladas = [
+    'Portal A',
+    'Portal B',
+    'Sótano -1',
+    'Cubierta',
+    'Sala de máquinas',
+    'Planta baja',
+    'Jardín',
+    'Azotea',
+    'Patio interior',
+    'Garaje',
+    'Zona común',
+    'Edificio anexo',
+  ];
+
+  /// Cómo se llama cada trabajo simulado según su tipo, para que no se repitan los nombres.
+  static const _variantesSimuladas = {
+    'Caldera': [
+      'Revisión de caldera de gas',
+      'Limpieza de quemadores',
+      'Control de combustión y CO',
+      'Revisión de sala de calderas',
+      'Comprobación de presión del circuito',
+      'Revisión del vaso de expansión',
+      'Inspección de chimenea',
+      'Mantenimiento de caldera de condensación',
+    ],
+    'Ascensor': [
+      'Mantenimiento de ascensor',
+      'Revisión de cables y poleas',
+      'Prueba de frenos y paracaídas',
+      'Revisión de puertas de cabina',
+      'Engrase de guías',
+      'Revisión del cuadro de maniobra',
+      'Inspección del foso',
+      'Revisión del montacargas',
+    ],
+    'Jardinería': [
+      'Poda y riego de zonas verdes',
+      'Siega del césped',
+      'Poda de setos',
+      'Tratamiento de plagas',
+      'Plantación de temporada',
+      'Revisión del riego automático',
+      'Limpieza de hojas y restos',
+      'Abonado de parterres',
+    ],
+    'Limpieza': [
+      'Limpieza de rellanos y portal',
+      'Limpieza de cristales',
+      'Fregado de escaleras',
+      'Limpieza del garaje',
+      'Desinfección de zonas comunes',
+      'Limpieza de cubiertas',
+      'Pulido de suelos',
+      'Limpieza de fachada baja',
+    ],
+  };
+
+  /// Las partes en que se divide un trabajo simulado de cada tipo.
+  static const _subtrabajosSimulados = {
+    'Caldera': [
+      'Revisar el quemador',
+      'Comprobar la presión del circuito',
+      'Medir el CO en humos',
+      'Limpiar filtros',
+      'Probar la válvula de seguridad',
+    ],
+    'Ascensor': [
+      'Revisar cables y poleas',
+      'Comprobar frenos',
+      'Engrasar guías',
+      'Revisar puertas de cabina',
+      'Limpiar el foso',
+    ],
+    'Jardinería': [
+      'Recoger el césped',
+      'Podar los setos',
+      'Cortar los arbustos',
+      'Regar las zonas verdes',
+      'Retirar restos de poda',
+    ],
+    'Limpieza': [
+      'Fregar los rellanos',
+      'Limpiar los cristales del portal',
+      'Vaciar las papeleras',
+      'Desinfectar los pasamanos',
+      'Limpiar el ascensor',
+    ],
+  };
+  static const _coloresSubtrabajos = [0xFF2563EB, 0xFF0D9488, 0xFFCA8A04, 0xFFDB2777, 0xFF16A34A, 0xFFEA580C];
 
   /// Hay datos de ejemplo cargados; los reales esperan en el respaldo.
   bool demo = false;
@@ -557,6 +719,8 @@ class Store extends ChangeNotifier {
     DateTime? hasta,
     bool permitirSolapes = false,
     int trabajosSimultaneos = 2,
+    bool conSubtrabajos = false,
+    int cadaTantosConSubtrabajos = 3,
   }) {
     final fechaInicio = DateUtils.dateOnly(desde ?? hoy());
     final fechaFin = DateUtils.dateOnly(hasta ?? masDias(fechaInicio, dias - 1));
@@ -569,7 +733,9 @@ class Store extends ChangeNotifier {
         cantidadTareas > 1000 ||
         (desde == null && (dias < 1 || dias > 90)) ||
         diasSimulados < 1 ||
-        (permitirSolapes && (trabajosSimultaneos < 2 || trabajosSimultaneos > 20))) {
+        (permitirSolapes && (trabajosSimultaneos < 2 || trabajosSimultaneos > 20)) ||
+        cadaTantosConSubtrabajos < 1 ||
+        cadaTantosConSubtrabajos > 20) {
       throw ArgumentError('Cantidades de simulación fuera de rango');
     }
     if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
@@ -581,8 +747,8 @@ class Store extends ChangeNotifier {
       for (var i = 0; i < equipo; i++)
         Trabajador(
           id: 'w$i',
-          nombre: _nombresSimulados[i % _nombresSimulados.length],
-          apellidos: _apellidosSimulados[(i ~/ _nombresSimulados.length) % _apellidosSimulados.length],
+          nombre: _trabajadorSimulado(i).split(' ').first,
+          apellidos: _trabajadorSimulado(i).split(' ').skip(1).join(' '),
           competencias: [...competencias],
           color: i % 8,
         ),
@@ -592,8 +758,7 @@ class Store extends ChangeNotifier {
       for (var i = 0; i < cuentas; i++)
         Cliente(
           id: 'c$i',
-          nombre:
-              '${_clientesSimulados[i % _clientesSimulados.length]}${i >= _clientesSimulados.length ? ' · Sede ${i ~/ _clientesSimulados.length + 1}' : ''}',
+          nombre: _clienteSimulado(i),
           ciudad: 'Bilbao',
           provincia: 'Bizkaia',
           lat: sitios[i % sitios.length].$1,
@@ -611,12 +776,31 @@ class Store extends ChangeNotifier {
       t
         ..id = 'd$i'
         ..plantilla = false
+        ..nombre =
+            '${_variantesSimuladas[t.tipo]?[(i ~/ plantillas.length) % 8] ?? t.nombre} · ${cuentas == 0 ? _ubicacionesSimuladas[(i ~/ 8) % _ubicacionesSimuladas.length] : clientes[i % cuentas].nombre}'
+        ..ubicacion = _ubicacionesSimuladas[(i * 5) % _ubicacionesSimuladas.length]
         ..clienteId = cuentas == 0 ? null : clientes[i % cuentas].id
         ..proximo = diaSimulado
         ..inicioMin = horaSimulada
         ..duracionMin = permitirSolapes ? 60 : [30, 60, 90, 120][r.nextInt(4)]
         ..trabajadorIds = equipo == 0 ? [] : [trabajadores[i % equipo].id];
       tareas.add(t);
+      // Cada tantos trabajos, uno se divide en varios subtrabajos, cada uno con su color, fecha y hora.
+      final partes = _subtrabajosSimulados[t.tipo];
+      if (conSubtrabajos && partes != null && i % cadaTantosConSubtrabajos == 0) {
+        for (var k = 0; k < 3; k++) {
+          subtareas.add(
+            t.copia()
+              ..id = 's${subtareas.length}'
+              ..padreId = t.id
+              ..nombre = partes[(i + k) % partes.length]
+              ..color = _coloresSubtrabajos[(i + k) % _coloresSubtrabajos.length]
+              ..proximo = masDias(t.proximo ?? fechaInicio, k)
+              ..inicioMin = (t.inicioMin ?? 8 * 60) + k * 60
+              ..duracionMin = [30, 45, 60][k],
+          );
+        }
+      }
     }
     _cambio();
   }
