@@ -572,7 +572,17 @@ class BotonPrimario extends StatelessWidget {
   final IconData icono;
   final VoidCallback onPressed;
   final String? tecla;
-  const BotonPrimario(this.texto, {super.key, this.icono = Icons.add_rounded, required this.onPressed, this.tecla});
+
+  /// Muestra el icono delante del texto también en escritorio (por defecto solo se ve en móvil).
+  final bool conIcono;
+  const BotonPrimario(
+    this.texto, {
+    super.key,
+    this.icono = Icons.add_rounded,
+    required this.onPressed,
+    this.tecla,
+    this.conIcono = false,
+  });
 
   @override
   Widget build(BuildContext context) => esMovil(context)
@@ -594,6 +604,7 @@ class BotonPrimario extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (conIcono) ...[Icon(icono, size: 18), const SizedBox(width: 6)],
               Text(texto),
               if (tecla != null) ...[
                 const SizedBox(width: 10),

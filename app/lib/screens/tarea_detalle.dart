@@ -64,8 +64,10 @@ class _TareaDetalleState extends State<TareaDetalle> {
               const SizedBox(width: 4),
               BotonPrimario(
                 'Subtrabajo',
+                conIcono: true,
                 icono: Icons.add_rounded,
-                onPressed: () => abrirTareaForm(context, null, padre: t),
+                tecla: 'N',
+                onPressed: () => abrirSubtrabajoRapido(context, t),
               ),
             ],
           ),
@@ -122,8 +124,8 @@ class _Resumen extends StatelessWidget {
   Widget _resumen() => Tarjeta(
     padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
     child: Wrap(
-      spacing: 48,
-      runSpacing: 14,
+      spacing: 28,
+      runSpacing: 10,
       crossAxisAlignment: WrapCrossAlignment.end,
       children: [
         _cifra(
@@ -138,7 +140,7 @@ class _Resumen extends StatelessWidget {
         ),
         _cifra('Periodicidad', t.periodicidad.etiqueta, t.horario ?? 'sin hora'),
         SizedBox(
-          width: 280,
+          width: 170,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -153,7 +155,7 @@ class _Resumen extends StatelessWidget {
   );
 
   /// Los subtrabajos, en la misma lista que los trabajos; se entra en cada uno para añadirle más.
-  Widget _subtrabajos() {
+  Widget _subtrabajos({bool fija = false}) {
     final hijas = store.hijas(t.id)
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
     if (hijas.isEmpty) {
@@ -165,7 +167,9 @@ class _Resumen extends StatelessWidget {
         ),
       );
     }
-    return TablaTrabajos(hijas, onAbrir: onAbrir, conCliente: false, nombre: 'subtrabajo');
+    final tabla = TablaTrabajos(hijas, onAbrir: onAbrir, conCliente: false, nombre: 'subtrabajo');
+    // En vertical no hay alto que repartir: tanto como filas, hasta un tope.
+    return fija ? SizedBox(height: (hijas.length * 52 + 96).clamp(140, 380).toDouble(), child: tabla) : tabla;
   }
 
   @override
@@ -176,7 +180,7 @@ class _Resumen extends StatelessWidget {
           children: [
             _resumen(),
             const SizedBox(height: 16),
-            SizedBox(height: 360, child: _subtrabajos()),
+            _subtrabajos(fija: true),
             const SizedBox(height: 16),
             _Historico(t),
           ],
