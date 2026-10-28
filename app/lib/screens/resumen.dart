@@ -771,7 +771,6 @@ class _HeroState extends State<_Hero> {
   @override
   Widget build(BuildContext context) {
     // Desde el primer cliente, mostrar las cifras aunque la guía siga pendiente.
-    final hechos = widget.pasos.where((p) => p).length;
     final clientes = store.clientes.length;
     final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
     final trabajadores = store.trabajadores.length;
@@ -796,15 +795,6 @@ class _HeroState extends State<_Hero> {
                 ),
               ),
             ),
-            // Sin botón "Itinerario": ya está "Ir al itinerario" en Próximos mantenimientos (una acción, un sitio).
-            // Igual que en el Itinerario.
-            if (hechos == widget.pasos.length)
-              BotonAccion(
-                'Nuevo trabajo',
-                icono: Icons.add_rounded,
-                tooltip: 'Crear un trabajo (N)',
-                onPressed: () => abrirTareaForm(context, null),
-              ),
           ],
         ),
         const SizedBox(height: 6),

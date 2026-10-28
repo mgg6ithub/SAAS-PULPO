@@ -265,8 +265,8 @@ class _CapaState extends State<_Capa> with SingleTickerProviderStateMixin {
   );
 }
 
-/// «Crear» arriba del menú, como en Jobber: al pulsarlo sale una fila horizontal con el icono de cada cosa que
-/// se puede dar de alta (trabajo, cliente, trabajador, plantilla) desde cualquier sitio. Con la barra en solo
+/// «Crear» arriba del menú, como en Jobber: al pulsarlo sale, a su derecha, una fila horizontal con el icono de cada
+/// cosa que se puede dar de alta (cliente, trabajo, trabajador) desde cualquier sitio. Con la barra en solo
 /// iconos, queda un botón con el plus.
 class _BotonCrear extends StatefulWidget {
   final bool compacto;
@@ -279,68 +279,126 @@ class _BotonCrear extends StatefulWidget {
 class _BotonCrearState extends State<_BotonCrear> {
   final _menu = MenuController();
 
-  Widget _opcion(IconData icono, String texto, VoidCallback alta) => InkWell(
-    borderRadius: BorderRadius.circular(P.radioControl),
-    hoverColor: P.hover,
-    onTap: () {
-      _menu.close();
-      alta();
-    },
-    child: SizedBox(
-      width: 84,
-      height: 68,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 24, color: P.morado),
-          const SizedBox(height: 6),
-          Text(texto, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500)),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    // Se despliega hacia la derecha del plus; en ventanas estrechas, debajo.
+    final alLado = MediaQuery.sizeOf(context).width >= 700;
+    return MenuAnchor(
+      controller: _menu,
+      alignmentOffset: alLado ? const Offset(8, 0) : const Offset(0, 4),
+      style: MenuStyle(
+        alignment: alLado ? AlignmentDirectional.topEnd : null,
+        backgroundColor: WidgetStatePropertyAll(P.superficie),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radio))),
       ),
-    ),
-  );
+      menuChildren: [
+        _FilaCrear(
+          cerrar: _menu.close,
+          opciones: [
+            (Icons.apartment_outlined, 'Cliente', () => abrirClienteForm(context)),
+            (Icons.handyman_outlined, 'Trabajo', () => abrirTareaForm(context, null)),
+            (Icons.badge_outlined, 'Trabajador', () => abrirTrabajadorForm(context)),
+          ],
+        ),
+      ],
+      builder: (context, menu, _) => Tooltip(
+        message: 'Crear',
+        child: SizedBox(
+          height: 40,
+          child: widget.compacto
+              ? IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: P.morado,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                  ),
+                  onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                  icon: const Icon(Icons.add_rounded, size: 22, color: Colors.white),
+                )
+              : FilledButton(
+                  onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [Icon(Icons.add_rounded, size: 20), SizedBox(width: 6), Text('Crear')],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Las opciones de «Crear» en fila. La elegida (la primera al abrir; después, la del ratón o las flechas) va en
+/// morado y las demás en neutro; Intro la abre.
+class _FilaCrear extends StatefulWidget {
+  final VoidCallback cerrar;
+  final List<(IconData, String, VoidCallback)> opciones;
+  const _FilaCrear({required this.cerrar, required this.opciones});
 
   @override
-  Widget build(BuildContext context) => MenuAnchor(
-    controller: _menu,
-    alignmentOffset: const Offset(0, 4),
-    style: MenuStyle(
-      backgroundColor: WidgetStatePropertyAll(P.superficie),
-      padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radio))),
-    ),
-    menuChildren: [
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _opcion(Icons.handyman_outlined, 'Trabajo', () => abrirTareaForm(context, null)),
-          _opcion(Icons.apartment_outlined, 'Cliente', () => abrirClienteForm(context)),
-          _opcion(Icons.badge_outlined, 'Trabajador', () => abrirTrabajadorForm(context)),
-          _opcion(Icons.content_copy_rounded, 'Plantilla', () => abrirTareaForm(context, null, plantilla: true)),
-        ],
-      ),
-    ],
-    builder: (context, menu, _) => Tooltip(
-      message: 'Crear',
-      child: SizedBox(
-        height: 40,
-        child: widget.compacto
-            ? IconButton.filled(
-                style: IconButton.styleFrom(
-                  backgroundColor: P.morado,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
-                ),
-                onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-                icon: const Icon(Icons.add_rounded, size: 22, color: Colors.white),
-              )
-            : FilledButton(
-                onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-                child: const Row(
+  State<_FilaCrear> createState() => _FilaCrearState();
+}
+
+class _FilaCrearState extends State<_FilaCrear> {
+  int elegida = 0;
+
+  void _abrir(int i) {
+    widget.cerrar();
+    widget.opciones[i].$3();
+  }
+
+  KeyEventResult _tecla(FocusNode _, KeyEvent e) {
+    if (e is! KeyDownEvent) return KeyEventResult.ignored;
+    final n = widget.opciones.length;
+    final k = e.logicalKey;
+    if (k == LogicalKeyboardKey.arrowRight || k == LogicalKeyboardKey.arrowDown) {
+      setState(() => elegida = (elegida + 1) % n);
+    } else if (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.arrowUp) {
+      setState(() => elegida = (elegida - 1 + n) % n);
+    } else if (k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.numpadEnter || k == LogicalKeyboardKey.space) {
+      _abrir(elegida);
+    } else {
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) => Focus(
+    autofocus: true,
+    onKeyEvent: _tecla,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final (i, (icono, texto, _)) in widget.opciones.indexed)
+          MouseRegion(
+            onEnter: (_) => setState(() => elegida = i),
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _abrir(i),
+              child: SizedBox(
+                width: 84,
+                height: 68,
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.add_rounded, size: 20), SizedBox(width: 6), Text('Crear')],
+                  children: [
+                    Icon(icono, size: 24, color: i == elegida ? P.morado : P.texto),
+                    const SizedBox(height: 6),
+                    Text(
+                      texto,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: i == elegida ? P.morado : P.texto,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-      ),
+            ),
+          ),
+      ],
     ),
   );
 }
