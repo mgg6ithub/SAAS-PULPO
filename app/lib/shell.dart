@@ -14,6 +14,7 @@ import 'screens/tarea_detalle.dart';
 import 'screens/tareas.dart';
 import 'screens/trabajador_detalle.dart';
 import 'screens/trabajadores.dart';
+import 'screens/vista_trabajador.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -130,7 +131,13 @@ class _ShellState extends State<Shell> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<String?>(
+    valueListenable: rolTrabajador,
+    // Vista de trabajador: otra app, sin barra lateral. Esta se queda con su estado al volver.
+    builder: (context, rol, _) => rol != null ? const ShellTrabajador() : _administrador(context),
+  );
+
+  Widget _administrador(BuildContext context) {
     final compacta = MediaQuery.sizeOf(context).width < 900;
     _visitadas.add(seccion);
     final enDetalle = clienteId != null || trabajadorId != null || tareaId != null;
@@ -580,6 +587,9 @@ class _BarraState extends State<_Barra> {
                 const SizedBox(height: 8),
                 Divider(height: 1, color: P.borde),
                 const SizedBox(height: 8),
+                Builder(
+                  builder: (context) => _fila(Icons.badge_outlined, 'Vista de trabajador', () => abrirVistaTrabajador(context)),
+                ),
                 Builder(builder: (context) => _fila(Icons.settings_outlined, 'Ajustes', () => abrirAjustes(context))),
                 Builder(
                   builder: (context) => _fila(
