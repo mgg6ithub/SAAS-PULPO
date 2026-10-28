@@ -1680,6 +1680,28 @@ Widget pillEstado(Tarea t) {
   return const Pill('Al día', P.verde, punto: true);
 }
 
+/// Consejo de la interfaz: bombilla morada y una frase que explica para qué sirve algo.
+/// Todos los consejos de Pulpo usan este estilo.
+class Consejo extends StatelessWidget {
+  final String texto;
+  const Consejo(this.texto, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Tarjeta(
+    color: P.moradoSuave,
+    padding: const EdgeInsets.all(12),
+    child: Row(
+      children: [
+        Icon(Icons.lightbulb_outline_rounded, color: P.morado, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(texto, style: TextStyle(color: P.moradoOscuro, fontSize: 13)),
+        ),
+      ],
+    ),
+  );
+}
+
 /// Píldora con el estado del próximo mantenimiento.
 Widget pillVencimiento(Tarea t) {
   if (t.esPlantilla) return Pill(t.periodicidad.etiqueta, P.gris, icono: Icons.repeat_rounded);

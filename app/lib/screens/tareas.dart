@@ -40,12 +40,11 @@ class _TareasPaginaState extends State<TareasPagina> {
 
   @override
   Widget build(BuildContext context) {
-    final deClientes = store.tareas.where((t) => !t.esPlantilla && t.clienteId != null).length;
+    final nTrabajos = store.tareas.length - store.plantillas.length;
     final filtradas =
         store.tareas.where((t) {
-          if (pestana == 0 && (t.esPlantilla || t.clienteId == null)) return false;
+          if (pestana == 0 && t.esPlantilla) return false;
           if (pestana == 1 && !t.esPlantilla) return false;
-          if (pestana == 2 && t.esPlantilla) return false;
           if (tipo != null && t.tipo != tipo) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
               .toLowerCase();
@@ -68,7 +67,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                 izquierda: [
                   const TituloVista('Trabajos'),
                   Pestanas(
-                    opciones: ['De clientes · $deClientes', 'Plantillas · ${store.plantillas.length}', 'Todos'],
+                    opciones: ['Todos · $nTrabajos', 'Plantillas · ${store.plantillas.length}'],
                     seleccion: pestana,
                     onChanged: (i) => setState(() => pestana = i),
                   ),
@@ -105,21 +104,9 @@ class _TareasPaginaState extends State<TareasPagina> {
               ),
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
-                Tarjeta(
-                  color: P.moradoSuave,
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.lightbulb_outline_rounded, color: P.morado, size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Las plantillas no tienen cliente. Al crear un trabajo dentro de un cliente, elige una y se rellena casi todo.',
-                          style: TextStyle(color: P.moradoOscuro, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
+                const Consejo(
+                  'Las plantillas son trabajos que dejas pre-creados con ciertos campos ya rellenos. '
+                  'Al crear un trabajo, eliges una plantilla y se rellena casi todo.',
                 ),
               ],
               const SizedBox(height: huecoVista),
@@ -128,8 +115,8 @@ class _TareasPaginaState extends State<TareasPagina> {
                     ? Vacio(
                         icono: Icons.handyman_outlined,
                         titulo: store.tareas.isEmpty ? 'Aún no hay trabajos' : null,
-                        texto: pestana == 0 && deClientes == 0
-                            ? 'Crea trabajos dentro de tus clientes, desde cero o a partir de una plantilla.'
+                        texto: pestana == 0 && nTrabajos == 0
+                            ? 'Crea tu primer trabajo, desde cero o a partir de una plantilla.'
                             : 'No hay trabajos con estos filtros',
                         // Sin búsqueda ni filtro de tipo: botón para crear (el primero, si aún no hay).
                         accion: q.isEmpty && tipo == null
@@ -138,7 +125,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                                 child: Text(
                                   pestana == 1
                                       ? 'Nueva plantilla'
-                                      : deClientes == 0
+                                      : nTrabajos == 0
                                       ? 'Añadir el primer trabajo'
                                       : 'Nuevo trabajo',
                                 ),
