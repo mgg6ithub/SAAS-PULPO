@@ -22,4 +22,23 @@ void main() {
     deshacer();
     expect(store.tareas.firstWhere((t) => t.id == 'd100').inicioMin, 480);
   });
+
+  test('un trabajo fijado conserva su técnico y su hora', () async {
+    SharedPreferences.setMockInitialValues({});
+    await store.cargar();
+    store.cargarDemoRutas();
+    final dia = hoy();
+    final w = store.trabajadores.where((w) => w.activo).last;
+    final t = store.tareasDelDia(dia).firstWhere((t) => store.cliente(t.clienteId)?.ubicado == true);
+    store.guardarTarea(
+      t.copia()
+        ..fijado = true
+        ..inicioMin = 11 * 60
+        ..trabajadorIds = [w.id],
+    );
+    final plan = planificar(dia);
+    final ruta = plan.rutas.firstWhere((r) => r.paradas.any((p) => p.tarea.id == t.id));
+    expect(ruta.trabajador.id, w.id);
+    expect(ruta.paradas.firstWhere((p) => p.tarea.id == t.id).inicio, 11 * 60);
+  });
 }

@@ -18,6 +18,7 @@ import 'store.dart';
 ///  4. Al final se mejora cada ruta (mover paradas, 2-opt) si baja el coste: viaje + retraso de
 ///     cada tarea pesado por su criticidad.
 ///  5. Lo que no cabe queda "Sin programar", con el motivo.
+/// Los trabajos fijados van primero, con su técnico y a su hora exacta: no se mueven.
 /// Los desplazamientos se estiman en línea recta (haversine) a una velocidad urbana media.
 
 /// Almacén (punto de salida y vuelta): Bilbao centro.
@@ -74,8 +75,9 @@ List<Parada>? _simular(List<Parada> ps) {
       ..viajeMin = viaje
       ..km = kmEntre(donde, p.punto)
       ..llegada = hora + viaje;
-    final desde = p.tarea.ventanaDesdeMin ?? inicioJornada;
-    final hasta = p.tarea.ventanaHastaMin ?? finJornada;
+    final fija = _fija(p.tarea);
+    final desde = fija ? p.tarea.inicioMin! : p.tarea.ventanaDesdeMin ?? inicioJornada;
+    final hasta = fija ? p.tarea.inicioMin! : p.tarea.ventanaHastaMin ?? finJornada;
     p.inicio = max(p.llegada, desde); // si llega antes de su franja, espera
     if (p.inicio > hasta || p.fin > finJornada) return null;
     hora = p.fin;
@@ -84,6 +86,9 @@ List<Parada>? _simular(List<Parada> ps) {
   if (hora + minutosEntre(donde, almacen) > finJornada + 30) return null; // vuelta con algo de margen
   return ps;
 }
+
+/// Fijado de verdad: con hora y técnico.
+bool _fija(Tarea t) => t.fijado && t.inicioMin != null && t.trabajadorIds.isNotEmpty;
 
 /// Coste de una ruta: minutos de viaje + lo tarde que empieza cada tarea, pesado por su criticidad
 /// (una crítica a las 15:00 cuesta mucho más que una rutinaria a las 15:00). Null si no cabe.
@@ -117,6 +122,7 @@ Plan planificar(DateTime dia) {
   // 1. Orden: criticidad, después franja más estrecha.
   int anchura(Tarea t) => (t.ventanaHastaMin ?? finJornada) - (t.ventanaDesdeMin ?? inicioJornada);
   tareas.sort((a, b) {
+    if (_fija(a) != _fija(b)) return _fija(a) ? -1 : 1;
     final c = b.criticidad.peso - a.criticidad.peso;
     return c != 0 ? c : anchura(a) - anchura(b);
   });
@@ -147,7 +153,9 @@ Plan planificar(DateTime dia) {
     if (mejor == null) {
       sinProgramar.add((
         t,
-        t.ventanaDesdeMin != null
+        _fija(t)
+            ? 'Fijado a las ${hhmm(t.inicioMin!)}, pero no se llega a tiempo con los demás fijados'
+            : t.ventanaDesdeMin != null
             ? 'No cabe en su franja (${hhmm(t.ventanaDesdeMin!)}–${hhmm(t.ventanaHastaMin!)}) con los demás'
             : 'No cabe en la jornada (${hhmm(inicioJornada)}–${hhmm(finJornada)}) de ningún técnico apto',
       ));
@@ -191,7 +199,12 @@ Plan planificar(DateTime dia) {
     for (final (i, p) in r.indexed) {
       final t = p.tarea;
       final motivos = <String>[
-        if (antes[t.id]!.trabajadorIds.contains(w.id)) 'Ya era de ${w.nombreCompleto}' else 'Técnico apto con hueco',
+        if (_fija(t))
+          'Fijado a las ${hhmm(t.inicioMin!)}: no se mueve'
+        else if (antes[t.id]!.trabajadorIds.contains(w.id))
+          'Ya era de ${w.nombreCompleto}'
+        else
+          'Técnico apto con hueco',
         if (t.criticidad.peso >= 4) '${t.criticidad.etiqueta}: va lo antes posible',
         if (t.ventanaDesdeMin != null) 'Franja ${hhmm(t.ventanaDesdeMin!)}–${hhmm(t.ventanaHastaMin!)}',
         if (p.inicio > p.llegada) 'Espera ${p.inicio - p.llegada} min a que abra su franja',

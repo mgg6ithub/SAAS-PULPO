@@ -299,6 +299,9 @@ class Tarea {
   /// Hora de inicio el día del próximo mantenimiento, en minutos desde las 00:00 (null = sin hora).
   int? inicioMin;
 
+  /// Fijado a su hora y su técnico: el planificador no lo mueve.
+  bool fijado;
+
   /// Franja horaria en la que se puede hacer (minutos desde las 00:00); null = hora exacta o sin hora.
   int? ventanaDesdeMin, ventanaHastaMin;
 
@@ -341,6 +344,7 @@ class Tarea {
     this.proximo,
     this.solicitud,
     this.inicioMin,
+    this.fijado = false,
     this.ventanaDesdeMin,
     this.ventanaHastaMin,
     this.duracionMin = 60,
@@ -398,6 +402,7 @@ class Tarea {
     'proximo': _f(proximo),
     'solicitud': _f(solicitud),
     'inicioMin': inicioMin,
+    'fijado': fijado,
     'ventanaDesdeMin': ventanaDesdeMin,
     'ventanaHastaMin': ventanaHastaMin,
     'duracionMin': duracionMin,
@@ -431,6 +436,7 @@ class Tarea {
     proximo: _d(j, 'proximo'),
     solicitud: _d(j, 'solicitud'),
     inicioMin: j['inicioMin'] as int?,
+    fijado: j['fijado'] as bool? ?? false,
     ventanaDesdeMin: j['ventanaDesdeMin'] as int?,
     ventanaHastaMin: j['ventanaHastaMin'] as int?,
     duracionMin: j['duracionMin'] as int? ?? 60,

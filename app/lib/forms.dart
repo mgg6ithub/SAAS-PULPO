@@ -2369,6 +2369,33 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                   child: Text(franja ? 'Hora exacta' : 'Franja horaria'),
                 ),
               ),
+              // Con hora exacta se puede fijar: el planificador no lo mueve.
+              if (!franja) ...[
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 46,
+                  child: Tooltip(
+                    message: 'El pulpo no cambia su hora ni su técnico al organizar',
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: esMovil(context) ? EdgeInsets.zero : null,
+                        minimumSize: esMovil(context) ? const Size(46, 46) : null,
+                        backgroundColor: t.fijado ? P.moradoSuave : null,
+                        side: BorderSide(color: t.fijado ? P.morado.withValues(alpha: .5) : P.borde),
+                      ),
+                      onPressed: () => cambiar(() => t.fijado = !t.fijado),
+                      // Móvil: solo el icono.
+                      child: esMovil(context)
+                          ? Icon(
+                              t.fijado ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                              size: 18,
+                              color: t.fijado ? P.morado : P.textoSuave,
+                            )
+                          : Text(t.fijado ? 'Fijado' : 'Fijar'),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           // Línea del aviso siempre reservada: al aparecer «Pon una hora» no se mueve nada.
