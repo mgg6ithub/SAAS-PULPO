@@ -99,35 +99,93 @@ const paleta = <Color>[
 
 Color colorPaleta(int i) => paleta[i % paleta.length];
 
-/// Tipo de máquina/tarea: icono, color y la competencia que suele pedir.
+/// Iconos que se pueden elegir para un tipo de trabajo. El tipo guarda la clave (texto), no el icono:
+/// así se guarda en la base y los iconos siguen siendo constantes.
+const iconosTipo = <String, IconData>{
+  'caldera': Icons.local_fire_department_rounded,
+  'ascensor': Icons.elevator_rounded,
+  'jardin': Icons.yard_rounded,
+  'limpieza': Icons.cleaning_services_rounded,
+  'fontaneria': Icons.plumbing_rounded,
+  'electricidad': Icons.bolt_rounded,
+  'clima': Icons.ac_unit_rounded,
+  'incendios': Icons.fire_extinguisher_rounded,
+  'piscina': Icons.pool_rounded,
+  'puerta': Icons.door_sliding_rounded,
+  'camara': Icons.videocam_rounded,
+  'solar': Icons.solar_power_rounded,
+  'agua': Icons.water_drop_rounded,
+  'pintura': Icons.format_paint_rounded,
+  'plagas': Icons.pest_control_rounded,
+  'otro': Icons.build_rounded,
+};
+
+/// Tipo de máquina/tarea: icono, color y la competencia que suele pedir. Cada empresa tiene los suyos
+/// (los edita en Ajustes); al empezar, los de [tiposBase].
 class TipoInfo {
-  final String nombre;
-  final IconData icono;
+  final String id, nombre;
+
+  /// Clave de [iconosTipo].
+  final String clave;
   final Color color;
   final String? competencia;
 
   /// Retraso medio sobre lo previsto, en minutos. De momento es una estimación fija;
   /// cuando haya historial se calculará con los tiempos reales.
   final int retrasoMin;
-  const TipoInfo(this.nombre, this.icono, this.color, this.competencia, [this.retrasoMin = 15]);
+  const TipoInfo(this.id, this.nombre, this.clave, this.color, this.competencia, [this.retrasoMin = 15]);
+
+  IconData get icono => iconosTipo[clave] ?? Icons.build_rounded;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'nombre': nombre,
+    'clave': clave,
+    'color': color.toARGB32(),
+    'competencia': competencia,
+    'retrasoMin': retrasoMin,
+  };
+
+  factory TipoInfo.fromJson(Map<String, dynamic> j) => TipoInfo(
+    j['id'] as String,
+    j['nombre'] as String? ?? '',
+    j['clave'] as String? ?? 'otro',
+    Color((j['color'] as num?)?.toInt() ?? 0xFF71717A),
+    j['competencia'] as String?,
+    j['retrasoMin'] as int? ?? 15,
+  );
+
+  TipoInfo cambiar({String? nombre, String? clave, Color? color, String? competencia, bool sinCompetencia = false}) =>
+      TipoInfo(
+        id,
+        nombre ?? this.nombre,
+        clave ?? this.clave,
+        color ?? this.color,
+        sinCompetencia ? null : competencia ?? this.competencia,
+        retrasoMin,
+      );
 }
 
-const tipos = <TipoInfo>[
-  TipoInfo('Caldera', Icons.local_fire_department_rounded, Color(0xFFEA580C), 'Calderas (RITE)', 20),
-  TipoInfo('Ascensor', Icons.elevator_rounded, Color(0xFF2563EB), 'Ascensores', 25),
-  TipoInfo('Jardinería', Icons.yard_rounded, Color(0xFF16A34A), 'Jardinería', 15),
-  TipoInfo('Limpieza', Icons.cleaning_services_rounded, Color(0xFF0891B2), 'Limpieza', 10),
-  TipoInfo('Fontanería', Icons.plumbing_rounded, Color(0xFF4F46E5), 'Fontanería', 20),
-  TipoInfo('Electricidad', Icons.bolt_rounded, Color(0xFFCA8A04), 'Electricidad', 15),
-  TipoInfo('Climatización', Icons.ac_unit_rounded, Color(0xFF0D9488), 'Climatización', 20),
-  TipoInfo('Contra incendios', Icons.fire_extinguisher_rounded, Color(0xFFDC2626), 'Contra incendios', 15),
-  TipoInfo('Piscina', Icons.pool_rounded, Color(0xFF0EA5E9), 'Piscinas', 15),
-  TipoInfo('Otro', Icons.build_rounded, Color(0xFF71717A), null),
+/// Los de una empresa nueva. «Otro» va siempre el último: es el de lo que no encaja.
+const tiposBase = <TipoInfo>[
+  TipoInfo('tipo-caldera', 'Caldera', 'caldera', Color(0xFFEA580C), 'Calderas (RITE)', 20),
+  TipoInfo('tipo-ascensor', 'Ascensor', 'ascensor', Color(0xFF2563EB), 'Ascensores', 25),
+  TipoInfo('tipo-jardineria', 'Jardinería', 'jardin', Color(0xFF16A34A), 'Jardinería', 15),
+  TipoInfo('tipo-limpieza', 'Limpieza', 'limpieza', Color(0xFF0891B2), 'Limpieza', 10),
+  TipoInfo('tipo-fontaneria', 'Fontanería', 'fontaneria', Color(0xFF4F46E5), 'Fontanería', 20),
+  TipoInfo('tipo-electricidad', 'Electricidad', 'electricidad', Color(0xFFCA8A04), 'Electricidad', 15),
+  TipoInfo('tipo-climatizacion', 'Climatización', 'clima', Color(0xFF0D9488), 'Climatización', 20),
+  TipoInfo('tipo-incendios', 'Contra incendios', 'incendios', Color(0xFFDC2626), 'Contra incendios', 15),
+  TipoInfo('tipo-piscina', 'Piscina', 'piscina', Color(0xFF0EA5E9), 'Piscinas', 15),
+  TipoInfo('tipo-otro', 'Otro', 'otro', Color(0xFF71717A), null),
 ];
+
+/// Tipos de la empresa en curso. Los carga y guarda el [Store]; aquí para que [tipoDe] los vea en todas partes.
+List<TipoInfo> tipos = [...tiposBase];
 
 TipoInfo tipoDe(String nombre) => tipos.firstWhere((t) => t.nombre == nombre, orElse: () => tipos.last);
 
-const competencias = <String>[
+const competenciasBase = <String>[
   'Calderas (RITE)',
   'Ascensores',
   'Fontanería',
@@ -140,6 +198,9 @@ const competencias = <String>[
   'Trabajo en altura',
   'PRL',
 ];
+
+/// Competencias de la empresa en curso (las carga y guarda el [Store]).
+List<String> competencias = [...competenciasBase];
 
 /// Tipos de letra que se pueden elegir en Ajustes. Geist es la de la landing; Atkinson Hyperlegible
 /// está pensada para leer mejor con poca vista.

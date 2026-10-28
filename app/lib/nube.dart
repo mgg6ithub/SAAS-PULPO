@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Color;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models.dart';
 import 'store.dart';
+import 'theme.dart' show TipoInfo, tipos, competencias;
 
 const supabaseUrl = 'https://gvasthxiqckmekwvhtrg.supabase.co';
 
@@ -151,6 +153,8 @@ class Nube {
       _db.from('trabajo_trabajadores').select('trabajo_id, trabajador_id').eq('empresa_id', empresaId),
       _db.from('trabajo_historial').select('trabajo_id, dia').eq('empresa_id', empresaId),
       _todo('automatizaciones'),
+      _todo('tipos_trabajo'),
+      _todo('competencias'),
     ]);
     final trabajadoresDe = <String, List<String>>{};
     for (final x in r[4]) {
@@ -178,6 +182,21 @@ class Nube {
       ],
       tareas: tareas,
       subtareas: subtareas,
+      tipos: [
+        for (final x in [...r[7]]..sort((a, b) => (a['orden'] as int).compareTo(b['orden'] as int)))
+          TipoInfo(
+            x['id'],
+            x['nombre'],
+            x['clave'],
+            Color((x['color'] as num).toInt()),
+            x['competencia'],
+            x['retraso_min'],
+          ),
+      ],
+      competencias: [
+        for (final x in [...r[8]]..sort((a, b) => (a['orden'] as int).compareTo(b['orden'] as int)))
+          x['nombre'] as String,
+      ],
     );
   }
 
@@ -185,7 +204,7 @@ class Nube {
   /// Después el [Store] vuelve a su estado inicial.
   Future<void> vaciar() async {
     await _cola;
-    for (final t in ['trabajos', 'clientes', 'trabajadores', 'etiquetas']) {
+    for (final t in ['trabajos', 'clientes', 'trabajadores', 'etiquetas', 'tipos_trabajo', 'competencias']) {
       await _db.from(t).delete().eq('empresa_id', empresaId);
     }
     _enviado.clear();
@@ -216,6 +235,8 @@ class Nube {
     'clientes',
     'trabajadores',
     'etiquetas',
+    'tipos_trabajo',
+    'competencias',
     'trabajos',
     'trabajo_trabajadores',
     'trabajo_historial',
@@ -291,6 +312,8 @@ class Nube {
     'clientes': 'id',
     'trabajadores': 'id',
     'etiquetas': 'id',
+    'tipos_trabajo': 'id',
+    'competencias': 'id',
     'trabajos': 'id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
     'trabajo_historial': 'trabajo_id,dia',
@@ -375,6 +398,23 @@ class Nube {
     for (final x in s.etiquetas) {
       r['etiquetas']![_u(x.id)] = {'id': _u(x.id), 'empresa_id': e, 'nombre': x.nombre, 'color': x.color};
     }
+    for (final (i, x) in tipos.indexed) {
+      r['tipos_trabajo']![_u(x.id)] = {
+        'id': _u(x.id),
+        'empresa_id': e,
+        'nombre': x.nombre,
+        'clave': x.clave,
+        'color': x.color.toARGB32(),
+        'competencia': x.competencia,
+        'retraso_min': x.retrasoMin,
+        'orden': i,
+      };
+    }
+    // Una fila por competencia; su id sale del nombre (renombrar = quitar una y poner otra).
+    for (final (i, n) in competencias.indexed) {
+      final id = _u('competencia:$n');
+      r['competencias']![id] = {'id': id, 'empresa_id': e, 'nombre': n, 'orden': i};
+    }
     for (final t in trabajos) {
       r['trabajos']![_u(t.id)] = {
         'id': _u(t.id),
@@ -445,12 +485,18 @@ class DatosNube {
   final List<Trabajador> trabajadores;
   final List<EtiquetaTrabajo> etiquetas;
   final List<Tarea> tareas, subtareas;
+
+  /// Vacíos = la empresa aún no los ha guardado: se usan los de partida.
+  final List<TipoInfo> tipos;
+  final List<String> competencias;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
     required this.etiquetas,
     required this.tareas,
     required this.subtareas,
+    this.tipos = const [],
+    this.competencias = const [],
   });
 }
 
