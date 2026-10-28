@@ -58,21 +58,17 @@ class _TareaDetalleState extends State<TareaDetalle> {
             ),
             titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
             subtitulo: [t.tipo, cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : 'Sin cliente')].join(' · '),
-            acciones: [pillEstado(t)],
+            acciones: [
+              pillEstado(t),
+              const SizedBox(width: 4),
+              BotonPrimario('Subtrabajo', onPressed: () => _nuevoSubtrabajo(t)),
+            ],
           ),
           const SizedBox(height: 18),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              PestanasOscuras(
-                opciones: const ['Resumen', 'Datos'],
-                seleccion: pestana,
-                onChanged: (i) => setState(() => pestana = i),
-              ),
-              BotonAccion('Subtrabajo', icono: Icons.add_rounded, onPressed: () => _nuevoSubtrabajo(t)),
-            ],
+          PestanasOscuras(
+            opciones: const ['Resumen', 'Datos'],
+            seleccion: pestana,
+            onChanged: (i) => setState(() => pestana = i),
           ),
           const SizedBox(height: 16),
           Expanded(
