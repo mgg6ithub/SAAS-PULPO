@@ -21,6 +21,17 @@ class InvitacionNoValida implements Exception {
   const InvitacionNoValida();
 }
 
+/// La empresa se quedaría sin administrador (quitar o degradar al último, o borrar su cuenta).
+class UltimoAdministrador implements Exception {
+  const UltimoAdministrador();
+}
+
+/// Una cuenta con acceso a la empresa.
+typedef Acceso = ({String usuarioId, String correo, String nombre, String rol, String? trabajadorId});
+
+/// Invitación sin usar y sin caducar.
+typedef InvitacionPendiente = ({String id, String codigo, String rol, String? trabajadorId, DateTime caduca});
+
 /// Datos que el [Store] tenía cargados y que se guardan en Supabase.
 typedef _Filas = Map<String, Map<String, Map<String, dynamic>>>;
 
@@ -273,8 +284,9 @@ class Nube {
     return r.isEmpty ? (nombre: '', foto: null) : (nombre: r.first['nombre'] as String, foto: r.first['foto'] as String?);
   }
 
+  /// El perfil ya existe: lo crea la base al crear la cuenta (trigger `copiar_correo`).
   static Future<void> guardarPerfil({required String nombre, String? foto}) =>
-      _db.from('perfiles').upsert({'usuario_id': _db.auth.currentUser!.id, 'nombre': nombre, 'foto': foto});
+      _db.from('perfiles').update({'nombre': nombre, 'foto': foto}).eq('usuario_id', _db.auth.currentUser!.id);
 
   static Future<void> cambiarClave(String nueva) => _db.auth.updateUser(UserAttributes(password: nueva));
 
@@ -290,7 +302,12 @@ class Nube {
   /// Borra la cuenta y las empresas donde es el único miembro (función `borrar-cuenta`), y cierra la sesión.
   static Future<void> borrarCuenta() async {
     await _abierta?._cola;
-    await _db.functions.invoke('borrar-cuenta');
+    try {
+      await _db.functions.invoke('borrar-cuenta');
+    } on FunctionException catch (e) {
+      if (e.status == 409) throw const UltimoAdministrador();
+      rethrow;
+    }
     await _db.auth.signOut(scope: SignOutScope.local);
   }
 
@@ -332,6 +349,80 @@ class Nube {
     await _db.from('empresas').update(datos).eq('id', empresaId);
     reabrir.value++; // el nombre sale en Mi cuenta y en la barra
   }
+
+  // ── Accesos (solo administradores) ──
+
+  /// Quién tiene cuenta en la empresa: primero los administradores, luego por nombre o correo.
+  Future<List<Acceso>> accesos() async {
+    final ms = await _db.from('miembros').select('usuario_id, rol, trabajador_id').eq('empresa_id', empresaId);
+    final ids = [for (final m in ms) m['usuario_id'] as String];
+    final ps = {
+      for (final p in await _db.from('perfiles').select('usuario_id, correo, nombre').inFilter('usuario_id', ids))
+        p['usuario_id'] as String: p,
+    };
+    return [
+      for (final m in ms)
+        (
+          usuarioId: m['usuario_id'] as String,
+          correo: ps[m['usuario_id']]?['correo'] as String? ?? '',
+          nombre: ps[m['usuario_id']]?['nombre'] as String? ?? '',
+          rol: m['rol'] as String,
+          trabajadorId: m['trabajador_id'] as String?,
+        ),
+    ]..sort((a, b) {
+      if (a.rol != b.rol) return a.rol == 'admin' ? -1 : 1;
+      return (a.nombre.isEmpty ? a.correo : a.nombre).toLowerCase().compareTo(
+        (b.nombre.isEmpty ? b.correo : b.nombre).toLowerCase(),
+      );
+    });
+  }
+
+  /// Cambia el rol de una cuenta (un trabajador va siempre ligado a su ficha).
+  Future<void> cambiarRol(String usuarioId, String rol, {String? trabajadorId}) => _protegido(
+    _db
+        .from('miembros')
+        .update({'rol': rol, 'trabajador_id': trabajadorId == null ? null : _u(trabajadorId)})
+        .eq('empresa_id', empresaId)
+        .eq('usuario_id', usuarioId),
+  );
+
+  Future<void> quitarAcceso(String usuarioId) =>
+      _protegido(_db.from('miembros').delete().eq('empresa_id', empresaId).eq('usuario_id', usuarioId));
+
+  /// La base no deja quitar ni degradar al último administrador (trigger `proteger_ultimo_admin`).
+  static Future<void> _protegido(Future<void> f) async {
+    try {
+      await f;
+    } on PostgrestException catch (e) {
+      if (e.hint == 'ultimo_admin') throw const UltimoAdministrador();
+      rethrow;
+    }
+  }
+
+  Future<List<InvitacionPendiente>> invitacionesPendientes() async {
+    final r = await _db
+        .from('invitaciones')
+        .select('id, codigo, rol, trabajador_id, caduca_en')
+        .eq('empresa_id', empresaId)
+        .isFilter('usada_por', null)
+        .gt('caduca_en', DateTime.now().toUtc().toIso8601String())
+        .order('created_at');
+    return [
+      for (final x in r)
+        (
+          id: x['id'] as String,
+          codigo: x['codigo'] as String,
+          rol: x['rol'] as String,
+          trabajadorId: x['trabajador_id'] as String?,
+          caduca: DateTime.parse(x['caduca_en'] as String).toLocal(),
+        ),
+    ];
+  }
+
+  /// La ficha [fichaId] del [Store] es la que la base llama [idBase] (las simulaciones usan ids cortos).
+  bool esFicha(String fichaId, String? idBase) => idBase != null && _u(fichaId) == idBase;
+
+  Future<void> anularInvitacion(String id) => _db.from('invitaciones').delete().eq('id', id);
 
   /// Borra la empresa abierta con todo lo suyo y pasa a otra (o a una nueva si no queda ninguna).
   Future<void> borrarEmpresa() async {
