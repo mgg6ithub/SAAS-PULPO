@@ -44,6 +44,7 @@ dependencies:
   file_picker: ^7.0.2
   desktop_drop: ^0.9.2
   video_player: ^2.14.1
+  supabase_flutter: 2.18.3
 
 dev_dependencies:
   flutter_test:

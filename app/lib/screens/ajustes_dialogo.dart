@@ -1,7 +1,10 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../ajustes.dart';
+import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -144,19 +147,34 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                   ),
                 ),
               ]),
-              _Grupo('Datos', [
-                _Fila(
-                  titulo: 'En este navegador',
-                  subtitulo: 'Tus clientes, trabajadores y trabajos',
-                  child: TextButton(
-                    style: TextButton.styleFrom(foregroundColor: P.rojo),
-                    onPressed: () async {
-                      if (await confirmar(context, '¿Borrar todos los datos y empezar de cero?')) store.restablecer();
-                    },
-                    child: const Text('Borrar todo'),
+              if (store.nube != null)
+                _Grupo('Cuenta', [
+                  _Fila(
+                    titulo: Supabase.instance.client.auth.currentUser?.email ?? 'Cuenta',
+                    subtitulo: 'Tus datos se guardan en la nube',
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Nube.cerrarSesion();
+                      },
+                      child: const Text('Cerrar sesión'),
+                    ),
                   ),
-                ),
-              ]),
+                ])
+              else
+                _Grupo('Datos', [
+                  _Fila(
+                    titulo: 'En este navegador',
+                    subtitulo: 'Tus clientes, trabajadores y trabajos',
+                    child: TextButton(
+                      style: TextButton.styleFrom(foregroundColor: P.rojo),
+                      onPressed: () async {
+                        if (await confirmar(context, '¿Borrar todos los datos y empezar de cero?')) store.restablecer();
+                      },
+                      child: const Text('Borrar todo'),
+                    ),
+                  ),
+                ]),
             ],
           ),
         ),

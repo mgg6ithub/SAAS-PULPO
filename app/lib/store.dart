@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models.dart';
+import 'nube.dart';
 import 'theme.dart' show competencias;
 
 /// Datos del prototipo. Se guardan en el navegador; más adelante, Supabase.
@@ -241,6 +242,42 @@ class Store extends ChangeNotifier {
   List<EtiquetaTrabajo> etiquetas = [];
   SharedPreferences? _prefs;
 
+  /// Con sesión iniciada, cada cambio se guarda en Supabase en vez de en el navegador.
+  Nube? nube;
+
+  /// Carga la empresa de la cuenta desde Supabase; una empresa nueva empieza con las plantillas iniciales.
+  Future<void> cargarDesdeNube(Nube n) async {
+    final d = await n.cargar();
+    clientes = d.clientes;
+    trabajadores = d.trabajadores;
+    tareas = d.tareas;
+    subtareas = d.subtareas;
+    etiquetas = d.etiquetas;
+    usoPlantillas = [];
+    demo = false;
+    nube = n;
+    n.vincular(this, vacio: n.nueva);
+    if (n.nueva) {
+      _inicial();
+      for (final t in tareas) {
+        t.id = nuevoId();
+      }
+      _cambio();
+    }
+    notifyListeners();
+  }
+
+  /// Al cerrar sesión no se queda en pantalla nada de la cuenta.
+  void vaciar() {
+    nube = null;
+    clientes = [];
+    trabajadores = [];
+    tareas = [];
+    subtareas = [];
+    etiquetas = [];
+    notifyListeners();
+  }
+
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     final s = _prefs!.getString(_clave);
@@ -270,18 +307,24 @@ class Store extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _guardar() => _prefs?.setString(
-    _clave,
-    jsonEncode({
-      'clientes': [for (final x in clientes) x.toJson()],
-      'trabajadores': [for (final x in trabajadores) x.toJson()],
-      'tareas': [for (final x in tareas) x.toJson()],
-      'subtareas': [for (final x in subtareas) x.toJson()],
-      'demo': demo,
-      'usoPlantillas': usoPlantillas,
-      'etiquetas': [for (final x in etiquetas) x.toJson()],
-    }),
-  );
+  void _guardar() {
+    if (nube != null) {
+      if (!demo) nube!.sincronizar();
+      return;
+    }
+    _prefs?.setString(
+      _clave,
+      jsonEncode({
+        'clientes': [for (final x in clientes) x.toJson()],
+        'trabajadores': [for (final x in trabajadores) x.toJson()],
+        'tareas': [for (final x in tareas) x.toJson()],
+        'subtareas': [for (final x in subtareas) x.toJson()],
+        'demo': demo,
+        'usoPlantillas': usoPlantillas,
+        'etiquetas': [for (final x in etiquetas) x.toJson()],
+      }),
+    );
+  }
 
   void _cambio() {
     _guardar();
@@ -299,7 +342,15 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
-  String nuevoId() => DateTime.now().microsecondsSinceEpoch.toString();
+  /// UUID v4: la base de datos usa uuid y así se pueden crear ids sin conexión.
+  String nuevoId() {
+    final r = Random.secure();
+    final b = List<int>.generate(16, (_) => r.nextInt(256));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    final h = [for (final x in b) x.toRadixString(16).padLeft(2, '0')].join();
+    return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
+  }
 
   // ── Clientes ──
   Cliente? cliente(String? id) {

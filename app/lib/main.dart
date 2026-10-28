@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'ajustes.dart';
+import 'nube.dart';
+import 'screens/acceso.dart';
 import 'shell.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -16,26 +18,34 @@ Future<void> main() async {
   if (barra != null) ajustes.anchoBarra = barra;
   final oscuro = Uri.base.queryParameters['oscuro'];
   if (oscuro != null) ajustes.tema = oscuro == '1' ? ThemeMode.dark : ThemeMode.light;
-  await store.cargar();
-  // La rama de revisión abre con veinte trabajos simultáneos; ?calendarioDemo=0 los desactiva.
-  if (Uri.base.queryParameters['calendarioDemo'] != '0') {
-    store.cargarSimulacion(
-      equipo: 1,
-      cuentas: 20,
-      cantidadTareas: 20,
-      desde: DateTime(2026, 10, 28),
-      hasta: DateTime(2026, 10, 28),
-      permitirSolapes: true,
-      trabajosSimultaneos: 20,
-    );
+  // Por defecto, con Supabase. ?local=1 abre la versión de pruebas con datos en el navegador.
+  final local = Uri.base.queryParameters['local'] == '1';
+  if (local) {
+    await store.cargar();
+    // La rama de revisión abre con veinte trabajos simultáneos; ?calendarioDemo=0 los desactiva.
+    if (Uri.base.queryParameters['calendarioDemo'] != '0') {
+      store.cargarSimulacion(
+        equipo: 1,
+        cuentas: 20,
+        cantidadTareas: 20,
+        desde: DateTime(2026, 10, 28),
+        hasta: DateTime(2026, 10, 28),
+        permitirSolapes: true,
+        trabajosSimultaneos: 20,
+      );
+    }
+    // ?demo=1 carga la empresa de ejemplo si la cuenta está vacía (útil para capturas).
+    if (Uri.base.queryParameters['demo'] == '1' && store.clientes.isEmpty) store.cargarDemo();
+  } else {
+    await Nube.iniciar();
   }
-  // ?demo=1 carga la empresa de ejemplo si la cuenta está vacía (útil para capturas).
-  if (Uri.base.queryParameters['demo'] == '1' && store.clientes.isEmpty) store.cargarDemo();
-  runApp(const PulpoApp());
+  runApp(PulpoApp(local: local));
 }
 
 class PulpoApp extends StatefulWidget {
-  const PulpoApp({super.key});
+  /// Sin Supabase: datos en el navegador (pruebas y capturas).
+  final bool local;
+  const PulpoApp({super.key, this.local = true});
 
   @override
   State<PulpoApp> createState() => _PulpoAppState();
@@ -94,6 +104,6 @@ class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(ajustes.escalaTexto)),
       child: child!,
     ),
-    home: const Shell(),
+    home: widget.local ? const Shell() : const PuertaNube(),
   );
 }
