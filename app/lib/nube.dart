@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -165,7 +164,7 @@ class Nube {
   /// antes a que el trabajo esté guardado, porque el informe apunta a él.
   Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma) async {
     await _cola;
-    final id = _uuidNuevo();
+    final id = store.nuevoId();
     Future<String> subir(String nombre, Uint8List bytes, String tipo) async {
       final ruta = '$empresaId/informes/$id/$nombre';
       await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
@@ -199,6 +198,25 @@ class Nube {
       cuando: DateTime.parse(x['created_at'] as String).toLocal(),
     );
   }
+
+  // ── Presupuestos y facturas proforma ──
+
+  Future<List<Map<String, dynamic>>> documentos() => _todo('documentos');
+
+  /// Crea (sin id) o actualiza un documento y devuelve la fila guardada: al crearlo, la base le pone el número.
+  Future<Map<String, dynamic>> guardarDocumento(Map<String, dynamic> fila) async {
+    await _cola;
+    final f = {
+      ...fila,
+      'empresa_id': empresaId,
+      if (fila['cliente_id'] != null) 'cliente_id': _u(fila['cliente_id'] as String),
+    };
+    return f['id'] == null
+        ? await _db.from('documentos').insert(f..remove('id')).select().single()
+        : await _db.from('documentos').update(f).eq('id', f['id']).select().single();
+  }
+
+  Future<void> borrarDocumento(String id) => _db.from('documentos').delete().eq('id', id);
 
   /// Sube a Storage la foto en base64 de una fila de `clientes` o `trabajadores` y devuelve la fila con la
   /// ruta. El nombre sale del contenido, así que reintentar no duplica.
@@ -246,7 +264,10 @@ class Nube {
       _db.from('trabajo_trabajadores').select('trabajo_id, trabajador_id').eq('empresa_id', empresaId),
       _db.from('trabajo_historial').select('trabajo_id, dia').eq('empresa_id', empresaId),
       _todo('automatizaciones'),
+      // El trabajador no ve precios: la base le devuelve la lista vacía.
+      _db.from('trabajo_precios').select('trabajo_id, precio, iva').eq('empresa_id', empresaId),
     ]);
+    final precioDe = {for (final x in r[7]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
     for (final x in r[4]) {
       (trabajadoresDe[x['trabajo_id']] ??= []).add(x['trabajador_id'] as String);
@@ -263,6 +284,12 @@ class Nube {
     for (final x in r[3]) {
       final id = x['id'] as String;
       final t = _tarea(x, trabajadoresDe[id] ?? [], (historialDe[id] ?? [])..sort(), automatizacionesDe[id] ?? []);
+      final p = precioDe[id];
+      if (p != null) {
+        t
+          ..precio = (p['precio'] as num).toDouble()
+          ..iva = (p['iva'] as num).toDouble();
+      }
       (t.padreId == null ? tareas : subtareas).add(t);
     }
     return DatosNube(
@@ -280,7 +307,7 @@ class Nube {
   /// Después el [Store] vuelve a su estado inicial.
   Future<void> vaciar() async {
     await _cola;
-    for (final t in ['trabajos', 'clientes', 'trabajadores', 'etiquetas']) {
+    for (final t in ['documentos', 'trabajos', 'clientes', 'trabajadores', 'etiquetas']) {
       await _db.from(t).delete().eq('empresa_id', empresaId);
     }
     _enviado.clear();
@@ -324,6 +351,7 @@ class Nube {
     'trabajadores',
     'etiquetas',
     'trabajos',
+    'trabajo_precios',
     'trabajo_trabajadores',
     'trabajo_historial',
     'automatizaciones',
@@ -402,6 +430,7 @@ class Nube {
     'trabajadores': 'id',
     'etiquetas': 'id',
     'trabajos': 'id',
+    'trabajo_precios': 'trabajo_id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
     'trabajo_historial': 'trabajo_id,dia',
     'automatizaciones': 'id',
@@ -416,6 +445,8 @@ class Nube {
       case 'trabajo_historial':
         final p = clave.split('|');
         return q.eq('trabajo_id', p[0]).eq('dia', p[1]);
+      case 'trabajo_precios':
+        return q.eq('trabajo_id', clave);
       default:
         return q.eq('id', clave);
     }
@@ -513,6 +544,9 @@ class Nube {
         'activa': t.activa,
         'competencias': t.competencias,
       };
+      if (t.precio > 0) {
+        r['trabajo_precios']![_u(t.id)] = {'trabajo_id': _u(t.id), 'empresa_id': e, 'precio': t.precio, 'iva': t.iva};
+      }
       for (final w in t.trabajadorIds.where(trabajadores.contains)) {
         r['trabajo_trabajadores']!['${_u(t.id)}|${_u(w)}'] = {
           'trabajo_id': _u(t.id),
@@ -543,16 +577,6 @@ class Nube {
     }
     return r;
   }
-}
-
-/// Uuid v4 aleatorio, para dar nombre a la carpeta de fotos antes de guardar el informe.
-String _uuidNuevo() {
-  final r = Random.secure();
-  final b = [for (var i = 0; i < 16; i++) r.nextInt(256)];
-  b[6] = b[6] & 0x0f | 0x40;
-  b[8] = b[8] & 0x3f | 0x80;
-  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
-  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }
 
 /// Lo que se lee de la base al entrar.

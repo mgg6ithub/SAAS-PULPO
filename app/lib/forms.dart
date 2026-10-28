@@ -1389,6 +1389,9 @@ class _TareaFormState extends State<TareaForm> {
   late final serie = TextEditingController(text: t.numeroSerie);
   late final ubicacion = TextEditingController(text: t.ubicacion);
   late final notas = TextEditingController(text: t.notas);
+  late final precio = TextEditingController(
+    text: t.precio == 0 ? '' : t.precio.toStringAsFixed(2).replaceAll('.', ',').replaceAll(',00', ''),
+  );
   bool intentoGuardar = false;
 
   bool get nueva => widget.original == null;
@@ -1416,7 +1419,9 @@ class _TareaFormState extends State<TareaForm> {
       ..tipo = p.tipo
       ..periodicidad = p.periodicidad
       ..competencias = [...p.competencias]
+      ..iva = p.iva
       ..proximo = t.proximo ?? widget.fecha ?? hoy();
+    precio.text = p.precio == 0 ? '' : p.precio.toStringAsFixed(2).replaceAll('.', ',').replaceAll(',00', '');
     nombre.text = p.nombre;
     marca.text = p.marca;
     modelo.text = p.modelo;
@@ -1450,7 +1455,8 @@ class _TareaFormState extends State<TareaForm> {
       ..modelo = modelo.text.trim()
       ..numeroSerie = serie.text.trim()
       ..ubicacion = ubicacion.text.trim()
-      ..notas = notas.text.trim();
+      ..notas = notas.text.trim()
+      ..precio = double.tryParse(precio.text.trim().replaceAll(',', '.')) ?? 0;
     store.guardarTarea(t);
     if (widget.incrustada) {
       ScaffoldMessenger.of(
@@ -1620,6 +1626,28 @@ class _TareaFormState extends State<TareaForm> {
                   DropdownMenuItem(value: m, child: Text(duracion(m))),
               ],
               onChanged: (m) => setState(() => t.duracionMin = m!),
+            ),
+          ),
+        ]),
+        Bloque('Precio', descripcion: 'Lo que se cobra cada vez que se hace, sin IVA. Solo lo ves tú.', [
+          dos(
+            campo('Importe', precio, hint: 'Ej.: 120'),
+            conMargen(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  etiqueta('IVA'),
+                  DropdownButtonFormField<double>(
+                    isExpanded: true,
+                    initialValue: t.iva,
+                    items: [
+                      for (final v in {21.0, 10.0, 4.0, 0.0, t.iva})
+                        DropdownMenuItem(value: v, child: Text('${v.toStringAsFixed(0)} %')),
+                    ],
+                    onChanged: (v) => setState(() => t.iva = v!),
+                  ),
+                ],
+              ),
             ),
           ),
         ]),
