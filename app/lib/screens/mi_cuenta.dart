@@ -5,6 +5,7 @@ import '../models.dart';
 import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
+import 'accesos.dart';
 import 'ajustes_dialogo.dart';
 import 'cuenta.dart';
 import 'invitar.dart';
@@ -68,6 +69,11 @@ Future<void> abrirMiCuenta(BuildContext context) async {
           value: 'empresa',
           child: Text('Datos de la empresa', style: TextStyle(color: P.texto, fontSize: 13.5)),
         ),
+      if (nube.esAdmin)
+        PopupMenuItem<String>(
+          value: 'accesos',
+          child: Text('Accesos de la empresa', style: TextStyle(color: P.texto, fontSize: 13.5)),
+        ),
       for (final e in otras)
         PopupMenuItem<String>(
           value: 'ir:${e.id}',
@@ -98,6 +104,8 @@ Future<void> abrirMiCuenta(BuildContext context) async {
       await abrirCuenta(context);
     case 'empresa':
       await abrirEmpresa(context);
+    case 'accesos':
+      await abrirAccesos(context);
     case 'nueva':
       await abrirNuevaEmpresa(context);
     case final String ir when ir.startsWith('ir:'):

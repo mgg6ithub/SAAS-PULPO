@@ -422,6 +422,33 @@ void main() {
         await Nube.cerrarSesion();
         await auth.signInWithPassword(email: _env['SB_CORREO_A']!, password: 'prueba-123456');
         expect((await db.from('perfiles').select().eq('usuario_id', idD)).length, 1);
+
+        // ── DEV-020: accesos de la empresa ──
+        final nA4 = await Nube.abrir();
+        final idA = auth.currentUser!.id;
+        var accesos = await nA4.accesos();
+        expect(accesos.map((a) => a.rol), ['admin', 'admin', 'trabajador'], reason: 'A, D y C');
+        expect(accesos.firstWhere((a) => a.usuarioId == idD).nombre, 'Socio Prueba');
+        expect(accesos.firstWhere((a) => a.usuarioId == idA).correo, _env['SB_CORREO_A']);
+        // D pasa a trabajador: A queda como único administrador y no se puede quitar ni degradar.
+        await nA4.cambiarRol(idD, 'trabajador');
+        await expectLater(nA4.quitarAcceso(idA), throwsA(isA<UltimoAdministrador>()));
+        await expectLater(nA4.cambiarRol(idA, 'trabajador'), throwsA(isA<UltimoAdministrador>()));
+        await expectLater(Nube.borrarCuenta(), throwsA(isA<UltimoAdministrador>()));
+        expect(auth.currentUser, isNotNull, reason: 'no se ha borrado nada');
+        // Vuelve a administrador; a C se le quita el acceso.
+        await nA4.cambiarRol(idD, 'admin');
+        final idC = accesos.firstWhere((a) => a.rol == 'trabajador').usuarioId;
+        await nA4.quitarAcceso(idC);
+        accesos = await nA4.accesos();
+        expect(accesos.map((a) => a.usuarioId), isNot(contains(idC)));
+        // Invitaciones pendientes: la nueva sale; las usadas no; anularla la quita.
+        await nA4.crearInvitacion(rol: 'admin');
+        var pendientes = await nA4.invitacionesPendientes();
+        expect(pendientes.length, 1);
+        await nA4.anularInvitacion(pendientes.single.id);
+        pendientes = await nA4.invitacionesPendientes();
+        expect(pendientes, isEmpty);
         await Nube.cerrarSesion();
 
         // B: su primera empresa y otra de ascensores, que arranca solo con la plantilla de ascensor.

@@ -30,16 +30,22 @@ Deno.serve(async (req) => {
   if (!yo.ok) return responder(401, { error: 'Sin sesión' })
   const { id } = await yo.json() as { id: string }
 
-  // Empresas donde es el único miembro: se borran enteras (todo lo suyo cae en cascada).
-  const mias = await (await admin(`/rest/v1/miembros?usuario_id=eq.${id}&select=empresa_id`)).json() as
-    { empresa_id: string }[]
-  for (const { empresa_id } of mias) {
-    const todos = await (await admin(`/rest/v1/miembros?empresa_id=eq.${empresa_id}&select=usuario_id`)).json() as
-      unknown[]
-    if (todos.length === 1) {
-      const r = await admin(`/rest/v1/empresas?id=eq.${empresa_id}`, { method: 'DELETE' })
-      if (!r.ok) return responder(500, { error: `No se pudo borrar la empresa: ${await r.text()}` })
+  // Empresas donde es el único miembro: se borran enteras (todo lo suyo cae en cascada). Si es el único
+  // administrador de una empresa con más gente, no se borra nada: antes tiene que nombrar a otro.
+  const mias = await (await admin(`/rest/v1/miembros?usuario_id=eq.${id}&select=empresa_id,rol`)).json() as
+    { empresa_id: string; rol: string }[]
+  const solas: string[] = []
+  for (const { empresa_id, rol } of mias) {
+    const todos = await (await admin(`/rest/v1/miembros?empresa_id=eq.${empresa_id}&select=usuario_id,rol`))
+      .json() as { usuario_id: string; rol: string }[]
+    if (todos.length === 1) solas.push(empresa_id)
+    else if (rol === 'admin' && !todos.some((m) => m.usuario_id !== id && m.rol === 'admin')) {
+      return responder(409, { error: 'ultimo_admin', empresa_id })
     }
+  }
+  for (const empresa_id of solas) {
+    const r = await admin(`/rest/v1/empresas?id=eq.${empresa_id}`, { method: 'DELETE' })
+    if (!r.ok) return responder(500, { error: `No se pudo borrar la empresa: ${await r.text()}` })
   }
 
   const r = await admin(`/auth/v1/admin/users/${id}`, { method: 'DELETE' })
