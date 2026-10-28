@@ -73,7 +73,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
-            opciones: const ['Resumen', 'Datos'],
+            opciones: const ['Resumen', 'Datos', 'Histórico'],
             seleccion: pestana,
             onChanged: (i) => setState(() => pestana = i),
           ),
@@ -84,15 +84,23 @@ class _TareaDetalleState extends State<TareaDetalle> {
               layoutBuilder: (actual, anteriores) => Stack(fit: StackFit.expand, children: [...anteriores, ?actual]),
               child: KeyedSubtree(
                 key: ValueKey(pestana),
-                child: pestana == 0
-                    ? _Resumen(t, widget.onAbrir)
-                    : Align(
-                        alignment: Alignment.topLeft,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 860),
-                          child: TareaForm(key: ValueKey(t.id), original: t, incrustada: true),
-                        ),
-                      ),
+                child: switch (pestana) {
+                  0 => _Resumen(t, widget.onAbrir),
+                  1 => Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 860),
+                      child: TareaForm(key: ValueKey(t.id), original: t, incrustada: true),
+                    ),
+                  ),
+                  _ => Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: SingleChildScrollView(child: _Historico(t)),
+                    ),
+                  ),
+                },
               ),
             ),
           ),
@@ -184,32 +192,15 @@ class _Resumen extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
       if (box.maxWidth <= 900) {
-        return ListView(
-          children: [
-            _resumen(),
-            const SizedBox(height: 16),
-            _subtrabajos(fija: true),
-            const SizedBox(height: 16),
-            _Historico(t),
-          ],
-        );
+        return ListView(children: [_resumen(), const SizedBox(height: 16), _subtrabajos(fija: true)]);
       }
-      // El resumen, compacto; todo el alto restante para la lista de subtrabajos y el histórico.
+      // El resumen, compacto; todo el alto restante para la lista de subtrabajos.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _resumen(),
           const SizedBox(height: 16),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _subtrabajos()),
-                const SizedBox(width: 16),
-                SizedBox(width: 340, child: SingleChildScrollView(child: _Historico(t))),
-              ],
-            ),
-          ),
+          Expanded(child: _subtrabajos()),
         ],
       );
     },
