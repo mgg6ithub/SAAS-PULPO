@@ -91,7 +91,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                       _ChipTipo(e.nombre, Color(e.color), false, () => _editarEtiqueta(e)),
                       const SizedBox(width: 6),
                     ],
-                    _ChipTipo('Añadir etiqueta', P.textoSuave, false, () => _editarEtiqueta(null)),
+                    _ChipNueva(() => _editarEtiqueta(null)),
                   ],
                 ),
               ),
@@ -142,6 +142,38 @@ class _TareasPaginaState extends State<TareasPagina> {
       ],
     );
   }
+}
+
+/// «Nueva» etiqueta: sin fondo, con un plus y el borde de rayas.
+class _ChipNueva extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ChipNueva(this.onTap);
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: 'Crear una etiqueta',
+    child: InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: CustomPaint(
+        painter: BordeDiscontinuo(P.textoSuave.withValues(alpha: .6), BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, size: 15, color: P.textoSuave),
+              const SizedBox(width: 5),
+              Text(
+                'Nueva',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: P.textoSuave),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Filtro por tipo: píldora con el punto de color del tipo; la elegida, con borde de su color.
