@@ -9,7 +9,8 @@ import 'tarea_card.dart';
 
 /// Todas las tareas: las de cada cliente y las plantillas (sin cliente).
 class TareasPagina extends StatefulWidget {
-  const TareasPagina({super.key});
+  final ValueChanged<String> onAbrir;
+  const TareasPagina({super.key, required this.onAbrir});
 
   @override
   State<TareasPagina> createState() => _TareasPaginaState();
@@ -39,11 +40,12 @@ class _TareasPaginaState extends State<TareasPagina> {
 
   @override
   Widget build(BuildContext context) {
-    final deClientes = store.tareas.length - store.plantillas.length;
+    final deClientes = store.tareas.where((t) => !t.esPlantilla && t.clienteId != null).length;
     final filtradas =
         store.tareas.where((t) {
-          if (pestana == 0 && t.esPlantilla) return false;
+          if (pestana == 0 && (t.esPlantilla || t.clienteId == null)) return false;
           if (pestana == 1 && !t.esPlantilla) return false;
+          if (pestana == 2 && t.esPlantilla) return false;
           if (tipo != null && t.tipo != tipo) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
               .toLowerCase();
@@ -211,7 +213,7 @@ class _TareasPaginaState extends State<TareasPagina> {
             if (seleccionando) {
               setState(() => seleccion.contains(ts[i].id) ? seleccion.remove(ts[i].id) : seleccion.add(ts[i].id));
             } else {
-              abrirTareaForm(context, ts[i]);
+              widget.onAbrir(ts[i].id);
             }
           },
           pie: pieTabla(ts.length, ts.length == 1 ? 'trabajo' : 'trabajos'),

@@ -10,6 +10,7 @@ import 'screens/clientes.dart';
 import 'screens/planificacion.dart';
 import 'screens/resumen.dart';
 import 'screens/simulaciones.dart';
+import 'screens/tarea_detalle.dart';
 import 'screens/tareas.dart';
 import 'screens/trabajador_detalle.dart';
 import 'screens/trabajadores.dart';
@@ -34,6 +35,7 @@ class _ShellState extends State<Shell> {
       Seccion.values[(int.tryParse(Uri.base.queryParameters['s'] ?? '') ?? 0).clamp(0, Seccion.values.length - 1)];
   String? clienteId = Uri.base.queryParameters['c'];
   String? trabajadorId = Uri.base.queryParameters['t'];
+  String? tareaId;
 
   /// Secciones ya abiertas: se quedan montadas (ocultas) para que volver a ellas sea instantáneo.
   final _visitadas = <Seccion>{};
@@ -64,6 +66,7 @@ class _ShellState extends State<Shell> {
     seccion = s;
     clienteId = null;
     trabajadorId = null;
+    tareaId = null;
   });
 
   @override
@@ -112,7 +115,7 @@ class _ShellState extends State<Shell> {
   Widget build(BuildContext context) {
     final compacta = MediaQuery.sizeOf(context).width < 900;
     _visitadas.add(seccion);
-    final enDetalle = clienteId != null || trabajadorId != null;
+    final enDetalle = clienteId != null || trabajadorId != null || tareaId != null;
     return Focus(
       autofocus: true,
       child: Scaffold(
@@ -143,7 +146,7 @@ class _ShellState extends State<Shell> {
                           ),
                       if (enDetalle)
                         _Capa(
-                          key: ValueKey('detalle-$clienteId-$trabajadorId'),
+                          key: ValueKey('detalle-$clienteId-$trabajadorId-$tareaId'),
                           activa: true,
                           child: RepaintBoundary(child: _detalle()),
                         ),
@@ -160,6 +163,8 @@ class _ShellState extends State<Shell> {
 
   Widget _detalle() => clienteId != null
       ? ClienteDetalle(clienteId: clienteId!, onVolver: () => setState(() => clienteId = null))
+      : tareaId != null
+      ? TareaDetalle(tareaId: tareaId!, onVolver: () => setState(() => tareaId = null))
       : TrabajadorDetalle(trabajadorId: trabajadorId!, onVolver: () => setState(() => trabajadorId = null));
 
   // Sin const: si no, el ListenableBuilder del store no las repinta al cambiar los datos.
@@ -169,8 +174,7 @@ class _ShellState extends State<Shell> {
     Seccion.planificacion => Planificacion(),
     Seccion.clientes => Clientes(onAbrir: (id) => setState(() => clienteId = id)),
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
-    // ignore: prefer_const_constructors
-    Seccion.tareas => TareasPagina(),
+    Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
   };
 }
 
