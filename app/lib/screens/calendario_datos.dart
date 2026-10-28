@@ -44,10 +44,7 @@ Map<DateTime, List<VisitaCalendario>> visitasCalendario(
 
   for (final t in tareas) {
     if (t.esPlantilla || !t.activa) continue;
-    final hechos = {
-      ...t.historial.map(DateUtils.dateOnly),
-      if (t.ultimo != null) DateUtils.dateOnly(t.ultimo!),
-    };
+    final hechos = {...t.historial.map(DateUtils.dateOnly), if (t.ultimo != null) DateUtils.dateOnly(t.ultimo!)};
     if (t.proximo != null && !hechos.contains(DateUtils.dateOnly(t.proximo!))) agregar(t, t.proximo!, false);
     for (final d in hechos) {
       if (!d.isAfter(hasta)) {

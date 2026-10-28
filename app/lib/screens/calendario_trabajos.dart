@@ -159,10 +159,7 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
                             child: Row(
                               children: [
                                 const Expanded(
-                                  child: Text(
-                                    'Detalles del trabajo',
-                                    style: TextStyle(fontWeight: FontWeight.w600),
-                                  ),
+                                  child: Text('Detalles del trabajo', style: TextStyle(fontWeight: FontWeight.w600)),
                                 ),
                                 IconButton(
                                   tooltip: 'Cerrar detalles',
@@ -218,10 +215,7 @@ class _MesCalendario extends StatelessWidget {
             for (final d in diasSemana)
               Expanded(
                 child: Center(
-                  child: Text(
-                    d.substring(0, 3).toUpperCase(),
-                    style: TextStyle(fontSize: 11, color: P.textoSuave),
-                  ),
+                  child: Text(d.substring(0, 3).toUpperCase(), style: TextStyle(fontSize: 11, color: P.textoSuave)),
                 ),
               ),
           ],
@@ -313,10 +307,7 @@ class _NumeroDia extends StatelessWidget {
     ),
     child: Text(
       '${dia.day}',
-      style: TextStyle(
-        fontWeight: FontWeight.w700,
-        color: DateUtils.isSameDay(dia, hoy()) ? Colors.white : P.texto,
-      ),
+      style: TextStyle(fontWeight: FontWeight.w700, color: DateUtils.isSameDay(dia, hoy()) ? Colors.white : P.texto),
     ),
   );
 }
@@ -442,8 +433,7 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
                                 ),
                               ),
                             for (var i = 0; i < 7; i++)
-                              for (final g in grupos[i])
-                                ..._bloques(g, dias[i], margen + i * columna, columna),
+                              for (final g in grupos[i]) ..._bloques(g, dias[i], margen + i * columna, columna),
                           ],
                         ),
                       ),
@@ -523,10 +513,7 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
   static const hora = 130.0;
   final horizontal = ScrollController(initialScrollOffset: 7.5 * hora);
   final vertical = ScrollController();
-  List<
-    ({String nombre, String? id, List<VisitaCalendario> visitas, bool sinHora})
-  >
-  filas = [];
+  List<({String nombre, String? id, List<VisitaCalendario> visitas, bool sinHora})> filas = [];
   @override
   void initState() {
     super.initState();
@@ -546,33 +533,21 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
       equipos[w.id] = [];
     }
     for (final v in widget.visitas) {
-      final ids = v.tarea.trabajadorIds
-          .where((id) => store.trabajador(id) != null)
-          .toList();
+      final ids = v.tarea.trabajadorIds.where((id) => store.trabajador(id) != null).toList();
       for (final id in ids.isEmpty ? [''] : ids) {
         (equipos[id] ??= []).add(v);
       }
     }
     for (final e in equipos.entries) {
       if (e.value.isEmpty) continue;
-      final nombre = e.key.isEmpty
-          ? 'Sin asignar'
-          : store.trabajador(e.key)!.nombreCompleto;
+      final nombre = e.key.isEmpty ? 'Sin asignar' : store.trabajador(e.key)!.nombreCompleto;
       final sinHora = e.value.where((v) => v.inicio == null).toList();
       for (final v in sinHora) {
-        filas.add((
-          nombre: nombre,
-          id: e.key.isEmpty ? null : e.key,
-          visitas: [v],
-          sinHora: true,
-        ));
+        filas.add((nombre: nombre, id: e.key.isEmpty ? null : e.key, visitas: [v], sinHora: true));
       }
       final grupos = distribuirVisitas(e.value, minimoMin: 30);
       final cantidad = grupos.fold(0, (n, g) => max(n, g.carriles));
-      final carriles = List.generate(
-        max(1, cantidad),
-        (_) => <VisitaCalendario>[],
-      );
+      final carriles = List.generate(max(1, cantidad), (_) => <VisitaCalendario>[]);
       for (final g in grupos) {
         for (final (v, c) in g.posiciones) {
           carriles[c].add(v);
@@ -580,12 +555,7 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
       }
       for (final carril in carriles) {
         if (carril.isNotEmpty) {
-          filas.add((
-            nombre: nombre,
-            id: e.key.isEmpty ? null : e.key,
-            visitas: carril,
-            sinHora: false,
-          ));
+          filas.add((nombre: nombre, id: e.key.isEmpty ? null : e.key, visitas: carril, sinHora: false));
         }
       }
     }
@@ -651,10 +621,7 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                                   painter: _RejillaCalendario(
                                     horizontal: true,
                                     unidad: hora,
-                                    actual:
-                                        DateUtils.isSameDay(widget.dia, hoy())
-                                        ? 0
-                                        : -1,
+                                    actual: DateUtils.isSameDay(widget.dia, hoy()) ? 0 : -1,
                                   ),
                                 ),
                               ),
@@ -666,31 +633,19 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                                     null,
                                     fecha: widget.dia,
                                     trabajadorId: f.id,
-                                    horaMin:
-                                        ((e.localPosition.dx / hora * 60) ~/
-                                                15 *
-                                                15)
-                                            .clamp(0, 1425),
+                                    horaMin: ((e.localPosition.dx / hora * 60) ~/ 15 * 15).clamp(0, 1425),
                                   ),
                                 ),
                               ),
                               for (final v in f.visitas)
                                 Positioned(
-                                  left: f.sinHora
-                                      ? 6
-                                      : v.inicio! / 60 * hora + 2,
+                                  left: f.sinHora ? 6 : v.inicio! / 60 * hora + 2,
                                   top: 7,
                                   height: alto - 14,
                                   width: f.sinHora
                                       ? max(40, 24 * hora - 12)
-                                      : max(
-                                          hora / 2 - 4,
-                                          (v.fin! - v.inicio!) / 60 * hora - 4,
-                                        ),
-                                  child: _EventoCalendario(
-                                    v,
-                                    onDetalle: widget.onDetalle,
-                                  ),
+                                      : max(hora / 2 - 4, (v.fin! - v.inicio!) / 60 * hora - 4),
+                                  child: _EventoCalendario(v, onDetalle: widget.onDetalle),
                                 ),
                             ],
                           ),
@@ -754,11 +709,7 @@ class _RejillaCalendario extends CustomPainter {
       }
       final ancho = (size.width - margen) / divisiones;
       for (var i = 0; i <= divisiones; i++) {
-        canvas.drawLine(
-          Offset(margen + i * ancho, 0),
-          Offset(margen + i * ancho, size.height),
-          Paint()..color = borde,
-        );
+        canvas.drawLine(Offset(margen + i * ancho, 0), Offset(margen + i * ancho, size.height), Paint()..color = borde);
       }
       if (actual >= 0) {
         final y = (ahora.hour + ahora.minute / 60) * unidad;
@@ -904,28 +855,19 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                                     ),
                                   ],
                                 ),
-                                Text(
-                                  t.nombre,
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-                                ),
+                                Text(t.nombre, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                                 const SizedBox(height: 6),
                                 Text(
                                   v.hecha ? 'Completado' : 'Pendiente',
                                   style: TextStyle(color: v.hecha ? P.verde : P.textoSuave, fontSize: 12),
                                 ),
                                 const SizedBox(height: 14),
-                                _dato(
-                                  Icons.business_outlined,
-                                  store.cliente(t.clienteId)?.nombre ?? 'Sin cliente',
-                                ),
+                                _dato(Icons.business_outlined, store.cliente(t.clienteId)?.nombre ?? 'Sin cliente'),
                                 _dato(
                                   Icons.schedule_rounded,
                                   '${fecha(v.dia)} · ${v.inicio == null ? 'Sin hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'} · ${t.duracionMin} min',
                                 ),
-                                _dato(
-                                  Icons.place_outlined,
-                                  t.ubicacion.isEmpty ? 'Sin ubicación' : t.ubicacion,
-                                ),
+                                _dato(Icons.place_outlined, t.ubicacion.isEmpty ? 'Sin ubicación' : t.ubicacion),
                                 _dato(
                                   Icons.people_outline,
                                   t.trabajadorIds.isEmpty
@@ -933,15 +875,11 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                                       : t.trabajadorIds
                                             .map(
                                               (id) =>
-                                                  store.trabajador(id)?.nombreCompleto ??
-                                                  'Trabajador no disponible',
+                                                  store.trabajador(id)?.nombreCompleto ?? 'Trabajador no disponible',
                                             )
                                             .join(', '),
                                 ),
-                                _dato(
-                                  Icons.repeat_rounded,
-                                  '${t.periodicidad.etiqueta} · ${t.criticidad.etiqueta}',
-                                ),
+                                _dato(Icons.repeat_rounded, '${t.periodicidad.etiqueta} · ${t.criticidad.etiqueta}'),
                                 if (t.notas.isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 12),
