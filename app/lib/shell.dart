@@ -265,6 +265,53 @@ class _CapaState extends State<_Capa> with SingleTickerProviderStateMixin {
   );
 }
 
+/// «Crear» arriba del menú, como en Jobber: un menú para dar de alta un trabajo, cliente, trabajador o plantilla
+/// desde cualquier sitio. Con la barra en solo iconos, queda un botón con el plus.
+class _BotonCrear extends StatelessWidget {
+  final bool compacto;
+  const _BotonCrear({required this.compacto});
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    alignmentOffset: const Offset(0, 4),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      MenuItemButton(onPressed: () => abrirTareaForm(context, null), child: const Text('Nuevo trabajo')),
+      MenuItemButton(onPressed: () => abrirClienteForm(context), child: const Text('Nuevo cliente')),
+      MenuItemButton(onPressed: () => abrirTrabajadorForm(context), child: const Text('Nuevo trabajador')),
+      MenuItemButton(
+        onPressed: () => abrirTareaForm(context, null, plantilla: true),
+        child: const Text('Nueva plantilla'),
+      ),
+    ],
+    builder: (context, menu, _) => Tooltip(
+      message: 'Crear',
+      child: SizedBox(
+        height: 40,
+        child: compacto
+            ? IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: P.morado,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                ),
+                onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                icon: const Icon(Icons.add_rounded, size: 22, color: Colors.white),
+              )
+            : FilledButton(
+                onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [Icon(Icons.add_rounded, size: 20), SizedBox(width: 6), Text('Crear')],
+                ),
+              ),
+      ),
+    ),
+  );
+}
+
 /// Barra lateral clara. Se ensancha o estrecha arrastrando su borde derecho (hasta media pantalla);
 /// por debajo de cierto ancho se queda en solo iconos. El botón de arriba la contrae o la expande.
 /// Con más ancho, el texto crece un poco (con tope).
@@ -385,7 +432,9 @@ class _BarraState extends State<_Barra> {
                   Divider(height: 1, color: P.borde),
                   const SizedBox(height: 10),
                 ] else
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 18),
+                _BotonCrear(compacto: iconos),
+                SizedBox(height: iconos ? 10 : 14),
                 _menu(vencidas),
                 const SizedBox(height: 14),
                 const Spacer(),
