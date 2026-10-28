@@ -1,7 +1,5 @@
 # Pulpo
 
-> **DESCATALOGADO Y OBSOLETO · 2026-10-26.** Primer prototipo conservado como referencia histórica. No arrancar ni desarrollar aquí. Versión vigente: `/Users/mike/Desktop/PULPO/` (`app/`).
-
 SaaS de automatización de mantenimiento para empresas pequeñas de mantenimiento (ascensores, contra incendios…). Gestiona sus clientes (edificios, colegios, hospitales…), sus trabajadores, qué tareas puede hacer cada uno y cuándo toca cada mantenimiento. Objetivo: automatizar el mantenimiento y ganar inteligencia con los datos.
 
 - Nombre provisional "Pulpo" (logo: pulpo morado).
