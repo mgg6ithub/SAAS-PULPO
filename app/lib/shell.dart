@@ -139,50 +139,64 @@ class _ShellState extends State<Shell> {
   );
 
   Widget _administrador(BuildContext context) {
-    final compacta = MediaQuery.sizeOf(context).width < 900;
+    final ancho = MediaQuery.sizeOf(context).width;
+    final compacta = ancho < 900;
+    // Móvil: sin barra lateral; las secciones van en una barra abajo.
+    final movil = ancho < 700;
     _visitadas.add(seccion);
     final enDetalle = clienteId != null || trabajadorId != null || tareaId != null;
+    final pagina = Expanded(
+      child: RepaintBoundary(
+        child: ListenableBuilder(
+          listenable: store,
+          // Una capa por sección visitada; solo la activa se ve (con fundido de entrada) y recibe
+          // eventos. La ficha de cliente o trabajador va encima, en su propia capa.
+          builder: (context, _) => Stack(
+            fit: StackFit.expand,
+            children: [
+              for (final s in Seccion.values)
+                if (_visitadas.contains(s))
+                  _Capa(
+                    key: ValueKey(s),
+                    activa: s == seccion && !enDetalle,
+                    child: RepaintBoundary(child: _seccion(s)),
+                  ),
+              if (enDetalle)
+                _Capa(
+                  key: ValueKey('detalle-$clienteId-$trabajadorId-$tareaId'),
+                  activa: true,
+                  child: RepaintBoundary(child: _detalle()),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
     return Focus(
       autofocus: true,
       child: Scaffold(
         backgroundColor: P.fondo,
-        // La barra va a la izquierda o, si se elige en Ajustes, a la derecha.
-        body: Row(
-          textDirection: ajustes.barraDerecha ? TextDirection.rtl : TextDirection.ltr,
-          children: [
-            ListenableBuilder(
-              listenable: Listenable.merge([store, ajustes.cambioBarra]),
-              builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir, crear: _crear),
-            ),
-            Expanded(
-              child: RepaintBoundary(
-                child: ListenableBuilder(
-                  listenable: store,
-                  // Una capa por sección visitada; solo la activa se ve (con fundido de entrada) y recibe
-                  // eventos. La ficha de cliente o trabajador va encima, en su propia capa.
-                  builder: (context, _) => Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      for (final s in Seccion.values)
-                        if (_visitadas.contains(s))
-                          _Capa(
-                            key: ValueKey(s),
-                            activa: s == seccion && !enDetalle,
-                            child: RepaintBoundary(child: _seccion(s)),
-                          ),
-                      if (enDetalle)
-                        _Capa(
-                          key: ValueKey('detalle-$clienteId-$trabajadorId-$tareaId'),
-                          activa: true,
-                          child: RepaintBoundary(child: _detalle()),
-                        ),
-                    ],
+        body: movil
+            ? Column(
+                children: [
+                  pagina,
+                  ListenableBuilder(
+                    listenable: store,
+                    builder: (_, _) => _BarraInferior(seccion: seccion, onTap: ir, crear: _crear),
                   ),
-                ),
+                ],
+              )
+            // La barra va a la izquierda o, si se elige en Ajustes, a la derecha.
+            : Row(
+                textDirection: ajustes.barraDerecha ? TextDirection.rtl : TextDirection.ltr,
+                children: [
+                  ListenableBuilder(
+                    listenable: Listenable.merge([store, ajustes.cambioBarra]),
+                    builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir, crear: _crear),
+                  ),
+                  pagina,
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -798,6 +812,122 @@ class _BarraState extends State<_Barra> {
                 ],
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Barra de abajo en móvil: las secciones solo con icono (la activa sobre fondo morado suave), «Crear»
+/// y «Más» (Simulaciones, vista de trabajador, Ajustes y Mi cuenta).
+class _BarraInferior extends StatelessWidget {
+  final Seccion seccion;
+  final ValueChanged<Seccion> onTap;
+  final MenuController crear;
+  const _BarraInferior({required this.seccion, required this.onTap, required this.crear});
+
+  @override
+  Widget build(BuildContext context) {
+    final vencidas = store.tareas
+        .where((t) => !t.esPlantilla && t.activa && t.proximo != null && diasHasta(t.proximo!) < 0)
+        .length;
+    final items = [
+      (Icons.home_outlined, 'Inicio', Seccion.inicio, 0),
+      (Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, vencidas),
+      (Icons.apartment_outlined, 'Clientes', Seccion.clientes, 0),
+      (Icons.handyman_outlined, 'Trabajos', Seccion.tareas, 0),
+      (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
+    ];
+    return Container(
+      decoration: BoxDecoration(
+        color: P.barra,
+        border: Border(top: BorderSide(color: P.borde)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Row(
+            children: [
+              for (final (icono, texto, s, aviso) in items)
+                Expanded(
+                  child: Tooltip(
+                    message: aviso > 0 ? '$texto · $aviso vencidos' : texto,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(P.radioControl),
+                      splashFactory: NoSplash.splashFactory,
+                      onTap: () => onTap(s),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 44,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: s == seccion ? P.moradoSuave : Colors.transparent,
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                        ),
+                        child: Center(
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Icon(icono, size: 22, color: s == seccion ? P.morado : P.textoSuave),
+                              if (aviso > 0)
+                                Positioned(
+                                  right: -3,
+                                  top: -2,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: P.rojo,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: P.barra, width: 1.5),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 4),
+              _BotonCrear(compacto: true, menu: crear),
+              const SizedBox(width: 4),
+              BotonMenu<int>(
+                tooltip: 'Más',
+                onSelected: (i) => switch (i) {
+                  0 => abrirSimulaciones(context),
+                  1 => abrirVistaTrabajador(context),
+                  2 => abrirAjustes(context),
+                  _ => abrirMiCuenta(context),
+                },
+                opciones: [
+                  for (final (i, (icono, texto)) in const [
+                    (Icons.science_outlined, 'Simulaciones'),
+                    (Icons.badge_outlined, 'Vista de trabajador'),
+                    (Icons.settings_outlined, 'Ajustes'),
+                    (Icons.person_outline_rounded, 'Mi cuenta'),
+                  ].indexed)
+                    (
+                      i,
+                      Row(
+                        children: [
+                          Icon(icono, size: 18, color: P.textoSuave),
+                          const SizedBox(width: 10),
+                          Text(texto),
+                        ],
+                      ),
+                    ),
+                ],
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(Icons.more_horiz_rounded, size: 22, color: P.textoSuave),
+                ),
+              ),
+            ],
           ),
         ),
       ),

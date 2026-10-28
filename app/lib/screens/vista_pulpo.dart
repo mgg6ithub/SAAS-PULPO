@@ -268,25 +268,25 @@ class _FilaGrupoHorario extends StatelessWidget {
           children: [
             SizedBox(
               width: 58,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    hhmm(grupo.inicio),
-                    maxLines: 1,
-                    softWrap: false,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
-                  ),
-                  const SizedBox(height: 3),
-                  Icon(Icons.arrow_downward_rounded, size: 15, color: P.textoSuave),
-                  const SizedBox(height: 3),
-                  Text(
-                    hhmm(grupo.fin),
-                    maxLines: 1,
-                    softWrap: false,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
-                  ),
-                ],
+              // Las horas nunca se parten: si no caben, se encogen.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      hhmm(grupo.inicio),
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
+                    ),
+                    const SizedBox(height: 3),
+                    Icon(Icons.arrow_downward_rounded, size: 15, color: P.textoSuave),
+                    const SizedBox(height: 3),
+                    Text(
+                      hhmm(grupo.fin),
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -341,6 +341,8 @@ class _FilaTrabajo extends StatelessWidget {
   Widget build(BuildContext context) {
     final tecnico = tarea.trabajadorIds.map(store.trabajador).whereType<Trabajador>().firstOrNull;
     final asignada = tarea.trabajadorIds.isNotEmpty;
+    // Móvil: sin la flecha ni el icono del selector, que es más estrecho.
+    final movil = esMovil(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -378,13 +380,14 @@ class _FilaTrabajo extends StatelessWidget {
               ),
             ),
           ),
-          if (asignada)
+          if (movil) const SizedBox(width: 8),
+          if (asignada && !movil)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Icon(Icons.arrow_forward_rounded, size: 22, color: P.textoSuave),
             ),
           SizedBox(
-            width: 178,
+            width: movil ? 120 : 178,
             child: BotonMenu<String>(
               tooltip: asignada ? 'Cambiar o quitar trabajador' : 'Elegir trabajador',
               seleccionado: tecnico?.id,
@@ -420,8 +423,7 @@ class _FilaTrabajo extends StatelessWidget {
                 decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(10)),
                 child: Row(
                   children: [
-                    Icon(Icons.badge_outlined, size: 18, color: P.morado),
-                    const SizedBox(width: 8),
+                    if (!movil) ...[Icon(Icons.badge_outlined, size: 18, color: P.morado), const SizedBox(width: 8)],
                     Expanded(
                       child: Text(
                         tecnico?.nombreCompleto ?? (asignada ? 'Trabajador no disponible' : 'Sin asignar'),

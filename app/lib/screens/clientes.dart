@@ -249,7 +249,7 @@ class _Tabla extends StatelessWidget {
             if (seleccion != null) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Nombre', flex: 4),
             if (ancho) const Col('CIF/NIF', flex: 2),
-            const Col('Población', flex: 2),
+            if (medio) const Col('Población', flex: 2),
             if (ancho) const Col('Contacto', flex: 3),
             if (medio) const Col('Trabajos', flex: 2),
             if (medio) const Col('Próximo', flex: 2),
