@@ -1,10 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../ajustes.dart';
-import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -147,21 +144,7 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                   ),
                 ),
               ]),
-              if (store.nube != null)
-                _Grupo('Cuenta', [
-                  _Fila(
-                    titulo: Supabase.instance.client.auth.currentUser?.email ?? 'Cuenta',
-                    subtitulo: 'Tus datos se guardan en la nube',
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        Nube.cerrarSesion();
-                      },
-                      child: const Text('Cerrar sesión'),
-                    ),
-                  ),
-                ])
-              else
+              if (store.nube == null)
                 _Grupo('Datos', [
                   _Fila(
                     titulo: 'En este navegador',

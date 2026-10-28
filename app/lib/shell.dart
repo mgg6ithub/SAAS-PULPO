@@ -7,6 +7,7 @@ import 'models.dart';
 import 'screens/ajustes_dialogo.dart';
 import 'screens/cliente_detalle.dart';
 import 'screens/clientes.dart';
+import 'screens/mi_cuenta.dart';
 import 'screens/planificacion.dart';
 import 'screens/resumen.dart';
 import 'screens/simulaciones.dart';
@@ -588,15 +589,16 @@ class _BarraState extends State<_Barra> {
                 Divider(height: 1, color: P.borde),
                 const SizedBox(height: 8),
                 Builder(
-                  builder: (context) => _fila(Icons.badge_outlined, 'Vista de trabajador', () => abrirVistaTrabajador(context)),
+                  builder: (context) =>
+                      _fila(Icons.badge_outlined, 'Vista de trabajador', () => abrirVistaTrabajador(context)),
                 ),
                 Builder(builder: (context) => _fila(Icons.settings_outlined, 'Ajustes', () => abrirAjustes(context))),
                 Builder(
                   builder: (context) => _fila(
                     null,
                     'Mi cuenta',
-                    () => abrirAjustes(context),
-                    lider: Avatar('YO', P.tinta, size: 22 * escala, cuadrado: true),
+                    () => abrirMiCuenta(context),
+                    lider: Avatar(inicialesCuenta(), P.tinta, size: 22 * escala, cuadrado: true),
                   ),
                 ),
               ],

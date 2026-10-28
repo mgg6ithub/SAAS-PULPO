@@ -148,11 +148,25 @@ class _SimulacionesState extends State<_Simulaciones> {
 
   void _mostrarResultado(String mensaje) => setState(() => _resultado = mensaje);
 
-  void _crearSimulacion() {
+  /// En la nube, una simulación sustituye lo que haya: se pregunta antes si hay datos reales.
+  Future<bool> _puedeSustituir() async =>
+      store.nube == null ||
+      store.demo ||
+      !store.tieneDatos ||
+      await confirmar(context, 'Esto sustituye los datos de tu empresa en la base de datos. ¿Continuar?');
+
+  Future<void> _vaciarNube() async {
+    if (!await confirmar(context, '¿Borrar de la base de datos todos los clientes, trabajadores y trabajos?')) return;
+    await store.vaciarNube();
+    if (mounted) _mostrarResultado('Base de datos limpia.');
+  }
+
+  Future<void> _crearSimulacion() async {
     if (!_form.currentState!.validate()) {
       _mostrarResultado('Revisa las cantidades y los trabajos simultáneos.');
       return;
     }
+    if (!await _puedeSustituir()) return;
     final valores = _campos.map((c) => int.parse(c.text)).toList();
     final desde = _modoFecha == 0 ? hoy() : _desde;
     final hasta = _modoFecha == 2 ? _hasta : desde;
@@ -253,7 +267,8 @@ class _SimulacionesState extends State<_Simulaciones> {
                 BotonAccion(
                   'Generar datos por defecto',
                   icono: Icons.auto_awesome_outlined,
-                  onPressed: () {
+                  onPressed: () async {
+                    if (!await _puedeSustituir()) return;
                     store.cargarDemo(soloProximosDosDias: true);
                     _mostrarResultado('Datos de ejemplo cargados.');
                   },
@@ -416,7 +431,13 @@ class _SimulacionesState extends State<_Simulaciones> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  if (store.demo)
+                  if (store.nube != null)
+                    BotonAccion(
+                      'Borrar datos de la base de datos',
+                      icono: Icons.delete_outline_rounded,
+                      onPressed: _vaciarNube,
+                    )
+                  else if (store.demo)
                     BotonAccion(
                       'Quitar datos',
                       icono: Icons.delete_outline_rounded,

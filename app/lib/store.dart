@@ -267,6 +267,22 @@ class Store extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Hay algo creado además de las plantillas.
+  bool get tieneDatos => clientes.isNotEmpty || trabajadores.isNotEmpty || tareas.any((t) => !t.esPlantilla);
+
+  /// Deja la empresa como una cuenta nueva: borra de la base todo lo creado (simulaciones y pruebas) y
+  /// vuelve a poner solo las plantillas iniciales.
+  Future<void> vaciarNube() async {
+    await nube!.vaciar();
+    demo = false;
+    _inicial();
+    for (final t in tareas) {
+      t.id = nuevoId();
+    }
+    _cambio();
+    await nube!.guardado;
+  }
+
   /// Al cerrar sesión no se queda en pantalla nada de la cuenta.
   void vaciar() {
     nube = null;
@@ -309,7 +325,7 @@ class Store extends ChangeNotifier {
 
   void _guardar() {
     if (nube != null) {
-      if (!demo) nube!.sincronizar();
+      nube!.sincronizar();
       return;
     }
     _prefs?.setString(

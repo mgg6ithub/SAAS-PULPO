@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,9 +23,12 @@ typedef _Filas = Map<String, Map<String, Map<String, dynamic>>>;
 
 /// Conexión con Supabase para una cuenta y una empresa: lee todo al entrar y, después, guarda solo lo que cambia.
 class Nube {
-  Nube._(this.empresaId, {required this.nueva});
+  Nube._(this.empresaId, {required this.nueva, this.nombre = ''});
 
   final String empresaId;
+
+  /// Nombre de la empresa, para enseñarlo en Mi cuenta.
+  final String nombre;
 
   /// La empresa se acaba de crear: el [Store] la rellena con las plantillas iniciales.
   final bool nueva;
@@ -40,13 +44,17 @@ class Nube {
   static Future<Nube> abrir() async {
     final ms = await _db.from('miembros').select('empresa_id, rol');
     for (final m in ms) {
-      if (m['rol'] == 'admin') return _abierta = Nube._(m['empresa_id'] as String, nueva: false);
+      if (m['rol'] == 'admin') {
+        final id = m['empresa_id'] as String;
+        final e = await _db.from('empresas').select('nombre').eq('id', id).single();
+        return _abierta = Nube._(id, nueva: false, nombre: e['nombre'] as String);
+      }
     }
     if (ms.isNotEmpty) throw const SinAcceso();
     final e = await _db.from('empresas').insert({'nombre': 'Mi empresa'}).select('id').single();
     final id = e['id'] as String;
     await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
-    return _abierta = Nube._(id, nueva: true);
+    return _abierta = Nube._(id, nueva: true, nombre: 'Mi empresa');
   }
 
   /// La última empresa abierta, para no cerrar la sesión con cambios sin guardar.
@@ -107,14 +115,24 @@ class Nube {
     );
   }
 
+  /// Borra de la base TODO lo de la empresa (también lo que el [Store] no conozca) y no deja nada pendiente.
+  /// Después el [Store] vuelve a su estado inicial.
+  Future<void> vaciar() async {
+    await _cola;
+    for (final t in ['trabajos', 'clientes', 'trabajadores', 'etiquetas']) {
+      await _db.from(t).delete().eq('empresa_id', empresaId);
+    }
+    _enviado.clear();
+    error.value = null;
+  }
+
   // ── Guardar ──
 
   /// Lo último que ya está en la base, por tabla y clave (la fila en JSON, para comparar).
   final Map<String, Map<String, String>> _enviado = {};
   Future<void> _cola = Future.value();
 
-  /// Termina cuando todo lo pendiente ya está guardado (para las pruebas).
-  @visibleForTesting
+  /// Termina cuando todo lo pendiente ya está guardado.
   Future<void> get guardado => _cola;
   Timer? _reintento;
   Store? _store;
@@ -215,6 +233,16 @@ class Nube {
     }
   }
 
+  static final _esUuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
+
+  /// Las simulaciones usan ids como `c1` o `d5`: aquí se convierten en un uuid fijo de esta empresa
+  /// (las claves de la base son globales, así que dos empresas no pueden compartir `c1`).
+  String _u(String id) {
+    if (_esUuid.hasMatch(id)) return id;
+    final h = md5.convert(utf8.encode('$empresaId:$id')).toString();
+    return '${h.substring(0, 8)}-${h.substring(8, 12)}-4${h.substring(13, 16)}-8${h.substring(17, 20)}-${h.substring(20)}';
+  }
+
   /// Todo el [Store] como filas de las tablas. Lo que apunta a algo que ya no existe se queda sin enlace.
   _Filas _filas(Store s) {
     final e = empresaId;
@@ -224,8 +252,8 @@ class Nube {
     final ids = {for (final t in trabajos) t.id};
     final r = <String, Map<String, Map<String, dynamic>>>{for (final t in _orden) t: {}};
     for (final c in s.clientes) {
-      r['clientes']![c.id] = {
-        'id': c.id,
+      r['clientes']![_u(c.id)] = {
+        'id': _u(c.id),
         'empresa_id': e,
         'nombre': c.nombre,
         'cif': c.cif,
@@ -247,8 +275,8 @@ class Nube {
       };
     }
     for (final w in s.trabajadores) {
-      r['trabajadores']![w.id] = {
-        'id': w.id,
+      r['trabajadores']![_u(w.id)] = {
+        'id': _u(w.id),
         'empresa_id': e,
         'nombre': w.nombre,
         'apellidos': w.apellidos,
@@ -264,17 +292,17 @@ class Nube {
       };
     }
     for (final x in s.etiquetas) {
-      r['etiquetas']![x.id] = {'id': x.id, 'empresa_id': e, 'nombre': x.nombre, 'color': x.color};
+      r['etiquetas']![_u(x.id)] = {'id': _u(x.id), 'empresa_id': e, 'nombre': x.nombre, 'color': x.color};
     }
     for (final t in trabajos) {
-      r['trabajos']![t.id] = {
-        'id': t.id,
+      r['trabajos']![_u(t.id)] = {
+        'id': _u(t.id),
         'empresa_id': e,
-        'cliente_id': clientes.contains(t.clienteId) ? t.clienteId : null,
+        'cliente_id': clientes.contains(t.clienteId) ? _u(t.clienteId!) : null,
         'plantilla': t.plantilla,
         'color': t.color,
-        'plantilla_id': ids.contains(t.plantillaId) ? t.plantillaId : null,
-        'padre_id': ids.contains(t.padreId) ? t.padreId : null,
+        'plantilla_id': ids.contains(t.plantillaId) ? _u(t.plantillaId!) : null,
+        'padre_id': ids.contains(t.padreId) ? _u(t.padreId!) : null,
         'nombre': t.nombre,
         'tipo': t.tipo,
         'marca': t.marca,
@@ -298,16 +326,20 @@ class Nube {
         'competencias': t.competencias,
       };
       for (final w in t.trabajadorIds.where(trabajadores.contains)) {
-        r['trabajo_trabajadores']!['${t.id}|$w'] = {'trabajo_id': t.id, 'trabajador_id': w, 'empresa_id': e};
+        r['trabajo_trabajadores']!['${_u(t.id)}|${_u(w)}'] = {
+          'trabajo_id': _u(t.id),
+          'trabajador_id': _u(w),
+          'empresa_id': e,
+        };
       }
       for (final d in t.historial.map(_dia).toSet()) {
-        r['trabajo_historial']!['${t.id}|$d'] = {'trabajo_id': t.id, 'dia': d, 'empresa_id': e};
+        r['trabajo_historial']!['${_u(t.id)}|$d'] = {'trabajo_id': _u(t.id), 'dia': d, 'empresa_id': e};
       }
       for (final a in t.automatizaciones) {
-        r['automatizaciones']![a.id] = {
-          'id': a.id,
+        r['automatizaciones']![_u(a.id)] = {
+          'id': _u(a.id),
           'empresa_id': e,
-          'trabajo_id': t.id,
+          'trabajo_id': _u(t.id),
           'nombre': a.nombre,
           'asunto': a.asunto,
           'cuerpo': a.cuerpo,
