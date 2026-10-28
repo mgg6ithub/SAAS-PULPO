@@ -31,6 +31,14 @@ extension CriticidadX on Criticidad {
   int get peso => const [8, 4, 2, 1][index];
 }
 
+/// En qué punto está un trabajo (se cambia a mano desde listas, bloques y la ficha).
+enum EstadoTrabajo { pendiente, enCurso, realizado, noRealizado }
+
+extension EstadoTrabajoX on EstadoTrabajo {
+  String get etiqueta => const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
+  Color get color => const [P.ambar, P.azul, P.verde, P.rojo][index];
+}
+
 enum EstadoMaquina { operativa, revision, averiada }
 
 extension EstadoMaquinaX on EstadoMaquina {
@@ -212,23 +220,6 @@ class Trabajador {
   Trabajador copia() => Trabajador.fromJson(toJson());
 }
 
-/// Parte de un trabajo (p. ej. un extintor de la escuela) con sus propias notas y estado.
-class Subtrabajo {
-  String id, nombre, notas;
-  bool hecho;
-
-  Subtrabajo({required this.id, this.nombre = '', this.notas = '', this.hecho = false});
-
-  Map<String, dynamic> toJson() => {'id': id, 'nombre': nombre, 'notas': notas, 'hecho': hecho};
-
-  factory Subtrabajo.fromJson(Map<String, dynamic> j) => Subtrabajo(
-    id: j['id'] as String,
-    nombre: j['nombre'] as String? ?? '',
-    notas: j['notas'] as String? ?? '',
-    hecho: j['hecho'] as bool? ?? false,
-  );
-}
-
 /// Tarea de mantenimiento sobre una máquina. Sin cliente = plantilla.
 class Tarea {
   String id, nombre, tipo, marca, modelo, numeroSerie, ubicacion, notas;
@@ -249,13 +240,15 @@ class Tarea {
   /// Lo que se calcula que dura, en minutos.
   int duracionMin;
   EstadoMaquina estadoMaquina;
+  EstadoTrabajo estado;
   Criticidad criticidad;
   Periodicidad periodicidad;
   bool activa;
   List<String> competencias, trabajadorIds;
 
-  /// Partes del trabajo, adheridas a él.
-  List<Subtrabajo> subtrabajos;
+  /// Si es un subtrabajo, el trabajo (o subtrabajo) del que cuelga. Los subtrabajos viven en
+  /// `store.subtareas`, no en `store.tareas`, y comparten el cliente de su trabajo raíz.
+  String? padreId;
 
   /// Días en que se hizo (el más reciente al final).
   List<DateTime> historial;
@@ -282,17 +275,17 @@ class Tarea {
     this.ventanaHastaMin,
     this.duracionMin = 60,
     this.estadoMaquina = EstadoMaquina.operativa,
+    this.estado = EstadoTrabajo.pendiente,
     this.criticidad = Criticidad.media,
     this.periodicidad = Periodicidad.mensual,
     this.activa = true,
     List<String>? competencias,
     List<String>? trabajadorIds,
-    List<Subtrabajo>? subtrabajos,
+    this.padreId,
     List<DateTime>? historial,
   }) : plantilla = plantilla ?? clienteId == null,
        competencias = competencias ?? [],
        trabajadorIds = trabajadorIds ?? [],
-       subtrabajos = subtrabajos ?? [],
        historial = historial ?? [];
 
   /// Es una plantilla (modelo para crear tareas). Antes se deducía de no tener cliente;
@@ -337,12 +330,13 @@ class Tarea {
     'ventanaHastaMin': ventanaHastaMin,
     'duracionMin': duracionMin,
     'estadoMaquina': estadoMaquina.index,
+    'estado': estado.index,
     'criticidad': criticidad.index,
     'periodicidad': periodicidad.index,
     'activa': activa,
     'competencias': competencias,
     'trabajadorIds': trabajadorIds,
-    'subtrabajos': [for (final x in subtrabajos) x.toJson()],
+    'padreId': padreId,
     'historial': [for (final d in historial) _f(d)],
   };
 
@@ -368,12 +362,13 @@ class Tarea {
     ventanaHastaMin: j['ventanaHastaMin'] as int?,
     duracionMin: j['duracionMin'] as int? ?? 60,
     estadoMaquina: EstadoMaquina.values[j['estadoMaquina'] as int? ?? 0],
+    estado: EstadoTrabajo.values[j['estado'] as int? ?? 0],
     criticidad: Criticidad.values[j['criticidad'] as int? ?? 2],
     periodicidad: Periodicidad.values[j['periodicidad'] as int? ?? 1],
     activa: j['activa'] as bool? ?? true,
     competencias: List<String>.from(j['competencias'] as List? ?? []),
     trabajadorIds: List<String>.from(j['trabajadorIds'] as List? ?? []),
-    subtrabajos: [for (final x in j['subtrabajos'] as List? ?? []) Subtrabajo.fromJson(x)],
+    padreId: j['padreId'] as String?,
     historial: [for (final x in j['historial'] as List? ?? []) DateTime.parse(x as String)],
   );
 

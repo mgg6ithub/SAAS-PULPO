@@ -74,6 +74,12 @@ class VentanaFormulario extends StatefulWidget {
 
   /// Incrustada sin cabecera (ni etiqueta ni título): solo los campos y el pie.
   final bool sinCabecera;
+
+  /// Incrustada solo para ver: no se puede escribir ni pulsar nada y no hay pie con Guardar.
+  final bool soloLectura;
+
+  /// Incrustada: cancela lo que se estaba editando (sale «Cancelar» junto a Guardar).
+  final VoidCallback? onCancelar;
   const VentanaFormulario({
     super.key,
     required this.titulo,
@@ -89,6 +95,8 @@ class VentanaFormulario extends StatefulWidget {
     this.avisos = const [],
     this.incrustada = false,
     this.sinCabecera = false,
+    this.soloLectura = false,
+    this.onCancelar,
   });
 
   @override
@@ -140,11 +148,16 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
               child: SingleChildScrollView(
                 controller: scroll,
                 padding: const EdgeInsets.fromLTRB(32, 6, 32, 32),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                child: AbsorbPointer(
+                  absorbing: widget.soloLectura,
+                  child: ExcludeFocus(
+                    excluding: widget.soloLectura,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                  ),
+                ),
               ),
             ),
-            const Divider(),
-            _pie(),
+            if (!widget.soloLectura) ...[const Divider(), _pie()],
           ],
         ),
       );
@@ -352,10 +365,10 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                   ),
                 ),
         ),
-        if (!widget.incrustada) ...[
+        if (!widget.incrustada || widget.onCancelar != null) ...[
           TextButton(
             style: TextButton.styleFrom(foregroundColor: P.textoSuave),
-            onPressed: () => Navigator.pop(context),
+            onPressed: widget.onCancelar ?? () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
           const SizedBox(width: 8),
@@ -1178,9 +1191,13 @@ Future<void> abrirTareaForm(
   DateTime? fecha,
   int? horaMin,
   String? trabajadorId,
+  Tarea? padre,
+  Tarea? borrador,
 }) => abrirPanel(
   context,
   TareaForm(
+    padre: padre,
+    borrador: borrador,
     original: t,
     clienteId: clienteId,
     plantilla: plantilla,
@@ -1190,6 +1207,114 @@ Future<void> abrirTareaForm(
   ),
 );
 
+/// Subtrabajo nuevo con lo mínimo: nombre, fecha, quién lo hace y color. El resto se hereda del trabajo y
+/// «Más información» abre el formulario completo con lo ya escrito.
+Future<void> abrirSubtrabajoRapido(BuildContext context, Tarea padre) => showDialog(
+  context: context,
+  routeSettings: const RouteSettings(name: rutaPanel),
+  builder: (_) =>
+      _SubtrabajoRapido(padre, (borrador) => abrirTareaForm(context, null, padre: padre, borrador: borrador)),
+);
+
+class _SubtrabajoRapido extends StatefulWidget {
+  final Tarea padre;
+  final void Function(Tarea borrador) onMas;
+  const _SubtrabajoRapido(this.padre, this.onMas);
+
+  @override
+  State<_SubtrabajoRapido> createState() => _SubtrabajoRapidoState();
+}
+
+class _SubtrabajoRapidoState extends State<_SubtrabajoRapido> {
+  late final Tarea t = Tarea(
+    id: store.nuevoId(),
+    clienteId: widget.padre.clienteId,
+    padreId: widget.padre.id,
+    plantilla: false,
+    tipo: widget.padre.tipo,
+    proximo: widget.padre.proximo ?? hoy(),
+    periodicidad: Periodicidad.unica,
+    inicioMin: widget.padre.inicioMin ?? 9 * 60,
+    criticidad: widget.padre.criticidad,
+    competencias: [...widget.padre.competencias],
+    trabajadorIds: [...widget.padre.trabajadorIds],
+  );
+  final nombre = TextEditingController();
+  bool intento = false;
+
+  @override
+  void dispose() {
+    nombre.dispose();
+    super.dispose();
+  }
+
+  void _anadir() {
+    setState(() => intento = true);
+    if (nombre.text.trim().isEmpty) return;
+    t.nombre = nombre.text.trim();
+    store.guardarTarea(t);
+    Navigator.pop(context);
+  }
+
+  void _mas() {
+    t.nombre = nombre.text.trim();
+    Navigator.pop(context);
+    widget.onMas(t);
+  }
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 440),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'SUBTRABAJO',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.morado),
+            ),
+            Text(
+              'Nuevo subtrabajo',
+              style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            Text('Dentro de ${widget.padre.nombre}', style: TextStyle(color: P.textoSuave, fontSize: 13)),
+            const SizedBox(height: 16),
+            campo(
+              'Nombre',
+              nombre,
+              hint: 'Caldera 3, extintores de CO2…',
+              obligatorio: true,
+              error: intento && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null,
+            ),
+            dos(
+              CampoFecha('Fecha', t.proximo, (d) => setState(() => t.proximo = d)),
+              conMargen(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [etiqueta('Asignado a'), SelectorTrabajadores(t, () => setState(() {}))],
+                ),
+              ),
+            ),
+            etiqueta('Color'),
+            SelectorColorTarea(t, () => setState(() {})),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                TextButton(onPressed: _mas, child: const Text('Más información')),
+                const Spacer(),
+                BotonPrimario('Añadir', onPressed: _anadir),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class TareaForm extends StatefulWidget {
   final Tarea? original;
   final String? clienteId;
@@ -1197,14 +1322,30 @@ class TareaForm extends StatefulWidget {
   final int? horaMin;
   final String? trabajadorId;
 
+  /// Crear un subtrabajo de este trabajo: hereda su cliente, tipo y fecha.
+  final Tarea? padre;
+
+  /// Tarea a medio hacer (p. ej. desde el subtrabajo rápido) con la que empieza el formulario de una nueva.
+  final Tarea? borrador;
+
   /// Crear una plantilla (sin cliente) en vez de una tarea.
   final bool plantilla;
 
   /// Dentro de la ficha del trabajo: sin cabecera ni ventana, guarda sin cerrar.
   final bool incrustada;
+
+  /// Incrustada: solo se ve, hasta que se pasa a editar.
+  final bool soloLectura;
+
+  /// Incrustada: se llama al guardar o cancelar, para salir del modo edición.
+  final VoidCallback? onTerminar;
   const TareaForm({
     super.key,
     this.incrustada = false,
+    this.soloLectura = false,
+    this.onTerminar,
+    this.padre,
+    this.borrador,
     this.original,
     this.clienteId,
     this.plantilla = false,
@@ -1220,11 +1361,14 @@ class TareaForm extends StatefulWidget {
 class _TareaFormState extends State<TareaForm> {
   late final Tarea t =
       widget.original?.copia() ??
+      widget.borrador ??
       Tarea(
         id: store.nuevoId(),
-        clienteId: widget.clienteId,
+        clienteId: widget.padre?.clienteId ?? widget.clienteId,
+        padreId: widget.padre?.id,
+        tipo: widget.padre?.tipo ?? 'Otro',
         plantilla: widget.plantilla,
-        proximo: widget.fecha ?? hoy(),
+        proximo: widget.fecha ?? widget.padre?.proximo ?? hoy(),
         periodicidad: widget.plantilla ? Periodicidad.mensual : Periodicidad.unica,
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
@@ -1314,8 +1458,10 @@ class _TareaFormState extends State<TareaForm> {
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
-      etiqueta: t.esPlantilla ? 'Plantillas' : 'Trabajos',
-      titulo: nueva ? (t.esPlantilla ? 'Nueva plantilla' : 'Nuevo trabajo') : nombre.text,
+      etiqueta: t.esPlantilla ? 'Plantillas' : (t.padreId != null ? 'Subtrabajos' : 'Trabajos'),
+      titulo: nueva
+          ? (t.esPlantilla ? 'Nueva plantilla' : (t.padreId != null ? 'Nuevo subtrabajo' : 'Nuevo trabajo'))
+          : nombre.text,
       tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
           ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
@@ -1323,6 +1469,8 @@ class _TareaFormState extends State<TareaForm> {
       bajoBotones: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
       incrustada: widget.incrustada,
       sinCabecera: widget.incrustada,
+      soloLectura: widget.soloLectura,
+      onCancelar: widget.incrustada ? widget.onTerminar : null,
       onGuardar: guardar,
       avisos: [
         if (error != null) ('Te falta el nombre', () => _irA(_claveNombre)),
@@ -1407,7 +1555,16 @@ class _TareaFormState extends State<TareaForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     etiqueta('Cliente'),
-                    SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id)),
+                    // Un subtrabajo comparte el cliente de su trabajo.
+                    if (t.padreId != null)
+                      conMargen(
+                        Text(
+                          store.cliente(t.clienteId)?.nombre ?? 'Sin cliente',
+                          style: TextStyle(color: P.textoSuave),
+                        ),
+                      )
+                    else
+                      SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id)),
                   ],
                 ),
               ),
@@ -1704,24 +1861,35 @@ class _CajaMenu extends StatelessWidget {
   final Widget child;
   final VoidCallback onTap;
   final bool abierto;
-  const _CajaMenu({required this.child, required this.onTap, required this.abierto});
+
+  /// Para listas y bloques: más baja y con menos relleno.
+  final bool compacta;
+  const _CajaMenu({required this.child, required this.onTap, required this.abierto, this.compacta = false});
 
   @override
   Widget build(BuildContext context) => InkWell(
     borderRadius: BorderRadius.circular(8),
+    hoverColor: compacta ? P.hover : null,
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 46),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: P.superficie,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: abierto ? P.morado : P.borde, width: abierto ? 1.6 : 1),
-      ),
+      constraints: BoxConstraints(minHeight: compacta ? 32 : 46),
+      padding: compacta
+          ? const EdgeInsets.symmetric(horizontal: 6, vertical: 3)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      // En listas, sin recuadro: basta el contenido y el doble chevron.
+      decoration: compacta
+          ? null
+          : BoxDecoration(
+              color: P.superficie,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: abierto ? P.morado : P.borde, width: abierto ? 1.6 : 1),
+            ),
       child: Row(
+        mainAxisSize: compacta ? MainAxisSize.min : MainAxisSize.max,
         children: [
-          Expanded(child: child),
-          Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+          compacta ? Flexible(child: child) : Expanded(child: child),
+          if (compacta) const SizedBox(width: 2),
+          Icon(Icons.unfold_more_rounded, size: compacta ? 16 : 18, color: P.textoSuave),
         ],
       ),
     ),
@@ -1733,7 +1901,10 @@ class _CajaMenu extends StatelessWidget {
 class SelectorCliente extends StatelessWidget {
   final String? valor;
   final ValueChanged<String> onChanged;
-  const SelectorCliente(this.valor, this.onChanged, {super.key});
+
+  /// En listas: más bajo y con letra normal.
+  final bool compacto;
+  const SelectorCliente(this.valor, this.onChanged, {super.key, this.compacto = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1774,19 +1945,28 @@ class SelectorCliente extends StatelessWidget {
       ],
       builder: (context, menu, _) => _CajaMenu(
         abierto: menu.isOpen,
+        compacta: compacto,
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
         child: c == null
-            ? Text('Elegir cliente', style: TextStyle(color: P.textoSuave))
+            ? Text(
+                'Elegir cliente',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: P.textoSuave),
+              )
             : Row(
                 children: [
-                  Avatar(c.iniciales, colorPaleta(c.color), size: 24, cuadrado: true),
-                  const SizedBox(width: 10),
+                  Avatar(c.iniciales, colorPaleta(c.color), size: compacto ? 20 : 24, cuadrado: true),
+                  SizedBox(width: compacto ? 8 : 10),
                   Flexible(
                     child: Text(
                       c.nombre,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontWeight: compacto ? FontWeight.w400 : FontWeight.w600,
+                        fontSize: compacto ? 13 : null,
+                      ),
                     ),
                   ),
                 ],
@@ -1796,12 +1976,77 @@ class SelectorCliente extends StatelessWidget {
   }
 }
 
+/// Estado del trabajo en una pastilla con doble chevron: se cambia desde la propia lista, bloque o ficha.
+/// «Realizado» lo marca como hecho (entra en el histórico y, si se repite, calcula la siguiente fecha).
+class SelectorEstado extends StatelessWidget {
+  final Tarea t;
+  const SelectorEstado(this.t, {super.key});
+
+  void _elegir(BuildContext context, EstadoTrabajo e) {
+    if (e == t.estado) return;
+    if (e == EstadoTrabajo.realizado) {
+      store.marcarHecha(t);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          width: 360,
+          content: Text(t.periodicidad.repite ? 'Hecho · próxima vez el ${fecha(t.proximo)}' : 'Hecho · ${t.nombre}'),
+          action: SnackBarAction(label: 'Deshacer', onPressed: () => store.desmarcarHecha(t)),
+        ),
+      );
+    } else {
+      t.estado = e;
+      store.guardarTarea(t);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    alignmentOffset: const Offset(0, 4),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      for (final e in EstadoTrabajo.values)
+        MenuItemButton(
+          leadingIcon: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
+          ),
+          trailingIcon: e == t.estado ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
+          onPressed: () => _elegir(context, e),
+          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 110), child: Text(e.etiqueta)),
+        ),
+    ],
+    builder: (context, menu, _) => _CajaMenu(
+      abierto: menu.isOpen,
+      compacta: true,
+      onTap: () => menu.isOpen ? menu.close() : menu.open(),
+      child: Tooltip(message: 'Cambiar el estado', child: Pill(t.estado.etiqueta, t.estado.color, punto: true)),
+    ),
+  );
+}
+
 /// Menú de trabajadores: se marcan uno o varios (no se cierra al marcar). Los que no son aptos
 /// salen apagados con lo que les falta. Los equipos llegarán con la fase de grupos.
 class SelectorTrabajadores extends StatelessWidget {
   final Tarea t;
   final VoidCallback onCambio;
-  const SelectorTrabajadores(this.t, this.onCambio, {super.key});
+
+  /// En listas y bloques: solo las caras y el doble chevron.
+  final bool compacto;
+
+  /// Con subtrabajos, ofrece asignar a todos ellos lo mismo que a este trabajo.
+  final bool ofrecerSubtrabajos;
+  const SelectorTrabajadores(
+    this.t,
+    this.onCambio, {
+    super.key,
+    this.compacto = false,
+    this.ofrecerSubtrabajos = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1843,6 +2088,14 @@ class SelectorTrabajadores extends StatelessWidget {
               ),
             ),
           ),
+        if (ofrecerSubtrabajos && store.descendientes(t.id).isNotEmpty && t.trabajadorIds.isNotEmpty) ...[
+          const Divider(height: 8),
+          MenuItemButton(
+            leadingIcon: Icon(Icons.account_tree_outlined, size: 18, color: P.morado),
+            onPressed: () => store.asignarASubtrabajos(t),
+            child: Text('Asignar también a sus ${store.descendientes(t.id).length} subtrabajos'),
+          ),
+        ],
         const Divider(height: 8),
         MenuItemButton(
           onPressed: null,
@@ -1851,8 +2104,14 @@ class SelectorTrabajadores extends StatelessWidget {
       ],
       builder: (context, menu, _) => _CajaMenu(
         abierto: menu.isOpen,
+        compacta: compacto,
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
-        child: elegidos.isEmpty
+        child: compacto
+            ? Tooltip(
+                message: elegidos.isEmpty ? 'Sin asignar' : elegidos.map((w) => w.nombreCompleto).join(', '),
+                child: AvataresTrabajadores(t.trabajadorIds, size: 22),
+              )
+            : elegidos.isEmpty
             ? Text('Sin asignar', style: TextStyle(color: P.textoSuave))
             : Row(
                 children: [

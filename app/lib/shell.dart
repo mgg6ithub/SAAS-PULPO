@@ -81,7 +81,9 @@ class _ShellState extends State<Shell> {
   /// "N" crea algo nuevo según la sección en la que estés (como en Holded).
   Future<void> nuevo() async {
     _abiertaConN = true;
+    final abierta = store.tarea(tareaId);
     await switch (seccion) {
+      _ when abierta != null => abrirSubtrabajoRapido(context, abierta),
       Seccion.clientes => abrirClienteForm(context),
       Seccion.trabajadores => abrirTrabajadorForm(context),
       _ => abrirTareaForm(context, null),
@@ -164,7 +166,11 @@ class _ShellState extends State<Shell> {
   Widget _detalle() => clienteId != null
       ? ClienteDetalle(clienteId: clienteId!, onVolver: () => setState(() => clienteId = null))
       : tareaId != null
-      ? TareaDetalle(tareaId: tareaId!, onVolver: () => setState(() => tareaId = null))
+      ? TareaDetalle(
+          tareaId: tareaId!,
+          onVolver: () => setState(() => tareaId = null),
+          onAbrir: (id) => setState(() => tareaId = id),
+        )
       : TrabajadorDetalle(trabajadorId: trabajadorId!, onVolver: () => setState(() => trabajadorId = null));
 
   // Sin const: si no, el ListenableBuilder del store no las repinta al cambiar los datos.

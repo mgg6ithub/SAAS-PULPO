@@ -32,6 +32,26 @@ class Store extends ChangeNotifier {
     'Gorka',
     'Ainhoa',
     'Oier',
+    'Amaia',
+    'Julen',
+    'Garazi',
+    'Beñat',
+    'Uxue',
+    'Xabier',
+    'Estibaliz',
+    'Koldo',
+    'Idoia',
+    'Imanol',
+    'Ziortza',
+    'Aratz',
+    'Naiara',
+    'Ekain',
+    'Itziar',
+    'Josu',
+    'Olatz',
+    'Peru',
+    'Saioa',
+    'Haritz',
   ];
   static const _apellidosSimulados = [
     'Etxebarria',
@@ -54,17 +74,159 @@ class Store extends ChangeNotifier {
     'Etxeberria',
     'Bilbao',
     'Sola',
+    'Zubiaur',
+    'Urrutia',
+    'Lasa',
+    'Otxoa',
+    'Garmendia',
+    'Uriarte',
+    'Larrañaga',
+    'Elorza',
+    'Zabala',
+    'Landa',
+    'Iturbe',
+    'Mujika',
+    'Aranburu',
+    'Berasategi',
+    'Olabarria',
+    'Gallastegi',
+    'Axpe',
+    'Barrenetxea',
+    'Zuazo',
+    'Ugarte',
   ];
-  static const _clientesSimulados = [
-    'Comunidad Santa María 11',
-    'Colegio San Ignacio',
-    'Hospital de Basurto · Pabellón B',
-    'Hotel Ercilla',
-    'Polideportivo de Lezama',
-    'Torre Iberdrola · Oficinas',
-    'Residencia Los Robles',
-    'Comunidad Gran Vía 45',
+
+  // 10 tipos × 20 lugares, repartidos para que no se repita ninguno hasta 200 clientes.
+  static const _tiposClienteSimulados = [
+    'Colegio',
+    'Hospital',
+    'Residencia',
+    'Comunidad',
+    'Hotel',
+    'Polideportivo',
+    'Centro comercial',
+    'Clínica',
+    'Oficinas',
+    'Gimnasio',
   ];
+  static const _lugaresClienteSimulados = [
+    'San Ignacio',
+    'Los Pinos',
+    'Santa María',
+    'Ercilla',
+    'Begoña',
+    'Las Arenas',
+    'Gran Vía',
+    'Mirador',
+    'El Pilar',
+    'Zorrotza',
+    'Deusto',
+    'Abando',
+    'Basurto',
+    'Lezama',
+    'Rekalde',
+    'Indautxu',
+    'Casco Viejo',
+    'Artxanda',
+    'Sarriko',
+    'Uribarri',
+  ];
+  static String _clienteSimulado(int i) =>
+      '${_tiposClienteSimulados[i % 10]} ${_lugaresClienteSimulados[(i * 7 + i ~/ 10) % 20]}';
+  static String _trabajadorSimulado(int i) =>
+      '${_nombresSimulados[i % 40]} ${_apellidosSimulados[(i * 7 + i ~/ 40) % 40]}';
+
+  static const _ubicacionesSimuladas = [
+    'Portal A',
+    'Portal B',
+    'Sótano -1',
+    'Cubierta',
+    'Sala de máquinas',
+    'Planta baja',
+    'Jardín',
+    'Azotea',
+    'Patio interior',
+    'Garaje',
+    'Zona común',
+    'Edificio anexo',
+  ];
+
+  /// Cómo se llama cada trabajo simulado según su tipo, para que no se repitan los nombres.
+  static const _variantesSimuladas = {
+    'Caldera': [
+      'Revisión de caldera de gas',
+      'Limpieza de quemadores',
+      'Control de combustión y CO',
+      'Revisión de sala de calderas',
+      'Comprobación de presión del circuito',
+      'Revisión del vaso de expansión',
+      'Inspección de chimenea',
+      'Mantenimiento de caldera de condensación',
+    ],
+    'Ascensor': [
+      'Mantenimiento de ascensor',
+      'Revisión de cables y poleas',
+      'Prueba de frenos y paracaídas',
+      'Revisión de puertas de cabina',
+      'Engrase de guías',
+      'Revisión del cuadro de maniobra',
+      'Inspección del foso',
+      'Revisión del montacargas',
+    ],
+    'Jardinería': [
+      'Poda y riego de zonas verdes',
+      'Siega del césped',
+      'Poda de setos',
+      'Tratamiento de plagas',
+      'Plantación de temporada',
+      'Revisión del riego automático',
+      'Limpieza de hojas y restos',
+      'Abonado de parterres',
+    ],
+    'Limpieza': [
+      'Limpieza de rellanos y portal',
+      'Limpieza de cristales',
+      'Fregado de escaleras',
+      'Limpieza del garaje',
+      'Desinfección de zonas comunes',
+      'Limpieza de cubiertas',
+      'Pulido de suelos',
+      'Limpieza de fachada baja',
+    ],
+  };
+
+  /// Las partes en que se divide un trabajo simulado de cada tipo.
+  static const _subtrabajosSimulados = {
+    'Caldera': [
+      'Revisar el quemador',
+      'Comprobar la presión del circuito',
+      'Medir el CO en humos',
+      'Limpiar filtros',
+      'Probar la válvula de seguridad',
+    ],
+    'Ascensor': [
+      'Revisar cables y poleas',
+      'Comprobar frenos',
+      'Engrasar guías',
+      'Revisar puertas de cabina',
+      'Limpiar el foso',
+    ],
+    'Jardinería': [
+      'Recoger el césped',
+      'Podar los setos',
+      'Cortar los arbustos',
+      'Regar las zonas verdes',
+      'Retirar restos de poda',
+    ],
+    'Limpieza': [
+      'Fregar los rellanos',
+      'Limpiar los cristales del portal',
+      'Vaciar las papeleras',
+      'Desinfectar los pasamanos',
+      'Limpiar el ascensor',
+    ],
+  };
+  static const _coloresSubtrabajos = [0xFF2563EB, 0xFF0D9488, 0xFFCA8A04, 0xFFDB2777, 0xFF16A34A, 0xFFEA580C];
 
   /// Hay datos de ejemplo cargados; los reales esperan en el respaldo.
   bool demo = false;
@@ -72,6 +234,10 @@ class Store extends ChangeNotifier {
   List<Cliente> clientes = [];
   List<Trabajador> trabajadores = [];
   List<Tarea> tareas = [];
+
+  /// Subtrabajos de cualquier nivel (cada uno apunta a su padre con `padreId`). Aparte de `tareas` para que
+  /// el calendario, el planificador y las cifras sigan viendo solo los trabajos.
+  List<Tarea> subtareas = [];
   List<EtiquetaTrabajo> etiquetas = [];
   SharedPreferences? _prefs;
 
@@ -86,6 +252,7 @@ class Store extends ChangeNotifier {
       clientes = [for (final x in j['clientes'] as List) Cliente.fromJson(x)];
       trabajadores = [for (final x in j['trabajadores'] as List) Trabajador.fromJson(x)];
       tareas = [for (final x in j['tareas'] as List) Tarea.fromJson(x)];
+      subtareas = [for (final x in j['subtareas'] as List? ?? []) Tarea.fromJson(x)];
       // Datos de ejemplo cargados antes de existir la marca: se reconocen por sus ids.
       demo = (j['demo'] as bool? ?? false) || _hayDemo;
       usoPlantillas = List<String>.from(j['usoPlantillas'] as List? ?? []);
@@ -109,6 +276,7 @@ class Store extends ChangeNotifier {
       'clientes': [for (final x in clientes) x.toJson()],
       'trabajadores': [for (final x in trabajadores) x.toJson()],
       'tareas': [for (final x in tareas) x.toJson()],
+      'subtareas': [for (final x in subtareas) x.toJson()],
       'demo': demo,
       'usoPlantillas': usoPlantillas,
       'etiquetas': [for (final x in etiquetas) x.toJson()],
@@ -149,6 +317,7 @@ class Store extends ChangeNotifier {
   void borrarCliente(String id) {
     clientes.removeWhere((c) => c.id == id);
     tareas.removeWhere((t) => t.clienteId == id);
+    subtareas.removeWhere((t) => t.clienteId == id);
     _cambio();
   }
 
@@ -206,23 +375,93 @@ class Store extends ChangeNotifier {
   bool esRecien(String id) =>
       id == recienId && recienEn != null && DateTime.now().difference(recienEn!).inMilliseconds < 2500;
 
-  void guardarTarea(Tarea t) {
-    if (!tareas.any((x) => x.id == t.id)) {
-      recienId = t.id;
-      recienEn = DateTime.now();
+  /// Un trabajo o un subtrabajo, de la lista que toque.
+  Tarea? tarea(String? id) {
+    for (final t in tareas) {
+      if (t.id == id) return t;
     }
-    _poner(tareas, t, (x) => x.id == t.id);
+    for (final t in subtareas) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  /// Subtrabajos directos de un trabajo o subtrabajo.
+  List<Tarea> hijas(String id) => subtareas.where((s) => s.padreId == id).toList();
+
+  /// Aplica un cambio a varios trabajos o subtrabajos a la vez (selección múltiple) y guarda una sola vez.
+  void aplicarA(Iterable<Tarea> ts, void Function(Tarea t) cambio) {
+    for (final t in ts) {
+      cambio(t);
+    }
+    for (final t in ts) {
+      if (t.padreId != null) {
+        t.clienteId = tarea(t.padreId)?.clienteId;
+      } else {
+        _compartirCliente(t);
+      }
+    }
     _cambio();
   }
 
+  /// «Realizado» lo marca como hecho (histórico y siguiente fecha); el resto solo cambia el estado.
+  void cambiarEstado(Iterable<Tarea> ts, EstadoTrabajo e) => aplicarA(ts, (t) {
+    if (e == EstadoTrabajo.realizado) {
+      if (t.estado != e) _marcarHecha(t);
+    } else {
+      t.estado = e;
+    }
+  });
+
+  /// Todos los subtrabajos que cuelgan de este, a cualquier profundidad.
+  List<Tarea> descendientes(String id) => [
+    for (final h in hijas(id)) ...[h, ...descendientes(h.id)],
+  ];
+
+  /// Pone a todos los subtrabajos los mismos trabajadores que a este trabajo.
+  void asignarASubtrabajos(Tarea t) {
+    for (final h in descendientes(t.id)) {
+      h.trabajadorIds = [...t.trabajadorIds];
+    }
+    _cambio();
+  }
+
+  void guardarTarea(Tarea t) {
+    if (t.padreId != null) {
+      // El subtrabajo comparte el cliente de su padre.
+      t.clienteId = tarea(t.padreId)?.clienteId;
+      _poner(subtareas, t, (x) => x.id == t.id);
+    } else {
+      if (!tareas.any((x) => x.id == t.id)) {
+        recienId = t.id;
+        recienEn = DateTime.now();
+      }
+      _poner(tareas, t, (x) => x.id == t.id);
+    }
+    _compartirCliente(t);
+    _cambio();
+  }
+
+  /// Los subtrabajos, a cualquier profundidad, siguen el cliente del trabajo.
+  void _compartirCliente(Tarea t) {
+    for (final h in hijas(t.id)) {
+      h.clienteId = t.clienteId;
+      _compartirCliente(h);
+    }
+  }
+
   void borrarTarea(String id) {
+    for (final h in hijas(id)) {
+      borrarTarea(h.id);
+    }
     tareas.removeWhere((t) => t.id == id);
+    subtareas.removeWhere((t) => t.id == id);
     _cambio();
   }
 
   /// El mantenimiento se ha hecho hoy: se calcula el siguiente.
   /// Cómo estaba cada tarea antes de marcarla hecha, para poder desmarcarla (durante la sesión).
-  final _antesDeHecha = <String, (DateTime?, DateTime?, EstadoMaquina)>{};
+  final _antesDeHecha = <String, (DateTime?, DateTime?, EstadoMaquina, EstadoTrabajo)>{};
 
   bool puedeDesmarcar(Tarea t) => _antesDeHecha.containsKey(t.id);
 
@@ -233,18 +472,25 @@ class Store extends ChangeNotifier {
     t
       ..ultimo = antes.$1
       ..proximo = antes.$2
-      ..estadoMaquina = antes.$3;
+      ..estadoMaquina = antes.$3
+      ..estado = antes.$4;
     _cambio();
   }
 
   void marcarHecha(Tarea t) {
-    _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina);
+    _marcarHecha(t);
+    _cambio();
+  }
+
+  void _marcarHecha(Tarea t) {
+    _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina, t.estado);
     t.ultimo = hoy();
+    // Si se repite, la siguiente vez vuelve a estar pendiente; si es única, se queda realizada.
+    t.estado = t.periodicidad.repite ? EstadoTrabajo.pendiente : EstadoTrabajo.realizado;
     if (!t.historial.any((d) => DateUtils.isSameDay(d, hoy()))) t.historial.add(hoy());
     // Una tarea única, al hacerse, ya no tiene próxima.
     t.proximo = t.periodicidad.repite ? masDias(hoy(), t.periodicidad.dias) : null;
     if (t.estadoMaquina == EstadoMaquina.revision) t.estadoMaquina = EstadoMaquina.operativa;
-    _cambio();
   }
 
   /// Tareas de un día. Pasado: lo que se hizo ese día. Hoy: lo hecho hoy, lo que toca
@@ -517,6 +763,8 @@ class Store extends ChangeNotifier {
     DateTime? hasta,
     bool permitirSolapes = false,
     int trabajosSimultaneos = 2,
+    bool conSubtrabajos = false,
+    int cadaTantosConSubtrabajos = 3,
   }) {
     final fechaInicio = DateUtils.dateOnly(desde ?? hoy());
     final fechaFin = DateUtils.dateOnly(hasta ?? masDias(fechaInicio, dias - 1));
@@ -529,7 +777,9 @@ class Store extends ChangeNotifier {
         cantidadTareas > 1000 ||
         (desde == null && (dias < 1 || dias > 90)) ||
         diasSimulados < 1 ||
-        (permitirSolapes && (trabajosSimultaneos < 2 || trabajosSimultaneos > 20))) {
+        (permitirSolapes && (trabajosSimultaneos < 2 || trabajosSimultaneos > 20)) ||
+        cadaTantosConSubtrabajos < 1 ||
+        cadaTantosConSubtrabajos > 20) {
       throw ArgumentError('Cantidades de simulación fuera de rango');
     }
     if (!demo) _prefs?.setString(_respaldo, _prefs?.getString(_clave) ?? '');
@@ -541,8 +791,8 @@ class Store extends ChangeNotifier {
       for (var i = 0; i < equipo; i++)
         Trabajador(
           id: 'w$i',
-          nombre: _nombresSimulados[i % _nombresSimulados.length],
-          apellidos: _apellidosSimulados[(i ~/ _nombresSimulados.length) % _apellidosSimulados.length],
+          nombre: _trabajadorSimulado(i).split(' ').first,
+          apellidos: _trabajadorSimulado(i).split(' ').skip(1).join(' '),
           competencias: [...competencias],
           color: i % 8,
         ),
@@ -552,8 +802,7 @@ class Store extends ChangeNotifier {
       for (var i = 0; i < cuentas; i++)
         Cliente(
           id: 'c$i',
-          nombre:
-              '${_clientesSimulados[i % _clientesSimulados.length]}${i >= _clientesSimulados.length ? ' · Sede ${i ~/ _clientesSimulados.length + 1}' : ''}',
+          nombre: _clienteSimulado(i),
           ciudad: 'Bilbao',
           provincia: 'Bizkaia',
           lat: sitios[i % sitios.length].$1,
@@ -571,12 +820,31 @@ class Store extends ChangeNotifier {
       t
         ..id = 'd$i'
         ..plantilla = false
+        ..nombre =
+            '${_variantesSimuladas[t.tipo]?[(i ~/ plantillas.length) % 8] ?? t.nombre} · ${cuentas == 0 ? _ubicacionesSimuladas[(i ~/ 8) % _ubicacionesSimuladas.length] : clientes[i % cuentas].nombre}'
+        ..ubicacion = _ubicacionesSimuladas[(i * 5) % _ubicacionesSimuladas.length]
         ..clienteId = cuentas == 0 ? null : clientes[i % cuentas].id
         ..proximo = diaSimulado
         ..inicioMin = horaSimulada
         ..duracionMin = permitirSolapes ? 60 : [30, 60, 90, 120][r.nextInt(4)]
         ..trabajadorIds = equipo == 0 ? [] : [trabajadores[i % equipo].id];
       tareas.add(t);
+      // Cada tantos trabajos, uno se divide en varios subtrabajos, cada uno con su color, fecha y hora.
+      final partes = _subtrabajosSimulados[t.tipo];
+      if (conSubtrabajos && partes != null && i % cadaTantosConSubtrabajos == 0) {
+        for (var k = 0; k < 3; k++) {
+          subtareas.add(
+            t.copia()
+              ..id = 's${subtareas.length}'
+              ..padreId = t.id
+              ..nombre = partes[(i + k) % partes.length]
+              ..color = _coloresSubtrabajos[(i + k) % _coloresSubtrabajos.length]
+              ..proximo = masDias(t.proximo ?? fechaInicio, k)
+              ..inicioMin = (t.inicioMin ?? 8 * 60) + k * 60
+              ..duracionMin = [30, 45, 60][k],
+          );
+        }
+      }
     }
     _cambio();
   }
@@ -593,7 +861,7 @@ class Store extends ChangeNotifier {
   };
 
   /// Los ids de ejemplo son cortos (c0, w3, d17); los reales son marcas de tiempo largas.
-  static final _idDemo = RegExp(r'^[cwd]\d{1,3}$');
+  static final _idDemo = RegExp(r'^[cwds]\d{1,4}$');
   bool get _hayDemo => clientes.any((c) => _idDemo.hasMatch(c.id)) || trabajadores.any((w) => _idDemo.hasMatch(w.id));
 
   /// Quita los datos de ejemplo y deja la cuenta como estaba antes de cargarlos.
@@ -610,6 +878,7 @@ class Store extends ChangeNotifier {
     clientes.removeWhere((c) => _idDemo.hasMatch(c.id));
     trabajadores.removeWhere((w) => _idDemo.hasMatch(w.id));
     tareas.removeWhere((t) => _idDemo.hasMatch(t.id) || (t.clienteId != null && cliente(t.clienteId) == null));
+    subtareas.removeWhere((t) => tarea(t.padreId) == null || _idDemo.hasMatch(t.id));
     for (final t in tareas) {
       t.trabajadorIds.removeWhere((id) => trabajador(id) == null);
     }
@@ -620,6 +889,7 @@ class Store extends ChangeNotifier {
   void _inicial() {
     clientes = [];
     trabajadores = [];
+    subtareas = [];
     tareas = [
       Tarea(
         id: 'p1',

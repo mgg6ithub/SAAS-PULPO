@@ -572,7 +572,17 @@ class BotonPrimario extends StatelessWidget {
   final IconData icono;
   final VoidCallback onPressed;
   final String? tecla;
-  const BotonPrimario(this.texto, {super.key, this.icono = Icons.add_rounded, required this.onPressed, this.tecla});
+
+  /// Muestra el icono delante del texto también en escritorio (por defecto solo se ve en móvil).
+  final bool conIcono;
+  const BotonPrimario(
+    this.texto, {
+    super.key,
+    this.icono = Icons.add_rounded,
+    required this.onPressed,
+    this.tecla,
+    this.conIcono = false,
+  });
 
   @override
   Widget build(BuildContext context) => esMovil(context)
@@ -594,6 +604,7 @@ class BotonPrimario extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (conIcono) ...[Icon(icono, size: 18), const SizedBox(width: 6)],
               Text(texto),
               if (tecla != null) ...[
                 const SizedBox(width: 10),
@@ -1114,7 +1125,11 @@ class Col {
 
   /// Contenido propio de la cabecera en vez del título (p. ej. el botón de seleccionar).
   final Widget? cabecera;
-  const Col(this.titulo, {this.flex = 1, this.ancho, this.derecha = false, this.cabecera});
+
+  /// Texto al pasar el ratón por la cabecera (por defecto, «Arrastrar para intercambiar…»); sirve para
+  /// columnas con título abreviado.
+  final String? ayuda;
+  const Col(this.titulo, {this.flex = 1, this.ancho, this.derecha = false, this.cabecera, this.ayuda});
 }
 
 /// Tabla densa: cabecera gris pequeña, filas de ~56 px, sin rejilla y con la fila resaltada al pasar
@@ -1222,6 +1237,7 @@ class _TablaState extends State<Tabla> {
                                       ),
                                       child: _TituloColumna(
                                         titulo: c.titulo,
+                                        ayuda: c.ayuda,
                                         derecha: c.derecha,
                                         onIntercambiar: (origen) => setState(() {
                                           final desde = _orden.indexOf(origen);
@@ -1328,7 +1344,8 @@ class _TituloColumna extends StatefulWidget {
   final String titulo;
   final bool derecha;
   final ValueChanged<String> onIntercambiar;
-  const _TituloColumna({required this.titulo, required this.derecha, required this.onIntercambiar});
+  final String? ayuda;
+  const _TituloColumna({required this.titulo, required this.derecha, required this.onIntercambiar, this.ayuda});
 
   @override
   State<_TituloColumna> createState() => _TituloColumnaState();
@@ -1364,7 +1381,7 @@ class _TituloColumnaState extends State<_TituloColumna> {
         ),
         childWhenDragging: Opacity(opacity: .35, child: _contenido(false)),
         child: Tooltip(
-          message: 'Arrastrar para intercambiar ${widget.titulo}',
+          message: widget.ayuda ?? 'Arrastrar para intercambiar ${widget.titulo}',
           child: Semantics(
             label: 'Columna ${widget.titulo}, arrastrar para intercambiar',
             child: AnimatedContainer(
@@ -1895,8 +1912,12 @@ class BarraSeleccion extends StatelessWidget {
   final int seleccionados, total;
   final String nombre; // en plural: "trabajadores", "clientes"
   final VoidCallback onTodos, onEliminar, onSalir;
+
+  /// Acciones propias de lo que se selecciona (trabajos, trabajadores, clientes), antes de «Eliminar».
+  final List<Widget> acciones;
   const BarraSeleccion({
     super.key,
+    this.acciones = const [],
     required this.seleccionados,
     required this.total,
     required this.nombre,
@@ -1927,6 +1948,7 @@ class BarraSeleccion extends StatelessWidget {
             child: Text(seleccionados == total && total > 0 ? 'Ninguno' : 'Seleccionar todo'),
           ),
           const SizedBox(width: 4),
+          ...acciones,
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: P.rojo),
             onPressed: seleccionados == 0 ? null : onEliminar,

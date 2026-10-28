@@ -129,7 +129,7 @@ class _TareaAsignada extends StatelessWidget {
       derecha: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          pillEstado(t),
+          SelectorEstado(t),
           const SizedBox(width: 4),
           IconButton(
             tooltip: 'Quitar de ${w.nombre}',

@@ -33,6 +33,8 @@ class _SimulacionesState extends State<_Simulaciones> {
   int _modoFecha = 0; // hoy, un día, intervalo
   DateTime _desde = hoy(), _hasta = hoy();
   bool _solapar = false;
+  bool _conSubtrabajos = false;
+  double _cadaSubtrabajos = 3;
   String? _resultado;
 
   @override
@@ -162,6 +164,8 @@ class _SimulacionesState extends State<_Simulaciones> {
       hasta: hasta,
       permitirSolapes: _solapar,
       trabajosSimultaneos: _solapar ? int.parse(_simultaneos.text) : 2,
+      conSubtrabajos: _conSubtrabajos,
+      cadaTantosConSubtrabajos: _cadaSubtrabajos.round(),
     );
     setState(() => _resultado = null);
   }
@@ -190,7 +194,7 @@ class _SimulacionesState extends State<_Simulaciones> {
                 ),
                 Text(
                   activa
-                      ? '${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · $trabajos trabajos'
+                      ? '${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · $trabajos trabajos${store.subtareas.isEmpty ? '' : ' · ${store.subtareas.length} subtrabajos'}'
                       : 'Crea una simulación para cargar datos de prueba.',
                   style: TextStyle(fontSize: 12, color: P.textoSuave),
                 ),
@@ -352,6 +356,57 @@ class _SimulacionesState extends State<_Simulaciones> {
                         ),
                       ),
                     ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Tarjeta(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Switch(value: _conSubtrabajos, onChanged: (v) => setState(() => _conSubtrabajos = v)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Crear subtrabajos', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                'Algunos trabajos se dividen en varios subtrabajos.',
+                                style: TextStyle(fontSize: 12, color: P.textoSuave),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_conSubtrabajos)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Slider(
+                              value: _cadaSubtrabajos,
+                              min: 1,
+                              max: 10,
+                              divisions: 9,
+                              label: '${_cadaSubtrabajos.round()}',
+                              semanticFormatterCallback: (v) => 'Uno de cada ${v.round()} trabajos',
+                              onChanged: (v) => setState(() => _cadaSubtrabajos = v),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 150,
+                            child: Text(
+                              _cadaSubtrabajos.round() == 1
+                                  ? 'Todos los trabajos'
+                                  : 'Uno de cada ${_cadaSubtrabajos.round()} trabajos',
+                              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),

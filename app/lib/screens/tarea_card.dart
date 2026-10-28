@@ -58,7 +58,8 @@ class TareaCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                if (!t.esPlantilla) PillTrabajadores(t.trabajadorIds),
+                if (!t.esPlantilla)
+                  SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: true),
               ],
             ),
             const SizedBox(height: 6),
@@ -88,7 +89,12 @@ class TareaCard extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      if (realizada) const Pill('Hecho', P.verde, punto: true) else pillEstado(t),
+                      if (realizada)
+                        const Pill('Hecho', P.verde, punto: true)
+                      else if (t.esPlantilla)
+                        pillEstado(t)
+                      else
+                        SelectorEstado(t),
                       if (averiada) Pill(t.estadoMaquina.etiqueta, t.estadoMaquina.color),
                       if (t.esPlantilla)
                         for (final c in t.competencias) Etiqueta(c, P.morado),
