@@ -229,6 +229,7 @@ class Store extends ChangeNotifier {
   void desmarcarHecha(Tarea t) {
     final antes = _antesDeHecha.remove(t.id);
     if (antes == null) return;
+    t.historial.removeWhere((d) => DateUtils.isSameDay(d, hoy()) && !DateUtils.isSameDay(antes.$1, d));
     t
       ..ultimo = antes.$1
       ..proximo = antes.$2
@@ -239,6 +240,7 @@ class Store extends ChangeNotifier {
   void marcarHecha(Tarea t) {
     _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina);
     t.ultimo = hoy();
+    if (!t.historial.any((d) => DateUtils.isSameDay(d, hoy()))) t.historial.add(hoy());
     // Una tarea única, al hacerse, ya no tiene próxima.
     t.proximo = t.periodicidad.repite ? masDias(hoy(), t.periodicidad.dias) : null;
     if (t.estadoMaquina == EstadoMaquina.revision) t.estadoMaquina = EstadoMaquina.operativa;

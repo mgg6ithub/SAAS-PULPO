@@ -212,6 +212,23 @@ class Trabajador {
   Trabajador copia() => Trabajador.fromJson(toJson());
 }
 
+/// Parte de un trabajo (p. ej. un extintor de la escuela) con sus propias notas y estado.
+class Subtrabajo {
+  String id, nombre, notas;
+  bool hecho;
+
+  Subtrabajo({required this.id, this.nombre = '', this.notas = '', this.hecho = false});
+
+  Map<String, dynamic> toJson() => {'id': id, 'nombre': nombre, 'notas': notas, 'hecho': hecho};
+
+  factory Subtrabajo.fromJson(Map<String, dynamic> j) => Subtrabajo(
+    id: j['id'] as String,
+    nombre: j['nombre'] as String? ?? '',
+    notas: j['notas'] as String? ?? '',
+    hecho: j['hecho'] as bool? ?? false,
+  );
+}
+
 /// Tarea de mantenimiento sobre una máquina. Sin cliente = plantilla.
 class Tarea {
   String id, nombre, tipo, marca, modelo, numeroSerie, ubicacion, notas;
@@ -236,6 +253,12 @@ class Tarea {
   Periodicidad periodicidad;
   bool activa;
   List<String> competencias, trabajadorIds;
+
+  /// Partes del trabajo, adheridas a él.
+  List<Subtrabajo> subtrabajos;
+
+  /// Días en que se hizo (el más reciente al final).
+  List<DateTime> historial;
 
   Tarea({
     required this.id,
@@ -264,9 +287,13 @@ class Tarea {
     this.activa = true,
     List<String>? competencias,
     List<String>? trabajadorIds,
+    List<Subtrabajo>? subtrabajos,
+    List<DateTime>? historial,
   }) : plantilla = plantilla ?? clienteId == null,
        competencias = competencias ?? [],
-       trabajadorIds = trabajadorIds ?? [];
+       trabajadorIds = trabajadorIds ?? [],
+       subtrabajos = subtrabajos ?? [],
+       historial = historial ?? [];
 
   /// Es una plantilla (modelo para crear tareas). Antes se deducía de no tener cliente;
   /// ahora es un dato propio, así una tarea puede existir sin cliente.
@@ -315,6 +342,8 @@ class Tarea {
     'activa': activa,
     'competencias': competencias,
     'trabajadorIds': trabajadorIds,
+    'subtrabajos': [for (final x in subtrabajos) x.toJson()],
+    'historial': [for (final d in historial) _f(d)],
   };
 
   factory Tarea.fromJson(Map<String, dynamic> j) => Tarea(
@@ -344,6 +373,8 @@ class Tarea {
     activa: j['activa'] as bool? ?? true,
     competencias: List<String>.from(j['competencias'] as List? ?? []),
     trabajadorIds: List<String>.from(j['trabajadorIds'] as List? ?? []),
+    subtrabajos: [for (final x in j['subtrabajos'] as List? ?? []) Subtrabajo.fromJson(x)],
+    historial: [for (final x in j['historial'] as List? ?? []) DateTime.parse(x as String)],
   );
 
   Tarea copia() => Tarea.fromJson(toJson());

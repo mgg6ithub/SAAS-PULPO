@@ -85,9 +85,77 @@ class _TareaDetalleState extends State<TareaDetalle> {
   }
 }
 
-class _Resumen extends StatelessWidget {
+class _Resumen extends StatefulWidget {
   final Tarea t;
   const _Resumen(this.t);
+
+  @override
+  State<_Resumen> createState() => _ResumenState();
+}
+
+class _ResumenState extends State<_Resumen> {
+  final nuevo = TextEditingController();
+
+  @override
+  void dispose() {
+    nuevo.dispose();
+    super.dispose();
+  }
+
+  void _anadir() {
+    final n = nuevo.text.trim();
+    if (n.isEmpty) return;
+    widget.t.subtrabajos.add(Subtrabajo(id: store.nuevoId(), nombre: n));
+    store.guardarTarea(widget.t);
+    nuevo.clear();
+  }
+
+  Widget _subtrabajos(Tarea t) => SeccionTarjeta(
+    titulo: 'Subtrabajos',
+    subtitulo: t.subtrabajos.isEmpty
+        ? null
+        : '${t.subtrabajos.where((x) => x.hecho).length} de ${t.subtrabajos.length} hechos',
+    children: [
+      for (final x in t.subtrabajos)
+        FilaLista(
+          lider: Checkbox(
+            value: x.hecho,
+            onChanged: (v) {
+              x.hecho = v ?? false;
+              store.guardarTarea(t);
+            },
+          ),
+          titulo: x.nombre,
+          derecha: IconButton(
+            tooltip: 'Quitar subtrabajo',
+            onPressed: () {
+              t.subtrabajos.remove(x);
+              store.guardarTarea(t);
+            },
+            icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
+          ),
+        ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: nuevo,
+                decoration: const InputDecoration(hintText: 'Añadir subtrabajo…', isDense: true),
+                onSubmitted: (_) => _anadir(),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Añadir subtrabajo',
+              onPressed: _anadir,
+              icon: Icon(Icons.add_rounded, color: P.morado),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 
   Widget _cifra(String etiqueta, String valor, String nota) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,6 +172,7 @@ class _Resumen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = widget.t;
     final equipo = [for (final id in t.trabajadorIds) ?store.trabajador(id)];
     final principal = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,12 +216,14 @@ class _Resumen extends StatelessWidget {
                     ),
                 ],
         ),
+        const SizedBox(height: 16),
+        _subtrabajos(t),
       ],
     );
     return LayoutBuilder(
       builder: (context, box) {
         if (box.maxWidth <= 900) {
-          return ListView(children: [principal, const SizedBox(height: 16), _Datos(t)]);
+          return ListView(children: [principal, const SizedBox(height: 16), _Historico(t)]);
         }
         return SingleChildScrollView(
           child: Row(
@@ -160,11 +231,46 @@ class _Resumen extends StatelessWidget {
             children: [
               Expanded(child: principal),
               const SizedBox(width: 16),
-              SizedBox(width: 340, child: _Datos(t)),
+              SizedBox(width: 340, child: _Historico(t)),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Cuándo se ha hecho el trabajo, lo último primero, y cuándo toca de nuevo.
+class _Historico extends StatelessWidget {
+  final Tarea t;
+  const _Historico(this.t);
+
+  @override
+  Widget build(BuildContext context) {
+    final dias = {...t.historial, ?t.ultimo}.toList()..sort((a, b) => b.compareTo(a));
+    return SeccionTarjeta(
+      titulo: 'Histórico',
+      subtitulo: dias.isEmpty ? null : '${dias.length} ${dias.length == 1 ? 'vez' : 'veces'} hecho',
+      children: [
+        if (t.proximo != null)
+          FilaLista(
+            lider: Icon(Icons.event_outlined, size: 18, color: P.morado),
+            titulo: 'Próximo',
+            subtitulo: '${fecha(t.proximo)} · ${relativo(t.proximo!)}',
+          ),
+        if (dias.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Text('Aún no se ha hecho.', style: TextStyle(color: P.textoSuave, fontSize: 13)),
+          )
+        else
+          for (final d in dias)
+            FilaLista(
+              lider: Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
+              titulo: fecha(d),
+              subtitulo: relativo(d),
+            ),
+      ],
     );
   }
 }
