@@ -60,7 +60,7 @@ delete from auth.users where id in (select id from u);
 
 def main():
     n = random.randint(10000, 99999)
-    a, b, c, d = (f"prueba-{x}-{n}@example.com" for x in "abcd")
+    a, b, c, d = (f"prueba-{x}-{n}@pultec.com" for x in "abcd")
     sql(CREAR.format(a=a, b=b, c=c, d=d))
     try:
         r = subprocess.run(["flutter", "test", "test/nube_real_test.dart"], cwd=APP, stdin=subprocess.DEVNULL,
