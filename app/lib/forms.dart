@@ -106,7 +106,10 @@ class VentanaFormulario extends StatefulWidget {
 
 class _VentanaFormularioState extends State<VentanaFormulario> {
   int lado = _lado;
-  bool get acoplada => lado != 0;
+
+  /// En móvil ocupa toda la pantalla, como acoplada pero a todo el ancho.
+  bool _movil = false;
+  bool get acoplada => lado != 0 || _movil;
   Offset desplazamiento = Offset.zero;
   bool arrastrando = false;
 
@@ -164,9 +167,10 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
       );
     }
     final pantalla = MediaQuery.sizeOf(context);
+    _movil = esMovil(context);
     // Mismo ancho centrada y acoplada: al cambiar de modo solo se mueve el marco y los campos no se
     // recolocan (cambiar de ancho rehacía todo el formulario de golpe y daba un tirón).
-    final ancho = min(860.0, pantalla.width - 48);
+    final ancho = _movil ? pantalla.width : min(860.0, pantalla.width - 48);
     final alto = acoplada ? pantalla.height : min(pantalla.height * .9, 900.0);
     var left = lado < 0 ? 0.0 : pantalla.width - ancho;
     var top = 0.0;
@@ -204,7 +208,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                       maxWidth: ancho,
                       child: SingleChildScrollView(
                         controller: scroll,
-                        padding: const EdgeInsets.fromLTRB(32, 6, 32, 32),
+                        padding: EdgeInsets.fromLTRB(_movil ? 16 : 32, 6, _movil ? 16 : 32, 32),
                         child: RepaintBoundary(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
                         ),
@@ -240,9 +244,9 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
             // A la derecha, sitio para los botones de ventana (y la criticidad debajo, si la hay).
             padding: EdgeInsets.fromLTRB(
-              32,
+              _movil ? 16 : 32,
               acoplada || widget.incrustada ? 16 : 6,
-              widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : 120),
+              widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : (_movil ? 56 : 120)),
               8,
             ),
             child: Column(
@@ -320,19 +324,22 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _BotonVentana(
-                    lado < 0 ? CupertinoIcons.rectangle : CupertinoIcons.sidebar_left,
-                    lado < 0 ? 'Acoplar al centro' : 'Acoplar a la izquierda',
-                    () => acoplar(-1),
-                    centro: lado < 0,
-                  ),
-                  _BotonVentana(
-                    lado > 0 ? CupertinoIcons.rectangle : CupertinoIcons.sidebar_right,
-                    lado > 0 ? 'Acoplar al centro' : 'Acoplar a la derecha',
-                    () => acoplar(1),
-                    centro: lado > 0,
-                  ),
-                  const SizedBox(width: 4),
+                  // En móvil no se acopla: solo cerrar.
+                  if (!_movil) ...[
+                    _BotonVentana(
+                      lado < 0 ? CupertinoIcons.rectangle : CupertinoIcons.sidebar_left,
+                      lado < 0 ? 'Acoplar al centro' : 'Acoplar a la izquierda',
+                      () => acoplar(-1),
+                      centro: lado < 0,
+                    ),
+                    _BotonVentana(
+                      lado > 0 ? CupertinoIcons.rectangle : CupertinoIcons.sidebar_right,
+                      lado > 0 ? 'Acoplar al centro' : 'Acoplar a la derecha',
+                      () => acoplar(1),
+                      centro: lado > 0,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   _BotonVentana(CupertinoIcons.xmark, 'Cerrar', () => Navigator.pop(context)),
                 ],
               ),
@@ -366,7 +373,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                   ),
                 ),
         ),
-        if (!widget.incrustada || widget.onCancelar != null) ...[
+        // En móvil sobra «Cancelar»: ya está la X de arriba.
+        if ((!widget.incrustada && !_movil) || widget.onCancelar != null) ...[
           TextButton(
             style: TextButton.styleFrom(foregroundColor: P.textoSuave),
             onPressed: widget.onCancelar ?? () => Navigator.pop(context),
