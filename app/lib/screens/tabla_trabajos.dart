@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -98,7 +99,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (ancho) const Col('Periodicidad', flex: 2),
             const Col('Próximo', flex: 2),
             if (ancho) const Col('Horario', flex: 2),
-            if (medio) const Col('Asignado a', ancho: 90),
+            if (medio) const Col('Asignado a', ancho: 120),
             const Col('Estado', ancho: 80, derecha: true),
           ],
           filas: ts.length,
@@ -164,7 +165,10 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       ],
                     ),
               if (ancho) celdaTexto(t.horario ?? '', suave: true),
-              if (medio) t.esPlantilla ? const SizedBox() : AvataresTrabajadores(t.trabajadorIds, size: 24),
+              if (medio)
+                t.esPlantilla
+                    ? const SizedBox()
+                    : SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: true),
               pillEstado(t),
             ];
           },

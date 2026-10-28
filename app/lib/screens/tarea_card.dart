@@ -58,7 +58,8 @@ class TareaCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                if (!t.esPlantilla) PillTrabajadores(t.trabajadorIds),
+                if (!t.esPlantilla)
+                  SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: true),
               ],
             ),
             const SizedBox(height: 6),

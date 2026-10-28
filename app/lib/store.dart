@@ -389,6 +389,19 @@ class Store extends ChangeNotifier {
   /// Subtrabajos directos de un trabajo o subtrabajo.
   List<Tarea> hijas(String id) => subtareas.where((s) => s.padreId == id).toList();
 
+  /// Todos los subtrabajos que cuelgan de este, a cualquier profundidad.
+  List<Tarea> descendientes(String id) => [
+    for (final h in hijas(id)) ...[h, ...descendientes(h.id)],
+  ];
+
+  /// Pone a todos los subtrabajos los mismos trabajadores que a este trabajo.
+  void asignarASubtrabajos(Tarea t) {
+    for (final h in descendientes(t.id)) {
+      h.trabajadorIds = [...t.trabajadorIds];
+    }
+    _cambio();
+  }
+
   void guardarTarea(Tarea t) {
     if (t.padreId != null) {
       // El subtrabajo comparte el cliente de su padre.

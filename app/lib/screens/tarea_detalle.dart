@@ -154,7 +154,7 @@ class _Resumen extends StatelessWidget {
             children: [
               Text('Asignado a', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
               const SizedBox(height: 6),
-              SelectorTrabajadores(t, () => store.guardarTarea(t)),
+              SelectorTrabajadores(t, () => store.guardarTarea(t), ofrecerSubtrabajos: true),
             ],
           ),
         ),

@@ -1838,15 +1838,20 @@ class _CajaMenu extends StatelessWidget {
   final Widget child;
   final VoidCallback onTap;
   final bool abierto;
-  const _CajaMenu({required this.child, required this.onTap, required this.abierto});
+
+  /// Para listas y bloques: más baja y con menos relleno.
+  final bool compacta;
+  const _CajaMenu({required this.child, required this.onTap, required this.abierto, this.compacta = false});
 
   @override
   Widget build(BuildContext context) => InkWell(
     borderRadius: BorderRadius.circular(8),
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 46),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      constraints: BoxConstraints(minHeight: compacta ? 32 : 46),
+      padding: compacta
+          ? const EdgeInsets.symmetric(horizontal: 6, vertical: 3)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: P.superficie,
         borderRadius: BorderRadius.circular(8),
@@ -1854,8 +1859,9 @@ class _CajaMenu extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(child: child),
-          Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+          compacta ? child : Expanded(child: child),
+          if (compacta) const SizedBox(width: 2),
+          Icon(Icons.unfold_more_rounded, size: compacta ? 16 : 18, color: P.textoSuave),
         ],
       ),
     ),
@@ -1935,7 +1941,19 @@ class SelectorCliente extends StatelessWidget {
 class SelectorTrabajadores extends StatelessWidget {
   final Tarea t;
   final VoidCallback onCambio;
-  const SelectorTrabajadores(this.t, this.onCambio, {super.key});
+
+  /// En listas y bloques: solo las caras y el doble chevron.
+  final bool compacto;
+
+  /// Con subtrabajos, ofrece asignar a todos ellos lo mismo que a este trabajo.
+  final bool ofrecerSubtrabajos;
+  const SelectorTrabajadores(
+    this.t,
+    this.onCambio, {
+    super.key,
+    this.compacto = false,
+    this.ofrecerSubtrabajos = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1977,6 +1995,14 @@ class SelectorTrabajadores extends StatelessWidget {
               ),
             ),
           ),
+        if (ofrecerSubtrabajos && store.descendientes(t.id).isNotEmpty && t.trabajadorIds.isNotEmpty) ...[
+          const Divider(height: 8),
+          MenuItemButton(
+            leadingIcon: Icon(Icons.account_tree_outlined, size: 18, color: P.morado),
+            onPressed: () => store.asignarASubtrabajos(t),
+            child: Text('Asignar también a sus ${store.descendientes(t.id).length} subtrabajos'),
+          ),
+        ],
         const Divider(height: 8),
         MenuItemButton(
           onPressed: null,
@@ -1985,8 +2011,14 @@ class SelectorTrabajadores extends StatelessWidget {
       ],
       builder: (context, menu, _) => _CajaMenu(
         abierto: menu.isOpen,
+        compacta: compacto,
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
-        child: elegidos.isEmpty
+        child: compacto
+            ? Tooltip(
+                message: elegidos.isEmpty ? 'Sin asignar' : elegidos.map((w) => w.nombreCompleto).join(', '),
+                child: AvataresTrabajadores(t.trabajadorIds, size: 22),
+              )
+            : elegidos.isEmpty
             ? Text('Sin asignar', style: TextStyle(color: P.textoSuave))
             : Row(
                 children: [
