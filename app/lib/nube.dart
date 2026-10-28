@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'informes.dart';
 import 'models.dart';
 import 'store.dart';
 
@@ -155,6 +157,99 @@ class Nube {
       .eq('trabajo_id', _u(trabajoId))
       .order('created_at', ascending: false)
       .limit(30);
+
+  // ── Informes y fotos ──
+
+  static const _bucket = 'fotos';
+
+  /// La foto ya está en Storage (ruta del bucket) y no en base64. El base64 nunca lleva puntos.
+  static bool esRutaFoto(String foto) => foto.endsWith('.png') || foto.endsWith('.jpg');
+
+  static final _fotos = <String, Future<Uint8List>>{};
+
+  /// Bytes de una foto del bucket (se descargan una sola vez).
+  Future<Uint8List> foto(String ruta) =>
+      _fotos[ruta] ??= _db.storage.from(_bucket).download(ruta).catchError((Object e) {
+        _fotos.remove(ruta);
+        throw e;
+      });
+
+  Future<List<Informe>> informes(String trabajoId) async {
+    final r = await _db
+        .from('informes')
+        .select('id, trabajador_id, resultado, notas, material, minutos, fotos, firma, firmante, created_at')
+        .eq('trabajo_id', _u(trabajoId))
+        .order('created_at', ascending: false);
+    return [
+      for (final x in r)
+        Informe(
+          id: x['id'],
+          trabajoId: trabajoId,
+          trabajadorId: x['trabajador_id'],
+          resultado: x['resultado'],
+          notas: x['notas'],
+          material: x['material'],
+          minutos: x['minutos'],
+          fotos: List<String>.from(x['fotos'] as List),
+          firma: x['firma'],
+          firmante: x['firmante'],
+          cuando: DateTime.parse(x['created_at'] as String).toLocal(),
+        ),
+    ];
+  }
+
+  /// Sube las fotos (JPEG) y la firma (PNG) a `<empresa>/informes/<informe>/` y guarda el informe. Espera
+  /// antes a que el trabajo esté guardado, porque el informe apunta a él.
+  Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma) async {
+    await _cola;
+    final id = _uuidNuevo();
+    Future<String> subir(String nombre, Uint8List bytes, String tipo) async {
+      final ruta = '$empresaId/informes/$id/$nombre';
+      await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
+      _fotos[ruta] = Future.value(bytes);
+      return ruta;
+    }
+
+    final rutas = [for (var n = 0; n < fotos.length; n++) await subir('$n.jpg', fotos[n], 'image/jpeg')];
+    final rutaFirma = firma == null ? null : await subir('firma.png', firma, 'image/png');
+    final x = await _db
+        .from('informes')
+        .insert({
+          'id': id,
+          'empresa_id': empresaId,
+          'trabajo_id': _u(i.trabajoId),
+          'trabajador_id': i.trabajadorId == null ? null : _u(i.trabajadorId!),
+          'resultado': i.resultado,
+          'notas': i.notas,
+          'material': i.material,
+          'minutos': i.minutos,
+          'fotos': rutas,
+          'firma': rutaFirma,
+          'firmante': i.firmante,
+        })
+        .select('created_at')
+        .single();
+    return i.guardado(
+      id: id,
+      fotos: rutas,
+      firma: rutaFirma,
+      cuando: DateTime.parse(x['created_at'] as String).toLocal(),
+    );
+  }
+
+  /// Sube a Storage la foto en base64 de una fila de `clientes` o `trabajadores` y devuelve la fila con la
+  /// ruta. El nombre sale del contenido, así que reintentar no duplica.
+  Future<Map<String, dynamic>> _conFotoSubida(String tabla, Map<String, dynamic> f) async {
+    final foto = f['foto'] as String;
+    if (foto.isEmpty || esRutaFoto(foto)) return f;
+    final bytes = base64Decode(foto);
+    final ruta = '$empresaId/$tabla/${md5.convert(bytes)}.png';
+    await _db.storage
+        .from(_bucket)
+        .uploadBinary(ruta, bytes, fileOptions: const FileOptions(contentType: 'image/png', upsert: true));
+    _fotos[ruta] = Future.value(bytes);
+    return {...f, 'foto': ruta};
+  }
 
   /// Enlace que se manda a quien se invita: abre la app con el código puesto.
   static String enlace(String codigo) =>
@@ -323,8 +418,20 @@ class Nube {
     _store = s;
     _enviado.clear();
     if (!vacio) {
-      _filas(s).forEach((t, filas) => _enviado[t] = {for (final e in filas.entries) e.key: jsonEncode(e.value)});
+      _filas(s).forEach(
+        (t, filas) => _enviado[t] = {
+          for (final e in filas.entries)
+            // Fotos antiguas en base64: se dejan sin guardar para que se suban a Storage.
+            if (esTrabajador || !_fotoEnBase64(e.value)) e.key: jsonEncode(e.value),
+        },
+      );
+      if (!esTrabajador) sincronizar();
     }
+  }
+
+  static bool _fotoEnBase64(Map<String, dynamic> f) {
+    final foto = f['foto'];
+    return foto is String && foto.isNotEmpty && !esRutaFoto(foto);
   }
 
   static const _orden = [
@@ -363,7 +470,7 @@ class Nube {
     _cola = _cola.then((_) async {
       try {
         for (final t in _orden) {
-          final filas = subir[t];
+          var filas = subir[t];
           if (filas == null) continue;
           if (esTrabajador) {
             // Solo puede cambiar sus trabajos (estado y fechas) y marcarlos como hechos.
@@ -375,6 +482,9 @@ class Nube {
               await _db.from(t).upsert(filas, onConflict: _clave[t]!, ignoreDuplicates: true);
             }
             continue;
+          }
+          if (t == 'clientes' || t == 'trabajadores') {
+            filas = [for (final f in filas) await _conFotoSubida(t, f)];
           }
           for (var i = 0; i < filas.length; i += 200) {
             await _db
@@ -548,6 +658,16 @@ class Nube {
     }
     return r;
   }
+}
+
+/// Uuid v4 aleatorio, para dar nombre a la carpeta de fotos antes de guardar el informe.
+String _uuidNuevo() {
+  final r = Random.secure();
+  final b = [for (var i = 0; i < 16; i++) r.nextInt(256)];
+  b[6] = b[6] & 0x0f | 0x40;
+  b[8] = b[8] & 0x3f | 0x80;
+  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }
 
 /// Lo que se lee de la base al entrar.

@@ -7,6 +7,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'informes.dart';
 import 'tabla_trabajos.dart';
 import 'tarea_automatizaciones.dart';
 
@@ -293,6 +294,7 @@ class _Historico extends StatelessWidget {
                 subtitulo: relativo(d),
                 derecha: Icon(Icons.check_circle_rounded, size: 20, color: P.verde),
               ),
+          InformesDelTrabajo(t),
         ],
       ),
     );

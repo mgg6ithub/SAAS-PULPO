@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'ajustes.dart';
 import 'geo.dart';
+import 'informes.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -690,7 +691,7 @@ Widget selectorColor(int actual, ValueChanged<int> onChanged, {double size = 26}
 /// Foto o logotipo de la cabecera del formulario. Sin foto: cuadro discontinuo con un icono de imagen;
 /// al pulsarlo se puede arrastrar una imagen o elegirla del ordenador.
 class FotoFormulario extends StatelessWidget {
-  final String foto; // PNG en base64; vacío = sin foto
+  final String foto; // PNG en base64 o ruta de Storage; vacío = sin foto
   final ValueChanged<String> onCambio;
   final bool cuadrado;
   const FotoFormulario({super.key, required this.foto, required this.onCambio, this.cuadrado = false});
@@ -720,7 +721,7 @@ class FotoFormulario extends StatelessWidget {
                 )
               : ClipRRect(
                   borderRadius: radio,
-                  child: Image.memory(base64Decode(foto), width: _lado, height: _lado, fit: BoxFit.cover),
+                  child: FotoGuardada(foto, width: _lado, height: _lado),
                 ),
         ),
       ),
