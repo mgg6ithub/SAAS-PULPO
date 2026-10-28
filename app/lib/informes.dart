@@ -8,7 +8,7 @@ import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-import 'descarga_io.dart' if (dart.library.js_interop) 'descarga_web.dart';
+import 'plataforma_io.dart' if (dart.library.js_interop) 'plataforma_web.dart';
 import 'models.dart';
 import 'nube.dart';
 import 'store.dart';

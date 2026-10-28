@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../forms.dart';
 import '../informes.dart';
+import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 import '../models.dart';
 import '../nube.dart';
 import '../store.dart';
@@ -16,20 +17,10 @@ import 'informes.dart';
 /// Trabajador con el que se ve la app (null = vista de administrador). '' = el primero activo.
 /// Maqueta: con el login de Supabase lo decidirá el rol de la cuenta. `?rol=trabajador&t=<id>` lo abre directo.
 final rolTrabajador = ValueNotifier<String?>(
-  Uri.base.queryParameters['rol'] == 'trabajador'
-      ? (Uri.base.queryParameters['t'] ?? '')
-      : null,
+  Uri.base.queryParameters['rol'] == 'trabajador' ? (Uri.base.queryParameters['t'] ?? '') : null,
 );
 
-const _dias = [
-  'lunes',
-  'martes',
-  'miércoles',
-  'jueves',
-  'viernes',
-  'sábado',
-  'domingo',
-];
+const _dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const _meses = [
   'enero',
   'febrero',
@@ -45,8 +36,7 @@ const _meses = [
   'diciembre',
 ];
 
-String _diaLargo(DateTime d) =>
-    '${_dias[d.weekday - 1]} ${d.day} de ${_meses[d.month - 1]}';
+String _diaLargo(DateTime d) => '${_dias[d.weekday - 1]} ${d.day} de ${_meses[d.month - 1]}';
 
 /// Elige con qué trabajador ver la app (hasta que haya login). Abre la vista de trabajador.
 Future<void> abrirVistaTrabajador(BuildContext context) {
@@ -69,11 +59,7 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
               child: Text(
                 'Ver Pulpo como…',
-                style: TextStyle(
-                  fontFamily: P.titulos,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w700),
               ),
             ),
             Padding(
@@ -86,10 +72,7 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
             if (activos.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-                child: Text(
-                  'Aún no hay trabajadores.',
-                  style: TextStyle(color: P.textoSuave),
-                ),
+                child: Text('Aún no hay trabajadores.', style: TextStyle(color: P.textoSuave)),
               )
             else
               Flexible(
@@ -104,8 +87,7 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
                           size: 34,
                         ),
                         titulo: w.nombreCompleto,
-                        subtitulo:
-                            '${_misTrabajos(w).length} trabajos asignados',
+                        subtitulo: '${_misTrabajos(w).length} trabajos asignados',
                         onTap: () {
                           Navigator.pop(c);
                           rolTrabajador.value = w.id;
@@ -121,22 +103,20 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
   );
 }
 
-List<Tarea> _misTrabajos(Trabajador w) => store.tareas
-    .where((t) => !t.esPlantilla && t.activa && t.trabajadorIds.contains(w.id))
-    .toList();
+List<Tarea> _misTrabajos(Trabajador w) =>
+    store.tareas.where((t) => !t.esPlantilla && t.activa && t.trabajadorIds.contains(w.id)).toList();
 
-int _porHora(Tarea a, Tarea b) =>
-    (a.inicioMin ?? 1 << 20).compareTo(b.inicioMin ?? 1 << 20);
+int _porHora(Tarea a, Tarea b) => (a.inicioMin ?? 1 << 20).compareTo(b.inicioMin ?? 1 << 20);
 
 /// Los trabajos de [w] de un día, ordenados por hora.
 List<Tarea> _delDia(Trabajador w, DateTime dia) =>
-    store
-        .tareasDelDia(dia)
-        .where((t) => t.trabajadorIds.contains(w.id))
-        .toList()
-      ..sort(_porHora);
+    store.tareasDelDia(dia).where((t) => t.trabajadorIds.contains(w.id)).toList()..sort(_porHora);
 
-/// La app del trabajador: sus trabajos, su horario y los informes de cada trabajo.
+/// Pestañas de la app del trabajador: arriba en escritorio, abajo en el móvil (a mano del pulgar).
+const _pestanas = ['Hoy', 'Semana', 'Pendientes'];
+
+/// La app del trabajador: su día, su semana, lo pendiente y los informes de cada trabajo. Pensada primero
+/// para el móvil: lo siguiente en grande, botones de llamar y de ruta y marcar hecho con un toque.
 class ShellTrabajador extends StatefulWidget {
   const ShellTrabajador({super.key});
 
@@ -147,278 +127,346 @@ class ShellTrabajador extends StatefulWidget {
 class _ShellTrabajadorState extends State<ShellTrabajador> {
   int pestana = 0;
   String? tareaId;
-  DateTime dia = hoy();
+  DateTime semana = _lunes(hoy());
 
   Trabajador? get _yo {
     final id = rolTrabajador.value;
-    return store.trabajador(id ?? '') ??
-        store.trabajadores.where((w) => w.activo).firstOrNull;
+    return store.trabajador(id ?? '') ?? store.trabajadores.where((w) => w.activo).firstOrNull;
   }
 
   void _abrir(Tarea t) => setState(() => tareaId = t.id);
 
   @override
-  Widget build(BuildContext context) {
-    final w = _yo;
-    return Scaffold(
-      backgroundColor: P.fondo,
-      body: ListenableBuilder(
-        listenable: Listenable.merge([store, informes]),
-        builder: (context, _) {
-          if (w == null) {
-            return const Vacio(
-              icono: Icons.person_outline_rounded,
-              titulo: 'Sin trabajadores',
-              texto: 'Crea un trabajador desde la vista de administrador.',
-            );
-          }
-          final tarea = tareaId == null
-              ? null
-              : store.tareas.where((t) => t.id == tareaId).firstOrNull;
-          return Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: Padding(
-                padding: margenPagina,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    BarraVista(
-                      izquierda: tarea == null
-                          ? [
-                              const LogoPulpo(size: 30),
-                              Pestanas(
-                                opciones: const [
-                                  'Inicio',
-                                  'Mis trabajos',
-                                  'Horario',
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([store, informes]),
+    builder: (context, _) {
+      final w = _yo;
+      final movil = esMovil(context);
+      final tarea = tareaId == null ? null : store.tareas.where((t) => t.id == tareaId).firstOrNull;
+      return Scaffold(
+        backgroundColor: P.fondo,
+        bottomNavigationBar: movil && w != null && tarea == null
+            ? _BarraInferior(pestana, (i) => setState(() => pestana = i))
+            : null,
+        body: w == null
+            ? const Vacio(
+                icono: Icons.person_outline_rounded,
+                titulo: 'Sin trabajadores',
+                texto: 'Crea un trabajador desde la vista de administrador.',
+              )
+            : Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: Padding(
+                    padding: margenPagina,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        BarraVista(
+                          izquierda: tarea == null
+                              ? [
+                                  const LogoPulpo(size: 30),
+                                  if (!movil)
+                                    Pestanas(
+                                      opciones: _pestanas,
+                                      seleccion: pestana,
+                                      onChanged: (i) => setState(() => pestana = i),
+                                    ),
+                                ]
+                              : [
+                                  BotonAccion(
+                                    'Volver',
+                                    icono: CupertinoIcons.chevron_left,
+                                    onPressed: () => setState(() => tareaId = null),
+                                  ),
                                 ],
-                                seleccion: pestana,
-                                onChanged: (i) => setState(() => pestana = i),
-                              ),
-                            ]
-                          : [
+                          derecha: [
+                            if (store.nube?.esTrabajador ?? false)
                               BotonAccion(
-                                'Volver',
-                                icono: CupertinoIcons.chevron_left,
-                                onPressed: () => setState(() => tareaId = null),
+                                'Cerrar sesión',
+                                icono: Icons.logout_rounded,
+                                tooltip: store.nube!.nombre,
+                                onPressed: Nube.cerrarSesion,
+                              )
+                            else
+                              BotonAccion(
+                                'Vista de administrador',
+                                icono: Icons.swap_horiz_rounded,
+                                tooltip: 'Salir de la vista de ${w.nombre}',
+                                onPressed: () => rolTrabajador.value = null,
                               ),
-                            ],
-                      derecha: [
-                        if (store.nube?.esTrabajador ?? false)
-                          BotonAccion(
-                            'Cerrar sesión',
-                            icono: Icons.logout_rounded,
-                            tooltip: store.nube!.nombre,
-                            onPressed: Nube.cerrarSesion,
-                          )
-                        else
-                          BotonAccion(
-                            'Vista de administrador',
-                            icono: Icons.swap_horiz_rounded,
-                            tooltip: 'Salir de la vista de ${w.nombre}',
-                            onPressed: () => rolTrabajador.value = null,
+                          ],
+                        ),
+                        const SizedBox(height: huecoVista),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: KeyedSubtree(
+                              key: ValueKey(tarea?.id ?? pestana),
+                              child: tarea != null
+                                  ? _DetalleTrabajo(tarea, w)
+                                  : switch (pestana) {
+                                      0 => _Hoy(w, _abrir),
+                                      1 => _Semana(w, semana, _abrir, (d) => setState(() => semana = d)),
+                                      _ => _MisTrabajos(w, _abrir),
+                                    },
+                            ),
                           ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: huecoVista),
-                    Expanded(
-                      child: tarea != null
-                          ? _DetalleTrabajo(tarea, w)
-                          : switch (pestana) {
-                              0 => _Inicio(
-                                w,
-                                _abrir,
-                                () => setState(() => pestana = 1),
-                              ),
-                              1 => _MisTrabajos(w, _abrir),
-                              _ => _Horario(
-                                w,
-                                dia,
-                                _abrir,
-                                (d) => setState(() => dia = d),
-                              ),
-                            },
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+      );
+    },
+  );
 }
 
-// ── Inicio ───────────────────────────────────────────────
+/// Barra de pestañas abajo, para el móvil: texto grande y una rayita morada en la elegida (sin iconos).
+class _BarraInferior extends StatelessWidget {
+  final int seleccion;
+  final ValueChanged<int> onChanged;
+  const _BarraInferior(this.seleccion, this.onChanged);
 
-class _Inicio extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: P.superficie,
+      border: Border(top: BorderSide(color: P.borde)),
+    ),
+    child: SafeArea(
+      top: false,
+      child: SizedBox(
+        height: 56,
+        child: Row(
+          children: [
+            for (final (i, o) in _pestanas.indexed)
+              Expanded(
+                child: InkWell(
+                  onTap: () => onChanged(i),
+                  hoverColor: P.hoverFila,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        width: i == seleccion ? 24 : 0,
+                        height: 3,
+                        decoration: BoxDecoration(color: P.morado, borderRadius: BorderRadius.circular(2)),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        o,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: i == seleccion ? P.morado : P.textoSuave,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Teléfono al que llamar por un trabajo: el del contacto o, si no hay, el del cliente.
+String _telefono(Cliente? c) => c == null ? '' : (c.telefonoContacto.isNotEmpty ? c.telefonoContacto : c.telefono);
+
+/// Enlace de Google Maps con la ruta hasta el trabajo (null = sin dirección).
+String? _ruta(Tarea t, Cliente? c) {
+  const base = 'https://www.google.com/maps/dir/?api=1&destination=';
+  if (t.ubicacion.isNotEmpty) return '$base${Uri.encodeComponent(t.ubicacion)}';
+  if (c == null) return null;
+  if (c.ubicado) return '$base${c.lat},${c.lng}';
+  final d = c.direccionCompleta;
+  return d.isEmpty ? null : '$base${Uri.encodeComponent(d)}';
+}
+
+/// Lo que se hace con un trabajo desde la calle: llamar, ir, informe y marcarlo hecho.
+class _AccionesTrabajo extends StatelessWidget {
+  final Tarea t;
   final Trabajador w;
-  final ValueChanged<Tarea> abrir;
-  final VoidCallback verTodos;
-  const _Inicio(this.w, this.abrir, this.verTodos);
+  const _AccionesTrabajo(this.t, this.w);
 
   @override
   Widget build(BuildContext context) {
-    final deHoy = _delDia(w, hoy());
-    final hechos = deHoy.where((t) => t.hechaEl(hoy())).length;
-    final pendientes = deHoy.where((t) => !t.hechaEl(hoy())).toList();
-    final siguiente = pendientes.firstOrNull;
-    final cliente = siguiente == null
-        ? null
-        : store.cliente(siguiente.clienteId);
-    return ListView(
+    final cliente = store.cliente(t.clienteId);
+    final tel = _telefono(cliente);
+    final ruta = _ruta(t, cliente);
+    final hecha = t.hechaEl(hoy());
+    // En el móvil, botones de texto (sin icono) para que se entiendan sin pensar.
+    final movil = esMovil(context);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        Row(
-          children: [
-            Avatar(
-              inicialesDe(w.nombreCompleto),
-              Color(w.color == 0 ? 0xFF6A2FF6 : w.color),
-              size: 44,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hola, ${w.nombre}',
-                    style: TextStyle(
-                      fontFamily: P.titulos,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -.6,
-                    ),
-                  ),
-                  Text(
-                    _diaLargo(hoy()),
-                    style: TextStyle(color: P.textoSuave, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: huecoVista + 4),
-        Tarjeta(
-          child: Row(
-            children: [
-              Expanded(child: Cifra('Hoy', deHoy.length)),
-              Expanded(child: Cifra('Hechos', hechos, punto: P.verde)),
-              Expanded(
-                child: Cifra('Pendientes', pendientes.length, punto: P.ambar),
-              ),
-            ],
+        if (tel.isNotEmpty)
+          BotonAccion(
+            'Llamar',
+            icono: movil ? null : Icons.call_outlined,
+            tooltip: tel,
+            onPressed: () => abrirEnlace('tel:${tel.replaceAll(' ', '')}'),
           ),
-        ),
-        const SizedBox(height: huecoVista),
-        if (siguiente == null)
-          Tarjeta(
-            child: Text(
-              deHoy.isEmpty
-                  ? 'Hoy no tienes trabajos.'
-                  : 'Has terminado todo por hoy.',
-              style: TextStyle(color: P.textoSuave),
-            ),
-          )
-        else
-          Tarjeta(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'SIGUIENTE',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .8,
-                    color: P.morado,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    TipoIcono(siguiente.tipo, size: 44),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            siguiente.nombre,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            [
-                              if (cliente != null) cliente.nombre,
-                              siguiente.horario ?? 'Sin hora',
-                            ].join(' · '),
-                            style: TextStyle(color: P.textoSuave, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                if (siguiente.ubicacion.isNotEmpty || cliente != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    siguiente.ubicacion.isNotEmpty
-                        ? siguiente.ubicacion
-                        : cliente!.direccionCompleta,
-                    style: TextStyle(color: P.textoSuave, fontSize: 13),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                BotonPrimario(
-                  'Abrir trabajo',
-                  icono: Icons.arrow_forward_rounded,
-                  conIcono: true,
-                  onPressed: () => abrir(siguiente),
-                ),
-              ],
-            ),
+        if (ruta != null)
+          BotonAccion(
+            'Cómo llegar',
+            icono: movil ? null : Icons.directions_outlined,
+            onPressed: () => abrirEnlace(ruta),
           ),
-        const SizedBox(height: huecoVista),
-        SeccionTarjeta(
-          titulo: 'Tu día',
-          subtitulo: deHoy.isEmpty ? null : '${deHoy.length} trabajos',
-          accion: Enlace('Ver todos', onTap: verTodos),
-          children: [
-            if (deHoy.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: Text(
-                  'Nada programado para hoy.',
-                  style: TextStyle(color: P.textoSuave),
-                ),
-              ),
-            for (final t in deHoy) _FilaTrabajo(t, abrir, mostrarDia: false),
-          ],
+        BotonAccion(
+          'Informe',
+          icono: movil ? null : Icons.edit_note_rounded,
+          onPressed: () => abrirPanel(context, FormularioInforme(t, w)),
         ),
+        if (hecha) ...[
+          if (store.puedeDesmarcar(t)) BotonAccion('Quitar hecho', onPressed: () => store.desmarcarHecha(t)),
+        ] else
+          BotonAccion(
+            'Hecho',
+            icono: movil ? null : Icons.check_rounded,
+            color: P.morado,
+            onPressed: () => store.marcarHecha(t),
+          ),
       ],
     );
   }
 }
 
-/// Una fila de trabajo: tipo, nombre, cliente y hora; hecho = atenuado con su estado.
+// ── Hoy ──────────────────────────────────────────────────
+
+class _Hoy extends StatelessWidget {
+  final Trabajador w;
+  final ValueChanged<Tarea> abrir;
+  const _Hoy(this.w, this.abrir);
+
+  @override
+  Widget build(BuildContext context) {
+    final deHoy = _delDia(w, hoy());
+    final hechos = deHoy.where((t) => t.hechaEl(hoy())).length;
+    final siguiente = deHoy.where((t) => !t.hechaEl(hoy())).firstOrNull;
+    return ListView(
+      children: [
+        Text(
+          'Hola, ${w.nombre}',
+          style: TextStyle(fontFamily: P.titulos, fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -.6),
+        ),
+        Text(
+          [_diaLargo(hoy()), if (deHoy.isNotEmpty) '$hechos de ${deHoy.length} hechos'].join(' · '),
+          style: TextStyle(color: P.textoSuave, fontSize: 13.5),
+        ),
+        const SizedBox(height: huecoVista + 4),
+        if (siguiente == null)
+          Tarjeta(
+            child: Text(
+              deHoy.isEmpty ? 'Hoy no tienes trabajos.' : 'Has terminado todo por hoy.',
+              style: TextStyle(color: P.textoSuave, fontSize: 15),
+            ),
+          )
+        else
+          _Siguiente(siguiente, w, abrir),
+        if (deHoy.isNotEmpty) ...[
+          const SizedBox(height: huecoVista),
+          SeccionTarjeta(
+            titulo: 'Tu día',
+            subtitulo: '$hechos de ${deHoy.length}',
+            children: [for (final t in deHoy) _FilaTrabajo(t, abrir)],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// El siguiente trabajo, en grande: hora, qué, dónde y los botones para llamar, ir y terminarlo.
+class _Siguiente extends StatelessWidget {
+  final Tarea t;
+  final Trabajador w;
+  final ValueChanged<Tarea> abrir;
+  const _Siguiente(this.t, this.w, this.abrir);
+
+  @override
+  Widget build(BuildContext context) {
+    final cliente = store.cliente(t.clienteId);
+    final direccion = t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '');
+    return Tarjeta(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => abrir(t),
+              hoverColor: P.hoverFila,
+              borderRadius: BorderRadius.circular(P.radioControl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'SIGUIENTE',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.morado),
+                      ),
+                      const Spacer(),
+                      Icon(CupertinoIcons.chevron_right, size: 16, color: P.textoSuave),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    t.horario ?? 'Sin hora',
+                    style: TextStyle(
+                      fontFamily: P.titulos,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(t.nombre, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  if (cliente != null) Text(cliente.nombre, style: const TextStyle(fontSize: 15)),
+                  if (direccion.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(direccion, style: TextStyle(color: P.textoSuave, fontSize: 14)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _AccionesTrabajo(t, w),
+        ],
+      ),
+    );
+  }
+}
+
+/// Una fila de trabajo: tipo, nombre, cliente y hora, con el círculo para marcarlo hecho de un toque.
 class _FilaTrabajo extends StatelessWidget {
   final Tarea t;
   final ValueChanged<Tarea> abrir;
   final bool mostrarDia;
-  const _FilaTrabajo(this.t, this.abrir, {required this.mostrarDia});
+  const _FilaTrabajo(this.t, this.abrir, {this.mostrarDia = false});
 
   @override
   Widget build(BuildContext context) {
     final hecha = t.hechaEl(hoy());
     final cliente = store.cliente(t.clienteId);
-    return Atenuado(
-      activo: hecha,
+    // Solo se marca lo de hoy o lo atrasado; lo de otros días todavía no se ha hecho.
+    final marcable = hecha || (t.proximo != null && diasHasta(t.proximo!) <= 0);
+    // Lo hecho se atenúa pero se puede abrir (para el informe) y desmarcar.
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: hecha ? .5 : 1,
       child: FilaLista(
         lider: TipoIcono(t.tipo, size: 36),
         titulo: t.nombre,
@@ -426,19 +474,54 @@ class _FilaTrabajo extends StatelessWidget {
           if (cliente != null) cliente.nombre,
           if (mostrarDia && t.proximo != null) relativo(t.proximo!),
         ].join(' · '),
-        derecha: Column(
+        derecha: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              t.horario ?? 'Sin hora',
-              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-            ),
-            const SizedBox(height: 3),
-            if (hecha) Pill('Hecho', P.verde, punto: true),
+            Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+            if (marcable) ...[const SizedBox(width: 6), _MarcaHecho(t)],
           ],
         ),
         onTap: () => abrir(t),
+      ),
+    );
+  }
+}
+
+/// Círculo de 40 px: vacío = pendiente, verde con check = hecho. Un toque cambia el estado.
+class _MarcaHecho extends StatelessWidget {
+  final Tarea t;
+  const _MarcaHecho(this.t);
+
+  @override
+  Widget build(BuildContext context) {
+    final hecha = t.hechaEl(hoy());
+    return Tooltip(
+      message: hecha ? (store.puedeDesmarcar(t) ? 'Quitar hecho' : 'Hecho') : 'Marcar hecho',
+      child: InkWell(
+        // Solo se deshace lo marcado en esta sesión (el store guarda cómo estaba antes).
+        onTap: !hecha
+            ? () => store.marcarHecha(t)
+            : store.puedeDesmarcar(t)
+            ? () => store.desmarcarHecha(t)
+            : null,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: hecha ? P.verde : Colors.transparent,
+                border: Border.all(color: hecha ? P.verde : P.textoSuave, width: 1.6),
+              ),
+              child: hecha ? const Icon(Icons.check_rounded, size: 16, color: Colors.white) : null,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -453,28 +536,19 @@ class _MisTrabajos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pendientes =
-        _misTrabajos(w)
-            .where((t) => t.proximo != null && !t.hechaEl(hoy()))
-            .toList()
-          ..sort((a, b) {
-            final c = a.proximo!.compareTo(b.proximo!);
-            return c != 0 ? c : _porHora(a, b);
-          });
+    final pendientes = _misTrabajos(w).where((t) => t.proximo != null && !t.hechaEl(hoy())).toList()
+      ..sort((a, b) {
+        final c = a.proximo!.compareTo(b.proximo!);
+        return c != 0 ? c : _porHora(a, b);
+      });
     if (pendientes.isEmpty) {
-      return const Vacio(
-        icono: Icons.task_alt_rounded,
-        titulo: 'Todo al día',
-        texto: 'No tienes trabajos pendientes.',
-      );
+      return const Vacio(icono: Icons.task_alt_rounded, titulo: 'Todo al día', texto: 'No tienes trabajos pendientes.');
     }
     // Atrasados primero; luego un bloque por día.
     final grupos = <String, List<Tarea>>{};
     for (final t in pendientes) {
       final n = diasHasta(t.proximo!);
-      final clave = n < 0
-          ? 'Atrasados'
-          : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
+      final clave = n < 0 ? 'Atrasados' : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
       (grupos[clave] ??= []).add(t);
     }
     return ListView(
@@ -483,10 +557,7 @@ class _MisTrabajos extends StatelessWidget {
           SeccionTarjeta(
             titulo: g.key,
             subtitulo: '${g.value.length}',
-            children: [
-              for (final t in g.value)
-                _FilaTrabajo(t, abrir, mostrarDia: g.key == 'Atrasados'),
-            ],
+            children: [for (final t in g.value) _FilaTrabajo(t, abrir, mostrarDia: g.key == 'Atrasados')],
           ),
           const SizedBox(height: huecoVista),
         ],
@@ -495,197 +566,69 @@ class _MisTrabajos extends StatelessWidget {
   }
 }
 
-// ── Horario ──────────────────────────────────────────────
+// ── Semana ───────────────────────────────────────────────
 
-class _Horario extends StatelessWidget {
+DateTime _lunes(DateTime d) => masDias(DateUtils.dateOnly(d), 1 - d.weekday);
+
+String _diaMes(DateTime d) => '${d.day} ${_meses[d.month - 1].substring(0, 3)}';
+
+/// Qué le toca cada día de la semana, en una lista simple (un bloque por día).
+class _Semana extends StatelessWidget {
   final Trabajador w;
-  final DateTime dia;
+  final DateTime lunes;
   final ValueChanged<Tarea> abrir;
-  final ValueChanged<DateTime> cambiarDia;
-  const _Horario(this.w, this.dia, this.abrir, this.cambiarDia);
-
-  static const _altoHora = 64.0;
+  final ValueChanged<DateTime> cambiar;
+  const _Semana(this.w, this.lunes, this.abrir, this.cambiar);
 
   @override
-  Widget build(BuildContext context) {
-    final trabajos = _delDia(w, dia);
-    final conHora = trabajos.where((t) => t.inicioMin != null).toList();
-    final sinHora = trabajos.where((t) => t.inicioMin == null).toList();
-    // Franja visible: la jornada (8–18) ampliada si algún trabajo se sale.
-    var desde = 8, hasta = 18;
-    for (final t in conHora) {
-      if (t.inicioMin! ~/ 60 < desde) desde = t.inicioMin! ~/ 60;
-      if ((t.finMin! + 59) ~/ 60 > hasta) hasta = (t.finMin! + 59) ~/ 60;
-    }
-    hasta = hasta.clamp(desde + 1, 24);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                _diaLargo(dia),
-                style: TextStyle(
-                  fontFamily: P.titulos,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.4,
-                ),
-              ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              '${_diaMes(lunes)} – ${_diaMes(masDias(lunes, 6))}',
+              style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.4),
             ),
-            NavegadorFecha(
-              anterior: 'Día anterior',
-              siguiente: 'Día siguiente',
-              onAnterior: () => cambiarDia(masDias(dia, -1)),
-              onHoy: () => cambiarDia(hoy()),
-              onSiguiente: () => cambiarDia(masDias(dia, 1)),
-            ),
-          ],
-        ),
-        const SizedBox(height: huecoVista),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: P.superficie,
-              borderRadius: BorderRadius.circular(P.radio),
-            ),
-            foregroundDecoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(P.radio),
-              border: Border.all(color: P.borde),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: trabajos.isEmpty
-                ? const Vacio(
-                    icono: Icons.event_available_rounded,
-                    texto: 'Nada programado este día.',
+          ),
+          NavegadorFecha(
+            anterior: 'Semana anterior',
+            siguiente: 'Semana siguiente',
+            onAnterior: () => cambiar(masDias(lunes, -7)),
+            onHoy: () => cambiar(_lunes(hoy())),
+            onSiguiente: () => cambiar(masDias(lunes, 7)),
+          ),
+        ],
+      ),
+      const SizedBox(height: huecoVista),
+      Expanded(
+        child: ListView.separated(
+          itemCount: 7,
+          separatorBuilder: (_, _) => const SizedBox(height: huecoVista),
+          itemBuilder: (context, i) {
+            final d = masDias(lunes, i);
+            final trabajos = _delDia(w, d);
+            final esHoy = DateUtils.isSameDay(d, hoy());
+            final nombre = _dias[d.weekday - 1];
+            return SeccionTarjeta(
+              titulo: '${esHoy ? 'Hoy, $nombre' : '${nombre[0].toUpperCase()}${nombre.substring(1)}'} ${d.day}',
+              subtitulo: trabajos.isEmpty ? null : '${trabajos.length}',
+              children: [
+                if (trabajos.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+                    child: Text('Libre', style: TextStyle(color: P.textoSuave)),
                   )
-                : ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    children: [
-                      SizedBox(
-                        height: (hasta - desde) * _altoHora,
-                        child: Stack(
-                          children: [
-                            for (var h = desde; h < hasta; h++)
-                              Positioned(
-                                top: (h - desde) * _altoHora,
-                                left: 0,
-                                right: 0,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(
-                                      width: 56,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(
-                                          left: 14,
-                                        ),
-                                        child: Transform.translate(
-                                          offset: const Offset(0, -7),
-                                          child: Text(
-                                            hhmm(h * 60),
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              color: P.textoSuave,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Divider(height: 1, color: P.borde),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            for (final t in conHora)
-                              Positioned(
-                                top:
-                                    (t.inicioMin! - desde * 60) /
-                                        60 *
-                                        _altoHora +
-                                    1,
-                                left: 62,
-                                right: 12,
-                                height: (t.duracionMin / 60 * _altoHora - 3)
-                                    .clamp(30, 2000),
-                                child: _Bloque(t, abrir),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (sinHora.isNotEmpty) ...[
-                        Divider(height: 1, color: P.borde),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-                          child: Text(
-                            'SIN HORA',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: .8,
-                              color: P.textoSuave,
-                            ),
-                          ),
-                        ),
-                        for (final t in sinHora)
-                          _FilaTrabajo(t, abrir, mostrarDia: false),
-                      ],
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Bloque extends StatelessWidget {
-  final Tarea t;
-  final ValueChanged<Tarea> abrir;
-  const _Bloque(this.t, this.abrir);
-
-  @override
-  Widget build(BuildContext context) {
-    final cliente = store.cliente(t.clienteId);
-    return Material(
-      color: t.colorBloque.withValues(alpha: .12),
-      borderRadius: BorderRadius.circular(P.radioControl),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        hoverColor: P.hoverFila,
-        mouseCursor: SystemMouseCursors.click,
-        onTap: () => abrir(t),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: t.colorBloque, width: 3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                t.nombre,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                [t.horario, if (cliente != null) cliente.nombre].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, color: P.textoSuave),
-              ),
-            ],
-          ),
+                else
+                  for (final t in trabajos) _FilaTrabajo(t, abrir),
+              ],
+            );
+          },
         ),
       ),
-    );
-  }
+    ],
+  );
 }
 
 // ── Detalle de un trabajo e informes ─────────────────────
@@ -702,10 +645,7 @@ class _DetalleTrabajo extends StatelessWidget {
       children: [
         SizedBox(
           width: 96,
-          child: Text(
-            etiqueta,
-            style: TextStyle(color: P.textoSuave, fontSize: 13),
-          ),
+          child: Text(etiqueta, style: TextStyle(color: P.textoSuave, fontSize: 13)),
         ),
         Expanded(child: Text(valor, style: const TextStyle(fontSize: 13.5))),
       ],
@@ -741,11 +681,7 @@ class _DetalleTrabajo extends StatelessWidget {
                   Wrap(
                     spacing: 6,
                     children: [
-                      Pill(
-                        hecha ? 'Hecho' : t.estado.etiqueta,
-                        hecha ? P.verde : t.estado.color,
-                        punto: true,
-                      ),
+                      Pill(hecha ? 'Hecho' : t.estado.etiqueta, hecha ? P.verde : t.estado.color, punto: true),
                       Pill(t.criticidad.etiqueta, t.criticidad.color),
                     ],
                   ),
@@ -755,56 +691,23 @@ class _DetalleTrabajo extends StatelessWidget {
           ],
         ),
         const SizedBox(height: huecoVista + 4),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            BotonPrimario(
-              'Nuevo informe',
-              icono: Icons.edit_note_rounded,
-              conIcono: true,
-              onPressed: () => abrirPanel(context, FormularioInforme(t, w)),
-            ),
-            if (!hecha)
-              BotonAccion(
-                'Marcar hecho',
-                icono: Icons.check_rounded,
-                onPressed: () => store.marcarHecha(t),
-              ),
-          ],
-        ),
+        _AccionesTrabajo(t, w),
         const SizedBox(height: huecoVista + 4),
         SeccionTarjeta(
           titulo: 'Información',
           children: [
             _dato('Cliente', cliente?.nombre ?? '—'),
-            _dato(
-              'Dirección',
-              t.ubicacion.isNotEmpty
-                  ? t.ubicacion
-                  : (cliente?.direccionCompleta ?? '—'),
-            ),
-            _dato(
-              'Cuándo',
-              [
-                if (t.proximo != null) relativo(t.proximo!),
-                t.horario ?? 'Sin hora',
-              ].join(' · '),
-            ),
+            _dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '—')),
+            _dato('Cuándo', [if (t.proximo != null) relativo(t.proximo!), t.horario ?? 'Sin hora'].join(' · ')),
             if (maquina.isNotEmpty) _dato('Máquina', maquina),
             if (t.notas.isNotEmpty) _dato('Notas', t.notas),
             if (t.competencias.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 child: Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: [
-                    for (final c in t.competencias) Etiqueta(c, P.morado),
-                  ],
+                  children: [for (final c in t.competencias) Etiqueta(c, P.morado)],
                 ),
               ),
           ],
@@ -948,62 +851,35 @@ class _FormularioInformeState extends State<FormularioInforme> {
     etiqueta: 'Informe',
     titulo: widget.t.nombre,
     onGuardar: _guardar,
-    avisos: [
-      if (intentado && notas.text.trim().isEmpty)
-        ('Cuenta qué has hecho', () {}),
-    ],
+    avisos: [if (intentado && notas.text.trim().isEmpty) ('Cuenta qué has hecho', () {})],
     campos: [
-      Bloque(
-        'Resultado',
-        primero: true,
-        descripcion: 'Cómo ha ido el trabajo.',
-        [
-          Pestanas(
-            opciones: resultadosInforme,
-            seleccion: resultado,
-            onChanged: (i) => setState(() => resultado = i),
-          ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Pill(
-              resultadosInforme[resultado],
-              coloresResultado[resultado],
-              punto: true,
-            ),
-          ),
-        ],
-      ),
-      Bloque(
-        'Qué has hecho',
-        descripcion:
-            'Lo que ha pasado, lo que has cambiado y lo que queda pendiente.',
-        [
-          campo(
-            'Notas',
-            notas,
-            lineas: 6,
-            hint: 'Ej.: revisado el motor, cambiada la correa. Falta pedir una pieza.',
-            error: intentado && notas.text.trim().isEmpty
-                ? 'Escribe qué has hecho'
-                : null,
-          ),
-        ],
-      ),
-      Bloque(
-        'Fotos',
-        descripcion: 'Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.',
-        [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (var n = 0; n < fotos.length; n++) _miniatura(n),
-              if (fotos.length < maxFotosInforme) _anadir(),
-            ],
-          ),
-        ],
-      ),
+      Bloque('Resultado', primero: true, descripcion: 'Cómo ha ido el trabajo.', [
+        Pestanas(opciones: resultadosInforme, seleccion: resultado, onChanged: (i) => setState(() => resultado = i)),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Pill(resultadosInforme[resultado], coloresResultado[resultado], punto: true),
+        ),
+      ]),
+      Bloque('Qué has hecho', descripcion: 'Lo que ha pasado, lo que has cambiado y lo que queda pendiente.', [
+        campo(
+          'Notas',
+          notas,
+          lineas: 6,
+          hint: 'Ej.: revisado el motor, cambiada la correa. Falta pedir una pieza.',
+          error: intentado && notas.text.trim().isEmpty ? 'Escribe qué has hecho' : null,
+        ),
+      ]),
+      Bloque('Fotos', descripcion: 'Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.', [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var n = 0; n < fotos.length; n++) _miniatura(n),
+            if (fotos.length < maxFotosInforme) _anadir(),
+          ],
+        ),
+      ]),
     ],
   );
 }

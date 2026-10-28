@@ -12,3 +12,6 @@ Future<void> descargar(Uint8List bytes, String nombre, String tipo) async {
     ..click();
   web.URL.revokeObjectURL(url);
 }
+
+/// Abre un enlace (`tel:`, mapas…) en una pestaña nueva o en la app que lo maneje.
+void abrirEnlace(String url) => web.window.open(url, '_blank');
