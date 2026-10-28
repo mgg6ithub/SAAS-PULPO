@@ -23,8 +23,8 @@ void main() {
     expect(store.tareas.every((t) => t.esPlantilla), isTrue);
   });
 
-  Future<void> pintar(WidgetTester tester, Widget ventana) async {
-    tester.view.physicalSize = const Size(1440, 2400);
+  Future<void> pintar(WidgetTester tester, Widget ventana, {double ancho = 1440}) async {
+    tester.view.physicalSize = Size(ancho, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: ventana)));
@@ -35,6 +35,14 @@ void main() {
     await pintar(tester, ClienteForm(original: store.clientes.first));
     await pintar(tester, TrabajadorForm(original: store.trabajadores.first));
     await pintar(tester, TareaForm(original: store.tareas.firstWhere((t) => !t.esPlantilla)));
+  });
+
+  testWidgets('en móvil los formularios ocupan toda la pantalla sin desbordes', (tester) async {
+    for (final ancho in [420.0, 360.0]) {
+      await pintar(tester, ClienteForm(original: store.clientes.first), ancho: ancho);
+      await pintar(tester, TrabajadorForm(original: store.trabajadores.first), ancho: ancho);
+      await pintar(tester, TareaForm(original: store.tareas.firstWhere((t) => !t.esPlantilla)), ancho: ancho);
+    }
   });
 
   testWidgets('desde un cliente la tarea va a ese cliente y la plantilla la rellena', (tester) async {

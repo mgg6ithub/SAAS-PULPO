@@ -328,20 +328,28 @@ class _PrimerosPasos extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  'Primeros pasos',
-                  style: TextStyle(
-                    fontFamily: P.titulos,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.3,
+                Flexible(
+                  child: Text(
+                    'Primeros pasos',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: P.titulos,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.3,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Pasitos que caminan hacia la derecha, en onda, junto al título.
-                ExcludeSemantics(
-                  child: CustomPaint(size: const Size(150, 30), painter: _HuellasGuia(P.morado.withValues(alpha: .4))),
-                ),
+                // Pasitos que caminan hacia la derecha, en onda, junto al título (en móvil no caben).
+                if (!esMovil(context))
+                  ExcludeSemantics(
+                    child: CustomPaint(
+                      size: const Size(150, 30),
+                      painter: _HuellasGuia(P.morado.withValues(alpha: .4)),
+                    ),
+                  ),
                 const Spacer(),
                 Text(
                   '${hechos.where((h) => h).length} de ${pasos.length}',

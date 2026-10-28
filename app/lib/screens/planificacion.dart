@@ -296,6 +296,16 @@ class _PlanificacionState extends State<Planificacion> {
                 if (conMapa) mapaVisto = true;
                 // Ancho por defecto fijo: al mover la barra lateral solo cambia el calendario, no el mapa.
                 double ancho(double? a) => (a ?? 420.0).clamp(260.0, maxMapa).toDouble();
+                // Móvil: el panel «Sin asignar» se abre encima del calendario, a todo el ancho.
+                if (esMovil(context)) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      calendario,
+                      if (sinAsignar) Padding(padding: const EdgeInsets.only(right: 12), child: panel),
+                    ],
+                  );
+                }
                 return ValueListenableBuilder<double?>(
                   valueListenable: anchoMapa,
                   builder: (context, a, _) => Row(
