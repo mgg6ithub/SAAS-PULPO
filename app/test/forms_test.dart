@@ -49,21 +49,14 @@ void main() {
 
   testWidgets('desde Tareas se puede elegir cliente', (tester) async {
     await pintar(tester, const TareaForm());
-    // Una tarea nueva propone el primer cliente y se puede cambiar.
-    expect(find.text('Ascensores Altura'), findsWidgets);
-    expect(find.text('Sin fecha'), findsOneWidget);
-    // Atajo de fecha y hora exacta con un toque.
-    await tester.tap(find.text('Mañana'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('9:00'));
-    await tester.tap(find.text('9:00'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining(fecha(masDias(hoy(), 1))), findsOneWidget);
-    expect(find.textContaining('De 09:00'), findsOneWidget);
+    // Un trabajo nuevo no propone cliente y empieza hoy.
+    expect(find.text('Elegir cliente'), findsOneWidget);
+    expect(find.textContaining('· hoy'), findsOneWidget);
 
     // El menú de clientes lista los clientes y ofrece crear uno nuevo.
-    await tester.tap(find.text('Ascensores Altura').last);
+    await tester.tap(find.text('Elegir cliente'));
     await tester.pumpAndSettle();
+    expect(find.text('Ascensores Altura'), findsOneWidget);
     expect(find.text('Crear nuevo cliente'), findsOneWidget);
   });
 
@@ -71,8 +64,8 @@ void main() {
     await pintar(tester, const ClienteForm());
     await tester.tap(find.byTooltip('Acoplar a la derecha'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Volver a ventana'), findsOneWidget);
-    await tester.tap(find.byTooltip('Volver a ventana'));
+    expect(find.byTooltip('Acoplar al centro'), findsOneWidget);
+    await tester.tap(find.byTooltip('Acoplar al centro'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Acoplar a la derecha'), findsOneWidget);
   });

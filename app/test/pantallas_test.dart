@@ -22,7 +22,7 @@ void main() {
     'Inicio': () => Resumen(onIr: (_) {}, onTrabajador: (_) {}),
     'Clientes': () => Clientes(onAbrir: (_) {}),
     'Trabajadores': () => Trabajadores(onAbrir: (_) {}),
-    'Tareas': () => const TareasPagina(),
+    'Tareas': () => TareasPagina(onAbrir: (_) {}),
     'Agenda': () => const Planificacion(mapa: false),
     'Ficha de cliente': () => ClienteDetalle(clienteId: 'c1', onVolver: () {}),
     'Ficha de trabajador': () => TrabajadorDetalle(trabajadorId: 'w1', onVolver: () {}),

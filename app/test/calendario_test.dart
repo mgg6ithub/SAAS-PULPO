@@ -151,7 +151,9 @@ void main() {
     expect(find.text('2000 trabajos →'), findsOneWidget);
     await tester.tap(find.text('2000 trabajos →'));
     await tester.pumpAndSettle();
-    expect(find.text('Equipo'), findsWidgets);
+    // Ya en el día: los trabajos se ven sueltos, no agrupados.
+    expect(find.text('2000 trabajos →'), findsNothing);
+    expect(find.text('Revisión 0'), findsWidgets);
     expect(find.byType(OverlayPortal).evaluate().length, lessThan(50));
     expect(tester.takeException(), isNull);
   });

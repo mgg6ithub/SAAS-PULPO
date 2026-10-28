@@ -81,8 +81,8 @@ void main() {
     ajustes.alternarContraida();
     await tester.pumpAndSettle();
 
-    // 3. Cambiar de vista Semana -> Mes -> Día.
-    for (final v in ['Mes', 'Día', 'Semana']) {
+    // 3. Cambiar de vista Plan -> Calendario (Mes -> Día -> Semana) -> Plan.
+    for (final v in ['Calendario', 'Mes', 'Día', 'Semana', 'Plan']) {
       sw.reset();
       c = await contar(() async {
         await tester.tap(find.text(v).first);

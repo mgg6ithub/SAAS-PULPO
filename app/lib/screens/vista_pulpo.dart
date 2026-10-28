@@ -273,6 +273,8 @@ class _FilaGrupoHorario extends StatelessWidget {
                 children: [
                   Text(
                     hhmm(grupo.inicio),
+                    maxLines: 1,
+                    softWrap: false,
                     style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
                   ),
                   const SizedBox(height: 3),
@@ -280,6 +282,8 @@ class _FilaGrupoHorario extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     hhmm(grupo.fin),
+                    maxLines: 1,
+                    softWrap: false,
                     style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: P.texto),
                   ),
                 ],
