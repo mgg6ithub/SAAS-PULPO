@@ -64,25 +64,22 @@ class _TareaDetalleState extends State<TareaDetalle> {
               if (padre != null) 'Subtrabajo de ${padre.nombre}',
               cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : 'Sin cliente'),
             ].join(' · '),
+            // Resumen: añadir subtrabajo; Datos: editar; Histórico: nada.
             acciones: [
-              t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
-              const SizedBox(width: 4),
-              if (pestana == 1)
-                (editando
-                    ? const SizedBox()
-                    : BotonPrimario(
-                        'Editar',
-                        conIcono: true,
-                        icono: Icons.edit_outlined,
-                        onPressed: () => setState(() => editando = true),
-                      ))
-              else
+              if (pestana == 0)
                 BotonPrimario(
                   'Subtrabajo',
                   conIcono: true,
                   icono: Icons.add_rounded,
                   tecla: 'N',
                   onPressed: () => abrirSubtrabajoRapido(context, t),
+                )
+              else if (pestana == 1 && !editando)
+                BotonPrimario(
+                  'Editar',
+                  conIcono: true,
+                  icono: Icons.edit_outlined,
+                  onPressed: () => setState(() => editando = true),
                 ),
             ],
           ),
@@ -104,28 +101,16 @@ class _TareaDetalleState extends State<TareaDetalle> {
                 key: ValueKey(pestana),
                 child: switch (pestana) {
                   0 => _Resumen(t, widget.onAbrir),
-                  1 => Align(
-                    alignment: Alignment.topLeft,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 860),
-                      // Al solo mirar, se rehace con cada cambio (cliente, asignado… hechos en otra pestaña);
-                      // al editar se conserva, para no perder lo escrito.
-                      child: TareaForm(
-                        key: ValueKey(editando ? '${t.id}-edicion' : '${t.id}-${jsonEncode(t.toJson()).hashCode}'),
-                        original: t,
-                        incrustada: true,
-                        soloLectura: !editando,
-                        onTerminar: () => setState(() => editando = false),
-                      ),
-                    ),
+                  // Al solo mirar, se rehace con cada cambio (cliente, asignado… hechos en otra pestaña);
+                  // al editar se conserva, para no perder lo escrito.
+                  1 => TareaForm(
+                    key: ValueKey(editando ? '${t.id}-edicion' : '${t.id}-${jsonEncode(t.toJson()).hashCode}'),
+                    original: t,
+                    incrustada: true,
+                    soloLectura: !editando,
+                    onTerminar: () => setState(() => editando = false),
                   ),
-                  _ => Align(
-                    alignment: Alignment.topLeft,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: SingleChildScrollView(child: _Historico(t)),
-                    ),
-                  ),
+                  _ => _Historico(t),
                 },
               ),
             ),
@@ -233,8 +218,8 @@ class _Resumen extends StatelessWidget {
   );
 }
 
-/// Arriba, si el trabajo es único o periódico (se cambia aquí mismo); debajo, cuándo se ha hecho, lo último
-/// primero, con su check, y cuándo toca de nuevo.
+/// Cuándo se ha hecho el trabajo, lo último primero, con un check verde a la derecha, y cuándo toca de nuevo.
+/// Ocupa todo el espacio; arriba a la derecha, un menú para decir si es único o se repite.
 class _Historico extends StatelessWidget {
   final Tarea t;
   const _Historico(this.t);
@@ -247,81 +232,60 @@ class _Historico extends StatelessWidget {
     store.guardarTarea(t);
   }
 
-  Widget _periodicidadCampo() => Tarjeta(
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Periodicidad', style: TextStyle(fontWeight: FontWeight.w600)),
-              Text(
-                t.periodicidad.repite ? 'Se repite: ${t.periodicidad.etiqueta.toLowerCase()}' : 'Se hace una sola vez',
-                style: TextStyle(fontSize: 12, color: P.textoSuave),
-              ),
-            ],
-          ),
-        ),
-        BotonMenu<Periodicidad>(
-          tooltip: 'Cada cuánto se repite',
-          seleccionado: t.periodicidad,
-          onSelected: _periodicidad,
-          opciones: [for (final p in Periodicidad.values) (p, Text(p.etiqueta))],
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: P.borde),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(t.periodicidad.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(width: 8),
-                Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
-              ],
-            ),
-          ),
-        ),
-      ],
+  Widget _menuPeriodicidad() => BotonMenu<Periodicidad>(
+    tooltip: 'Cada cuánto se repite',
+    seleccionado: t.periodicidad,
+    onSelected: _periodicidad,
+    opciones: [for (final p in Periodicidad.values) (p, Text(p.etiqueta))],
+    child: Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: P.borde),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(t.periodicidad.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(width: 8),
+          Icon(Icons.unfold_more_rounded, size: 16, color: P.textoSuave),
+        ],
+      ),
     ),
   );
 
   @override
   Widget build(BuildContext context) {
     final dias = {...t.historial, ?t.ultimo}.toList()..sort((a, b) => b.compareTo(a));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [_periodicidadCampo(), const SizedBox(height: 12), _lista(dias)],
-    );
-  }
-
-  Widget _lista(List<DateTime> dias) {
-    return SeccionTarjeta(
-      titulo: 'Histórico',
-      subtitulo: dias.isEmpty ? null : '${dias.length} ${dias.length == 1 ? 'vez' : 'veces'} hecho',
-      children: [
-        if (t.proximo != null)
-          FilaLista(
-            lider: Icon(Icons.event_outlined, size: 18, color: P.morado),
-            titulo: 'Pendiente',
-            subtitulo: '${fecha(t.proximo)} · ${relativo(t.proximo!)}',
-          ),
-        if (dias.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Text('Aún no se ha hecho.', style: TextStyle(color: P.textoSuave, fontSize: 13)),
-          )
-        else
-          for (final d in dias)
+    return LayoutBuilder(
+      builder: (context, box) => SeccionTarjeta(
+        alto: box.maxHeight,
+        titulo: 'Histórico',
+        subtitulo: dias.isEmpty ? null : '${dias.length} ${dias.length == 1 ? 'vez' : 'veces'} hecho',
+        accion: _menuPeriodicidad(),
+        children: [
+          if (t.proximo != null)
             FilaLista(
-              lider: Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
-              titulo: fecha(d),
-              subtitulo: relativo(d),
+              lider: Icon(Icons.event_outlined, size: 18, color: P.morado),
+              titulo: 'Pendiente',
+              subtitulo: '${fecha(t.proximo)} · ${relativo(t.proximo!)}',
             ),
-      ],
+          if (dias.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Text('Aún no se ha hecho.', style: TextStyle(color: P.textoSuave, fontSize: 13)),
+            )
+          else
+            for (final d in dias)
+              FilaLista(
+                lider: Icon(Icons.event_outlined, size: 18, color: P.textoSuave),
+                titulo: fecha(d),
+                subtitulo: relativo(d),
+                derecha: Icon(Icons.check_circle_rounded, size: 20, color: P.verde),
+              ),
+        ],
+      ),
     );
   }
 }
