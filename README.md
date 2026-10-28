@@ -1,6 +1,4 @@
-# Pulpo — primer prototipo obsoleto
-
-> Versión vigente: `/Users/mike/Desktop/PULPO/` (aplicación en `app/`).
+# Pulpo
 
 SaaS de automatización de mantenimiento para empresas pequeñas: gestiona sus clientes, sus trabajadores y cuándo toca cada mantenimiento, y se automatiza cada vez más a medida que acumula datos.
 
