@@ -72,6 +72,7 @@ class Store extends ChangeNotifier {
   List<Cliente> clientes = [];
   List<Trabajador> trabajadores = [];
   List<Tarea> tareas = [];
+  List<EtiquetaTrabajo> etiquetas = [];
   SharedPreferences? _prefs;
 
   Future<void> cargar() async {
@@ -88,6 +89,7 @@ class Store extends ChangeNotifier {
       // Datos de ejemplo cargados antes de existir la marca: se reconocen por sus ids.
       demo = (j['demo'] as bool? ?? false) || _hayDemo;
       usoPlantillas = List<String>.from(j['usoPlantillas'] as List? ?? []);
+      etiquetas = [for (final x in j['etiquetas'] as List? ?? []) EtiquetaTrabajo.fromJson(x)];
       // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
       for (final c in clientes) {
         final g = _coordsDemo[c.id];
@@ -109,12 +111,24 @@ class Store extends ChangeNotifier {
       'tareas': [for (final x in tareas) x.toJson()],
       'demo': demo,
       'usoPlantillas': usoPlantillas,
+      'etiquetas': [for (final x in etiquetas) x.toJson()],
     }),
   );
 
   void _cambio() {
     _guardar();
     notifyListeners();
+  }
+
+  void guardarEtiqueta(EtiquetaTrabajo e) {
+    final i = etiquetas.indexWhere((x) => x.id == e.id);
+    i < 0 ? etiquetas.add(e) : etiquetas[i] = e;
+    _cambio();
+  }
+
+  void borrarEtiqueta(String id) {
+    etiquetas.removeWhere((e) => e.id == id);
+    _cambio();
   }
 
   String nuevoId() => DateTime.now().microsecondsSinceEpoch.toString();

@@ -513,12 +513,7 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
               const SizedBox(height: 14),
               Text(
                 'El pulpo está planificando…',
-                style: TextStyle(
-                  fontFamily: P.titulos,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.4,
-                ),
+                style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.4),
               ),
               const SizedBox(height: 6),
               Text(

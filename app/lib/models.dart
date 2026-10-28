@@ -50,6 +50,19 @@ extension PeriodicidadX on Periodicidad {
 }
 
 /// Cliente al que se le da mantenimiento: comunidad, colegio, hospital, empresa...
+/// Etiqueta con nombre y color, creada por el usuario para marcar trabajos.
+class EtiquetaTrabajo {
+  String id, nombre;
+  int color; // ARGB
+
+  EtiquetaTrabajo({required this.id, this.nombre = '', required this.color});
+
+  Map<String, dynamic> toJson() => {'id': id, 'nombre': nombre, 'color': color};
+
+  factory EtiquetaTrabajo.fromJson(Map<String, dynamic> j) =>
+      EtiquetaTrabajo(id: j['id'] as String, nombre: j['nombre'] as String? ?? '', color: j['color'] as int);
+}
+
 class Cliente {
   String id, nombre, cif, direccion, ciudad, cp, provincia, telefono, email, contacto, telefonoContacto, notas;
 

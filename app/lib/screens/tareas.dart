@@ -38,6 +38,8 @@ class _TareasPaginaState extends State<TareasPagina> {
     salirSeleccion();
   }
 
+  Future<void> _editarEtiqueta(EtiquetaTrabajo? e) => showDialog(context: context, builder: (_) => _EtiquetaDialogo(e));
+
   @override
   Widget build(BuildContext context) {
     final nTrabajos = store.tareas.length - store.plantillas.length;
@@ -94,13 +96,26 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ),
               ),
               const SizedBox(height: huecoVista),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final x in tipos.where((x) => tiposUsados.contains(x.nombre)))
-                    _ChipTipo(x, tipo == x.nombre, () => setState(() => tipo = tipo == x.nombre ? null : x.nombre)),
-                ],
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
+                      _ChipTipo(
+                        x.nombre,
+                        x.color,
+                        tipo == x.nombre,
+                        () => setState(() => tipo = tipo == x.nombre ? null : x.nombre),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    for (final e in store.etiquetas) ...[
+                      _ChipTipo(e.nombre, Color(e.color), false, () => _editarEtiqueta(e)),
+                      const SizedBox(width: 6),
+                    ],
+                    _ChipTipo('Añadir etiqueta', P.textoSuave, false, () => _editarEtiqueta(null)),
+                  ],
+                ),
               ),
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
@@ -270,10 +285,11 @@ class _TareasPaginaState extends State<TareasPagina> {
 
 /// Filtro por tipo: píldora con el punto de color del tipo; la elegida, con borde de su color.
 class _ChipTipo extends StatelessWidget {
-  final TipoInfo tipo;
+  final String nombre;
+  final Color color;
   final bool sel;
   final VoidCallback onTap;
-  const _ChipTipo(this.tipo, this.sel, this.onTap);
+  const _ChipTipo(this.nombre, this.color, this.sel, this.onTap);
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -283,9 +299,9 @@ class _ChipTipo extends StatelessWidget {
       duration: const Duration(milliseconds: 150),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: sel ? tipo.color.withValues(alpha: .1) : P.superficie,
+        color: sel ? color.withValues(alpha: .1) : P.superficie,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: sel ? tipo.color : P.borde),
+        border: Border.all(color: sel ? color : P.borde),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -293,14 +309,102 @@ class _ChipTipo extends StatelessWidget {
           Container(
             width: 7,
             height: 7,
-            decoration: BoxDecoration(color: tipo.color, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 7),
           Text(
-            tipo.nombre,
-            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: sel ? tipo.color : P.texto),
+            nombre,
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: sel ? color : P.texto),
           ),
         ],
+      ),
+    ),
+  );
+}
+
+/// Crear o editar una etiqueta: nombre y color.
+class _EtiquetaDialogo extends StatefulWidget {
+  final EtiquetaTrabajo? original;
+  const _EtiquetaDialogo(this.original);
+
+  @override
+  State<_EtiquetaDialogo> createState() => _EtiquetaDialogoState();
+}
+
+class _EtiquetaDialogoState extends State<_EtiquetaDialogo> {
+  late final nombre = TextEditingController(text: widget.original?.nombre);
+  late int color = widget.original?.color ?? SelectorColorTarea.colores.first;
+
+  @override
+  void dispose() {
+    nombre.dispose();
+    super.dispose();
+  }
+
+  void _guardar() {
+    final n = nombre.text.trim();
+    if (n.isEmpty) return;
+    store.guardarEtiqueta(EtiquetaTrabajo(id: widget.original?.id ?? store.nuevoId(), nombre: n, color: color));
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 360),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.original == null ? 'Nueva etiqueta' : 'Editar etiqueta',
+              style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: nombre,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Nombre'),
+              onSubmitted: (_) => _guardar(),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in SelectorColorTarea.colores)
+                  InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => setState(() => color = c),
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(color: Color(c), shape: BoxShape.circle),
+                      child: color == c ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (widget.original != null)
+                  TextButton(
+                    onPressed: () {
+                      store.borrarEtiqueta(widget.original!.id);
+                      Navigator.pop(context);
+                    },
+                    child: Text('Eliminar', style: TextStyle(color: P.rojo)),
+                  ),
+                const SizedBox(width: 8),
+                BotonPrimario('Guardar', onPressed: _guardar),
+              ],
+            ),
+          ],
+        ),
       ),
     ),
   );
