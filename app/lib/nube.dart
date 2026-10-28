@@ -111,6 +111,14 @@ class Nube {
     return r['codigo'] as String;
   }
 
+  /// Últimos emails de las automatizaciones de un trabajo: a quién, cómo fue y cuándo.
+  Future<List<Map<String, dynamic>>> envios(String trabajoId) => _db
+      .from('envios_automatizacion')
+      .select('destinatario, asunto, estado, error, enviado_en, created_at')
+      .eq('trabajo_id', _u(trabajoId))
+      .order('created_at', ascending: false)
+      .limit(30);
+
   /// Enlace que se manda a quien se invita: abre la app con el código puesto.
   static String enlace(String codigo) =>
       Uri.base.removeFragment().replace(queryParameters: {'invitacion': codigo}).toString();

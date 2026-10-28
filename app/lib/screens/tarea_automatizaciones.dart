@@ -7,7 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 
 /// Pestaña «Automatizaciones» de un trabajo: reglas que mandan emails cuando pasa algo de ese trabajo.
-/// Maqueta: las reglas se guardan, pero el envío es simulado (se ve en «Vista previa»).
+/// Las reglas se guardan en la base y el servidor manda los emails; «Vista previa» enseña cómo quedarían.
 class TareaAutomatizaciones extends StatelessWidget {
   final Tarea t;
   const TareaAutomatizaciones(this.t, {super.key});
@@ -56,6 +56,7 @@ class TareaAutomatizaciones extends StatelessWidget {
               ),
               onTap: () => abrirAutomatizacion(context, t, a),
             ),
+        if (store.nube != null) _Registro(t),
       ],
     ),
   );
@@ -121,7 +122,7 @@ Future<void> _vistaPrevia(BuildContext context, Tarea t, Automatizacion a) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'VISTA PREVIA · ENVÍO SIMULADO',
+                'VISTA PREVIA',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.morado),
               ),
               const SizedBox(height: 8),
@@ -291,5 +292,90 @@ class _AutomatizacionFormState extends State<_AutomatizacionForm> {
         campo('Texto', cuerpo, lineas: 6),
       ]),
     ],
+  );
+}
+
+/// Emails que ya se han mandado (o se intentó) de las reglas de este trabajo.
+class _Registro extends StatefulWidget {
+  final Tarea t;
+  const _Registro(this.t);
+
+  @override
+  State<_Registro> createState() => _RegistroState();
+}
+
+class _RegistroState extends State<_Registro> {
+  late Future<List<Map<String, dynamic>>> _envios = store.nube!.envios(widget.t.id);
+
+  static (String, Color) _estado(String e) => switch (e) {
+    'enviado' => ('Enviado', P.verde),
+    'simulado' => ('Sin clave de envío', P.gris),
+    'error' => ('Error', P.rojo),
+    _ => ('Pendiente', P.ambar),
+  };
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Registro de envíos',
+                style: TextStyle(color: P.texto, fontSize: 13.5, fontWeight: FontWeight.w600),
+              ),
+            ),
+            TextButton(
+              onPressed: () => setState(() => _envios = store.nube!.envios(widget.t.id)),
+              child: const Text('Actualizar'),
+            ),
+          ],
+        ),
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: _envios,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Text('No se pudo leer el registro.', style: TextStyle(color: P.rojo, fontSize: 13));
+            }
+            final filas = snap.data;
+            if (filas == null) return const LinearProgressIndicator(minHeight: 2);
+            if (filas.isEmpty) {
+              return Text(
+                'Aún no se ha mandado ningún email. Se revisan cada 5 minutos.',
+                style: TextStyle(color: P.textoSuave, fontSize: 13),
+              );
+            }
+            return Column(
+              children: [
+                for (final f in filas)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Pill(_estado(f['estado'] as String).$1, _estado(f['estado'] as String).$2),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '${f['destinatario']} · ${f['asunto']}',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: P.texto, fontSize: 13),
+                          ),
+                        ),
+                        Text(
+                          fecha(DateTime.parse((f['enviado_en'] ?? f['created_at']) as String).toLocal()),
+                          style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    ),
   );
 }

@@ -68,7 +68,7 @@ void main() {
           cp: '48001',
           provincia: 'Bizkaia',
           telefono: '944111222',
-          email: 'pinos@example.com',
+          email: 'pinos@prueba.invalid',
           contacto: 'Marta',
           telefonoContacto: '600111222',
           notas: 'Portero: Ángel — "puerta azul"\nsegunda línea',
@@ -86,7 +86,7 @@ void main() {
           nombre: 'Ana',
           apellidos: 'Etxeberria Ruiz',
           telefono: '600000001',
-          email: 'ana@example.com',
+          email: 'ana@prueba.invalid',
           info: 'Turno de mañana',
           titulos: 'FP Electricidad',
           foto: 'iVBORw0KGgo=',
@@ -143,7 +143,7 @@ void main() {
               disparador: Disparador.antes,
               cantidad: 2,
               enHoras: true,
-              extras: ['uno@example.com', 'dos@example.com'],
+              extras: ['uno@prueba.invalid', 'dos@prueba.invalid'],
             ),
             Automatizacion(id: s.nuevoId(), nombre: 'Tras completar', disparador: Disparador.alCompletar),
             Automatizacion(id: s.nuevoId(), nombre: 'No hecho', disparador: Disparador.noHecho, cantidad: 3),
@@ -171,6 +171,7 @@ void main() {
 
         // ── Otra instancia lo lee y es idéntico ──
         var r = await _recargar();
+        expect(await n.envios(trabajo.id), isEmpty, reason: 'el registro de envíos se puede leer');
         expect(_j(r.etiquetas.single.toJson()), _j(etiqueta.toJson()), reason: 'etiqueta');
         expect(_j(r.clientes.single.toJson()), _j(cliente.toJson()), reason: 'cliente');
         expect(_j(r.trabajadores.firstWhere((w) => w.id == ana.id).toJson()), _j(ana.toJson()), reason: 'trabajador');
