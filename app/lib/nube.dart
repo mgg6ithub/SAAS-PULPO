@@ -24,12 +24,33 @@ typedef _Filas = Map<String, Map<String, Map<String, dynamic>>>;
 
 /// Conexión con Supabase para una cuenta y una empresa: lee todo al entrar y, después, guarda solo lo que cambia.
 class Nube {
-  Nube._(this.empresaId, {required this.nueva, this.nombre = '', this.rol = 'admin', this.trabajadorId});
+  Nube._(
+    this.empresaId, {
+    required this.nueva,
+    this.nombre = '',
+    this.tipo = '',
+    this.rol = 'admin',
+    this.trabajadorId,
+  });
 
   final String empresaId;
 
   /// Nombre de la empresa, para enseñarlo en Mi cuenta.
   final String nombre;
+
+  /// A qué se dedica (clave de [tiposEmpresa]): una empresa nueva arranca solo con sus plantillas.
+  final String tipo;
+
+  /// Tipos de empresa al crearla → tipo de las plantillas con las que arranca (null = todas).
+  static const tiposEmpresa = <String, String?>{
+    'Ascensores': 'Ascensor',
+    'Calderas': 'Caldera',
+    'Jardinería': 'Jardinería',
+    'Limpieza': 'Limpieza',
+    'Varios': null,
+  };
+
+  bool get esAdmin => rol == 'admin';
 
   /// `admin` (todo) o `trabajador` (solo sus trabajos, el resto lo recorta la base de datos).
   final String rol;
@@ -65,8 +86,14 @@ class Nube {
     await (await SharedPreferences.getInstance()).remove('pulpo_invitacion');
   }
 
-  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una). Si no tiene ninguna,
-  /// crea una y la hace administradora.
+  /// Cambia cada vez que hay que volver a abrir la empresa (se ha cambiado, creado o borrado una).
+  static final reabrir = ValueNotifier<int>(0);
+
+  /// Empresa recién creada desde la cuenta: al abrirla arranca con sus plantillas.
+  static String? _recienCreada;
+
+  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una): la última elegida o, si no,
+  /// una donde sea administradora. Si no tiene ninguna, crea una y la hace administradora.
   static Future<Nube> abrir() async {
     if (invitacion != null) {
       try {
@@ -80,15 +107,25 @@ class Nube {
       }
       await _olvidarInvitacion();
     }
-    final ms = await _db.from('miembros').select('empresa_id, rol, trabajador_id');
+    final ms = await _db
+        .from('miembros')
+        .select('empresa_id, rol, trabajador_id')
+        .eq('usuario_id', _db.auth.currentUser!.id);
     if (ms.isNotEmpty) {
-      final m = ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first);
+      final elegida = (await SharedPreferences.getInstance()).getString('pulpo_empresa');
+      final m = ms.firstWhere(
+        (x) => x['empresa_id'] == elegida,
+        orElse: () => ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first),
+      );
       final id = m['empresa_id'] as String;
-      final e = await _db.from('empresas').select('nombre').eq('id', id).single();
+      final e = await _db.from('empresas').select('nombre, tipo').eq('id', id).single();
+      final nueva = id == _recienCreada;
+      _recienCreada = null;
       return _abierta = Nube._(
         id,
-        nueva: false,
+        nueva: nueva,
         nombre: e['nombre'] as String,
+        tipo: e['tipo'] as String,
         rol: m['rol'] as String,
         trabajadorId: m['trabajador_id'] as String?,
       );
@@ -126,9 +163,87 @@ class Nube {
   /// La última empresa abierta, para no cerrar la sesión con cambios sin guardar.
   static Nube? _abierta;
 
-  static Future<void> cerrarSesion() async {
+  static Future<void> cerrarSesion({bool enTodos = false}) async {
     await _abierta?._cola;
-    await _db.auth.signOut();
+    await _db.auth.signOut(scope: enTodos ? SignOutScope.global : SignOutScope.local);
+  }
+
+  // ── Cuenta ──
+
+  static String? get correo => _db.auth.currentUser?.email;
+
+  /// Nombre y foto de la cuenta (vacío si aún no los ha puesto).
+  static Future<({String nombre, String? foto})> perfil() async {
+    final r = await _db.from('perfiles').select('nombre, foto').eq('usuario_id', _db.auth.currentUser!.id);
+    return r.isEmpty ? (nombre: '', foto: null) : (nombre: r.first['nombre'] as String, foto: r.first['foto'] as String?);
+  }
+
+  static Future<void> guardarPerfil({required String nombre, String? foto}) =>
+      _db.from('perfiles').upsert({'usuario_id': _db.auth.currentUser!.id, 'nombre': nombre, 'foto': foto});
+
+  static Future<void> cambiarClave(String nueva) => _db.auth.updateUser(UserAttributes(password: nueva));
+
+  /// Supabase manda un enlace al correo nuevo; el cambio vale al pulsarlo.
+  static Future<void> cambiarCorreo(String nuevo) =>
+      _db.auth.updateUser(UserAttributes(email: nuevo), emailRedirectTo: _aqui());
+
+  /// Manda el correo de «olvidé mi contraseña»; el enlace vuelve a la app para poner una nueva.
+  static Future<void> recuperarClave(String correo) => _db.auth.resetPasswordForEmail(correo, redirectTo: _aqui());
+
+  static String _aqui() => Uri.base.removeFragment().replace(queryParameters: {}).toString();
+
+  /// Borra la cuenta y las empresas donde es el único miembro (función `borrar-cuenta`), y cierra la sesión.
+  static Future<void> borrarCuenta() async {
+    await _abierta?._cola;
+    await _db.functions.invoke('borrar-cuenta');
+    await _db.auth.signOut(scope: SignOutScope.local);
+  }
+
+  // ── Empresas ──
+
+  /// Empresas de la cuenta con su rol, por nombre.
+  static Future<List<({String id, String nombre, String rol})>> empresas() async {
+    final ms = await _db
+        .from('miembros')
+        .select('empresa_id, rol, empresas(nombre)')
+        .eq('usuario_id', _db.auth.currentUser!.id);
+    return [
+      for (final m in ms)
+        (id: m['empresa_id'] as String, nombre: (m['empresas'] as Map)['nombre'] as String, rol: m['rol'] as String),
+    ]..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+  }
+
+  /// Cambia a otra empresa de la cuenta (se recuerda para la próxima vez).
+  static Future<void> entrarEn(String empresaId) async {
+    await _abierta?._cola;
+    await (await SharedPreferences.getInstance()).setString('pulpo_empresa', empresaId);
+    reabrir.value++;
+  }
+
+  /// Crea otra empresa, la hace administradora y entra en ella.
+  static Future<void> crearEmpresa(String nombre, String tipo) async {
+    final e = await _db.from('empresas').insert({'nombre': nombre, 'tipo': tipo}).select('id').single();
+    final id = e['id'] as String;
+    await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
+    _recienCreada = id;
+    await entrarEn(id);
+  }
+
+  /// Nombre, tipo, CIF, dirección, teléfono y logo de la empresa abierta.
+  Future<Map<String, dynamic>> datosEmpresa() =>
+      _db.from('empresas').select('nombre, tipo, cif, direccion, telefono, logo').eq('id', empresaId).single();
+
+  Future<void> guardarEmpresa(Map<String, dynamic> datos) async {
+    await _db.from('empresas').update(datos).eq('id', empresaId);
+    reabrir.value++; // el nombre sale en Mi cuenta y en la barra
+  }
+
+  /// Borra la empresa abierta con todo lo suyo y pasa a otra (o a una nueva si no queda ninguna).
+  Future<void> borrarEmpresa() async {
+    await _cola;
+    await _db.from('empresas').delete().eq('id', empresaId);
+    await (await SharedPreferences.getInstance()).remove('pulpo_empresa');
+    reabrir.value++;
   }
 
   // ── Leer ──
