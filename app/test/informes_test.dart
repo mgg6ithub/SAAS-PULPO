@@ -22,8 +22,11 @@ void main() {
   });
 
   test('sin sesión el informe se guarda en memoria y sale el primero', () async {
-    await informes.crear(trabajoId: 't1', trabajadorId: 'w1', resultado: 0, notas: 'uno', fotos: []);
-    await informes.crear(trabajoId: 't1', trabajadorId: 'w1', resultado: 1, notas: 'dos', fotos: [Uint8List(3)]);
+    await informes.crear(Informe(trabajoId: 't1', trabajadorId: 'w1', resultado: 0, notas: 'uno'));
+    await informes.crear(
+      Informe(trabajoId: 't1', trabajadorId: 'w1', resultado: 1, notas: 'dos'),
+      fotos: [Uint8List(3)],
+    );
     final l = informes.de('t1')!;
     expect(l.map((i) => i.notas), ['dos', 'uno']);
     expect(l.first.fotos.length, 1);
@@ -32,7 +35,18 @@ void main() {
 
   test('el PDF del informe se genera con sus fotos', () async {
     final foto = await comprimirFoto(Uint8List.fromList(img.encodePng(img.Image(width: 40, height: 30))));
-    await informes.crear(trabajoId: 't2', trabajadorId: 'w1', resultado: 2, notas: 'Falta una pieza', fotos: [foto]);
+    await informes.crear(
+      Informe(
+        trabajoId: 't2',
+        trabajadorId: 'w1',
+        resultado: 2,
+        notas: 'Falta una pieza',
+        material: 'Correa',
+        minutos: 90,
+      ),
+      fotos: [foto],
+      firma: foto,
+    );
     final pdf = await informePdf(informes.de('t2')!.first, Tarea(id: 't2', nombre: 'Revisión ascensor'));
     expect(String.fromCharCodes(pdf.take(4)), '%PDF');
   });
@@ -63,9 +77,21 @@ void main() {
     tester.takeException();
     expect(find.text('Fotos'), findsOneWidget);
     await tester.enterText(find.byType(TextField).first, 'Cambiada la correa');
-    await tester.tap(find.text('Guardar'));
+    await tester.enterText(find.widgetWithText(TextField, 'Ej.: 90'), '90');
+    final firma = find.text('Firma aquí');
+    await tester.ensureVisible(firma);
+    await tester.dragFrom(tester.getCenter(firma) - const Offset(60, 0), const Offset(120, 20));
     await tester.pumpAndSettle();
-    expect(informes.de('t9')!.single.notas, 'Cambiada la correa');
+    expect(find.text('Firma aquí'), findsNothing);
+    await tester.enterText(find.widgetWithText(TextField, 'Ej.: Ana López, presidenta'), 'Ana López');
+    // La firma se pasa a PNG con el motor real: fuera del reloj falso del test.
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Guardar'));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await tester.pumpAndSettle();
+    final i = informes.de('t9')!.single;
+    expect((i.notas, i.minutos, i.firmante, i.firma != null), ('Cambiada la correa', 90, 'Ana López', true));
 
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: InformesDelTrabajo(t))));
     await tester.pumpAndSettle();

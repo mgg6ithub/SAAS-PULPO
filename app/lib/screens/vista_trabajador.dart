@@ -747,15 +747,28 @@ class FormularioInforme extends StatefulWidget {
 }
 
 class _FormularioInformeState extends State<FormularioInforme> {
-  final notas = TextEditingController();
+  final notas = TextEditingController(), material = TextEditingController(), minutos = TextEditingController();
+  final firmante = TextEditingController();
   final fotos = <Uint8List>[];
+  final firma = Firma();
   int resultado = 0;
   bool intentado = false, guardando = false, leyendoFotos = false;
 
   @override
   void dispose() {
-    notas.dispose();
+    for (final c in [notas, material, minutos, firmante]) {
+      c.dispose();
+    }
+    firma.dispose();
     super.dispose();
+  }
+
+  /// Minutos escritos (null = vacío); -1 = no es un número válido.
+  int? get _minutos {
+    final m = minutos.text.trim();
+    if (m.isEmpty) return null;
+    final n = int.tryParse(m);
+    return n == null || n < 0 || n > 10080 ? -1 : n;
   }
 
   Future<void> _anadirFotos() async {
@@ -775,7 +788,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
 
   Future<void> _guardar() async {
     if (guardando || leyendoFotos) return;
-    if (notas.text.trim().isEmpty) {
+    if (notas.text.trim().isEmpty || _minutos == -1) {
       setState(() => intentado = true);
       return;
     }
@@ -785,11 +798,17 @@ class _FormularioInformeState extends State<FormularioInforme> {
         messenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
     try {
       await informes.crear(
-        trabajoId: widget.t.id,
-        trabajadorId: widget.w.id,
-        resultado: resultado,
-        notas: notas.text.trim(),
+        Informe(
+          trabajoId: widget.t.id,
+          trabajadorId: widget.w.id,
+          resultado: resultado,
+          notas: notas.text.trim(),
+          material: material.text.trim(),
+          minutos: _minutos,
+          firmante: firma.vacia ? '' : firmante.text.trim(),
+        ),
         fotos: fotos,
+        firma: await firma.png(),
       );
     } catch (e) {
       debugPrint('Pulpo: no se pudo guardar el informe: $e');
@@ -851,7 +870,10 @@ class _FormularioInformeState extends State<FormularioInforme> {
     etiqueta: 'Informe',
     titulo: widget.t.nombre,
     onGuardar: _guardar,
-    avisos: [if (intentado && notas.text.trim().isEmpty) ('Cuenta qué has hecho', () {})],
+    avisos: [
+      if (intentado && notas.text.trim().isEmpty) ('Cuenta qué has hecho', () {}),
+      if (intentado && _minutos == -1) ('El tiempo va en minutos', () {}),
+    ],
     campos: [
       Bloque('Resultado', primero: true, descripcion: 'Cómo ha ido el trabajo.', [
         Pestanas(opciones: resultadosInforme, seleccion: resultado, onChanged: (i) => setState(() => resultado = i)),
@@ -870,6 +892,15 @@ class _FormularioInformeState extends State<FormularioInforme> {
           error: intentado && notas.text.trim().isEmpty ? 'Escribe qué has hecho' : null,
         ),
       ]),
+      Bloque('Material y tiempo', descripcion: 'Lo que has usado y cuánto has tardado.', [
+        campo('Material', material, lineas: 2, hint: 'Ej.: 1 correa, 2 l de aceite'),
+        campo(
+          'Minutos',
+          minutos,
+          hint: 'Ej.: 90',
+          error: intentado && _minutos == -1 ? 'Escribe solo los minutos, con números' : null,
+        ),
+      ]),
       Bloque('Fotos', descripcion: 'Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.', [
         Wrap(
           spacing: 8,
@@ -879,6 +910,10 @@ class _FormularioInformeState extends State<FormularioInforme> {
             if (fotos.length < maxFotosInforme) _anadir(),
           ],
         ),
+      ]),
+      Bloque('Firma del cliente', descripcion: 'Que firme con el dedo en el recuadro. Si no está, déjalo en blanco.', [
+        PanelFirma(firma),
+        campo('Nombre de quien firma', firmante, hint: 'Ej.: Ana López, presidenta'),
       ]),
     ],
   );

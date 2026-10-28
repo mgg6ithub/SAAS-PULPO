@@ -20,21 +20,51 @@ class Informe {
   final String id, trabajoId;
   final String? trabajadorId;
   final int resultado;
-  final String notas;
+  final String notas, material;
+
+  /// Tiempo dedicado, en minutos (null = sin apuntar).
+  final int? minutos;
 
   /// Rutas del bucket `fotos` (con sesión) o JPEG en base64 (sin sesión).
   final List<String> fotos;
+
+  /// Firma del cliente en PNG (ruta o base64, como las fotos); null = sin firmar.
+  final String? firma;
+  final String firmante;
   final DateTime cuando;
   Informe({
-    required this.id,
+    this.id = '',
     required this.trabajoId,
     this.trabajadorId,
     required this.resultado,
     required this.notas,
+    this.material = '',
+    this.minutos,
     this.fotos = const [],
+    this.firma,
+    this.firmante = '',
     DateTime? cuando,
   }) : cuando = cuando ?? DateTime.now();
+
+  /// El mismo informe ya guardado: con su id, sus fotos y su firma guardadas y la hora de la base.
+  Informe guardado({required String id, required List<String> fotos, String? firma, DateTime? cuando}) => Informe(
+    id: id,
+    trabajoId: trabajoId,
+    trabajadorId: trabajadorId,
+    resultado: resultado,
+    notas: notas,
+    material: material,
+    minutos: minutos,
+    fotos: fotos,
+    firma: firma,
+    firmante: firmante,
+    cuando: cuando,
+  );
 }
+
+/// «1 h 30 min», «45 min».
+String duracionTexto(int minutos) =>
+    [if (minutos >= 60) '${minutos ~/ 60} h', if (minutos % 60 != 0 || minutos == 0) '${minutos % 60} min'].join(' ');
 
 const resultadosInforme = ['Todo correcto', 'Con incidencias', 'No se pudo hacer'];
 const coloresResultado = [P.verde, P.ambar, P.rojo];
@@ -81,35 +111,20 @@ class Informes extends ChangeNotifier {
     return _de[trabajoId];
   }
 
-  /// Guarda el informe (y sube sus fotos, ya comprimidas).
-  Future<void> crear({
-    required String trabajoId,
-    required String trabajadorId,
-    required int resultado,
-    required String notas,
-    required List<Uint8List> fotos,
-  }) async {
+  /// Guarda el informe [i] (sin id) y sube sus fotos, ya comprimidas, y la firma.
+  Future<void> crear(Informe i, {List<Uint8List> fotos = const [], Uint8List? firma}) async {
     final n = store.nube;
     if (n == null) {
       _local.add(
-        Informe(
+        i.guardado(
           id: '${DateTime.now().microsecondsSinceEpoch}',
-          trabajoId: trabajoId,
-          trabajadorId: trabajadorId,
-          resultado: resultado,
-          notas: notas,
           fotos: [for (final f in fotos) base64Encode(f)],
+          firma: firma == null ? null : base64Encode(firma),
         ),
       );
     } else {
-      final i = await n.crearInforme(
-        trabajoId: trabajoId,
-        trabajadorId: trabajadorId,
-        resultado: resultado,
-        notas: notas,
-        fotos: fotos,
-      );
-      if (_de[trabajoId] != null) _de[trabajoId] = [i, ..._de[trabajoId]!];
+      final g = await n.crearInforme(i, fotos, firma);
+      if (_de[i.trabajoId] != null) _de[i.trabajoId] = [g, ..._de[i.trabajoId]!];
     }
     notifyListeners();
   }
@@ -146,7 +161,8 @@ Future<Uint8List> comprimirFoto(Uint8List bytes) async {
 class FotoGuardada extends StatefulWidget {
   final String foto;
   final double? width, height;
-  const FotoGuardada(this.foto, {super.key, this.width, this.height});
+  final BoxFit fit;
+  const FotoGuardada(this.foto, {super.key, this.width, this.height, this.fit = BoxFit.cover});
 
   @override
   State<FotoGuardada> createState() => _FotoGuardadaState();
@@ -165,14 +181,14 @@ class _FotoGuardadaState extends State<FotoGuardada> {
   Widget build(BuildContext context) => FutureBuilder(
     future: _bytes,
     builder: (context, s) => s.hasData
-        ? Image.memory(s.data!, width: widget.width, height: widget.height, fit: BoxFit.cover)
+        ? Image.memory(s.data!, width: widget.width, height: widget.height, fit: widget.fit)
         : Container(width: widget.width, height: widget.height, color: P.fondo),
   );
 }
 
 /// Descarga el informe en PDF, para mandárselo al cliente.
 Future<void> descargarInformePdf(Informe i, Tarea t) async {
-  final nombre = 'Informe ${t.nombre} ${fecha(i.cuando)}'.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
+  final nombre = 'Parte ${t.nombre} ${fecha(i.cuando)}'.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
   await descargar(await informePdf(i, t), '$nombre.pdf', 'application/pdf');
 }
 
@@ -181,6 +197,7 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
   final cliente = store.cliente(t.clienteId);
   final w = store.trabajadores.where((x) => x.id == i.trabajadorId).firstOrNull;
   final fotos = await Future.wait(i.fotos.map(bytesFoto));
+  final firma = i.firma == null ? null : await bytesFoto(i.firma!);
   final doc = pw.Document();
   final morado = PdfColor.fromInt(P.morado.toARGB32());
   final suave = PdfColor.fromInt(0xFF6B7280);
@@ -207,7 +224,7 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
           style: pw.TextStyle(color: morado, fontSize: 9, fontWeight: pw.FontWeight.bold, letterSpacing: 1),
         ),
         pw.SizedBox(height: 4),
-        pw.Text('Informe de trabajo', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+        pw.Text('Parte de trabajo', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 18),
         dato('Trabajo', t.nombre),
         if (cliente != null) dato('Cliente', cliente.nombre),
@@ -215,10 +232,17 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
         dato('Fecha', '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}'),
         if (w != null) dato('Técnico', w.nombreCompleto),
         dato('Resultado', resultadosInforme[i.resultado]),
+        if (i.minutos != null) dato('Tiempo', duracionTexto(i.minutos!)),
         pw.SizedBox(height: 14),
         pw.Text('Qué se ha hecho', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 6),
         pw.Text(i.notas, style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 2)),
+        if (i.material.isNotEmpty) ...[
+          pw.SizedBox(height: 14),
+          pw.Text('Material', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+          pw.Text(i.material, style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 2)),
+        ],
         if (fotos.isNotEmpty) ...[
           pw.SizedBox(height: 18),
           pw.Text('Fotos', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
@@ -230,6 +254,13 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
               for (final f in fotos) pw.Image(pw.MemoryImage(f), width: 246, height: 184, fit: pw.BoxFit.cover),
             ],
           ),
+        ],
+        if (firma != null) ...[
+          pw.SizedBox(height: 18),
+          pw.Text('Conforme, el cliente', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+          pw.Image(pw.MemoryImage(firma), width: 200, height: 80, fit: pw.BoxFit.contain),
+          if (i.firmante.isNotEmpty) pw.Text(i.firmante, style: const pw.TextStyle(fontSize: 10.5)),
         ],
       ],
     ),

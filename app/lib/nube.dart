@@ -140,7 +140,7 @@ class Nube {
   Future<List<Informe>> informes(String trabajoId) async {
     final r = await _db
         .from('informes')
-        .select('id, trabajador_id, resultado, notas, fotos, created_at')
+        .select('id, trabajador_id, resultado, notas, material, minutos, fotos, firma, firmante, created_at')
         .eq('trabajo_id', _u(trabajoId))
         .order('created_at', ascending: false);
     return [
@@ -151,52 +151,51 @@ class Nube {
           trabajadorId: x['trabajador_id'],
           resultado: x['resultado'],
           notas: x['notas'],
+          material: x['material'],
+          minutos: x['minutos'],
           fotos: List<String>.from(x['fotos'] as List),
+          firma: x['firma'],
+          firmante: x['firmante'],
           cuando: DateTime.parse(x['created_at'] as String).toLocal(),
         ),
     ];
   }
 
-  /// Sube las fotos (JPEG) a `<empresa>/informes/<informe>/` y guarda el informe. Espera antes a que el
-  /// trabajo esté guardado, porque el informe apunta a él.
-  Future<Informe> crearInforme({
-    required String trabajoId,
-    required String trabajadorId,
-    required int resultado,
-    required String notas,
-    required List<Uint8List> fotos,
-  }) async {
+  /// Sube las fotos (JPEG) y la firma (PNG) a `<empresa>/informes/<informe>/` y guarda el informe. Espera
+  /// antes a que el trabajo esté guardado, porque el informe apunta a él.
+  Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma) async {
     await _cola;
     final id = _uuidNuevo();
-    final rutas = <String>[];
-    for (var n = 0; n < fotos.length; n++) {
-      final ruta = '$empresaId/informes/$id/$n.jpg';
-      await _db.storage
-          .from(_bucket)
-          .uploadBinary(ruta, fotos[n], fileOptions: const FileOptions(contentType: 'image/jpeg'));
-      _fotos[ruta] = Future.value(fotos[n]);
-      rutas.add(ruta);
+    Future<String> subir(String nombre, Uint8List bytes, String tipo) async {
+      final ruta = '$empresaId/informes/$id/$nombre';
+      await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
+      _fotos[ruta] = Future.value(bytes);
+      return ruta;
     }
+
+    final rutas = [for (var n = 0; n < fotos.length; n++) await subir('$n.jpg', fotos[n], 'image/jpeg')];
+    final rutaFirma = firma == null ? null : await subir('firma.png', firma, 'image/png');
     final x = await _db
         .from('informes')
         .insert({
           'id': id,
           'empresa_id': empresaId,
-          'trabajo_id': _u(trabajoId),
-          'trabajador_id': _u(trabajadorId),
-          'resultado': resultado,
-          'notas': notas,
+          'trabajo_id': _u(i.trabajoId),
+          'trabajador_id': i.trabajadorId == null ? null : _u(i.trabajadorId!),
+          'resultado': i.resultado,
+          'notas': i.notas,
+          'material': i.material,
+          'minutos': i.minutos,
           'fotos': rutas,
+          'firma': rutaFirma,
+          'firmante': i.firmante,
         })
         .select('created_at')
         .single();
-    return Informe(
+    return i.guardado(
       id: id,
-      trabajoId: trabajoId,
-      trabajadorId: trabajadorId,
-      resultado: resultado,
-      notas: notas,
       fotos: rutas,
+      firma: rutaFirma,
       cuando: DateTime.parse(x['created_at'] as String).toLocal(),
     );
   }

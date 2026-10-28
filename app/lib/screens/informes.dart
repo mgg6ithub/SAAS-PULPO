@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../informes.dart';
@@ -74,6 +78,20 @@ class _Informe extends StatefulWidget {
 class _InformeState extends State<_Informe> {
   bool descargando = false;
 
+  Widget _dato(String etiqueta, String valor) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(etiqueta, style: TextStyle(color: P.textoSuave, fontSize: 13)),
+        ),
+        Expanded(child: Text(valor, style: const TextStyle(fontSize: 13.5))),
+      ],
+    ),
+  );
+
   Future<void> _pdf() async {
     setState(() => descargando = true);
     try {
@@ -126,6 +144,11 @@ class _InformeState extends State<_Informe> {
           ),
           const SizedBox(height: 16),
           Text(i.notas, style: const TextStyle(fontSize: 14, height: 1.45)),
+          if (i.material.isNotEmpty || i.minutos != null) ...[
+            const SizedBox(height: 12),
+            if (i.material.isNotEmpty) _dato('Material', i.material),
+            if (i.minutos != null) _dato('Tiempo', duracionTexto(i.minutos!)),
+          ],
           if (i.fotos.isNotEmpty) ...[
             const SizedBox(height: 16),
             Wrap(
@@ -139,6 +162,13 @@ class _InformeState extends State<_Informe> {
                   ),
               ],
             ),
+          ],
+          if (i.firma != null) ...[
+            const SizedBox(height: 16),
+            Text('Conforme, el cliente', style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
+            const SizedBox(height: 4),
+            FotoGuardada(i.firma!, width: 220, height: 88, fit: BoxFit.contain),
+            if (i.firmante.isNotEmpty) Text(i.firmante, style: const TextStyle(fontSize: 13.5)),
           ],
           const SizedBox(height: 20),
           Row(
@@ -157,4 +187,123 @@ class _InformeState extends State<_Informe> {
       ),
     );
   }
+}
+
+/// Trazos de una firma hecha con el dedo o el ratón.
+class Firma extends ChangeNotifier {
+  final trazos = <List<Offset>>[];
+  Size tamano = Size.zero;
+  bool get vacia => trazos.isEmpty;
+
+  Offset _dentro(Offset p) => Offset(p.dx.clamp(0, tamano.width), p.dy.clamp(0, tamano.height));
+
+  void empezar(Offset p) {
+    trazos.add([_dentro(p)]);
+    notifyListeners();
+  }
+
+  void seguir(Offset p) {
+    if (trazos.isEmpty) return;
+    trazos.last.add(_dentro(p));
+    notifyListeners();
+  }
+
+  void borrar() {
+    trazos.clear();
+    notifyListeners();
+  }
+
+  void pintar(Canvas c, Color color) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    for (final t in trazos) {
+      final camino = Path()..moveTo(t.first.dx, t.first.dy);
+      for (final q in t.skip(1)) {
+        camino.lineTo(q.dx, q.dy);
+      }
+      if (t.length == 1) camino.lineTo(t.first.dx + .1, t.first.dy);
+      c.drawPath(camino, p);
+    }
+  }
+
+  /// La firma en PNG con fondo transparente (null = sin firmar).
+  Future<Uint8List?> png() async {
+    if (vacia) return null;
+    final r = ui.PictureRecorder();
+    pintar(Canvas(r), const Color(0xFF111111));
+    final imagen = await r.endRecording().toImage(tamano.width.ceil(), tamano.height.ceil());
+    final b = await imagen.toByteData(format: ui.ImageByteFormat.png);
+    return b!.buffer.asUint8List();
+  }
+}
+
+/// Recuadro donde el cliente firma con el dedo. Se queda con el gesto para que la ventana no se desplace.
+class PanelFirma extends StatelessWidget {
+  final Firma firma;
+  const PanelFirma(this.firma, {super.key});
+
+  static const alto = 160.0;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Container(
+        height: alto,
+        decoration: BoxDecoration(
+          color: P.superficie,
+          borderRadius: BorderRadius.circular(P.radio),
+          border: Border.all(color: P.borde),
+        ),
+        child: RawGestureDetector(
+          gestures: {
+            EagerGestureRecognizer: GestureRecognizerFactoryWithHandlers<EagerGestureRecognizer>(
+              EagerGestureRecognizer.new,
+              (_) {},
+            ),
+          },
+          child: Listener(
+            onPointerDown: (e) => firma.empezar(e.localPosition),
+            onPointerMove: (e) => firma.seguir(e.localPosition),
+            child: LayoutBuilder(
+              builder: (context, box) {
+                firma.tamano = Size(box.maxWidth, box.maxHeight);
+                return ListenableBuilder(
+                  listenable: firma,
+                  builder: (context, _) => Stack(
+                    children: [
+                      if (firma.vacia)
+                        Center(
+                          child: Text('Firma aquí', style: TextStyle(color: P.textoSuave, fontSize: 15)),
+                        ),
+                      Positioned.fill(child: CustomPaint(painter: _PintorFirma(firma))),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(onPressed: firma.borrar, child: const Text('Borrar firma')),
+      ),
+    ],
+  );
+}
+
+class _PintorFirma extends CustomPainter {
+  final Firma firma;
+  _PintorFirma(this.firma) : super(repaint: firma);
+
+  @override
+  void paint(Canvas canvas, Size size) => firma.pintar(canvas, P.texto);
+
+  @override
+  bool shouldRepaint(_PintorFirma old) => false;
 }
