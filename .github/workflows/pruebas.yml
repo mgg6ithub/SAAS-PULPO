@@ -1,0 +1,65 @@
+# Pruebas automáticas de Pulpo (DEV-032): análisis y tests de la app en cada cambio,
+# y la prueba real contra Supabase cuando el repositorio tiene sus secretos.
+name: Pruebas
+
+on:
+  push:
+    branches: [main, develop]
+    paths: [app/**, supabase/**, .github/workflows/pruebas.yml]
+  pull_request:
+    paths: [app/**, supabase/**, .github/workflows/pruebas.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - run: flutter pub get
+      # Solo los errores paran: los avisos se ven en el registro sin bloquear.
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter test
+
+  # Crea y borra sus propias cuentas (tool/probar_nube.py); nunca toca las cuentas fijas.
+  # Necesita los secretos SUPABASE_ACCESS_TOKEN y SUPABASE_PROJECT_REF (el proyecto de desarrollo).
+  nube:
+    needs: app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: ¿Hay secretos de Supabase?
+        id: secretos
+        run: echo "hay=${{ env.SUPABASE_ACCESS_TOKEN != '' && env.SUPABASE_PROJECT_REF != '' }}" >> "$GITHUB_OUTPUT"
+      - if: steps.secretos.outputs.hay == 'true'
+        uses: actions/checkout@v4
+      - if: steps.secretos.outputs.hay == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - if: steps.secretos.outputs.hay == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - if: steps.secretos.outputs.hay == 'true'
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      - if: steps.secretos.outputs.hay == 'true'
+        working-directory: app
+        run: flutter pub get && python3 tool/probar_nube.py
