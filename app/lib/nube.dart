@@ -365,6 +365,8 @@ class Nube {
       _todo('automatizaciones'),
       _todo('tipos_trabajo'),
       _todo('competencias'),
+      _todo('equipos'),
+      _todo('vencimientos'),
     ]);
     final trabajadoresDe = <String, List<String>>{};
     for (final x in r[4]) {
@@ -407,6 +409,33 @@ class Nube {
         for (final x in [...r[8]]..sort((a, b) => (a['orden'] as int).compareTo(b['orden'] as int)))
           x['nombre'] as String,
       ],
+      equipos: [
+        for (final x in r[9])
+          Equipo(
+            id: x['id'],
+            clienteId: x['cliente_id'],
+            tipo: x['tipo'],
+            nombre: x['nombre'],
+            marca: x['marca'],
+            modelo: x['modelo'],
+            numeroSerie: x['numero_serie'],
+            ubicacion: x['ubicacion'],
+            notas: x['notas'],
+            instalacion: _fecha(x['instalacion']),
+            estado: EstadoMaquina.values[x['estado'] as int],
+            documentos: List<String>.from(x['documentos'] as List),
+          ),
+      ],
+      vencimientos: [
+        for (final x in r[10])
+          Vencimiento(
+            id: x['id'],
+            equipoId: x['equipo_id'],
+            nombre: x['nombre'],
+            vence: DateTime.parse(x['vence'] as String),
+            avisarDias: x['avisar_dias'],
+          ),
+      ],
     );
   }
 
@@ -414,7 +443,7 @@ class Nube {
   /// Después el [Store] vuelve a su estado inicial.
   Future<void> vaciar() async {
     await _cola;
-    for (final t in ['trabajos', 'clientes', 'trabajadores', 'etiquetas', 'tipos_trabajo', 'competencias']) {
+    for (final t in ['trabajos', 'equipos', 'clientes', 'trabajadores', 'etiquetas', 'tipos_trabajo', 'competencias']) {
       await _db.from(t).delete().eq('empresa_id', empresaId);
     }
     _enviado.clear();
@@ -459,6 +488,8 @@ class Nube {
     'etiquetas',
     'tipos_trabajo',
     'competencias',
+    'equipos',
+    'vencimientos',
     'trabajos',
     'trabajo_trabajadores',
     'trabajo_historial',
@@ -539,6 +570,8 @@ class Nube {
     'etiquetas': 'id',
     'tipos_trabajo': 'id',
     'competencias': 'id',
+    'equipos': 'id',
+    'vencimientos': 'id',
     'trabajos': 'id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
     'trabajo_historial': 'trabajo_id,dia',
@@ -576,6 +609,7 @@ class Nube {
     final trabajadores = {for (final w in s.trabajadores) w.id};
     final trabajos = [...s.tareas, ...s.subtareas];
     final ids = {for (final t in trabajos) t.id};
+    final equipos = {for (final x in s.equipos) x.id};
     final r = <String, Map<String, Map<String, dynamic>>>{for (final t in _orden) t: {}};
     for (final c in s.clientes) {
       r['clientes']![_u(c.id)] = {
@@ -635,6 +669,33 @@ class Nube {
         'orden': i,
       };
     }
+    for (final x in s.equipos.where((x) => clientes.contains(x.clienteId))) {
+      r['equipos']![_u(x.id)] = {
+        'id': _u(x.id),
+        'empresa_id': e,
+        'cliente_id': _u(x.clienteId),
+        'tipo': x.tipo,
+        'nombre': x.nombre,
+        'marca': x.marca,
+        'modelo': x.modelo,
+        'numero_serie': x.numeroSerie,
+        'ubicacion': x.ubicacion,
+        'notas': x.notas,
+        'instalacion': _dia(x.instalacion),
+        'estado': x.estado.index,
+        'documentos': x.documentos,
+      };
+    }
+    for (final x in s.vencimientos.where((x) => equipos.contains(x.equipoId))) {
+      r['vencimientos']![_u(x.id)] = {
+        'id': _u(x.id),
+        'empresa_id': e,
+        'equipo_id': _u(x.equipoId),
+        'nombre': x.nombre,
+        'vence': _dia(x.vence),
+        'avisar_dias': x.avisarDias,
+      };
+    }
     // Una fila por competencia; su id sale del nombre (renombrar = quitar una y poner otra).
     for (final (i, n) in competencias.indexed) {
       final id = _u('competencia:$n');
@@ -645,6 +706,7 @@ class Nube {
         'id': _u(t.id),
         'empresa_id': e,
         'cliente_id': clientes.contains(t.clienteId) ? _u(t.clienteId!) : null,
+        'equipo_id': equipos.contains(t.equipoId) ? _u(t.equipoId!) : null,
         'plantilla': t.plantilla,
         'color': t.color,
         'plantilla_id': ids.contains(t.plantillaId) ? _u(t.plantillaId!) : null,
@@ -724,6 +786,8 @@ class DatosNube {
   /// Vacíos = la empresa aún no los ha guardado: se usan los de partida.
   final List<TipoInfo> tipos;
   final List<String> competencias;
+  final List<Equipo> equipos;
+  final List<Vencimiento> vencimientos;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
@@ -732,6 +796,8 @@ class DatosNube {
     required this.subtareas,
     this.tipos = const [],
     this.competencias = const [],
+    this.equipos = const [],
+    this.vencimientos = const [],
   });
 }
 
@@ -799,6 +865,7 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
     Tarea(
       id: x['id'],
       clienteId: x['cliente_id'],
+      equipoId: x['equipo_id'],
       plantilla: x['plantilla'],
       color: (x['color'] as num?)?.toInt(),
       plantillaId: x['plantilla_id'],

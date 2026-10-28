@@ -304,6 +304,9 @@ class Trabajador {
 class Tarea {
   String id, nombre, tipo, marca, modelo, numeroSerie, ubicacion, notas;
   String? clienteId, plantillaId;
+
+  /// Equipo del cliente sobre el que se hace (ascensor, caldera…); null = sin equipo.
+  String? equipoId;
   DateTime? instalacion, ultimo, proximo;
 
   /// Cuándo pidió el cliente este mantenimiento.
@@ -342,6 +345,7 @@ class Tarea {
   Tarea({
     required this.id,
     this.clienteId,
+    this.equipoId,
     bool? plantilla,
     this.color,
     this.plantillaId,
@@ -400,6 +404,7 @@ class Tarea {
   Map<String, dynamic> toJson() => {
     'id': id,
     'clienteId': clienteId,
+    'equipoId': equipoId,
     'plantilla': plantilla,
     'color': color,
     'plantillaId': plantillaId,
@@ -434,6 +439,7 @@ class Tarea {
   factory Tarea.fromJson(Map<String, dynamic> j) => Tarea(
     id: _s(j, 'id'),
     clienteId: j['clienteId'] as String?,
+    equipoId: j['equipoId'] as String?,
     plantilla: j['plantilla'] as bool?,
     color: j['color'] as int?,
     plantillaId: j['plantillaId'] as String?,
@@ -483,6 +489,93 @@ String relativo(DateTime d) {
   if (n == 1) return 'Mañana';
   if (n == -1) return 'Ayer';
   return n > 0 ? 'En $n días' : 'Hace ${-n} días';
+}
+
+/// Equipo de un cliente (un ascensor, una caldera, un extintor): tiene vida propia, trabajos que se hacen
+/// sobre él, documentos y vencimientos legales.
+class Equipo {
+  String id, clienteId, tipo, nombre, marca, modelo, numeroSerie, ubicacion, notas;
+  DateTime? instalacion;
+  EstadoMaquina estado;
+
+  /// Rutas de sus documentos en el bucket `documentos` (certificados, libro de mantenimiento, fotos).
+  List<String> documentos;
+
+  Equipo({
+    required this.id,
+    required this.clienteId,
+    this.tipo = 'Otro',
+    this.nombre = '',
+    this.marca = '',
+    this.modelo = '',
+    this.numeroSerie = '',
+    this.ubicacion = '',
+    this.notas = '',
+    this.instalacion,
+    this.estado = EstadoMaquina.operativa,
+    List<String>? documentos,
+  }) : documentos = documentos ?? [];
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'clienteId': clienteId,
+    'tipo': tipo,
+    'nombre': nombre,
+    'marca': marca,
+    'modelo': modelo,
+    'numeroSerie': numeroSerie,
+    'ubicacion': ubicacion,
+    'notas': notas,
+    'instalacion': _f(instalacion),
+    'estado': estado.index,
+    'documentos': documentos,
+  };
+
+  factory Equipo.fromJson(Map<String, dynamic> j) => Equipo(
+    id: _s(j, 'id'),
+    clienteId: _s(j, 'clienteId'),
+    tipo: j['tipo'] as String? ?? 'Otro',
+    nombre: _s(j, 'nombre'),
+    marca: _s(j, 'marca'),
+    modelo: _s(j, 'modelo'),
+    numeroSerie: _s(j, 'numeroSerie'),
+    ubicacion: _s(j, 'ubicacion'),
+    notas: _s(j, 'notas'),
+    instalacion: _d(j, 'instalacion'),
+    estado: EstadoMaquina.values[j['estado'] as int? ?? 0],
+    documentos: List<String>.from(j['documentos'] as List? ?? []),
+  );
+
+  Equipo copia() => Equipo.fromJson(toJson());
+}
+
+/// Vencimiento legal de un equipo (inspección OCA, revisión obligatoria, certificado): avisa
+/// [avisarDias] antes de [vence].
+class Vencimiento {
+  String id, equipoId, nombre;
+  DateTime vence;
+  int avisarDias;
+
+  Vencimiento({required this.id, required this.equipoId, this.nombre = '', required this.vence, this.avisarDias = 30});
+
+  /// Vencido, o dentro del plazo de aviso.
+  bool get avisar => diasHasta(vence) <= avisarDias;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'equipoId': equipoId,
+    'nombre': nombre,
+    'vence': _f(vence),
+    'avisarDias': avisarDias,
+  };
+
+  factory Vencimiento.fromJson(Map<String, dynamic> j) => Vencimiento(
+    id: _s(j, 'id'),
+    equipoId: _s(j, 'equipoId'),
+    nombre: _s(j, 'nombre'),
+    vence: _d(j, 'vence') ?? DateTime.now(),
+    avisarDias: j['avisarDias'] as int? ?? 30,
+  );
 }
 
 /// Minutos desde las 00:00 → "09:05".

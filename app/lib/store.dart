@@ -240,6 +240,10 @@ class Store extends ChangeNotifier {
   /// el calendario, el planificador y las cifras sigan viendo solo los trabajos.
   List<Tarea> subtareas = [];
   List<EtiquetaTrabajo> etiquetas = [];
+
+  /// Equipos de los clientes y sus vencimientos legales.
+  List<Equipo> equipos = [];
+  List<Vencimiento> vencimientos = [];
   SharedPreferences? _prefs;
 
   /// Con sesión iniciada, cada cambio se guarda en Supabase en vez de en el navegador.
@@ -253,6 +257,8 @@ class Store extends ChangeNotifier {
     tareas = d.tareas;
     subtareas = d.subtareas;
     etiquetas = d.etiquetas;
+    equipos = d.equipos;
+    vencimientos = d.vencimientos;
     tipos = d.tipos.isEmpty ? [...tiposBase] : d.tipos;
     competencias = d.competencias.isEmpty ? [...competenciasBase] : d.competencias;
     usoPlantillas = [];
@@ -285,6 +291,8 @@ class Store extends ChangeNotifier {
     tareas = [];
     subtareas = [];
     etiquetas = [];
+    equipos = [];
+    vencimientos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     usoPlantillas = [];
@@ -299,6 +307,8 @@ class Store extends ChangeNotifier {
     tareas = [];
     subtareas = [];
     etiquetas = [];
+    equipos = [];
+    vencimientos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     notifyListeners();
@@ -322,6 +332,8 @@ class Store extends ChangeNotifier {
       demo = (j['demo'] as bool? ?? false) || _hayDemo;
       usoPlantillas = List<String>.from(j['usoPlantillas'] as List? ?? []);
       etiquetas = [for (final x in j['etiquetas'] as List? ?? []) EtiquetaTrabajo.fromJson(x)];
+      equipos = [for (final x in j['equipos'] as List? ?? []) Equipo.fromJson(x)];
+      vencimientos = [for (final x in j['vencimientos'] as List? ?? []) Vencimiento.fromJson(x)];
       if (j['tipos'] case final List l when l.isNotEmpty) tipos = [for (final x in l) TipoInfo.fromJson(x)];
       if (j['competencias'] case final List l when l.isNotEmpty) competencias = List<String>.from(l);
       // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
@@ -353,6 +365,8 @@ class Store extends ChangeNotifier {
         'usoPlantillas': usoPlantillas,
         'etiquetas': [for (final x in etiquetas) x.toJson()],
         'tipos': [for (final x in tipos) x.toJson()],
+        'equipos': [for (final x in equipos) x.toJson()],
+        'vencimientos': [for (final x in vencimientos) x.toJson()],
         'competencias': competencias,
       }),
     );
@@ -466,12 +480,55 @@ class Store extends ChangeNotifier {
 
   void borrarCliente(String id) {
     clientes.removeWhere((c) => c.id == id);
+    for (final e in equipos.where((e) => e.clienteId == id).toList()) {
+      vencimientos.removeWhere((v) => v.equipoId == e.id);
+    }
+    equipos.removeWhere((e) => e.clienteId == id);
     tareas.removeWhere((t) => t.clienteId == id);
     subtareas.removeWhere((t) => t.clienteId == id);
     _cambio();
   }
 
   List<Tarea> tareasDe(String clienteId) => tareas.where((t) => t.clienteId == clienteId).toList();
+
+  // ── Equipos y vencimientos legales ──
+  Equipo? equipo(String? id) => id == null ? null : equipos.where((e) => e.id == id).firstOrNull;
+  List<Equipo> equiposDe(String clienteId) => equipos.where((e) => e.clienteId == clienteId).toList();
+  List<Vencimiento> vencimientosDe(String equipoId) =>
+      vencimientos.where((v) => v.equipoId == equipoId).toList()..sort((a, b) => a.vence.compareTo(b.vence));
+
+  /// Trabajos hechos sobre el equipo (su historial de revisiones y averías).
+  List<Tarea> trabajosDe(String equipoId) => tareas.where((t) => t.equipoId == equipoId).toList();
+
+  /// Vencimientos vencidos o dentro de su plazo de aviso, el más urgente primero.
+  List<Vencimiento> get vencimientosPorAvisar =>
+      vencimientos.where((v) => v.avisar && equipo(v.equipoId) != null).toList()
+        ..sort((a, b) => a.vence.compareTo(b.vence));
+
+  void guardarEquipo(Equipo e) {
+    _poner(equipos, e, (x) => x.id == e.id);
+    _cambio();
+  }
+
+  /// Quita el equipo y sus vencimientos; sus trabajos se quedan, sin equipo.
+  void borrarEquipo(String id) {
+    equipos.removeWhere((e) => e.id == id);
+    vencimientos.removeWhere((v) => v.equipoId == id);
+    for (final t in [...tareas, ...subtareas].where((t) => t.equipoId == id)) {
+      t.equipoId = null;
+    }
+    _cambio();
+  }
+
+  void guardarVencimiento(Vencimiento v) {
+    _poner(vencimientos, v, (x) => x.id == v.id);
+    _cambio();
+  }
+
+  void borrarVencimiento(String id) {
+    vencimientos.removeWhere((v) => v.id == id);
+    _cambio();
+  }
 
   // ── Trabajadores ──
   Trabajador? trabajador(String id) {
@@ -1040,6 +1097,8 @@ class Store extends ChangeNotifier {
     clientes = [];
     trabajadores = [];
     subtareas = [];
+    equipos = [];
+    vencimientos = [];
     tareas = [
       Tarea(
         id: 'p1',
