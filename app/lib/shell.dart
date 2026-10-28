@@ -265,33 +265,66 @@ class _CapaState extends State<_Capa> with SingleTickerProviderStateMixin {
   );
 }
 
-/// «Crear» arriba del menú, como en Jobber: un menú para dar de alta un trabajo, cliente, trabajador o plantilla
-/// desde cualquier sitio. Con la barra en solo iconos, queda un botón con el plus.
-class _BotonCrear extends StatelessWidget {
+/// «Crear» arriba del menú, como en Jobber: al pulsarlo sale una fila horizontal con el icono de cada cosa que
+/// se puede dar de alta (trabajo, cliente, trabajador, plantilla) desde cualquier sitio. Con la barra en solo
+/// iconos, queda un botón con el plus.
+class _BotonCrear extends StatefulWidget {
   final bool compacto;
   const _BotonCrear({required this.compacto});
 
   @override
+  State<_BotonCrear> createState() => _BotonCrearState();
+}
+
+class _BotonCrearState extends State<_BotonCrear> {
+  final _menu = MenuController();
+
+  Widget _opcion(IconData icono, String texto, VoidCallback alta) => InkWell(
+    borderRadius: BorderRadius.circular(P.radioControl),
+    hoverColor: P.hover,
+    onTap: () {
+      _menu.close();
+      alta();
+    },
+    child: SizedBox(
+      width: 84,
+      height: 68,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icono, size: 24, color: P.morado),
+          const SizedBox(height: 6),
+          Text(texto, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    ),
+  );
+
+  @override
   Widget build(BuildContext context) => MenuAnchor(
+    controller: _menu,
     alignmentOffset: const Offset(0, 4),
     style: MenuStyle(
       backgroundColor: WidgetStatePropertyAll(P.superficie),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+      padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radio))),
     ),
     menuChildren: [
-      MenuItemButton(onPressed: () => abrirTareaForm(context, null), child: const Text('Nuevo trabajo')),
-      MenuItemButton(onPressed: () => abrirClienteForm(context), child: const Text('Nuevo cliente')),
-      MenuItemButton(onPressed: () => abrirTrabajadorForm(context), child: const Text('Nuevo trabajador')),
-      MenuItemButton(
-        onPressed: () => abrirTareaForm(context, null, plantilla: true),
-        child: const Text('Nueva plantilla'),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _opcion(Icons.handyman_outlined, 'Trabajo', () => abrirTareaForm(context, null)),
+          _opcion(Icons.apartment_outlined, 'Cliente', () => abrirClienteForm(context)),
+          _opcion(Icons.badge_outlined, 'Trabajador', () => abrirTrabajadorForm(context)),
+          _opcion(Icons.content_copy_rounded, 'Plantilla', () => abrirTareaForm(context, null, plantilla: true)),
+        ],
       ),
     ],
     builder: (context, menu, _) => Tooltip(
       message: 'Crear',
       child: SizedBox(
         height: 40,
-        child: compacto
+        child: widget.compacto
             ? IconButton.filled(
                 style: IconButton.styleFrom(
                   backgroundColor: P.morado,
