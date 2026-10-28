@@ -64,6 +64,106 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
     );
   }
 
+  /// Cambia a la vez lo seleccionado: estado, asignado, cliente, fecha o periodicidad.
+  Widget _cambiar() {
+    final sel = [for (final id in seleccion) ?store.tarea(id)];
+    void aplicado() => ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: 320,
+        content: Text('Cambiado en ${sel.length} ${sel.length == 1 ? widget.nombre : '${widget.nombre}s'}'),
+      ),
+    );
+    void aplicar(void Function(Tarea t) cambio) {
+      store.aplicarA(sel, cambio);
+      aplicado();
+    }
+
+    Widget opcion(String texto, VoidCallback onPressed, {Widget? icono}) =>
+        MenuItemButton(leadingIcon: icono, onPressed: onPressed, child: Text(texto));
+
+    return MenuAnchor(
+      alignmentOffset: const Offset(0, -4),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(P.superficie),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+      ),
+      menuChildren: [
+        SubmenuButton(
+          menuChildren: [
+            for (final e in EstadoTrabajo.values)
+              opcion(
+                e.etiqueta,
+                () {
+                  store.cambiarEstado(sel, e);
+                  aplicado();
+                },
+                icono: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
+                ),
+              ),
+          ],
+          child: const Text('Estado'),
+        ),
+        SubmenuButton(
+          menuChildren: [
+            opcion('Sin asignar', () => aplicar((t) => t.trabajadorIds = [])),
+            for (final w in store.trabajadores.where((w) => w.activo))
+              opcion(
+                w.nombreCompleto,
+                () => aplicar((t) => t.trabajadorIds = [w.id]),
+                icono: Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 20),
+              ),
+          ],
+          child: const Text('Asignado a'),
+        ),
+        SubmenuButton(
+          menuChildren: [
+            opcion('Sin cliente', () => aplicar((t) => t.clienteId = null)),
+            for (final c in [...store.clientes]..sort((a, b) => a.nombre.compareTo(b.nombre)))
+              opcion(
+                c.nombre,
+                () => aplicar((t) => t.clienteId = c.id),
+                icono: Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
+              ),
+          ],
+          child: const Text('Cliente'),
+        ),
+        opcion('Fecha…', () async {
+          final d = await showDatePicker(
+            context: context,
+            initialDate: hoy(),
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100),
+          );
+          if (d != null) aplicar((t) => t.proximo = d);
+        }),
+        SubmenuButton(
+          menuChildren: [
+            for (final p in Periodicidad.values)
+              opcion(
+                p.etiqueta,
+                () => aplicar((t) {
+                  t.periodicidad = p;
+                  if (p.repite && t.proximo == null) t.proximo = masDias(t.ultimo ?? hoy(), p.dias);
+                }),
+              ),
+          ],
+          child: const Text('Periodicidad'),
+        ),
+      ],
+      builder: (context, menu, _) => TextButton.icon(
+        style: TextButton.styleFrom(foregroundColor: Colors.white),
+        onPressed: sel.isEmpty ? null : () => menu.isOpen ? menu.close() : menu.open(),
+        icon: const Icon(Icons.unfold_more_rounded, size: 18),
+        iconAlignment: IconAlignment.end,
+        label: const Text('Cambiar'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ts = widget.trabajos;
@@ -77,6 +177,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             bottom: 24,
             child: Center(
               child: BarraSeleccion(
+                acciones: [_cambiar()],
                 seleccionados: seleccion.length,
                 total: ts.length,
                 nombre: '${widget.nombre}s',

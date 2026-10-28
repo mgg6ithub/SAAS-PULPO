@@ -389,6 +389,30 @@ class Store extends ChangeNotifier {
   /// Subtrabajos directos de un trabajo o subtrabajo.
   List<Tarea> hijas(String id) => subtareas.where((s) => s.padreId == id).toList();
 
+  /// Aplica un cambio a varios trabajos o subtrabajos a la vez (selección múltiple) y guarda una sola vez.
+  void aplicarA(Iterable<Tarea> ts, void Function(Tarea t) cambio) {
+    for (final t in ts) {
+      cambio(t);
+    }
+    for (final t in ts) {
+      if (t.padreId != null) {
+        t.clienteId = tarea(t.padreId)?.clienteId;
+      } else {
+        _compartirCliente(t);
+      }
+    }
+    _cambio();
+  }
+
+  /// «Realizado» lo marca como hecho (histórico y siguiente fecha); el resto solo cambia el estado.
+  void cambiarEstado(Iterable<Tarea> ts, EstadoTrabajo e) => aplicarA(ts, (t) {
+    if (e == EstadoTrabajo.realizado) {
+      if (t.estado != e) _marcarHecha(t);
+    } else {
+      t.estado = e;
+    }
+  });
+
   /// Todos los subtrabajos que cuelgan de este, a cualquier profundidad.
   List<Tarea> descendientes(String id) => [
     for (final h in hijas(id)) ...[h, ...descendientes(h.id)],
@@ -454,6 +478,11 @@ class Store extends ChangeNotifier {
   }
 
   void marcarHecha(Tarea t) {
+    _marcarHecha(t);
+    _cambio();
+  }
+
+  void _marcarHecha(Tarea t) {
     _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina, t.estado);
     t.ultimo = hoy();
     // Si se repite, la siguiente vez vuelve a estar pendiente; si es única, se queda realizada.
@@ -462,7 +491,6 @@ class Store extends ChangeNotifier {
     // Una tarea única, al hacerse, ya no tiene próxima.
     t.proximo = t.periodicidad.repite ? masDias(hoy(), t.periodicidad.dias) : null;
     if (t.estadoMaquina == EstadoMaquina.revision) t.estadoMaquina = EstadoMaquina.operativa;
-    _cambio();
   }
 
   /// Tareas de un día. Pasado: lo que se hizo ese día. Hoy: lo hecho hoy, lo que toca

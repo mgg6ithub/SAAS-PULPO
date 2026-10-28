@@ -1912,8 +1912,12 @@ class BarraSeleccion extends StatelessWidget {
   final int seleccionados, total;
   final String nombre; // en plural: "trabajadores", "clientes"
   final VoidCallback onTodos, onEliminar, onSalir;
+
+  /// Acciones propias de lo que se selecciona (trabajos, trabajadores, clientes), antes de «Eliminar».
+  final List<Widget> acciones;
   const BarraSeleccion({
     super.key,
+    this.acciones = const [],
     required this.seleccionados,
     required this.total,
     required this.nombre,
@@ -1944,6 +1948,7 @@ class BarraSeleccion extends StatelessWidget {
             child: Text(seleccionados == total && total > 0 ? 'Ninguno' : 'Seleccionar todo'),
           ),
           const SizedBox(width: 4),
+          ...acciones,
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: P.rojo),
             onPressed: seleccionados == 0 ? null : onEliminar,
