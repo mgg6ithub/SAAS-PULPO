@@ -507,7 +507,7 @@ class Store extends ChangeNotifier {
     final diasSimulados = fechaFin.difference(fechaInicio).inDays + 1;
     if (equipo < 0 ||
         equipo > 100 ||
-        cuentas < 1 ||
+        cuentas < 0 ||
         cuentas > 200 ||
         cantidadTareas < 0 ||
         cantidadTareas > 1000 ||
@@ -555,7 +555,7 @@ class Store extends ChangeNotifier {
       t
         ..id = 'd$i'
         ..plantilla = false
-        ..clienteId = clientes[i % cuentas].id
+        ..clienteId = cuentas == 0 ? null : clientes[i % cuentas].id
         ..proximo = diaSimulado
         ..inicioMin = horaSimulada
         ..duracionMin = permitirSolapes ? 60 : [30, 60, 90, 120][r.nextInt(4)]

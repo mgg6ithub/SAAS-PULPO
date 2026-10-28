@@ -21,7 +21,7 @@ class _Simulaciones extends StatefulWidget {
 class _SimulacionesState extends State<_Simulaciones> {
   final _form = GlobalKey<FormState>();
   static const _nombres = ['Trabajadores', 'Clientes', 'Trabajos'];
-  static const _minimos = [0, 1, 0];
+  static const _minimos = [0, 0, 0];
   static const _maximos = [100, 200, 1000];
   final _valores = [6, 8, 40];
   final _campos = [
