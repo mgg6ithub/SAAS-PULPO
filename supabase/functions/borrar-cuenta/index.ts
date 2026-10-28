@@ -17,7 +17,7 @@ const responder = (estado: number, cuerpo: Record<string, unknown>) =>
 const admin = (ruta: string, init: RequestInit = {}) =>
   fetch(`${URL_BASE}${ruta}`, {
     ...init,
-    headers: { apikey: CLAVE, Authorization: `Bearer ${CLAVE}`, 'Content-Type': 'application/json', ...init.headers },
+    headers: { apikey: CLAVE, 'Content-Type': 'application/json', ...init.headers },
   })
 
 Deno.serve(async (req) => {
