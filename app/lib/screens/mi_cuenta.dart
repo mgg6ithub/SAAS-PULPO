@@ -64,7 +64,12 @@ Future<void> abrirMiCuenta(BuildContext context) async {
     ],
   );
   if (!context.mounted) return;
-  if (elegido == 'ajustes') await abrirAjustes(context);
-  if (elegido == 'invitar') await invitarAdministrador(context);
-  if (elegido == 'salir') await Nube.cerrarSesion();
+  switch (elegido) {
+    case 'ajustes':
+      await abrirAjustes(context);
+    case 'invitar':
+      await invitarAdministrador(context);
+    case 'salir':
+      await Nube.cerrarSesion();
+  }
 }
