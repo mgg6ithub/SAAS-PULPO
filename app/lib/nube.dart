@@ -682,6 +682,9 @@ class Nube {
         'competencias': w.competencias,
         'activo': w.activo,
         'estado_hoy': w.estadoHoy.index,
+        'salida': w.salida,
+        'salida_lat': w.salidaLat,
+        'salida_lng': w.salidaLng,
         'color': w.color,
       };
     }
@@ -709,6 +712,7 @@ class Nube {
         'proximo': _dia(t.proximo),
         'solicitud': _dia(t.solicitud),
         'inicio_min': t.inicioMin,
+        'fijado': t.fijado,
         'ventana_desde_min': t.ventanaDesdeMin,
         'ventana_hasta_min': t.ventanaHastaMin,
         'duracion_min': t.duracionMin,
@@ -816,6 +820,9 @@ Trabajador _trabajador(Map x) => Trabajador(
   competencias: List<String>.from(x['competencias'] as List),
   activo: x['activo'],
   estadoHoy: EstadoHoy.values[x['estado_hoy'] as int],
+  salida: x['salida'] as String? ?? '',
+  salidaLat: (x['salida_lat'] as num?)?.toDouble(),
+  salidaLng: (x['salida_lng'] as num?)?.toDouble(),
   color: (x['color'] as num).toInt(),
 );
 
@@ -852,6 +859,7 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       proximo: _fecha(x['proximo']),
       solicitud: _fecha(x['solicitud']),
       inicioMin: x['inicio_min'],
+      fijado: x['fijado'] as bool? ?? false,
       ventanaDesdeMin: x['ventana_desde_min'],
       ventanaHastaMin: x['ventana_hasta_min'],
       duracionMin: x['duracion_min'],

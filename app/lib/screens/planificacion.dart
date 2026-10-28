@@ -50,6 +50,8 @@ class _PlanificacionState extends State<Planificacion> {
   set vista(int v) => _vista = v;
   DateTime get dia => _dia ??= hoy();
   set dia(DateTime d) => _dia = d;
+
+  /// Mapa al lado del calendario: apagado al entrar al Itinerario; lo enciende su botón.
   late bool mapa = false;
 
   /// Ancho del mapa (se ajusta arrastrando el separador); null = el de por defecto. Va en un
@@ -273,6 +275,7 @@ class _PlanificacionState extends State<Planificacion> {
                   if (vista == 1) const SizedBox(width: 8),
                   // El pulpo: organiza el día que estás viendo.
                   BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = true)),
+                  if (vista == 1) ...[const SizedBox(width: 8), _BotonMapa(mapa, () => setState(() => mapa = !mapa))],
                 ],
               );
               // Con menos de 900 los botones van solo con icono: así caben junto a la fecha sin solaparse.
@@ -290,7 +293,7 @@ class _PlanificacionState extends State<Planificacion> {
               // Calendario y mapa se crean fuera (más arriba): al redimensionar o arrastrar el separador,
               // aquí solo se recoloca la fila con las mismas instancias, sin reconstruirlas.
               builder: (context, box) {
-                final conMapa = false;
+                final conMapa = vista == 1 && mapa && box.maxWidth > 760;
                 final maxMapa = max(260.0, box.maxWidth - 360);
                 // El mapa se monta la primera vez que se muestra y luego ya no se desmonta.
                 if (conMapa) mapaVisto = true;
@@ -301,7 +304,20 @@ class _PlanificacionState extends State<Planificacion> {
                   return Stack(
                     fit: StackFit.expand,
                     children: [
-                      calendario,
+                      // Con el mapa encendido, va debajo del calendario (apilado).
+                      if (vista == 1 && mapa)
+                        Column(
+                          children: [
+                            Expanded(child: calendario),
+                            const SizedBox(height: huecoVista),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12, bottom: 12),
+                              child: SizedBox(height: box.maxHeight * .45, child: mapaVista),
+                            ),
+                          ],
+                        )
+                      else
+                        calendario,
                       if (sinAsignar) Padding(padding: const EdgeInsets.only(right: 12), child: panel),
                     ],
                   );

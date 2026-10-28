@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/models.dart';
+import 'package:pulpo/screens/agenda_vistas.dart';
 import 'package:pulpo/screens/planificacion.dart';
 import 'package:pulpo/screens/vista_dias.dart';
 import 'package:pulpo/store.dart';
@@ -72,6 +73,14 @@ void main() {
       await tester.tap(find.text(nombre));
       await tester.pumpAndSettle();
       expect(find.text('Hoy'), findsWidgets);
+      // El mapa va apagado al entrar; solo en Calendario está su botón.
+      expect(find.byTooltip('Mostrar mapa'), nombre != 'Plan' ? findsOneWidget : findsNothing);
+      if (nombre != 'Plan') {
+        await tester.tap(find.byTooltip('Mostrar mapa'));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(MapaAgenda), findsOneWidget);
+        expect(find.byTooltip('Ocultar mapa'), findsOneWidget);
+      }
     });
   }
 

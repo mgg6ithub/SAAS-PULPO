@@ -237,6 +237,10 @@ class Trabajador {
   EstadoHoy estadoHoy;
   int color;
 
+  /// De dónde sale y adónde vuelve cada día (su casa o la oficina); vacío = el almacén.
+  String salida;
+  double? salidaLat, salidaLng;
+
   Trabajador({
     required this.id,
     this.nombre = '',
@@ -250,6 +254,9 @@ class Trabajador {
     this.activo = true,
     this.estadoHoy = EstadoHoy.disponible,
     this.color = 0,
+    this.salida = '',
+    this.salidaLat,
+    this.salidaLng,
   }) : competencias = competencias ?? [];
 
   String get nombreCompleto => '$nombre $apellidos'.trim();
@@ -267,6 +274,9 @@ class Trabajador {
     'activo': activo,
     'estadoHoy': estadoHoy.index,
     'color': color,
+    'salida': salida,
+    'salidaLat': salidaLat,
+    'salidaLng': salidaLng,
   };
 
   factory Trabajador.fromJson(Map<String, dynamic> j) => Trabajador(
@@ -282,6 +292,9 @@ class Trabajador {
     activo: j['activo'] as bool? ?? true,
     estadoHoy: EstadoHoy.values[j['estadoHoy'] as int? ?? 0],
     color: j['color'] as int? ?? 0,
+    salida: _s(j, 'salida'),
+    salidaLat: (j['salidaLat'] as num?)?.toDouble(),
+    salidaLng: (j['salidaLng'] as num?)?.toDouble(),
   );
 
   Trabajador copia() => Trabajador.fromJson(toJson());
@@ -298,6 +311,9 @@ class Tarea {
 
   /// Hora de inicio el día del próximo mantenimiento, en minutos desde las 00:00 (null = sin hora).
   int? inicioMin;
+
+  /// Fijado a su hora y su técnico: el planificador no lo mueve.
+  bool fijado;
 
   /// Franja horaria en la que se puede hacer (minutos desde las 00:00); null = hora exacta o sin hora.
   int? ventanaDesdeMin, ventanaHastaMin;
@@ -341,6 +357,7 @@ class Tarea {
     this.proximo,
     this.solicitud,
     this.inicioMin,
+    this.fijado = false,
     this.ventanaDesdeMin,
     this.ventanaHastaMin,
     this.duracionMin = 60,
@@ -398,6 +415,7 @@ class Tarea {
     'proximo': _f(proximo),
     'solicitud': _f(solicitud),
     'inicioMin': inicioMin,
+    'fijado': fijado,
     'ventanaDesdeMin': ventanaDesdeMin,
     'ventanaHastaMin': ventanaHastaMin,
     'duracionMin': duracionMin,
@@ -431,6 +449,7 @@ class Tarea {
     proximo: _d(j, 'proximo'),
     solicitud: _d(j, 'solicitud'),
     inicioMin: j['inicioMin'] as int?,
+    fijado: j['fijado'] as bool? ?? false,
     ventanaDesdeMin: j['ventanaDesdeMin'] as int?,
     ventanaHastaMin: j['ventanaHastaMin'] as int?,
     duracionMin: j['duracionMin'] as int? ?? 60,

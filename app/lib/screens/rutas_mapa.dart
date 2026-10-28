@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:video_player/video_player.dart';
 
 import '../ajustes.dart';
+import '../forms.dart';
 import '../models.dart';
 import '../planificador.dart';
 import '../store.dart';
@@ -51,6 +52,26 @@ class CapaRutas extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Punto de salida propio de cada técnico: su casa u oficina, en su color.
+                    for (final r in plan.rutas.where(
+                      (r) => r.paradas.isNotEmpty && nombreSalida(r.trabajador) == 'Salida',
+                    ))
+                      Marker(
+                        point: salidaDe(r.trabajador),
+                        width: 30,
+                        height: 30,
+                        child: Tooltip(
+                          message: '${r.trabajador.nombreCompleto} · salida y vuelta',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _color(r.trabajador),
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(Icons.home_rounded, size: 15, color: Colors.white),
+                          ),
+                        ),
+                      ),
                     for (final r in plan.rutas)
                       for (final (i, p) in r.paradas.indexed)
                         Marker(
@@ -82,7 +103,11 @@ class CapaRutas extends StatelessWidget {
           ),
   );
 
-  static List<LatLng> _directa(Ruta r) => [almacen, ...r.paradas.map((p) => p.punto), almacen];
+  static List<LatLng> _directa(Ruta r) => [
+    salidaDe(r.trabajador),
+    ...r.paradas.map((p) => p.punto),
+    salidaDe(r.trabajador),
+  ];
 
   Widget _linea(Ruta r, List<LatLng> puntos, {bool punteada = false}) => PolylineLayer(
     polylines: [
@@ -143,7 +168,8 @@ class ControlesRuta extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '${r.trabajador.nombreCompleto} · ${r.paradas.length} paradas · ${r.km.toStringAsFixed(1)} km',
+                          '${r.trabajador.nombreCompleto} · ${r.paradas.length} paradas · ${r.km.toStringAsFixed(1)} km · '
+                          '${duracion(r.minutosViaje)} de viaje',
                           style: const TextStyle(fontSize: 11.5),
                         ),
                       ],
@@ -277,7 +303,7 @@ class _FlujoRuta extends StatelessWidget {
               children: [
                 _caja(
                   Text(
-                    'Almacén\nsalida ${hhmm(inicioJornada)}',
+                    '${nombreSalida(r.trabajador)}\nsalida ${hhmm(inicioJornada)}',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                   P.tinta,
@@ -325,9 +351,15 @@ class _FlujoRuta extends StatelessWidget {
                   ),
                 ],
                 if (r.paradas.isNotEmpty) ...[
-                  _flecha(minutosEntre(r.paradas.last.punto, almacen), kmEntre(r.paradas.last.punto, almacen)),
+                  _flecha(
+                    minutosEntre(r.paradas.last.punto, salidaDe(r.trabajador)),
+                    kmEntre(r.paradas.last.punto, salidaDe(r.trabajador)),
+                  ),
                   _caja(
-                    const Text('Vuelta\nal almacén', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Vuelta\n${nombreSalida(r.trabajador) == 'Salida' ? 'a la salida' : 'al almacén'}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
                     P.tinta,
                     ancho: 100,
                   ),
