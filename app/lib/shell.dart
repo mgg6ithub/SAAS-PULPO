@@ -75,6 +75,9 @@ class _ShellState extends State<Shell> {
     super.dispose();
   }
 
+  /// Menú «Crear» de la barra lateral (la tecla T lo abre).
+  final _crear = MenuController();
+
   /// Ventana abierta con la N: otra N la cierra.
   bool _abiertaConN = false;
 
@@ -95,13 +98,26 @@ class _ShellState extends State<Shell> {
   /// fuera de esta vista). Se ignora al escribir en un campo y con Ctrl/Cmd/Alt. Abre la ventana de nuevo
   /// de la sección; si la abrió una N y sigue arriba (sin un menú o diálogo encima), la cierra.
   bool _tecla(KeyEvent e) {
-    if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.keyN || !mounted) return false;
+    final esT = e.logicalKey == LogicalKeyboardKey.keyT;
+    if (e is! KeyDownEvent || (e.logicalKey != LogicalKeyboardKey.keyN && !esT) || !mounted) return false;
     final teclado = HardwareKeyboard.instance;
     if (teclado.isControlPressed || teclado.isMetaPressed || teclado.isAltPressed) return false;
     final foco = primaryFocus?.context;
     if (foco?.findAncestorStateOfType<EditableTextState>() != null) return false;
     final arriba = foco == null ? null : ModalRoute.of(foco);
     final aqui = ModalRoute.of(context);
+    // T abre (o cierra) el menú «Crear» de la barra lateral, en cualquier vista.
+    if (esT) {
+      if (_crear.isOpen) {
+        _crear.close();
+        return true;
+      }
+      if (arriba == null || arriba == aqui) {
+        _crear.open();
+        return true;
+      }
+      return false;
+    }
     if (_abiertaConN && arriba != null && arriba != aqui && arriba.settings.name == rutaPanel) {
       Navigator.of(context).pop();
       return true;
@@ -128,7 +144,7 @@ class _ShellState extends State<Shell> {
           children: [
             ListenableBuilder(
               listenable: Listenable.merge([store, ajustes.cambioBarra]),
-              builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir),
+              builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir, crear: _crear),
             ),
             Expanded(
               child: RepaintBoundary(
@@ -270,21 +286,20 @@ class _CapaState extends State<_Capa> with SingleTickerProviderStateMixin {
 /// iconos, queda un botón con el plus.
 class _BotonCrear extends StatefulWidget {
   final bool compacto;
-  const _BotonCrear({required this.compacto});
+  final MenuController menu;
+  const _BotonCrear({required this.compacto, required this.menu});
 
   @override
   State<_BotonCrear> createState() => _BotonCrearState();
 }
 
 class _BotonCrearState extends State<_BotonCrear> {
-  final _menu = MenuController();
-
   @override
   Widget build(BuildContext context) {
     // Se despliega hacia la derecha del plus; en ventanas estrechas, debajo.
     final alLado = MediaQuery.sizeOf(context).width >= 700;
     return MenuAnchor(
-      controller: _menu,
+      controller: widget.menu,
       alignmentOffset: alLado ? const Offset(8, 0) : const Offset(0, 4),
       style: MenuStyle(
         alignment: alLado ? AlignmentDirectional.topEnd : null,
@@ -294,7 +309,7 @@ class _BotonCrearState extends State<_BotonCrear> {
       ),
       menuChildren: [
         _FilaCrear(
-          cerrar: _menu.close,
+          cerrar: widget.menu.close,
           opciones: [
             (Icons.apartment_outlined, 'Cliente', () => abrirClienteForm(context)),
             (Icons.handyman_outlined, 'Trabajo', () => abrirTareaForm(context, null)),
@@ -319,13 +334,31 @@ class _BotonCrearState extends State<_BotonCrear> {
                   onPressed: () => menu.isOpen ? menu.close() : menu.open(),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: [Icon(Icons.add_rounded, size: 20), SizedBox(width: 6), Text('Crear')],
+                    children: [
+                      Icon(Icons.add_rounded, size: 20),
+                      SizedBox(width: 6),
+                      Text('Crear'),
+                      SizedBox(width: 10),
+                      _TeclaT(),
+                    ],
                   ),
                 ),
         ),
       ),
     );
   }
+}
+
+/// La «T» pequeña del botón Crear (como la «N» de los botones de «Nuevo»).
+class _TeclaT extends StatelessWidget {
+  const _TeclaT();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    decoration: BoxDecoration(color: Colors.white.withValues(alpha: .2), borderRadius: BorderRadius.circular(4)),
+    child: const Text('T', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+  );
 }
 
 /// Las opciones de «Crear» en fila. La elegida (la primera al abrir; después, la del ratón o las flechas) va en
@@ -377,9 +410,15 @@ class _FilaCrearState extends State<_FilaCrear> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => _abrir(i),
-              child: SizedBox(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
                 width: 84,
                 height: 68,
+                // La sombra suave va solo en la elegida (ratón o flechas).
+                decoration: BoxDecoration(
+                  color: i == elegida ? P.hover : Colors.transparent,
+                  borderRadius: BorderRadius.circular(P.radioControl),
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -410,7 +449,8 @@ class _Barra extends StatefulWidget {
   final Seccion seccion;
   final bool compacta;
   final ValueChanged<Seccion> onTap;
-  const _Barra({required this.seccion, required this.compacta, required this.onTap});
+  final MenuController crear;
+  const _Barra({required this.seccion, required this.compacta, required this.onTap, required this.crear});
 
   @override
   State<_Barra> createState() => _BarraState();
@@ -524,7 +564,7 @@ class _BarraState extends State<_Barra> {
                   const SizedBox(height: 10),
                 ] else
                   const SizedBox(height: 18),
-                _BotonCrear(compacto: iconos),
+                _BotonCrear(compacto: iconos, menu: widget.crear),
                 SizedBox(height: iconos ? 10 : 14),
                 _menu(vencidas),
                 const SizedBox(height: 14),
