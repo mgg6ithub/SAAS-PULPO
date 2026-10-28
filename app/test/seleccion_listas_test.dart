@@ -22,7 +22,7 @@ void main() {
       final Widget pantalla = switch (nombre) {
         'Clientes' => Clientes(onAbrir: (_) {}),
         'Trabajadores' => Trabajadores(onAbrir: (_) {}),
-        _ => const TareasPagina(),
+        _ => TareasPagina(onAbrir: (_) {}),
       };
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: pantalla)));
       await tester.pumpAndSettle();

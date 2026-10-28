@@ -354,15 +354,19 @@ class _BotonCrearState extends State<_BotonCrear> {
                 )
               : FilledButton(
                   onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_rounded, size: 20),
-                      SizedBox(width: 6),
-                      Text('Crear'),
-                      SizedBox(width: 10),
-                      _TeclaT(),
-                    ],
+                  // FittedBox: mientras la barra se estrecha, el contenido encoge en vez de desbordar.
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 20),
+                        SizedBox(width: 6),
+                        Text('Crear'),
+                        SizedBox(width: 10),
+                        _TeclaT(),
+                      ],
+                    ),
                   ),
                 ),
         ),
