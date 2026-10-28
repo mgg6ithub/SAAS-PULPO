@@ -2,8 +2,11 @@
 // No corre sola: se lanza con `python3 tool/probar_nube.py`, que crea dos cuentas de prueba y las borra al acabar.
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
+import 'package:pulpo/informes.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/nube.dart';
 import 'package:pulpo/store.dart';
@@ -22,6 +25,15 @@ String _tarea(Tarea t) {
     for (final a in [...t.automatizaciones]..sort((x, y) => x.id.compareTo(y.id))) a.toJson(),
   ];
   return _j(m);
+}
+
+/// El JSON sin la foto: en la base la foto pasa a ser una ruta de Storage (se compara aparte con [_mismaFoto]).
+String _sinFoto(Map<String, dynamic> m) => _j({...m}..remove('foto'));
+
+/// La foto guardada en Storage es la misma que se subió en base64.
+Future<void> _mismaFoto(Nube n, String guardada, String original) async {
+  expect(guardada, endsWith('.png'), reason: 'la foto va a Storage');
+  expect(await n.foto(guardada), base64Decode(original));
 }
 
 Future<int> _filas(String tabla) async => (await Supabase.instance.client.from(tabla).select()).length;
@@ -173,8 +185,11 @@ void main() {
         var r = await _recargar();
         expect(await n.envios(trabajo.id), isEmpty, reason: 'el registro de envíos se puede leer');
         expect(_j(r.etiquetas.single.toJson()), _j(etiqueta.toJson()), reason: 'etiqueta');
-        expect(_j(r.clientes.single.toJson()), _j(cliente.toJson()), reason: 'cliente');
-        expect(_j(r.trabajadores.firstWhere((w) => w.id == ana.id).toJson()), _j(ana.toJson()), reason: 'trabajador');
+        expect(_sinFoto(r.clientes.single.toJson()), _sinFoto(cliente.toJson()), reason: 'cliente');
+        await _mismaFoto(n, r.clientes.single.foto, cliente.foto);
+        final rAna = r.trabajadores.firstWhere((w) => w.id == ana.id);
+        expect(_sinFoto(rAna.toJson()), _sinFoto(ana.toJson()), reason: 'trabajador');
+        await _mismaFoto(n, rAna.foto, ana.foto);
         expect(
           _j(r.trabajadores.firstWhere((w) => w.id == luis.id).toJson()),
           _j(luis.toJson()),
@@ -206,7 +221,7 @@ void main() {
         await n.guardado;
         expect(Nube.error.value, isNull);
         r = await _recargar();
-        expect(_j(r.clientes.single.toJson()), _j(cliente.toJson()), reason: 'cliente editado');
+        expect(_sinFoto(r.clientes.single.toJson()), _sinFoto(cliente.toJson()), reason: 'cliente editado');
         expect(_tarea(r.tarea(trabajo.id)!), _tarea(trabajo), reason: 'trabajo editado');
         expect(r.etiquetas, isEmpty);
         expect(r.tarea(subsub.id), isNull);
@@ -312,6 +327,28 @@ void main() {
         sC.marcarHecha(sC.tarea(trabajoP.id)!);
         await nC.guardado;
         expect(Nube.error.value, isNull);
+        // Deja el parte de su trabajo con foto y firma; en un trabajo que no es suyo, no puede.
+        final jpg = Uint8List.fromList(img.encodeJpg(img.Image(width: 8, height: 8)));
+        final png = Uint8List.fromList(img.encodePng(img.Image(width: 8, height: 8)));
+        final parte = await nC.crearInforme(
+          Informe(
+            trabajoId: trabajoP.id,
+            trabajadorId: pepe.id,
+            resultado: 1,
+            notas: 'Correa cambiada',
+            material: 'Correa',
+            minutos: 45,
+            firmante: 'Ana',
+          ),
+          [jpg],
+          png,
+        );
+        expect(parte.fotos.single, endsWith('/0.jpg'));
+        await expectLater(
+          nC.crearInforme(Informe(trabajoId: trabajoQ.id, trabajadorId: pepe.id, resultado: 0, notas: 'x'), [], null),
+          throwsA(anything),
+        );
+        expect((await nC.informes(trabajoP.id)).single.id, parte.id);
         // No puede cambiar nada más del trabajo, ni crear, ni ver lo de otros.
         final db = Supabase.instance.client;
         await expectLater(db.from('trabajos').update({'nombre': 'cambiado'}).eq('id', trabajoP.id), throwsA(anything));
@@ -321,6 +358,8 @@ void main() {
         // La invitación ya está gastada: con otra cuenta no vale.
         await Nube.cerrarSesion();
         await auth.signInWithPassword(email: _env['SB_CORREO_B']!, password: 'prueba-123456');
+        expect(await _filas('informes'), 0, reason: 'otra empresa no ve los partes');
+        expect(await db.storage.from('fotos').list(path: '${n2.empresaId}/informes/${parte.id}'), isEmpty);
         Nube.invitacion = codigoW;
         await expectLater(Nube.abrir(), throwsA(isA<InvitacionNoValida>()));
         await Nube.cerrarSesion();
@@ -337,6 +376,10 @@ void main() {
         expect(sD.clientes.length, 2);
         expect(sD.tarea(trabajoP.id)!.historial, isNotEmpty, reason: 'el socio ve lo que marcó el trabajador');
         expect(sD.tarea(trabajoP.id)!.ultimo, isNotNull);
+        final leido = (await nD.informes(trabajoP.id)).single;
+        expect((leido.material, leido.minutos, leido.firmante, leido.resultado), ('Correa', 45, 'Ana', 1));
+        expect(await nD.foto(leido.fotos.single), jpg);
+        expect(await nD.foto(leido.firma!), png);
         sD.tarea(trabajoQ.id)!.nombre = 'Editado por el socio';
         sD.guardarTarea(sD.tarea(trabajoQ.id)!);
         await nD.guardado;
@@ -353,6 +396,7 @@ void main() {
         expect(sA3.tarea(trabajoP.id)!.historial, isNotEmpty);
         expect(await _filas('invitaciones'), 2);
         expect(await _filas('miembros'), 3);
+        await db.storage.from('fotos').remove([...parte.fotos, parte.firma!]);
         await sA3.vaciarNube();
         // ── El botón de borrar la deja solo con las cuentas ──
         expect(Nube.error.value, isNull);
@@ -363,6 +407,7 @@ void main() {
         expect(await _filas('automatizaciones'), 0);
         expect(await _filas('trabajo_trabajadores'), 0);
         expect(await _filas('trabajo_historial'), 0);
+        expect(await _filas('informes'), 0);
         r = await _recargar();
         expect(r.tareas, isEmpty);
         expect(r.clientes, isEmpty);
