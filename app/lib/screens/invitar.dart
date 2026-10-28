@@ -18,7 +18,7 @@ Future<void> invitarTrabajador(BuildContext context, Trabajador w) => _ventana(
 /// Invitación para un socio: ve y gestiona toda la empresa.
 Future<void> invitarAdministrador(BuildContext context) => _ventana(
   context,
-  titulo: 'Invitar a un administrador',
+  titulo: 'Invitar a un socio',
   texto: 'Verá y gestionará toda la empresa, igual que tú.',
   crear: () => store.nube!.crearInvitacion(rol: 'admin'),
 );

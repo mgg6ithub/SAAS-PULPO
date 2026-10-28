@@ -55,7 +55,7 @@ Future<void> abrirMiCuenta(BuildContext context) async {
       ),
       PopupMenuItem<String>(
         value: 'invitar',
-        child: Text('Invitar a un administrador', style: TextStyle(color: P.texto, fontSize: 13.5)),
+        child: Text('Invitar a un socio', style: TextStyle(color: P.texto, fontSize: 13.5)),
       ),
       PopupMenuItem<String>(
         value: 'salir',
