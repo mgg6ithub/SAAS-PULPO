@@ -10,6 +10,7 @@ import '../widgets.dart';
 import '../forms.dart';
 import 'agenda_herramientas.dart';
 import 'agenda_vistas.dart';
+import 'calendario_trabajos.dart';
 import 'rutas_mapa.dart';
 import 'tarea_card.dart';
 import 'vista_dias.dart';
@@ -65,6 +66,10 @@ class _PlanificacionState extends State<Planificacion> {
 
   /// Panel lateral con los trabajos sin técnico.
   bool sinAsignar = false;
+  ModoCalendario modoCalendario = ModoCalendario.semana;
+  int get escala => vista == 0 ? 0 : switch (modoCalendario) {
+    ModoCalendario.dia => 0, ModoCalendario.semana => 1, ModoCalendario.mes => 2,
+  };
 
   DateTime get lunes => lunesDe(dia);
 
@@ -94,7 +99,7 @@ class _PlanificacionState extends State<Planificacion> {
   }
 
   /// Periodo que se ve ahora (para el mapa y el título).
-  (DateTime, DateTime, String) get periodo => switch (vista) {
+  (DateTime, DateTime, String) get periodo => switch (escala) {
     0 => (dia, dia, diasHasta(dia) == 0 ? 'hoy' : '${diasSemana[dia.weekday - 1].toLowerCase()} ${dia.day}'),
     1 => (lunes, masDias(lunes, 6), 'semana ${rangoSemana(lunes)}'),
     2 => (DateTime(dia.year, dia.month), DateTime(dia.year, dia.month + 1, 0), meses[dia.month - 1].toLowerCase()),
@@ -102,7 +107,7 @@ class _PlanificacionState extends State<Planificacion> {
     _ => (masDias(hoy(), -1), masDias(hoy(), 2), 'de ayer a pasado mañana'),
   };
 
-  String get titulo => switch (vista) {
+  String get titulo => switch (escala) {
     0 => '${diasSemana[dia.weekday - 1]} ${dia.day} de ${meses[dia.month - 1].toLowerCase()}',
     1 => 'Semana del ${rangoSemana(lunes)}',
     _ => '${meses[dia.month - 1]} ${dia.year}',
@@ -112,7 +117,7 @@ class _PlanificacionState extends State<Planificacion> {
   List<String> get titulos {
     final mes = meses[dia.month - 1];
     final corto = mes.substring(0, 3).toLowerCase();
-    return switch (vista) {
+    return switch (escala) {
       0 => [titulo, '${dia.day} de ${mes.toLowerCase()}', '${dia.day} $corto', '${dia.day}'],
       1 => [titulo, rangoSemana(lunes), '${lunes.day} ${meses[lunes.month - 1].substring(0, 3).toLowerCase()}'],
       2 => [titulo, mes, corto],
@@ -122,7 +127,7 @@ class _PlanificacionState extends State<Planificacion> {
   }
 
   void mover(int n) => setState(
-    () => dia = switch (vista) {
+    () => dia = switch (escala) {
       0 => masDias(dia, n),
       1 => masDias(dia, 7 * n),
       _ => DateTime(dia.year, dia.month + n, 1),
@@ -146,10 +151,10 @@ class _PlanificacionState extends State<Planificacion> {
           await abrirTareaForm(context, null, fecha: dia, horaMin: hora);
         },
       ),
-      _ => VistaSemana(
-        lunes,
-        key: ValueKey('semana-$lunes'),
-        onSinAsignar: () => setState(() => sinAsignar = !sinAsignar),
+      _ => CalendarioTrabajos(
+        dia: dia, modo: modoCalendario,
+        onModo: (m) => setState(() => modoCalendario = m),
+        onDia: (d) => setState(() { dia = d; modoCalendario = ModoCalendario.dia; }),
       ),
     };
     final calendario = RepaintBoundary(
@@ -178,8 +183,8 @@ class _PlanificacionState extends State<Planificacion> {
                 children: [
                   ...[
                     NavegadorFecha(
-                      anterior: vista == 0 ? 'Día anterior' : 'Semana anterior',
-                      siguiente: vista == 0 ? 'Día siguiente' : 'Semana siguiente',
+                      anterior: escala == 0 ? 'Día anterior' : escala == 1 ? 'Semana anterior' : 'Mes anterior',
+                      siguiente: escala == 0 ? 'Día siguiente' : escala == 1 ? 'Semana siguiente' : 'Mes siguiente',
                       onAnterior: () => mover(-1),
                       onHoy: () => setState(() => dia = hoy()),
                       onSiguiente: () => mover(1),
