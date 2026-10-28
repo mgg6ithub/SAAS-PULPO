@@ -71,6 +71,9 @@ class VentanaFormulario extends StatefulWidget {
 
   /// Panel fijo dentro de una vista (p. ej. a la derecha del trabajador), no una ventana flotante.
   final bool incrustada;
+
+  /// Incrustada sin cabecera (ni etiqueta ni título): solo los campos y el pie.
+  final bool sinCabecera;
   const VentanaFormulario({
     super.key,
     required this.titulo,
@@ -85,6 +88,7 @@ class VentanaFormulario extends StatefulWidget {
     this.onBorrar,
     this.avisos = const [],
     this.incrustada = false,
+    this.sinCabecera = false,
   });
 
   @override
@@ -122,11 +126,16 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     if (widget.incrustada) {
       return Material(
         color: P.superficie,
-        shape: Border(left: BorderSide(color: P.borde)),
+        clipBehavior: widget.sinCabecera ? Clip.antiAlias : Clip.none,
+        shape: widget.sinCabecera
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: P.borde),
+              )
+            : Border(left: BorderSide(color: P.borde)),
         child: Column(
           children: [
-            _cabecera(),
-            const Divider(),
+            if (!widget.sinCabecera) ...[_cabecera(), const Divider()],
             Expanded(
               child: SingleChildScrollView(
                 controller: scroll,
@@ -1190,8 +1199,12 @@ class TareaForm extends StatefulWidget {
 
   /// Crear una plantilla (sin cliente) en vez de una tarea.
   final bool plantilla;
+
+  /// Dentro de la ficha del trabajo: sin cabecera ni ventana, guarda sin cerrar.
+  final bool incrustada;
   const TareaForm({
     super.key,
+    this.incrustada = false,
     this.original,
     this.clienteId,
     this.plantilla = false,
@@ -1286,7 +1299,13 @@ class _TareaFormState extends State<TareaForm> {
       ..ubicacion = ubicacion.text.trim()
       ..notas = notas.text.trim();
     store.guardarTarea(t);
-    Navigator.pop(context);
+    if (widget.incrustada) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('${t.nombre} guardado')));
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -1302,6 +1321,8 @@ class _TareaFormState extends State<TareaForm> {
           ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
           : store.cliente(t.clienteId)?.nombre,
       bajoBotones: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
+      incrustada: widget.incrustada,
+      sinCabecera: widget.incrustada,
       onGuardar: guardar,
       avisos: [
         if (error != null) ('Te falta el nombre', () => _irA(_claveNombre)),
@@ -1314,11 +1335,20 @@ class _TareaFormState extends State<TareaForm> {
               final nav = Navigator.of(context);
               if (await confirmar(context, '¿Eliminar "${t.nombre}"?')) {
                 store.borrarTarea(t.id);
-                nav.pop();
+                if (!widget.incrustada) nav.pop();
               }
             },
       // Mismo esquema que cliente y trabajador: bloques con su título a la izquierda y los campos a la derecha.
       campos: [
+        // Sin cabecera no hay sitio para la criticidad: va arriba a la derecha de los campos.
+        if (widget.incrustada)
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
+            ),
+          ),
         Bloque(
           t.esPlantilla ? 'Plantilla' : 'Trabajo',
           primero: true,
