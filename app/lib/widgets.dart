@@ -1125,7 +1125,11 @@ class Col {
 
   /// Contenido propio de la cabecera en vez del título (p. ej. el botón de seleccionar).
   final Widget? cabecera;
-  const Col(this.titulo, {this.flex = 1, this.ancho, this.derecha = false, this.cabecera});
+
+  /// Texto al pasar el ratón por la cabecera (por defecto, «Arrastrar para intercambiar…»); sirve para
+  /// columnas con título abreviado.
+  final String? ayuda;
+  const Col(this.titulo, {this.flex = 1, this.ancho, this.derecha = false, this.cabecera, this.ayuda});
 }
 
 /// Tabla densa: cabecera gris pequeña, filas de ~56 px, sin rejilla y con la fila resaltada al pasar
@@ -1233,6 +1237,7 @@ class _TablaState extends State<Tabla> {
                                       ),
                                       child: _TituloColumna(
                                         titulo: c.titulo,
+                                        ayuda: c.ayuda,
                                         derecha: c.derecha,
                                         onIntercambiar: (origen) => setState(() {
                                           final desde = _orden.indexOf(origen);
@@ -1339,7 +1344,8 @@ class _TituloColumna extends StatefulWidget {
   final String titulo;
   final bool derecha;
   final ValueChanged<String> onIntercambiar;
-  const _TituloColumna({required this.titulo, required this.derecha, required this.onIntercambiar});
+  final String? ayuda;
+  const _TituloColumna({required this.titulo, required this.derecha, required this.onIntercambiar, this.ayuda});
 
   @override
   State<_TituloColumna> createState() => _TituloColumnaState();
@@ -1375,7 +1381,7 @@ class _TituloColumnaState extends State<_TituloColumna> {
         ),
         childWhenDragging: Opacity(opacity: .35, child: _contenido(false)),
         child: Tooltip(
-          message: 'Arrastrar para intercambiar ${widget.titulo}',
+          message: widget.ayuda ?? 'Arrastrar para intercambiar ${widget.titulo}',
           child: Semantics(
             label: 'Columna ${widget.titulo}, arrastrar para intercambiar',
             child: AnimatedContainer(

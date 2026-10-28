@@ -113,12 +113,12 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Equipo / trabajo', flex: 4),
             if (medio && widget.conCliente) const Col('Cliente', flex: 3),
-            if (medio) const Col('Subtrabajos', ancho: 100),
             if (ancho) const Col('Periodicidad', flex: 2),
-            const Col('Fecha', flex: 2),
-            if (ancho) const Col('Horario', flex: 2),
-            if (medio) const Col('Asignado a', ancho: 120),
-            const Col('Estado', ancho: 150, derecha: true),
+            const Col('Fecha y hora', flex: 3),
+            if (medio) const Col('Asignado a', ancho: 96),
+            const Col('Estado', ancho: 140, derecha: true),
+            // Solo si algún trabajo de la lista tiene subtrabajos; al final y abreviada.
+            if (medio && ts.any((t) => store.hijas(t.id).isNotEmpty)) const Col('Sub', ancho: 60, ayuda: 'Subtrabajos'),
           ],
           filas: ts.length,
           onTap: (i) {
@@ -173,7 +173,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                           Flexible(child: celdaTexto(c.nombre)),
                         ],
                       ),
-              if (medio) _subtrabajos(t),
               if (ancho) celdaTexto(t.periodicidad.etiqueta),
               t.proximo == null
                   ? celdaTexto('', suave: true)
@@ -188,15 +187,20 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                             fontWeight: vencida ? FontWeight.w600 : FontWeight.w400,
                           ),
                         ),
-                        Text(relativo(t.proximo!), style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
+                        Text(
+                          [relativo(t.proximo!), ?t.horario].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11.5, color: P.textoSuave),
+                        ),
                       ],
                     ),
-              if (ancho) celdaTexto(t.horario ?? '', suave: true),
               if (medio)
                 t.esPlantilla
                     ? const SizedBox()
                     : SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: true),
               t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
+              if (medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
             ];
           },
         ),

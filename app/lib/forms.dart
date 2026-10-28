@@ -1869,18 +1869,23 @@ class _CajaMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     borderRadius: BorderRadius.circular(8),
+    hoverColor: compacta ? P.hover : null,
     onTap: onTap,
     child: Container(
       constraints: BoxConstraints(minHeight: compacta ? 32 : 46),
       padding: compacta
           ? const EdgeInsets.symmetric(horizontal: 6, vertical: 3)
           : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: P.superficie,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: abierto ? P.morado : P.borde, width: abierto ? 1.6 : 1),
-      ),
+      // En listas, sin recuadro: basta el contenido y el doble chevron.
+      decoration: compacta
+          ? null
+          : BoxDecoration(
+              color: P.superficie,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: abierto ? P.morado : P.borde, width: abierto ? 1.6 : 1),
+            ),
       child: Row(
+        mainAxisSize: compacta ? MainAxisSize.min : MainAxisSize.max,
         children: [
           compacta ? Flexible(child: child) : Expanded(child: child),
           if (compacta) const SizedBox(width: 2),
