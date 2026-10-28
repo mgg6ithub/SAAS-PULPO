@@ -123,22 +123,30 @@ class _Resumen extends StatelessWidget {
   /// Cifras y, en la misma tarjeta, a quién está asignado (se puede cambiar desde aquí).
   Widget _resumen() => Tarjeta(
     padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-    child: Wrap(
-      spacing: 28,
-      runSpacing: 10,
-      crossAxisAlignment: WrapCrossAlignment.end,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _cifra(
-          'Próximo',
-          t.proximo == null ? '—' : relativo(t.proximo!),
-          t.proximo == null ? 'sin fecha' : fecha(t.proximo),
+        // Las cifras a la izquierda; el espacio sobrante las separa del asignado, arriba a la derecha.
+        Expanded(
+          child: Wrap(
+            spacing: 28,
+            runSpacing: 10,
+            children: [
+              _cifra(
+                'Próximo',
+                t.proximo == null ? '—' : relativo(t.proximo!),
+                t.proximo == null ? 'sin fecha' : fecha(t.proximo),
+              ),
+              _cifra(
+                'Último',
+                t.ultimo == null ? '—' : relativo(t.ultimo!),
+                t.ultimo == null ? 'sin registros' : fecha(t.ultimo),
+              ),
+              _cifra('Periodicidad', t.periodicidad.etiqueta, t.horario ?? 'sin hora'),
+            ],
+          ),
         ),
-        _cifra(
-          'Último',
-          t.ultimo == null ? '—' : relativo(t.ultimo!),
-          t.ultimo == null ? 'sin registros' : fecha(t.ultimo),
-        ),
-        _cifra('Periodicidad', t.periodicidad.etiqueta, t.horario ?? 'sin hora'),
+        const SizedBox(width: 16),
         SizedBox(
           width: 170,
           child: Column(
