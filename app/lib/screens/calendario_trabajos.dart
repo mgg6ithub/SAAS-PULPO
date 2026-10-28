@@ -515,19 +515,19 @@ class _DiaCalendario extends StatefulWidget {
 }
 
 class _DiaCalendarioState extends State<_DiaCalendario> {
-  static const hora = 130.0, lateralFijo = 180.0;
+  static const hora = 130.0;
   final horizontal = ScrollController(initialScrollOffset: 7.5 * hora);
-  final desplazamiento = ValueNotifier<double>(7.5 * hora);
   final vertical = ScrollController();
-  List<({String nombre, String? id, List<VisitaCalendario> visitas, bool sinHora})> filas = [];
+  List<
+    ({String nombre, String? id, List<VisitaCalendario> visitas, bool sinHora})
+  >
+  filas = [];
   @override
   void initState() {
     super.initState();
-    horizontal.addListener(_scroll);
     _filas();
   }
 
-  void _scroll() => desplazamiento.value = horizontal.offset;
   @override
   void didUpdateWidget(_DiaCalendario old) {
     super.didUpdateWidget(old);
@@ -541,28 +541,51 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
       equipos[w.id] = [];
     }
     for (final v in widget.visitas) {
-      final ids = v.tarea.trabajadorIds.where((id) => store.trabajador(id) != null).toList();
+      final ids = v.tarea.trabajadorIds
+          .where((id) => store.trabajador(id) != null)
+          .toList();
       for (final id in ids.isEmpty ? [''] : ids) {
         (equipos[id] ??= []).add(v);
       }
     }
     for (final e in equipos.entries) {
-      final nombre = e.key.isEmpty ? 'Sin asignar' : store.trabajador(e.key)!.nombreCompleto;
+      if (e.value.isEmpty) continue;
+      final nombre = e.key.isEmpty
+          ? 'Sin asignar'
+          : store.trabajador(e.key)!.nombreCompleto;
       final sinHora = e.value.where((v) => v.inicio == null).toList();
       for (final v in sinHora) {
-        filas.add((nombre: nombre, id: e.key.isEmpty ? null : e.key, visitas: [v], sinHora: true));
+        filas.add((
+          nombre: nombre,
+          id: e.key.isEmpty ? null : e.key,
+          visitas: [v],
+          sinHora: true,
+        ));
       }
       final grupos = distribuirVisitas(e.value, minimoMin: 30);
       final cantidad = grupos.fold(0, (n, g) => max(n, g.carriles));
-      final carriles = List.generate(max(1, cantidad), (_) => <VisitaCalendario>[]);
+      final carriles = List.generate(
+        max(1, cantidad),
+        (_) => <VisitaCalendario>[],
+      );
       for (final g in grupos) {
         for (final (v, c) in g.posiciones) {
           carriles[c].add(v);
         }
       }
       for (final carril in carriles) {
-        filas.add((nombre: nombre, id: e.key.isEmpty ? null : e.key, visitas: carril, sinHora: false));
+        if (carril.isNotEmpty) {
+          filas.add((
+            nombre: nombre,
+            id: e.key.isEmpty ? null : e.key,
+            visitas: carril,
+            sinHora: false,
+          ));
+        }
       }
+    }
+    if (filas.isEmpty) {
+      filas.add((nombre: '', id: null, visitas: [], sinHora: false));
     }
   }
 
@@ -570,167 +593,111 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
   void dispose() {
     horizontal.dispose();
     vertical.dispose();
-    desplazamiento.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      const lateral = lateralFijo;
       final escala = MediaQuery.textScalerOf(context).scale(1);
       final alto = 76.0 * escala;
-      return Column(
-        children: [
-          SizedBox(
-            height: 50,
-            child: Row(
+      return Scrollbar(
+        controller: horizontal,
+        thumbVisibility: true,
+        scrollbarOrientation: ScrollbarOrientation.bottom,
+        child: SingleChildScrollView(
+          controller: horizontal,
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: max(box.maxWidth, 24 * hora),
+            height: box.maxHeight,
+            child: Column(
               children: [
                 SizedBox(
-                  width: lateral,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(
-                      'Equipo',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: P.textoSuave),
-                    ),
+                  height: 50,
+                  child: Row(
+                    children: [
+                      for (var h = 0; h < 24; h++)
+                        SizedBox(
+                          width: hora,
+                          child: Text(
+                            '${h.toString().padLeft(2, '0')}:00',
+                            style: TextStyle(fontSize: 12, color: P.textoSuave),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Expanded(
                   child: Scrollbar(
-                    controller: horizontal,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: horizontal,
-                      scrollDirection: Axis.horizontal,
-                      physics: const ClampingScrollPhysics(),
-                      child: SizedBox(
-                        width: max(box.maxWidth - lateral, 24 * hora),
-                        child: Row(
-                          children: [
-                            for (var h = 0; h < 24; h++)
-                              SizedBox(
-                                width: hora,
-                                child: Text(
-                                  '${h.toString().padLeft(2, '0')}:00',
-                                  style: TextStyle(fontSize: 12, color: P.textoSuave),
+                    controller: vertical,
+                    child: ListView.builder(
+                      controller: vertical,
+                      itemExtent: alto,
+                      itemCount: filas.length,
+                      itemBuilder: (context, i) {
+                        final f = filas[i];
+                        return SizedBox(
+                          width: 24 * hora,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: _RejillaCalendario(
+                                    horizontal: true,
+                                    unidad: hora,
+                                    actual:
+                                        DateUtils.isSameDay(widget.dia, hoy())
+                                        ? 0
+                                        : -1,
+                                  ),
                                 ),
                               ),
-                          ],
-                        ),
-                      ),
+                              Positioned.fill(
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTapUp: (e) => abrirTareaForm(
+                                    context,
+                                    null,
+                                    fecha: widget.dia,
+                                    trabajadorId: f.id,
+                                    horaMin:
+                                        ((e.localPosition.dx / hora * 60) ~/
+                                                15 *
+                                                15)
+                                            .clamp(0, 1425),
+                                  ),
+                                ),
+                              ),
+                              for (final v in f.visitas)
+                                Positioned(
+                                  left: f.sinHora
+                                      ? 6
+                                      : v.inicio! / 60 * hora + 2,
+                                  top: 7,
+                                  height: alto - 14,
+                                  width: f.sinHora
+                                      ? max(40, 24 * hora - 12)
+                                      : max(
+                                          hora / 2 - 4,
+                                          (v.fin! - v.inicio!) / 60 * hora - 4,
+                                        ),
+                                  child: _EventoCalendario(
+                                    v,
+                                    onDetalle: widget.onDetalle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: Scrollbar(
-              controller: vertical,
-              child: ListView.builder(
-                controller: vertical,
-                itemExtent: alto,
-                itemCount: filas.length,
-                itemBuilder: (context, i) {
-                  final f = filas[i];
-                  final primero = i == 0 || filas[i - 1].id != f.id;
-                  return Row(
-                    children: [
-                      Container(
-                        width: lateral,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: P.cabeceraTabla,
-                          border: Border(top: BorderSide(color: P.borde)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              f.nombre,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: primero ? FontWeight.w600 : FontWeight.w400,
-                                color: primero ? P.texto : P.textoSuave,
-                              ),
-                            ),
-                            if (f.sinHora)
-                              Text(
-                                'Sin hora',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 10, color: P.textoSuave),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: ClipRect(
-                          child: ValueListenableBuilder<double>(
-                            valueListenable: desplazamiento,
-                            builder: (context, offset, _) => LayoutBuilder(
-                              builder: (context, espacio) => Stack(
-                                children: [
-                                  Positioned(
-                                    left: 0,
-                                    top: 0,
-                                    bottom: 0,
-                                    width: 24 * hora,
-                                    child: CustomPaint(
-                                      painter: _RejillaCalendario(
-                                        horizontal: true,
-                                        unidad: hora,
-                                        offset: offset,
-                                        actual: DateUtils.isSameDay(widget.dia, hoy()) ? 0 : -1,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    left: 0,
-                                    top: 0,
-                                    bottom: 0,
-                                    width: 24 * hora,
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.translucent,
-                                      onTapUp: (e) => abrirTareaForm(
-                                        context,
-                                        null,
-                                        fecha: widget.dia,
-                                        trabajadorId: f.id,
-                                        horaMin: ((e.localPosition.dx / hora * 60) ~/ 15 * 15).clamp(0, 1425),
-                                      ),
-                                    ),
-                                  ),
-                                  for (final v in f.visitas)
-                                    if (f.sinHora ||
-                                        (v.inicio! / 60 * hora < offset + espacio.maxWidth &&
-                                            v.fin! / 60 * hora > offset))
-                                      Positioned(
-                                        left: f.sinHora ? 6 : v.inicio! / 60 * hora + 2,
-                                        top: 7,
-                                        height: alto - 14,
-                                        width: f.sinHora
-                                            ? max(40, 24 * hora - 12)
-                                            : max(hora / 2 - 4, (v.fin! - v.inicio!) / 60 * hora - 4),
-                                        child: _EventoCalendario(v, onDetalle: widget.onDetalle),
-                                      ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
+        ),
       );
     },
   );
@@ -738,7 +705,7 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
 
 class _RejillaCalendario extends CustomPainter {
   final bool horizontal;
-  final double unidad, margen, offset;
+  final double unidad, margen;
   final int divisiones, actual;
   final Color fondo = P.fondo, borde = P.borde, rojo = P.rojo;
   final DateTime ahora = DateTime.now();
@@ -746,7 +713,6 @@ class _RejillaCalendario extends CustomPainter {
     required this.horizontal,
     required this.unidad,
     this.margen = 0,
-    this.offset = 0,
     this.divisiones = 1,
     this.actual = -1,
   });
@@ -754,15 +720,15 @@ class _RejillaCalendario extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final p = Paint()..color = fondo;
     if (horizontal) {
-      canvas.drawRect(Rect.fromLTRB(0, 0, max(0, 8 * unidad - offset), size.height), p);
-      canvas.drawRect(Rect.fromLTRB(max(0, 17 * unidad - offset), 0, size.width, size.height), p);
+      canvas.drawRect(Rect.fromLTRB(0, 0, 8 * unidad, size.height), p);
+      canvas.drawRect(Rect.fromLTRB(17 * unidad, 0, size.width, size.height), p);
       for (var h = 0; h <= 24; h++) {
-        final x = h * unidad - offset;
+        final x = h * unidad;
         canvas.drawLine(Offset(x, 0), Offset(x, size.height), Paint()..color = borde);
       }
       canvas.drawLine(Offset.zero, Offset(size.width, 0), Paint()..color = borde);
       if (actual >= 0) {
-        final x = (ahora.hour + ahora.minute / 60) * unidad - offset;
+        final x = (ahora.hour + ahora.minute / 60) * unidad;
         canvas.drawLine(
           Offset(x, 0),
           Offset(x, size.height),
@@ -807,7 +773,6 @@ class _RejillaCalendario extends CustomPainter {
       horizontal != old.horizontal ||
       unidad != old.unidad ||
       margen != old.margen ||
-      offset != old.offset ||
       divisiones != old.divisiones ||
       actual != old.actual ||
       fondo != old.fondo ||

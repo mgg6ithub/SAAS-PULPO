@@ -18,8 +18,8 @@ Future<void> main() async {
   if (oscuro != null)
     ajustes.tema = oscuro == '1' ? ThemeMode.dark : ThemeMode.light;
   await store.cargar();
-  // La rama de revisión del calendario abre con veinte trabajos simultáneos para verificar el día.
-  if (Uri.base.queryParameters['calendarioDemo'] == '1') {
+  // La rama de revisión abre con veinte trabajos simultáneos; ?calendarioDemo=0 los desactiva.
+  if (Uri.base.queryParameters['calendarioDemo'] != '0') {
     store.cargarSimulacion(
       equipo: 1,
       cuentas: 20,
