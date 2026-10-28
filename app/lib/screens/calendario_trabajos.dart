@@ -173,7 +173,12 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
                             ),
                           ),
                           Expanded(
-                            child: TareaDetalle(key: ValueKey(detalle), tareaId: detalle!, onVolver: _cerrar),
+                            child: TareaDetalle(
+                              key: ValueKey(detalle),
+                              tareaId: detalle!,
+                              onVolver: _cerrar,
+                              onAbrir: _detalle,
+                            ),
                           ),
                         ],
                       ),
