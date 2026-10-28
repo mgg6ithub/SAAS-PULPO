@@ -7,6 +7,7 @@ import 'package:pulpo/screens/resumen.dart';
 import 'package:pulpo/screens/tareas.dart';
 import 'package:pulpo/screens/trabajador_detalle.dart';
 import 'package:pulpo/screens/trabajadores.dart';
+import 'package:pulpo/shell.dart';
 import 'package:pulpo/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,6 +20,7 @@ void main() {
   });
 
   final pantallas = <String, Widget Function()>{
+    'Shell': () => const Shell(),
     'Inicio': () => Resumen(onIr: (_) {}, onTrabajador: (_) {}),
     'Clientes': () => Clientes(onAbrir: (_) {}),
     'Trabajadores': () => Trabajadores(onAbrir: (_) {}),
