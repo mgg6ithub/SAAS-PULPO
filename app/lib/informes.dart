@@ -151,6 +151,7 @@ class Informes extends ChangeNotifier {
         );
         _sinSubir!.remove(x);
         await _apuntar();
+        unawaited(_mandarParte(n, g));
         final l = _de[g.trabajoId];
         if (l != null) _de[g.trabajoId] = [g, ...l.where((i) => i.id != g.id)];
         cambio = true;
@@ -163,6 +164,18 @@ class Informes extends ChangeNotifier {
     }
     Nube.subiendo.value = null;
     if (cambio) notifyListeners();
+  }
+
+  /// Manda el PDF del parte recién subido al cliente (si tiene correo, lo decide la función). Si falla no se
+  /// avisa: el parte ya está guardado y se puede descargar desde el Histórico.
+  Future<void> _mandarParte(Nube n, Informe g) async {
+    final t = store.tarea(g.trabajoId);
+    if (t == null) return;
+    try {
+      await n.enviarParte(g.id, await informePdf(g, t));
+    } catch (e) {
+      debugPrint('Pulpo: no se pudo mandar el parte al cliente: $e');
+    }
   }
 
   /// Informes del trabajo, el más reciente primero (null = cargando).
@@ -221,6 +234,7 @@ class Informes extends ChangeNotifier {
       try {
         final g = await n.crearInforme(i, fotos, firma, id: id);
         if (_de[i.trabajoId] != null) _de[i.trabajoId] = [g, ..._de[i.trabajoId]!];
+        unawaited(_mandarParte(n, g));
       } catch (e) {
         if (!Nube.sinConexion(e)) rethrow;
         (await _apuntados()).add({

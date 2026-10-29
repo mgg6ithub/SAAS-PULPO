@@ -199,6 +199,9 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
   String? _aviso;
   bool _avisoMalo = true;
 
+  /// Correo de una cuenta creada que aún no se ha confirmado: deja reenviar el correo.
+  String? _porConfirmar;
+
   @override
   void dispose() {
     _correo.dispose();
@@ -219,6 +222,20 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     try {
       await Nube.recuperarClave(correo);
       _ponerAviso('Si hay una cuenta con ese correo, te llegará un enlace para poner otra contraseña.', malo: false);
+    } on AuthException catch (e) {
+      _ponerAviso(_traducir(e.message));
+    } catch (_) {
+      _ponerAviso('No se pudo conectar. Comprueba la conexión.');
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  Future<void> _reenviar() async {
+    setState(() => _enviando = true);
+    try {
+      await Nube.reenviarConfirmacion(_porConfirmar!);
+      _ponerAviso('Te lo hemos vuelto a enviar.', malo: false);
     } on AuthException catch (e) {
       _ponerAviso(_traducir(e.message));
     } catch (_) {
@@ -252,12 +269,13 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     final auth = Supabase.instance.client.auth;
     try {
       if (_nueva) {
-        final r = await auth.signUp(email: correo, password: _clave.text);
+        final r = await Nube.crearCuenta(correo, _clave.text);
         if (r.session == null && mounted) {
           setState(() {
-            _aviso = 'Te hemos enviado un correo para confirmar la cuenta. Después, entra.';
+            _aviso = 'Revisa tu correo y confirma la cuenta. Después, entra.';
             _avisoMalo = false;
             _nueva = false;
+            _porConfirmar = correo;
           });
         }
       } else {
@@ -268,6 +286,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         setState(() {
           _aviso = _traducir(e.message);
           _avisoMalo = true;
+          if (e.message.toLowerCase().contains('not confirmed')) _porConfirmar = correo;
         });
       }
     } catch (_) {
@@ -342,6 +361,8 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         child: Text(_nueva ? 'Ya tengo cuenta' : 'Crear una cuenta'),
       ),
       if (!_nueva) TextButton(onPressed: _enviando ? null : _recuperar, child: const Text('¿Olvidaste la contraseña?')),
+      if (!_nueva && _porConfirmar != null)
+        TextButton(onPressed: _enviando ? null : _reenviar, child: const Text('Reenviar el correo de confirmación')),
     ],
   );
 }

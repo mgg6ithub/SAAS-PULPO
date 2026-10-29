@@ -255,6 +255,10 @@ class Nube {
     );
   }
 
+  /// Manda al cliente el PDF del parte (función `enviar-parte`); la función no lo repite si ya se mandó.
+  Future<void> enviarParte(String informeId, Uint8List pdf) =>
+      _db.functions.invoke('enviar-parte', body: {'informe_id': informeId, 'pdf': base64Encode(pdf)});
+
   // ── Documentos de los equipos ──
 
   static const _bucketDocumentos = 'documentos';
@@ -352,6 +356,14 @@ class Nube {
 
   /// Manda el correo de «olvidé mi contraseña»; el enlace vuelve a la app para poner una nueva.
   static Future<void> recuperarClave(String correo) => _db.auth.resetPasswordForEmail(correo, redirectTo: _aqui());
+
+  /// Crea la cuenta; el enlace del correo de confirmación vuelve a esta misma dirección de la app.
+  static Future<AuthResponse> crearCuenta(String correo, String clave) =>
+      _db.auth.signUp(email: correo, password: clave, emailRedirectTo: _aqui());
+
+  /// Vuelve a mandar el correo de confirmar la cuenta.
+  static Future<void> reenviarConfirmacion(String correo) =>
+      _db.auth.resend(type: OtpType.signup, email: correo, emailRedirectTo: _aqui());
 
   static String _aqui() => Uri.base.removeFragment().replace(queryParameters: {}).toString();
 
