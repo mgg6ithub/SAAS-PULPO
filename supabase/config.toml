@@ -422,3 +422,7 @@ verify_jwt = false
 [functions.borrar-cuenta]
 # Comprueba ella misma el token del usuario (llama a /auth/v1/user); así funciona con las claves nuevas.
 verify_jwt = false
+
+[functions.enviar-parte]
+# Comprueba ella misma el token del usuario (lee el informe con él); así funciona con las claves nuevas.
+verify_jwt = false
