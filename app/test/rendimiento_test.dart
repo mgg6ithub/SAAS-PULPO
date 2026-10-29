@@ -66,6 +66,9 @@ void main() {
       }
     });
     informe('arrastrar barra (${sw.elapsedMilliseconds} ms)', c, 30);
+    // La guía de Organizar sigue al botón sin reconstruir el Plan (antes ~900 rebuilds/frame).
+    expect(c.values.fold(0, (a, b) => a + b) / 30, lessThan(60));
+    expect(find.bySemanticsLabel(RegExp('Pulsa Organizar')), findsOneWidget);
     await g.up();
     await tester.pumpAndSettle();
 
