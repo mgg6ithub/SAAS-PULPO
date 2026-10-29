@@ -5,13 +5,17 @@ import '../forms.dart';
 import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets.dart';
+import 'accesos.dart';
+import 'invitar.dart';
 
 /// Ventanas de la cuenta (DEV-018): perfil, correo, contraseña, sesiones y borrar la cuenta; datos de la empresa,
 /// crear otra y borrarla.
 
 Future<void> abrirCuenta(BuildContext context) => abrirPanel(context, const CuentaForm());
 
-Future<void> abrirEmpresa(BuildContext context) => abrirPanel(context, const EmpresaForm());
+/// Datos de una empresa de la cuenta (la abierta si no se dice cuál).
+Future<void> abrirEmpresa(BuildContext context, [String? id]) => abrirPanel(context, EmpresaForm(id: id));
 
 Future<void> abrirNuevaEmpresa(BuildContext context) => abrirPanel(context, const EmpresaForm(nueva: true));
 
@@ -43,6 +47,9 @@ class _CuentaFormState extends State<CuentaForm> {
   @override
   void initState() {
     super.initState();
+    Nube.refrescarCuenta().then((_) {
+      if (mounted) setState(() {});
+    }, onError: (_) {});
     Nube.perfil().then((p) {
       if (!mounted) return;
       setState(() {
@@ -75,11 +82,18 @@ class _CuentaFormState extends State<CuentaForm> {
     try {
       await Nube.cambiarCorreo(nuevo);
       _correo.clear();
-      if (mounted) _avisar(context, 'Te hemos mandado un enlace a $nuevo. El cambio vale al pulsarlo.');
+      if (mounted) {
+        setState(() {});
+        _avisar(context, 'Te hemos mandado un enlace a $nuevo y otro a ${Nube.correo}: pulsa los dos.');
+      }
     } catch (e) {
       if (mounted) _avisar(context, _error(e));
     }
   }
+
+  /// Supabase pide confirmar el cambio en los dos correos (el de ahora y el nuevo).
+  static const _textoCorreo =
+      'Te llegará un enlace al correo nuevo y otro al de ahora; el cambio vale al pulsar los dos.';
 
   Future<void> _cerrarEnTodos() async {
     if (!await _confirmarAccion(
@@ -128,7 +142,15 @@ class _CuentaFormState extends State<CuentaForm> {
       Bloque('Perfil', descripcion: 'Tu nombre sale en las invitaciones y en los emails.', primero: true, [
         if (_cargado) campo('Nombre', _nombre, hint: 'Nombre y apellido') else const LinearProgressIndicator(),
       ]),
-      Bloque('Correo', descripcion: 'Te llegará un enlace al correo nuevo; el cambio vale al pulsarlo.', [
+      Bloque('Correo', descripcion: _textoCorreo, [
+        if (Nube.correoPendiente case final pendiente?)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Pendiente de confirmar: $pendiente',
+              style: TextStyle(fontSize: 13.5, color: P.ambar, fontWeight: FontWeight.w600),
+            ),
+          ),
         campo('Correo nuevo', _correo, hint: Nube.correo),
         Align(
           alignment: Alignment.centerRight,
@@ -159,10 +181,12 @@ class _CuentaFormState extends State<CuentaForm> {
   );
 }
 
-/// Datos de la empresa abierta o, con [nueva], una empresa más para la cuenta.
+/// Datos de una empresa de la cuenta ([id], o la abierta) o, con [nueva], una empresa más. La abierta, además,
+/// invitar a un socio y sus accesos.
 class EmpresaForm extends StatefulWidget {
   final bool nueva;
-  const EmpresaForm({super.key, this.nueva = false});
+  final String? id;
+  const EmpresaForm({super.key, this.nueva = false, this.id});
 
   @override
   State<EmpresaForm> createState() => _EmpresaFormState();
@@ -176,7 +200,12 @@ class _EmpresaFormState extends State<EmpresaForm> {
   final _claveNombre = GlobalKey();
   String _tipo = 'Varios';
   String _logo = '';
+  String _icono = '';
+  int _color = 0;
   bool _intento = false, _cargado = false;
+
+  String get _id => widget.id ?? store.nube!.empresaId;
+  bool get _abierta => _id == store.nube!.empresaId;
 
   @override
   void initState() {
@@ -186,7 +215,7 @@ class _EmpresaFormState extends State<EmpresaForm> {
       _cargado = true;
       return;
     }
-    store.nube!.datosEmpresa().then((d) {
+    Nube.datosEmpresa(_id).then((d) {
       if (!mounted) return;
       setState(() {
         _nombre.text = d['nombre'] as String;
@@ -194,6 +223,8 @@ class _EmpresaFormState extends State<EmpresaForm> {
         _direccion.text = d['direccion'] as String;
         _telefono.text = d['telefono'] as String;
         _logo = d['logo'] as String? ?? '';
+        _icono = d['icono'] as String? ?? '';
+        _color = d['color'] as int? ?? 0;
         if (Nube.tiposEmpresa.containsKey(d['tipo'])) _tipo = d['tipo'] as String;
         _cargado = true;
       });
@@ -223,13 +254,15 @@ class _EmpresaFormState extends State<EmpresaForm> {
       if (widget.nueva) {
         await Nube.crearEmpresa(_nombre.text.trim(), _tipo);
       } else {
-        await store.nube!.guardarEmpresa({
+        await Nube.guardarEmpresa(_id, {
           'nombre': _nombre.text.trim(),
           'tipo': _tipo,
           'cif': _cif.text.trim(),
           'direccion': _direccion.text.trim(),
           'telefono': _telefono.text.trim(),
           'logo': _logo.isEmpty ? null : _logo,
+          'icono': _icono,
+          'color': _color,
         });
       }
       if (mounted) Navigator.pop(context);
@@ -265,7 +298,7 @@ class _EmpresaFormState extends State<EmpresaForm> {
         ? null
         : FotoFormulario(foto: _logo, cuadrado: true, onCambio: (f) => setState(() => _logo = f)),
     onGuardar: _guardar,
-    onBorrar: widget.nueva ? null : _borrar,
+    onBorrar: widget.nueva || !_abierta ? null : _borrar,
     avisos: [if (_intento && _faltaNombre) ('Te falta el nombre', _irAlNombre)],
     campos: [
       Bloque('Empresa', descripcion: 'Cómo se llama y a qué se dedica.', primero: true, [
@@ -298,8 +331,96 @@ class _EmpresaFormState extends State<EmpresaForm> {
           dos(campo('CIF', _cif), campo('Teléfono', _telefono)),
           campo('Dirección', _direccion, hint: 'Calle, número, ciudad'),
         ]),
+      if (!widget.nueva && _cargado)
+        Bloque('Icono y color', descripcion: 'Para distinguirla en el selector de empresas.', [_iconoYColor()]),
+      if (!widget.nueva && _cargado && _abierta && store.nube!.esAdmin) ...[
+        Bloque('Invitar a un socio', descripcion: 'Un enlace de un solo uso: verá y gestionará toda la empresa.', [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton(onPressed: () => invitarAdministrador(context), child: const Text('Crear enlace')),
+          ),
+        ]),
+        Bloque('Accesos', descripcion: 'Quién entra en la empresa y con qué rol.', [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton(onPressed: () => abrirAccesos(context), child: const Text('Ver accesos')),
+          ),
+        ]),
+      ],
+      if (!widget.nueva && _cargado && !_abierta)
+        Bloque('Socios y accesos', descripcion: 'Se gestionan con la empresa abierta.', [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Nube.entrarEn(_id);
+              },
+              child: const Text('Cambiar a esta empresa'),
+            ),
+          ),
+        ]),
     ],
   );
+
+  /// Iconos de [iconosTipo] en el color elegido y, debajo, los colores de la paleta.
+  Widget _iconoYColor() {
+    final color = Nube.colorEmpresa(_color);
+    final icono = Nube.iconoEmpresa(_icono, _tipo);
+    Widget opcion({required bool sel, required VoidCallback onTap, required String tooltip, required Widget child}) =>
+        Tooltip(
+          message: tooltip,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(P.radioControl),
+            mouseCursor: SystemMouseCursors.click,
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(P.radioControl),
+                border: Border.all(color: sel ? color : Colors.transparent, width: 1.5),
+              ),
+              child: child,
+            ),
+          ),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final e in iconosTipo.entries)
+              opcion(
+                sel: e.key == icono,
+                tooltip: 'Icono',
+                onTap: () => setState(() => _icono = e.key),
+                child: IconoCuadro(e.value, color, size: 34),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final c in [P.morado, ...paleta])
+              opcion(
+                sel: c.toARGB32() == color.toARGB32(),
+                tooltip: 'Color',
+                onTap: () => setState(() => _color = c == P.morado ? 0 : c.toARGB32()),
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /// Contraseña nueva, dos veces. Con [recuperando] viene del enlace de «olvidé mi contraseña».
@@ -429,7 +550,7 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
     try {
       final nube = store.nube!;
       Navigator.pop(context);
-      await nube.guardarEmpresa({'nombre': nombre});
+      await Nube.guardarEmpresa(nube.empresaId, {'nombre': nombre});
     } catch (e) {
       if (mounted) {
         setState(() {
