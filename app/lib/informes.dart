@@ -74,6 +74,16 @@ const maxFotosInforme = 6;
 
 /// Informes por trabajo: se piden a la base la primera vez que se ven y se guardan aquí.
 class Informes extends ChangeNotifier {
+  Informes() {
+    // Otra persona ha hecho un parte: se vuelven a pedir los de cada trabajo al verlo.
+    Nube.cambiado.addListener(() {
+      if (!Nube.cambiado.value.contains('informes') || _pedidos.isEmpty) return;
+      _de.clear();
+      _pedidos.clear();
+      notifyListeners();
+    });
+  }
+
   final _local = <Informe>[];
   final _de = <String, List<Informe>>{};
   final _pedidos = <String>{};

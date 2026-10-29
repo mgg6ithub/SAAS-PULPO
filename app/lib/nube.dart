@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'dart:ui' show Color;
 
 import 'package:crypto/crypto.dart';
@@ -8,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'en_vivo.dart';
 import 'informes.dart';
 import 'models.dart';
 import 'store.dart';
@@ -122,6 +122,7 @@ class Nube {
       }
       await _olvidarInvitacion();
     }
+    await _abierta?._enVivo?.parar();
     final ms = await _db
         .from('miembros')
         .select('empresa_id, rol, trabajador_id')
@@ -215,7 +216,7 @@ class Nube {
   /// antes a que el trabajo esté guardado, porque el informe apunta a él.
   Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma) async {
     await _cola;
-    final id = _uuidNuevo();
+    final id = store.nuevoId();
     Future<String> subir(String nombre, Uint8List bytes, String tipo) async {
       final ruta = '$empresaId/informes/$id/$nombre';
       await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
@@ -250,6 +251,25 @@ class Nube {
     );
   }
 
+  // ── Presupuestos y facturas proforma ──
+
+  Future<List<Map<String, dynamic>>> documentos() => _todo('documentos');
+
+  /// Crea (sin id) o actualiza un documento y devuelve la fila guardada: al crearlo, la base le pone el número.
+  Future<Map<String, dynamic>> guardarDocumento(Map<String, dynamic> fila) async {
+    await _cola;
+    final f = {
+      ...fila,
+      'empresa_id': empresaId,
+      if (fila['cliente_id'] != null) 'cliente_id': _u(fila['cliente_id'] as String),
+    };
+    return f['id'] == null
+        ? await _db.from('documentos').insert(f..remove('id')).select().single()
+        : await _db.from('documentos').update(f).eq('id', f['id']).select().single();
+  }
+
+  Future<void> borrarDocumento(String id) => _db.from('documentos').delete().eq('id', id);
+
   /// Sube a Storage la foto en base64 de una fila de `clientes` o `trabajadores` y devuelve la fila con la
   /// ruta. El nombre sale del contenido, así que reintentar no duplica.
   Future<Map<String, dynamic>> _conFotoSubida(String tabla, Map<String, dynamic> f) async {
@@ -273,6 +293,7 @@ class Nube {
 
   static Future<void> cerrarSesion({bool enTodos = false}) async {
     await _abierta?._cola;
+    await _abierta?._enVivo?.parar();
     await _db.auth.signOut(scope: enTodos ? SignOutScope.global : SignOutScope.local);
   }
 
@@ -458,7 +479,10 @@ class Nube {
       _todo('competencias'),
       _todo('equipos'),
       _todo('vencimientos'),
+      // El trabajador no ve precios: la base le devuelve la lista vacía.
+      _db.from('trabajo_precios').select('trabajo_id, precio, iva').eq('empresa_id', empresaId),
     ]);
+    final precioDe = {for (final x in r[11]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
     for (final x in r[4]) {
       (trabajadoresDe[x['trabajo_id']] ??= []).add(x['trabajador_id'] as String);
@@ -475,6 +499,12 @@ class Nube {
     for (final x in r[3]) {
       final id = x['id'] as String;
       final t = _tarea(x, trabajadoresDe[id] ?? [], (historialDe[id] ?? [])..sort(), automatizacionesDe[id] ?? []);
+      final p = precioDe[id];
+      if (p != null) {
+        t
+          ..precio = (p['precio'] as num).toDouble()
+          ..iva = (p['iva'] as num).toDouble();
+      }
       (t.padreId == null ? tareas : subtareas).add(t);
     }
     return DatosNube(
@@ -534,7 +564,16 @@ class Nube {
   /// Después el [Store] vuelve a su estado inicial.
   Future<void> vaciar() async {
     await _cola;
-    for (final t in ['trabajos', 'equipos', 'clientes', 'trabajadores', 'etiquetas', 'tipos_trabajo', 'competencias']) {
+    for (final t in [
+      'documentos',
+      'trabajos',
+      'equipos',
+      'clientes',
+      'trabajadores',
+      'etiquetas',
+      'tipos_trabajo',
+      'competencias',
+    ]) {
       await _db.from(t).delete().eq('empresa_id', empresaId);
     }
     _enviado.clear();
@@ -556,6 +595,7 @@ class Nube {
   void vincular(Store s, {bool vacio = false}) {
     _store = s;
     _enviado.clear();
+    (_enVivo ??= EnVivo(empresaId, _alCambiar)).empezar();
     if (!vacio) {
       _filas(s).forEach(
         (t, filas) => _enviado[t] = {
@@ -582,6 +622,7 @@ class Nube {
     'equipos',
     'vencimientos',
     'trabajos',
+    'trabajo_precios',
     'trabajo_trabajadores',
     'trabajo_historial',
     'automatizaciones',
@@ -609,6 +650,7 @@ class Nube {
       if (quitadas.isNotEmpty) borrar[t] = quitadas;
     }
     if (subir.isEmpty && borrar.isEmpty) return;
+    _envios++;
     _reintento?.cancel();
     _cola = _cola.then((_) async {
       try {
@@ -655,6 +697,82 @@ class Nube {
     });
   }
 
+  // ── En vivo ──
+
+  /// Tablas que otra persona acaba de cambiar (informes y documentos se vuelven a pedir al verlo).
+  static final cambiado = ValueNotifier<Set<String>>({});
+
+  /// Otra persona cambió algo que también se estaba cambiando aquí: se queda lo de aquí.
+  static final choque = ValueNotifier<String?>(null);
+
+  EnVivo? _enVivo;
+  bool _recargando = false, _otraVez = false;
+
+  /// Veces que se ha puesto algo en la cola de guardar: si cambia mientras se lee, la lectura no vale.
+  int _envios = 0;
+
+  void _alCambiar(Set<String> tablas) {
+    cambiado.value = tablas;
+    if (tablas.any(_orden.contains)) _recargar();
+  }
+
+  /// Vuelve a leer la empresa y la pone en el [Store]. Lo propio que aún no se ha subido no se pisa: se sube
+  /// primero y se vuelve a leer después. Los ecos de lo que se guardó aquí no cambian nada.
+  Future<void> _recargar() async {
+    if (_recargando) {
+      _otraVez = true;
+      return;
+    }
+    _recargando = true;
+    try {
+      do {
+        _otraVez = false;
+        await _cola;
+        final envios = _envios;
+        final s = _store;
+        if (s == null) return;
+        final d = await cargar();
+        if (envios != _envios || _store != s) {
+          _otraVez = true;
+          continue;
+        }
+        final remoto = _filas(Store()..ponerDeLaNube(d));
+        final aqui = _filas(s);
+        final visto = _comoClaves(_enviado), base = _comoClaves(remoto), local = _comoClaves(aqui);
+        if (mapEquals(visto, base)) continue;
+        final pendientes = [
+          for (final k in {...visto.keys, ...local.keys})
+            if (visto[k] != local[k]) k,
+        ];
+        if (pendientes.isNotEmpty) {
+          if (choques(visto, base, pendientes).isNotEmpty) {
+            choque.value = 'Otra persona ha cambiado lo mismo que tú: se ha quedado tu versión.';
+            Timer(const Duration(seconds: 6), () => choque.value = null);
+          }
+          sincronizar();
+          _otraVez = true;
+          continue;
+        }
+        s.ponerDeLaNube(d);
+        _enviado
+          ..clear()
+          ..addAll({
+            for (final t in _orden) t: {for (final e in remoto[t]!.entries) e.key: jsonEncode(e.value)},
+          });
+      } while (_otraVez);
+    } catch (e) {
+      debugPrint('Pulpo: no se pudo leer en vivo: $e');
+    } finally {
+      _recargando = false;
+    }
+  }
+
+  /// Filas por `tabla|clave`, en JSON.
+  static Map<String, String> _comoClaves(Map<String, Map<String, Object?>> filas) => {
+    for (final t in filas.entries)
+      for (final f in t.value.entries) '${t.key}|${f.key}': f.value is String ? f.value as String : jsonEncode(f.value),
+  };
+
   static const _clave = {
     'clientes': 'id',
     'trabajadores': 'id',
@@ -664,6 +782,7 @@ class Nube {
     'equipos': 'id',
     'vencimientos': 'id',
     'trabajos': 'id',
+    'trabajo_precios': 'trabajo_id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
     'trabajo_historial': 'trabajo_id,dia',
     'automatizaciones': 'id',
@@ -678,6 +797,8 @@ class Nube {
       case 'trabajo_historial':
         final p = clave.split('|');
         return q.eq('trabajo_id', p[0]).eq('dia', p[1]);
+      case 'trabajo_precios':
+        return q.eq('trabajo_id', clave);
       default:
         return q.eq('id', clave);
     }
@@ -825,6 +946,9 @@ class Nube {
         'activa': t.activa,
         'competencias': t.competencias,
       };
+      if (t.precio > 0) {
+        r['trabajo_precios']![_u(t.id)] = {'trabajo_id': _u(t.id), 'empresa_id': e, 'precio': t.precio, 'iva': t.iva};
+      }
       for (final w in t.trabajadorIds.where(trabajadores.contains)) {
         r['trabajo_trabajadores']!['${_u(t.id)}|${_u(w)}'] = {
           'trabajo_id': _u(t.id),
@@ -855,16 +979,6 @@ class Nube {
     }
     return r;
   }
-}
-
-/// Uuid v4 aleatorio, para dar nombre a la carpeta de fotos antes de guardar el informe.
-String _uuidNuevo() {
-  final r = Random.secure();
-  final b = [for (var i = 0; i < 16; i++) r.nextInt(256)];
-  b[6] = b[6] & 0x0f | 0x40;
-  b[8] = b[8] & 0x3f | 0x80;
-  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
-  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }
 
 /// Lo que se lee de la base al entrar.

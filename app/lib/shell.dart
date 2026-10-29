@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'ajustes.dart';
+import 'finanzas.dart';
 import 'forms.dart';
 import 'models.dart';
 import 'screens/ajustes_dialogo.dart';
 import 'screens/cliente_detalle.dart';
+import 'screens/finanzas.dart';
 import 'screens/clientes.dart';
 import 'screens/mi_cuenta.dart';
 import 'screens/planificacion.dart';
@@ -21,7 +23,7 @@ import 'theme.dart';
 import 'widgets.dart';
 
 /// Secciones de la barra lateral, en orden.
-enum Seccion { inicio, planificacion, clientes, trabajadores, tareas }
+enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, finanzas }
 
 /// Barra lateral + página activa.
 class Shell extends StatefulWidget {
@@ -91,6 +93,7 @@ class _ShellState extends State<Shell> {
       _ when abierta != null => abrirSubtrabajoRapido(context, abierta),
       Seccion.clientes => abrirClienteForm(context),
       Seccion.trabajadores => abrirTrabajadorForm(context),
+      Seccion.finanzas => abrirDocumento(context, Documento(vence: masDias(hoy(), 30))),
       _ => abrirTareaForm(context, null),
     };
     _abiertaConN = false;
@@ -219,6 +222,7 @@ class _ShellState extends State<Shell> {
     Seccion.clientes => Clientes(onAbrir: (id) => setState(() => clienteId = id)),
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
     Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
+    Seccion.finanzas => const VistaFinanzas(),
   };
 }
 
@@ -716,6 +720,7 @@ class _BarraState extends State<_Barra> {
       (Icons.apartment_outlined, 'Clientes', Seccion.clientes, 0),
       (Icons.handyman_outlined, 'Trabajos', Seccion.tareas, 0),
       (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
+      (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
     return Stack(
@@ -838,6 +843,7 @@ class _BarraInferior extends StatelessWidget {
       (Icons.apartment_outlined, 'Clientes', Seccion.clientes, 0),
       (Icons.handyman_outlined, 'Trabajos', Seccion.tareas, 0),
       (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
+      (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     return Container(
       decoration: BoxDecoration(
