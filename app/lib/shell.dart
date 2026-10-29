@@ -213,7 +213,11 @@ class _ShellState extends State<Shell> {
 
   // Sin const: si no, el ListenableBuilder del store no las repinta al cambiar los datos.
   Widget _seccion(Seccion s) => switch (s) {
-    Seccion.inicio => Resumen(onIr: ir, onTrabajador: (id) => setState(() => trabajadorId = id)),
+    Seccion.inicio => Resumen(
+      onIr: ir,
+      onTrabajador: (id) => setState(() => trabajadorId = id),
+      onCliente: (id) => setState(() => clienteId = id),
+    ),
     // ignore: prefer_const_constructors
     Seccion.planificacion => Planificacion(),
     Seccion.clientes => Clientes(onAbrir: (id) => setState(() => clienteId = id)),

@@ -17,8 +17,23 @@ void main() {
 
   Future<Map<String, int>> contar(Future<void> Function() accion) async {
     final c = <String, int>{};
-    const zonas = {'Tabla', 'ListaRejilla', '_Barra', 'Planificacion', 'VistaSemana', 'VistaDiaTecnicos', 'VistaCalendario', 'MapaAgenda',
-      'Resumen', 'Clientes', 'Trabajadores', 'TareasPagina', 'BarraVista', '_Capa', 'Shell'};
+    const zonas = {
+      'Tabla',
+      'ListaRejilla',
+      '_Barra',
+      'Planificacion',
+      'VistaSemana',
+      'VistaDiaTecnicos',
+      'VistaCalendario',
+      'MapaAgenda',
+      'Resumen',
+      'Clientes',
+      'Trabajadores',
+      'TareasPagina',
+      'BarraVista',
+      '_Capa',
+      'Shell',
+    };
     debugOnRebuildDirtyWidget = (e, _) {
       var zona = '?';
       if (zonas.contains(e.widget.runtimeType.toString())) zona = e.widget.runtimeType.toString();
@@ -39,8 +54,10 @@ void main() {
   void informe(String que, Map<String, int> c, int frames) {
     final orden = c.entries.toList()..sort((a, b) => b.value - a.value);
     final total = c.values.fold(0, (a, b) => a + b);
-    debugPrint('== $que: ${(total / frames).toStringAsFixed(0)} rebuilds/frame · top: '
-        '${orden.take(25).map((e) => '${e.key} ${(e.value / frames).toStringAsFixed(1)}').join(', ')}');
+    debugPrint(
+      '== $que: ${(total / frames).toStringAsFixed(0)} rebuilds/frame · top: '
+      '${orden.take(25).map((e) => '${e.key} ${(e.value / frames).toStringAsFixed(1)}').join(', ')}',
+    );
   }
 
   testWidgets('rendimiento', (tester) async {
@@ -141,16 +158,21 @@ void main() {
     addTearDown(tester.view.reset);
     final clientes = store.clientes.map((c) => c.id).toList();
     final tecnicos = store.trabajadores.map((w) => w.id).toList();
-    store.tareas.addAll(List.generate(3000, (i) => Tarea(
-      id: 'm$i',
-      plantilla: false,
-      clienteId: clientes[i % clientes.length],
-      nombre: 'Revisión $i',
-      proximo: masDias(hoy(), i % 60 - 10),
-      inicioMin: 480 + (i % 20) * 30,
-      trabajadorIds: i % 7 == 0 ? [] : [tecnicos[i % tecnicos.length]],
-      periodicidad: Periodicidad.unica,
-    )));
+    store.tareas.addAll(
+      List.generate(
+        3000,
+        (i) => Tarea(
+          id: 'm$i',
+          plantilla: false,
+          clienteId: clientes[i % clientes.length],
+          nombre: 'Revisión $i',
+          proximo: masDias(hoy(), i % 60 - 10),
+          inicioMin: 480 + (i % 20) * 30,
+          trabajadorIds: i % 7 == 0 ? [] : [tecnicos[i % tecnicos.length]],
+          periodicidad: Periodicidad.unica,
+        ),
+      ),
+    );
     final sw = Stopwatch()..start();
     await tester.pumpWidget(const MaterialApp(home: Shell()));
     await tester.pumpAndSettle();

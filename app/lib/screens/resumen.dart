@@ -4,12 +4,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../ajustes.dart';
+import '../estadisticas.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../shell.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'estadisticas.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
 
@@ -18,7 +20,10 @@ import 'tarea_card.dart';
 class Resumen extends StatelessWidget {
   final ValueChanged<Seccion> onIr;
   final ValueChanged<String> onTrabajador;
-  const Resumen({super.key, required this.onIr, required this.onTrabajador});
+
+  /// Abre la ficha de un cliente (desde las estadísticas).
+  final ValueChanged<String>? onCliente;
+  const Resumen({super.key, required this.onIr, required this.onTrabajador, this.onCliente});
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +99,8 @@ class Resumen extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
                     _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
+                    const SizedBox(height: 32),
+                    Estadisticas(dosCol: dosCol, onCliente: onCliente ?? (_) {}),
                   ],
                 ],
               ),
@@ -549,6 +556,31 @@ class _Pendientes extends StatelessWidget {
           titulo: '$averiadas ${averiadas == 1 ? 'equipo' : 'equipos'} en revisión o averiados',
           derecha: _cat('Trabajos'),
           onTap: () => onIr(Seccion.tareas),
+        ),
+      for (final e in equiposQueFallan(store))
+        FilaLista(
+          lider: _punto(P.rojo),
+          titulo: '${e.nombre} falla demasiado',
+          subtitulo: '${store.cliente(e.clienteId)?.nombre ?? ''} · 3 o más averías en un año',
+          derecha: _cat('Clientes'),
+          onTap: () => onIr(Seccion.clientes),
+        ),
+      for (final w in sobrecargados(store))
+        FilaLista(
+          lider: _punto(P.ambar),
+          titulo: '${w.nombreCompleto} va sobrecargado',
+          subtitulo: 'Más de 40 h asignadas en los próximos 7 días',
+          derecha: _cat('Trabajadores'),
+          onTap: () => onIr(Seccion.trabajadores),
+        ),
+      if (clientesOlvidados(store) case final olvidados when olvidados.isNotEmpty)
+        FilaLista(
+          lider: _punto(P.azul),
+          titulo:
+              '${olvidados.length} ${olvidados.length == 1 ? 'cliente' : 'clientes'} sin revisión desde hace más de un año',
+          subtitulo: olvidados.take(3).map((c) => c.nombre).join(' · '),
+          derecha: _cat('Clientes'),
+          onTap: () => onIr(Seccion.clientes),
         ),
       if (sinTareas > 0)
         FilaLista(
