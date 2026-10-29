@@ -255,6 +255,10 @@ class Nube {
     );
   }
 
+  /// Manda al cliente el PDF del parte (función `enviar-parte`); la función no lo repite si ya se mandó.
+  Future<void> enviarParte(String informeId, Uint8List pdf) =>
+      _db.functions.invoke('enviar-parte', body: {'informe_id': informeId, 'pdf': base64Encode(pdf)});
+
   // ── Documentos de los equipos ──
 
   static const _bucketDocumentos = 'documentos';
