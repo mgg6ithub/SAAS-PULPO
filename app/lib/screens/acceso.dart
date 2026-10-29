@@ -70,6 +70,23 @@ class _PuertaNubeState extends State<PuertaNube> {
       // Un trabajador entra directo a su vista; un administrador, a la de siempre.
       rolTrabajador.value = store.nube!.esTrabajador ? store.nube!.trabajadorId : null;
       if (mounted) setState(() => _fase = _Fase.listo);
+      if (Nube.creadaAlEntrar) {
+        Nube.creadaAlEntrar = false;
+        final proveedores = Supabase.instance.client.auth.currentUser?.appMetadata['providers'] as List? ?? [];
+        // Con Google no se elige «Crear cuenta»: se dice qué ha pasado por si esperaba unirse a otra empresa.
+        if (proveedores.contains('google') && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 12),
+              content: const Text(
+                'Hemos creado una empresa nueva para tu cuenta. Si querías unirte a la de otra persona, '
+                'pídele un enlace de invitación.',
+              ),
+              action: SnackBarAction(label: 'Entendido', onPressed: () {}),
+            ),
+          );
+        }
+      }
       if (_pedirClave) {
         _pedirClave = false;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -231,6 +248,17 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     }
   }
 
+  Future<void> _google() async {
+    setState(() => _enviando = true);
+    try {
+      await Nube.entrarConGoogle();
+    } catch (_) {
+      _ponerAviso('No se pudo abrir Google. Comprueba la conexión.');
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
   Future<void> _reenviar() async {
     setState(() => _enviando = true);
     try {
@@ -355,6 +383,8 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
                 onPressed: _enviar,
               ),
       ),
+      const SizedBox(height: 16),
+      OutlinedButton(onPressed: _enviando ? null : _google, child: const Text('Continuar con Google')),
       const SizedBox(height: 8),
       TextButton(
         onPressed: _enviando ? null : () => setState(() => _nueva = !_nueva),

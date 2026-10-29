@@ -149,8 +149,12 @@ class Nube {
     final e = await _db.from('empresas').insert({'nombre': 'Mi empresa'}).select('id').single();
     final id = e['id'] as String;
     await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
+    creadaAlEntrar = true;
     return _abierta = Nube._(id, nueva: true, nombre: 'Mi empresa');
   }
+
+  /// La cuenta no tenía empresa ni invitación y se le acaba de crear una (se avisa al entrar).
+  static bool creadaAlEntrar = false;
 
   /// Crea una invitación de un solo uso (7 días) y devuelve su código. Las fichas pendientes de guardar
   /// se esperan antes, porque la invitación apunta a una.
@@ -360,6 +364,10 @@ class Nube {
   /// Crea la cuenta; el enlace del correo de confirmación vuelve a esta misma dirección de la app.
   static Future<AuthResponse> crearCuenta(String correo, String clave) =>
       _db.auth.signUp(email: correo, password: clave, emailRedirectTo: _aqui());
+
+  /// Entra con Google (DEV-012): sale a Google y vuelve a esta misma dirección con la sesión puesta. Si ya hay
+  /// una cuenta con ese correo, Supabase enlaza las dos (Google verifica el correo).
+  static Future<void> entrarConGoogle() => _db.auth.signInWithOAuth(OAuthProvider.google, redirectTo: _aqui());
 
   /// Vuelve a mandar el correo de confirmar la cuenta.
   static Future<void> reenviarConfirmacion(String correo) =>
