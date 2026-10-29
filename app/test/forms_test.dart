@@ -66,6 +66,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ascensores Altura'), findsOneWidget);
     expect(find.text('Crear nuevo cliente'), findsOneWidget);
+    await tester.tap(find.text('Ascensores Altura').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Elegir cliente'), findsNothing);
+    expect(find.text('Ascensores Altura'), findsWidgets);
   });
 
   testWidgets('la ventana se acopla a la derecha y vuelve', (tester) async {

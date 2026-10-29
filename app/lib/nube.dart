@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Color;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import 'en_vivo.dart';
 import 'informes.dart';
 import 'models.dart';
 import 'store.dart';
+import 'theme.dart' show TipoInfo, tipos, competencias;
 
 const supabaseUrl = 'https://gvasthxiqckmekwvhtrg.supabase.co';
 
@@ -21,17 +23,49 @@ class InvitacionNoValida implements Exception {
   const InvitacionNoValida();
 }
 
+/// La empresa se quedaría sin administrador (quitar o degradar al último, o borrar su cuenta).
+class UltimoAdministrador implements Exception {
+  const UltimoAdministrador();
+}
+
+/// Una cuenta con acceso a la empresa.
+typedef Acceso = ({String usuarioId, String correo, String nombre, String rol, String? trabajadorId});
+
+/// Invitación sin usar y sin caducar.
+typedef InvitacionPendiente = ({String id, String codigo, String rol, String? trabajadorId, DateTime caduca});
+
 /// Datos que el [Store] tenía cargados y que se guardan en Supabase.
 typedef _Filas = Map<String, Map<String, Map<String, dynamic>>>;
 
 /// Conexión con Supabase para una cuenta y una empresa: lee todo al entrar y, después, guarda solo lo que cambia.
 class Nube {
-  Nube._(this.empresaId, {required this.nueva, this.nombre = '', this.rol = 'admin', this.trabajadorId});
+  Nube._(
+    this.empresaId, {
+    required this.nueva,
+    this.nombre = '',
+    this.tipo = '',
+    this.rol = 'admin',
+    this.trabajadorId,
+  });
 
   final String empresaId;
 
   /// Nombre de la empresa, para enseñarlo en Mi cuenta.
   final String nombre;
+
+  /// A qué se dedica (clave de [tiposEmpresa]): una empresa nueva arranca solo con sus plantillas.
+  final String tipo;
+
+  /// Tipos de empresa al crearla → tipo de las plantillas con las que arranca (null = todas).
+  static const tiposEmpresa = <String, String?>{
+    'Ascensores': 'Ascensor',
+    'Calderas': 'Caldera',
+    'Jardinería': 'Jardinería',
+    'Limpieza': 'Limpieza',
+    'Varios': null,
+  };
+
+  bool get esAdmin => rol == 'admin';
 
   /// `admin` (todo) o `trabajador` (solo sus trabajos, el resto lo recorta la base de datos).
   final String rol;
@@ -67,8 +101,14 @@ class Nube {
     await (await SharedPreferences.getInstance()).remove('pulpo_invitacion');
   }
 
-  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una). Si no tiene ninguna,
-  /// crea una y la hace administradora.
+  /// Cambia cada vez que hay que volver a abrir la empresa (se ha cambiado, creado o borrado una).
+  static final reabrir = ValueNotifier<int>(0);
+
+  /// Empresa recién creada desde la cuenta: al abrirla arranca con sus plantillas.
+  static String? _recienCreada;
+
+  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una): la última elegida o, si no,
+  /// una donde sea administradora. Si no tiene ninguna, crea una y la hace administradora.
   static Future<Nube> abrir() async {
     if (invitacion != null) {
       try {
@@ -83,15 +123,25 @@ class Nube {
       await _olvidarInvitacion();
     }
     await _abierta?._enVivo?.parar();
-    final ms = await _db.from('miembros').select('empresa_id, rol, trabajador_id');
+    final ms = await _db
+        .from('miembros')
+        .select('empresa_id, rol, trabajador_id')
+        .eq('usuario_id', _db.auth.currentUser!.id);
     if (ms.isNotEmpty) {
-      final m = ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first);
+      final elegida = (await SharedPreferences.getInstance()).getString('pulpo_empresa');
+      final m = ms.firstWhere(
+        (x) => x['empresa_id'] == elegida,
+        orElse: () => ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first),
+      );
       final id = m['empresa_id'] as String;
-      final e = await _db.from('empresas').select('nombre').eq('id', id).single();
+      final e = await _db.from('empresas').select('nombre, tipo').eq('id', id).single();
+      final nueva = id == _recienCreada;
+      _recienCreada = null;
       return _abierta = Nube._(
         id,
-        nueva: false,
+        nueva: nueva,
         nombre: e['nombre'] as String,
+        tipo: e['tipo'] as String,
         rol: m['rol'] as String,
         trabajadorId: m['trabajador_id'] as String?,
       );
@@ -241,10 +291,168 @@ class Nube {
   /// La última empresa abierta, para no cerrar la sesión con cambios sin guardar.
   static Nube? _abierta;
 
-  static Future<void> cerrarSesion() async {
+  static Future<void> cerrarSesion({bool enTodos = false}) async {
     await _abierta?._cola;
     await _abierta?._enVivo?.parar();
-    await _db.auth.signOut();
+    await _db.auth.signOut(scope: enTodos ? SignOutScope.global : SignOutScope.local);
+  }
+
+  // ── Cuenta ──
+
+  static String? get correo => _db.auth.currentUser?.email;
+
+  /// Nombre y foto de la cuenta (vacío si aún no los ha puesto).
+  static Future<({String nombre, String? foto})> perfil() async {
+    final r = await _db.from('perfiles').select('nombre, foto').eq('usuario_id', _db.auth.currentUser!.id);
+    return r.isEmpty ? (nombre: '', foto: null) : (nombre: r.first['nombre'] as String, foto: r.first['foto'] as String?);
+  }
+
+  /// El perfil ya existe: lo crea la base al crear la cuenta (trigger `copiar_correo`).
+  static Future<void> guardarPerfil({required String nombre, String? foto}) =>
+      _db.from('perfiles').update({'nombre': nombre, 'foto': foto}).eq('usuario_id', _db.auth.currentUser!.id);
+
+  static Future<void> cambiarClave(String nueva) => _db.auth.updateUser(UserAttributes(password: nueva));
+
+  /// Supabase manda un enlace al correo nuevo; el cambio vale al pulsarlo.
+  static Future<void> cambiarCorreo(String nuevo) =>
+      _db.auth.updateUser(UserAttributes(email: nuevo), emailRedirectTo: _aqui());
+
+  /// Manda el correo de «olvidé mi contraseña»; el enlace vuelve a la app para poner una nueva.
+  static Future<void> recuperarClave(String correo) => _db.auth.resetPasswordForEmail(correo, redirectTo: _aqui());
+
+  static String _aqui() => Uri.base.removeFragment().replace(queryParameters: {}).toString();
+
+  /// Borra la cuenta y las empresas donde es el único miembro (función `borrar-cuenta`), y cierra la sesión.
+  static Future<void> borrarCuenta() async {
+    await _abierta?._cola;
+    try {
+      await _db.functions.invoke('borrar-cuenta');
+    } on FunctionException catch (e) {
+      if (e.status == 409) throw const UltimoAdministrador();
+      rethrow;
+    }
+    await _db.auth.signOut(scope: SignOutScope.local);
+  }
+
+  // ── Empresas ──
+
+  /// Empresas de la cuenta con su rol, por nombre.
+  static Future<List<({String id, String nombre, String rol})>> empresas() async {
+    final ms = await _db
+        .from('miembros')
+        .select('empresa_id, rol, empresas(nombre)')
+        .eq('usuario_id', _db.auth.currentUser!.id);
+    return [
+      for (final m in ms)
+        (id: m['empresa_id'] as String, nombre: (m['empresas'] as Map)['nombre'] as String, rol: m['rol'] as String),
+    ]..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+  }
+
+  /// Cambia a otra empresa de la cuenta (se recuerda para la próxima vez).
+  static Future<void> entrarEn(String empresaId) async {
+    await _abierta?._cola;
+    await (await SharedPreferences.getInstance()).setString('pulpo_empresa', empresaId);
+    reabrir.value++;
+  }
+
+  /// Crea otra empresa, la hace administradora y entra en ella.
+  static Future<void> crearEmpresa(String nombre, String tipo) async {
+    final e = await _db.from('empresas').insert({'nombre': nombre, 'tipo': tipo}).select('id').single();
+    final id = e['id'] as String;
+    await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
+    _recienCreada = id;
+    await entrarEn(id);
+  }
+
+  /// Nombre, tipo, CIF, dirección, teléfono y logo de la empresa abierta.
+  Future<Map<String, dynamic>> datosEmpresa() =>
+      _db.from('empresas').select('nombre, tipo, cif, direccion, telefono, logo').eq('id', empresaId).single();
+
+  Future<void> guardarEmpresa(Map<String, dynamic> datos) async {
+    await _db.from('empresas').update(datos).eq('id', empresaId);
+    reabrir.value++; // el nombre sale en Mi cuenta y en la barra
+  }
+
+  // ── Accesos (solo administradores) ──
+
+  /// Quién tiene cuenta en la empresa: primero los administradores, luego por nombre o correo.
+  Future<List<Acceso>> accesos() async {
+    final ms = await _db.from('miembros').select('usuario_id, rol, trabajador_id').eq('empresa_id', empresaId);
+    final ids = [for (final m in ms) m['usuario_id'] as String];
+    final ps = {
+      for (final p in await _db.from('perfiles').select('usuario_id, correo, nombre').inFilter('usuario_id', ids))
+        p['usuario_id'] as String: p,
+    };
+    return [
+      for (final m in ms)
+        (
+          usuarioId: m['usuario_id'] as String,
+          correo: ps[m['usuario_id']]?['correo'] as String? ?? '',
+          nombre: ps[m['usuario_id']]?['nombre'] as String? ?? '',
+          rol: m['rol'] as String,
+          trabajadorId: m['trabajador_id'] as String?,
+        ),
+    ]..sort((a, b) {
+      if (a.rol != b.rol) return a.rol == 'admin' ? -1 : 1;
+      return (a.nombre.isEmpty ? a.correo : a.nombre).toLowerCase().compareTo(
+        (b.nombre.isEmpty ? b.correo : b.nombre).toLowerCase(),
+      );
+    });
+  }
+
+  /// Cambia el rol de una cuenta (un trabajador va siempre ligado a su ficha).
+  Future<void> cambiarRol(String usuarioId, String rol, {String? trabajadorId}) => _protegido(
+    _db
+        .from('miembros')
+        .update({'rol': rol, 'trabajador_id': trabajadorId == null ? null : _u(trabajadorId)})
+        .eq('empresa_id', empresaId)
+        .eq('usuario_id', usuarioId),
+  );
+
+  Future<void> quitarAcceso(String usuarioId) =>
+      _protegido(_db.from('miembros').delete().eq('empresa_id', empresaId).eq('usuario_id', usuarioId));
+
+  /// La base no deja quitar ni degradar al último administrador (trigger `proteger_ultimo_admin`).
+  static Future<void> _protegido(Future<void> f) async {
+    try {
+      await f;
+    } on PostgrestException catch (e) {
+      if (e.hint == 'ultimo_admin') throw const UltimoAdministrador();
+      rethrow;
+    }
+  }
+
+  Future<List<InvitacionPendiente>> invitacionesPendientes() async {
+    final r = await _db
+        .from('invitaciones')
+        .select('id, codigo, rol, trabajador_id, caduca_en')
+        .eq('empresa_id', empresaId)
+        .isFilter('usada_por', null)
+        .gt('caduca_en', DateTime.now().toUtc().toIso8601String())
+        .order('created_at');
+    return [
+      for (final x in r)
+        (
+          id: x['id'] as String,
+          codigo: x['codigo'] as String,
+          rol: x['rol'] as String,
+          trabajadorId: x['trabajador_id'] as String?,
+          caduca: DateTime.parse(x['caduca_en'] as String).toLocal(),
+        ),
+    ];
+  }
+
+  /// La ficha [fichaId] del [Store] es la que la base llama [idBase] (las simulaciones usan ids cortos).
+  bool esFicha(String fichaId, String? idBase) => idBase != null && _u(fichaId) == idBase;
+
+  Future<void> anularInvitacion(String id) => _db.from('invitaciones').delete().eq('id', id);
+
+  /// Borra la empresa abierta con todo lo suyo y pasa a otra (o a una nueva si no queda ninguna).
+  Future<void> borrarEmpresa() async {
+    await _cola;
+    await _db.from('empresas').delete().eq('id', empresaId);
+    await (await SharedPreferences.getInstance()).remove('pulpo_empresa');
+    reabrir.value++;
   }
 
   // ── Leer ──
@@ -267,10 +475,14 @@ class Nube {
       _db.from('trabajo_trabajadores').select('trabajo_id, trabajador_id').eq('empresa_id', empresaId),
       _db.from('trabajo_historial').select('trabajo_id, dia').eq('empresa_id', empresaId),
       _todo('automatizaciones'),
+      _todo('tipos_trabajo'),
+      _todo('competencias'),
+      _todo('equipos'),
+      _todo('vencimientos'),
       // El trabajador no ve precios: la base le devuelve la lista vacía.
       _db.from('trabajo_precios').select('trabajo_id, precio, iva').eq('empresa_id', empresaId),
     ]);
-    final precioDe = {for (final x in r[7]) x['trabajo_id'] as String: x};
+    final precioDe = {for (final x in r[11]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
     for (final x in r[4]) {
       (trabajadoresDe[x['trabajo_id']] ??= []).add(x['trabajador_id'] as String);
@@ -303,6 +515,48 @@ class Nube {
       ],
       tareas: tareas,
       subtareas: subtareas,
+      tipos: [
+        for (final x in [...r[7]]..sort((a, b) => (a['orden'] as int).compareTo(b['orden'] as int)))
+          TipoInfo(
+            x['id'],
+            x['nombre'],
+            x['clave'],
+            Color((x['color'] as num).toInt()),
+            x['competencia'],
+            x['retraso_min'],
+          ),
+      ],
+      competencias: [
+        for (final x in [...r[8]]..sort((a, b) => (a['orden'] as int).compareTo(b['orden'] as int)))
+          x['nombre'] as String,
+      ],
+      equipos: [
+        for (final x in r[9])
+          Equipo(
+            id: x['id'],
+            clienteId: x['cliente_id'],
+            tipo: x['tipo'],
+            nombre: x['nombre'],
+            marca: x['marca'],
+            modelo: x['modelo'],
+            numeroSerie: x['numero_serie'],
+            ubicacion: x['ubicacion'],
+            notas: x['notas'],
+            instalacion: _fecha(x['instalacion']),
+            estado: EstadoMaquina.values[x['estado'] as int],
+            documentos: List<String>.from(x['documentos'] as List),
+          ),
+      ],
+      vencimientos: [
+        for (final x in r[10])
+          Vencimiento(
+            id: x['id'],
+            equipoId: x['equipo_id'],
+            nombre: x['nombre'],
+            vence: DateTime.parse(x['vence'] as String),
+            avisarDias: x['avisar_dias'],
+          ),
+      ],
     );
   }
 
@@ -310,7 +564,16 @@ class Nube {
   /// Después el [Store] vuelve a su estado inicial.
   Future<void> vaciar() async {
     await _cola;
-    for (final t in ['documentos', 'trabajos', 'clientes', 'trabajadores', 'etiquetas']) {
+    for (final t in [
+      'documentos',
+      'trabajos',
+      'equipos',
+      'clientes',
+      'trabajadores',
+      'etiquetas',
+      'tipos_trabajo',
+      'competencias',
+    ]) {
       await _db.from(t).delete().eq('empresa_id', empresaId);
     }
     _enviado.clear();
@@ -354,6 +617,10 @@ class Nube {
     'clientes',
     'trabajadores',
     'etiquetas',
+    'tipos_trabajo',
+    'competencias',
+    'equipos',
+    'vencimientos',
     'trabajos',
     'trabajo_precios',
     'trabajo_trabajadores',
@@ -469,14 +736,7 @@ class Nube {
           _otraVez = true;
           continue;
         }
-        final remoto = _filas(
-          Store()
-            ..clientes = d.clientes
-            ..trabajadores = d.trabajadores
-            ..etiquetas = d.etiquetas
-            ..tareas = d.tareas
-            ..subtareas = d.subtareas,
-        );
+        final remoto = _filas(Store()..ponerDeLaNube(d));
         final aqui = _filas(s);
         final visto = _comoClaves(_enviado), base = _comoClaves(remoto), local = _comoClaves(aqui);
         if (mapEquals(visto, base)) continue;
@@ -517,6 +777,10 @@ class Nube {
     'clientes': 'id',
     'trabajadores': 'id',
     'etiquetas': 'id',
+    'tipos_trabajo': 'id',
+    'competencias': 'id',
+    'equipos': 'id',
+    'vencimientos': 'id',
     'trabajos': 'id',
     'trabajo_precios': 'trabajo_id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
@@ -557,6 +821,7 @@ class Nube {
     final trabajadores = {for (final w in s.trabajadores) w.id};
     final trabajos = [...s.tareas, ...s.subtareas];
     final ids = {for (final t in trabajos) t.id};
+    final equipos = {for (final x in s.equipos) x.id};
     final r = <String, Map<String, Map<String, dynamic>>>{for (final t in _orden) t: {}};
     for (final c in s.clientes) {
       r['clientes']![_u(c.id)] = {
@@ -595,17 +860,65 @@ class Nube {
         'competencias': w.competencias,
         'activo': w.activo,
         'estado_hoy': w.estadoHoy.index,
+        'salida': w.salida,
+        'salida_lat': w.salidaLat,
+        'salida_lng': w.salidaLng,
         'color': w.color,
       };
     }
     for (final x in s.etiquetas) {
       r['etiquetas']![_u(x.id)] = {'id': _u(x.id), 'empresa_id': e, 'nombre': x.nombre, 'color': x.color};
     }
+    for (final (i, x) in tipos.indexed) {
+      r['tipos_trabajo']![_u(x.id)] = {
+        'id': _u(x.id),
+        'empresa_id': e,
+        'nombre': x.nombre,
+        'clave': x.clave,
+        'color': x.color.toARGB32(),
+        'competencia': x.competencia,
+        'retraso_min': x.retrasoMin,
+        'orden': i,
+      };
+    }
+    for (final x in s.equipos.where((x) => clientes.contains(x.clienteId))) {
+      r['equipos']![_u(x.id)] = {
+        'id': _u(x.id),
+        'empresa_id': e,
+        'cliente_id': _u(x.clienteId),
+        'tipo': x.tipo,
+        'nombre': x.nombre,
+        'marca': x.marca,
+        'modelo': x.modelo,
+        'numero_serie': x.numeroSerie,
+        'ubicacion': x.ubicacion,
+        'notas': x.notas,
+        'instalacion': _dia(x.instalacion),
+        'estado': x.estado.index,
+        'documentos': x.documentos,
+      };
+    }
+    for (final x in s.vencimientos.where((x) => equipos.contains(x.equipoId))) {
+      r['vencimientos']![_u(x.id)] = {
+        'id': _u(x.id),
+        'empresa_id': e,
+        'equipo_id': _u(x.equipoId),
+        'nombre': x.nombre,
+        'vence': _dia(x.vence),
+        'avisar_dias': x.avisarDias,
+      };
+    }
+    // Una fila por competencia; su id sale del nombre (renombrar = quitar una y poner otra).
+    for (final (i, n) in competencias.indexed) {
+      final id = _u('competencia:$n');
+      r['competencias']![id] = {'id': id, 'empresa_id': e, 'nombre': n, 'orden': i};
+    }
     for (final t in trabajos) {
       r['trabajos']![_u(t.id)] = {
         'id': _u(t.id),
         'empresa_id': e,
         'cliente_id': clientes.contains(t.clienteId) ? _u(t.clienteId!) : null,
+        'equipo_id': equipos.contains(t.equipoId) ? _u(t.equipoId!) : null,
         'plantilla': t.plantilla,
         'color': t.color,
         'plantilla_id': ids.contains(t.plantillaId) ? _u(t.plantillaId!) : null,
@@ -622,6 +935,7 @@ class Nube {
         'proximo': _dia(t.proximo),
         'solicitud': _dia(t.solicitud),
         'inicio_min': t.inicioMin,
+        'fijado': t.fijado,
         'ventana_desde_min': t.ventanaDesdeMin,
         'ventana_hasta_min': t.ventanaHastaMin,
         'duracion_min': t.duracionMin,
@@ -673,12 +987,22 @@ class DatosNube {
   final List<Trabajador> trabajadores;
   final List<EtiquetaTrabajo> etiquetas;
   final List<Tarea> tareas, subtareas;
+
+  /// Vacíos = la empresa aún no los ha guardado: se usan los de partida.
+  final List<TipoInfo> tipos;
+  final List<String> competencias;
+  final List<Equipo> equipos;
+  final List<Vencimiento> vencimientos;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
     required this.etiquetas,
     required this.tareas,
     required this.subtareas,
+    this.tipos = const [],
+    this.competencias = const [],
+    this.equipos = const [],
+    this.vencimientos = const [],
   });
 }
 
@@ -722,6 +1046,9 @@ Trabajador _trabajador(Map x) => Trabajador(
   competencias: List<String>.from(x['competencias'] as List),
   activo: x['activo'],
   estadoHoy: EstadoHoy.values[x['estado_hoy'] as int],
+  salida: x['salida'] as String? ?? '',
+  salidaLat: (x['salida_lat'] as num?)?.toDouble(),
+  salidaLng: (x['salida_lng'] as num?)?.toDouble(),
   color: (x['color'] as num).toInt(),
 );
 
@@ -743,6 +1070,7 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
     Tarea(
       id: x['id'],
       clienteId: x['cliente_id'],
+      equipoId: x['equipo_id'],
       plantilla: x['plantilla'],
       color: (x['color'] as num?)?.toInt(),
       plantillaId: x['plantilla_id'],
@@ -758,6 +1086,7 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       proximo: _fecha(x['proximo']),
       solicitud: _fecha(x['solicitud']),
       inicioMin: x['inicio_min'],
+      fijado: x['fijado'] as bool? ?? false,
       ventanaDesdeMin: x['ventana_desde_min'],
       ventanaHastaMin: x['ventana_hasta_min'],
       duracionMin: x['duracion_min'],

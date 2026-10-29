@@ -8,6 +8,7 @@ import '../shell.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'cuenta.dart';
 import 'vista_trabajador.dart';
 
 /// Entrada de la app con Supabase: sin sesión pide acceso; con sesión carga la empresa y abre Pulpo.
@@ -24,16 +25,28 @@ class _PuertaNubeState extends State<PuertaNube> {
   StreamSubscription<AuthState>? _sub;
   _Fase _fase = _Fase.cargando;
   String? _usuario;
+  bool _pedirClave = false;
 
   @override
   void initState() {
     super.initState();
-    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((e) => _sesion(e.session));
+    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((e) {
+      // Vuelve del enlace de «olvidé mi contraseña»: al entrar, se pide la nueva.
+      if (e.event == AuthChangeEvent.passwordRecovery) _pedirClave = true;
+      _sesion(e.session);
+    });
     _sesion(Supabase.instance.client.auth.currentSession);
+    Nube.reabrir.addListener(_reabrir);
+  }
+
+  /// Se ha cambiado, creado o borrado una empresa: se vuelve a abrir la que toque.
+  void _reabrir() {
+    if (_usuario != null) _abrir(_usuario!);
   }
 
   @override
   void dispose() {
+    Nube.reabrir.removeListener(_reabrir);
     _sub?.cancel();
     super.dispose();
   }
@@ -57,6 +70,12 @@ class _PuertaNubeState extends State<PuertaNube> {
       // Un trabajador entra directo a su vista; un administrador, a la de siempre.
       rolTrabajador.value = store.nube!.esTrabajador ? store.nube!.trabajadorId : null;
       if (mounted) setState(() => _fase = _Fase.listo);
+      if (_pedirClave) {
+        _pedirClave = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) cambiarClave(context, recuperando: true);
+        });
+      }
     } on InvitacionNoValida {
       if (mounted) setState(() => _fase = _Fase.invitacionMala);
     } catch (e) {
@@ -187,6 +206,36 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     super.dispose();
   }
 
+  Future<void> _recuperar() async {
+    final correo = _correo.text.trim();
+    if (!correo.contains('@')) {
+      setState(() {
+        _aviso = 'Escribe tu correo y vuelve a pulsar.';
+        _avisoMalo = true;
+      });
+      return;
+    }
+    setState(() => _enviando = true);
+    try {
+      await Nube.recuperarClave(correo);
+      _ponerAviso('Si hay una cuenta con ese correo, te llegará un enlace para poner otra contraseña.', malo: false);
+    } on AuthException catch (e) {
+      _ponerAviso(_traducir(e.message));
+    } catch (_) {
+      _ponerAviso('No se pudo conectar. Comprueba la conexión.');
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  void _ponerAviso(String texto, {bool malo = true}) {
+    if (!mounted) return;
+    setState(() {
+      _aviso = texto;
+      _avisoMalo = malo;
+    });
+  }
+
   Future<void> _enviar() async {
     final correo = _correo.text.trim();
     if (!correo.contains('@') || _clave.text.length < 6) {
@@ -292,6 +341,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         onPressed: _enviando ? null : () => setState(() => _nueva = !_nueva),
         child: Text(_nueva ? 'Ya tengo cuenta' : 'Crear una cuenta'),
       ),
+      if (!_nueva) TextButton(onPressed: _enviando ? null : _recuperar, child: const Text('¿Olvidaste la contraseña?')),
     ],
   );
 }

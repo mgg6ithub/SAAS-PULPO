@@ -63,8 +63,8 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
-            opciones: const ['Resumen', 'Trabajos', 'Datos'],
-            contadores: [null, tareas.length, null],
+            opciones: const ['Resumen', 'Trabajos', 'Historial', 'Datos'],
+            contadores: [null, tareas.length, null, null],
             seleccion: pestana,
             onChanged: (i) => setState(() => pestana = i),
           ),
@@ -78,6 +78,7 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
                 child: switch (pestana) {
                   0 => _Resumen(c, tareas, onVerTodo: () => setState(() => pestana = 1)),
                   1 => _Mantenimientos(c, tareas),
+                  2 => LayoutBuilder(builder: (context, box) => _Historial(tareas, alto: box.maxHeight)),
                   _ => SingleChildScrollView(
                     child: Align(
                       alignment: Alignment.topLeft,
@@ -204,6 +205,46 @@ class _Resumen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Todo lo que se ha hecho en el cliente, de lo más reciente a lo más antiguo: cada visita de cada equipo.
+class _Historial extends StatelessWidget {
+  final List<Tarea> tareas;
+  final double alto;
+  const _Historial(this.tareas, {required this.alto});
+
+  @override
+  Widget build(BuildContext context) {
+    final visitas = [
+      for (final t in tareas)
+        for (final d in {...t.historial, ?t.ultimo}) (d, t),
+    ]..sort((a, b) => b.$1.compareTo(a.$1));
+    return SeccionTarjeta(
+      alto: alto,
+      titulo: 'Historial de mantenimientos',
+      subtitulo: visitas.isEmpty ? null : '${visitas.length} ${visitas.length == 1 ? 'visita' : 'visitas'}',
+      children: visitas.isEmpty
+          ? [
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text(
+                  'Aún no se ha hecho ningún mantenimiento.',
+                  style: TextStyle(color: P.textoSuave, fontSize: 13),
+                ),
+              ),
+            ]
+          : [
+              for (final (d, t) in visitas)
+                FilaLista(
+                  lider: BarraTipo(t.tipo, alto: 32, color: t.colorBloque),
+                  titulo: t.nombre,
+                  subtitulo: [fecha(d), relativo(d), t.tipo, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
+                  derecha: Icon(Icons.check_circle_rounded, size: 20, color: P.verde),
+                  onTap: () => abrirTareaForm(context, t),
+                ),
+            ],
     );
   }
 }

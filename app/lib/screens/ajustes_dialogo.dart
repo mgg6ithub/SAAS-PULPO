@@ -5,6 +5,7 @@ import '../ajustes.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'tipos_competencias.dart';
 
 /// Ajustes de la app, agrupados en tarjetas como los ajustes de iOS: apariencia, letra, agenda,
 /// barra lateral y datos.
@@ -142,6 +143,19 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                     seleccion: ajustes.barraDerecha ? 1 : 0,
                     onChanged: (i) => ajustes.ponerBarraDerecha(i == 1),
                   ),
+                ),
+              ]),
+              // Los datos propios de la empresa (nombre, logo, contacto) irán aquí con DEV-018.
+              _Grupo('Empresa', [
+                _Fila(
+                  titulo: 'Tipos de trabajo',
+                  subtitulo: '${tipos.length} tipos, con su icono, color y competencia',
+                  child: Enlace('Editar', onTap: () => abrirTipos(context)),
+                ),
+                _Fila(
+                  titulo: 'Competencias',
+                  subtitulo: '${competencias.length} competencias para trabajadores y trabajos',
+                  child: Enlace('Editar', onTap: () => abrirCompetencias(context)),
                 ),
               ]),
               if (store.nube == null)

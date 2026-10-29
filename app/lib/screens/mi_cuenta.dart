@@ -5,7 +5,9 @@ import '../models.dart';
 import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
+import 'accesos.dart';
 import 'ajustes_dialogo.dart';
+import 'cuenta.dart';
 import 'invitar.dart';
 
 String? _correo() => Supabase.instance.client.auth.currentUser?.email;
@@ -25,6 +27,12 @@ Future<void> abrirMiCuenta(BuildContext context) async {
     ),
     Offset.zero & lienzo.size,
   );
+  final nube = store.nube!;
+  // Las otras empresas de la cuenta, para cambiar de una a otra (si falla la red, el menú sale sin ellas).
+  final otras = (await Nube.empresas().catchError((_) => <({String id, String nombre, String rol})>[]))
+      .where((e) => e.id != nube.empresaId)
+      .toList();
+  if (!context.mounted) return;
   final elegido = await showMenu<String>(
     context: context,
     position: posicion,
@@ -44,9 +52,36 @@ Future<void> abrirMiCuenta(BuildContext context) async {
               style: TextStyle(color: P.texto, fontSize: 13.5, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 2),
-            Text('${store.nube!.nombre} · Administrador', style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
+            Text(
+              '${nube.nombre} · ${nube.esAdmin ? 'Administrador' : 'Trabajador'}',
+              style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+            ),
           ],
         ),
+      ),
+      const PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'cuenta',
+        child: Text('Tu cuenta', style: TextStyle(color: P.texto, fontSize: 13.5)),
+      ),
+      if (nube.esAdmin)
+        PopupMenuItem<String>(
+          value: 'empresa',
+          child: Text('Datos de la empresa', style: TextStyle(color: P.texto, fontSize: 13.5)),
+        ),
+      if (nube.esAdmin)
+        PopupMenuItem<String>(
+          value: 'accesos',
+          child: Text('Accesos de la empresa', style: TextStyle(color: P.texto, fontSize: 13.5)),
+        ),
+      for (final e in otras)
+        PopupMenuItem<String>(
+          value: 'ir:${e.id}',
+          child: Text('Cambiar a ${e.nombre}', style: TextStyle(color: P.texto, fontSize: 13.5)),
+        ),
+      PopupMenuItem<String>(
+        value: 'nueva',
+        child: Text('Crear otra empresa', style: TextStyle(color: P.texto, fontSize: 13.5)),
       ),
       const PopupMenuDivider(),
       PopupMenuItem<String>(
@@ -65,6 +100,16 @@ Future<void> abrirMiCuenta(BuildContext context) async {
   );
   if (!context.mounted) return;
   switch (elegido) {
+    case 'cuenta':
+      await abrirCuenta(context);
+    case 'empresa':
+      await abrirEmpresa(context);
+    case 'accesos':
+      await abrirAccesos(context);
+    case 'nueva':
+      await abrirNuevaEmpresa(context);
+    case final String ir when ir.startsWith('ir:'):
+      await Nube.entrarEn(ir.substring(3));
     case 'ajustes':
       await abrirAjustes(context);
     case 'invitar':

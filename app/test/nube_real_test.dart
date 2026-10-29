@@ -428,6 +428,81 @@ void main() {
         expect(r.tareas, isEmpty);
         expect(r.clientes, isEmpty);
         await Nube.cerrarSesion();
+
+        // ── DEV-018: perfil, varias empresas con sus datos y tipo, borrar empresa y cuenta ──
+        // El socio (D) pone su perfil: lo ve el administrador de su empresa (A), no alguien de fuera (B).
+        await auth.signInWithPassword(email: _env['SB_CORREO_D']!, password: 'prueba-123456');
+        await Nube.guardarPerfil(nombre: 'Socio Prueba', foto: null);
+        expect((await Nube.perfil()).nombre, 'Socio Prueba');
+        final idD = auth.currentUser!.id;
+        await Nube.cerrarSesion();
+        await auth.signInWithPassword(email: _env['SB_CORREO_A']!, password: 'prueba-123456');
+        expect((await db.from('perfiles').select().eq('usuario_id', idD)).length, 1);
+
+        // ── DEV-020: accesos de la empresa ──
+        final nA4 = await Nube.abrir();
+        final idA = auth.currentUser!.id;
+        var accesos = await nA4.accesos();
+        expect(accesos.map((a) => a.rol), ['admin', 'admin', 'trabajador'], reason: 'A, D y C');
+        expect(accesos.firstWhere((a) => a.usuarioId == idD).nombre, 'Socio Prueba');
+        expect(accesos.firstWhere((a) => a.usuarioId == idA).correo, _env['SB_CORREO_A']);
+        // D pasa a trabajador: A queda como único administrador y no se puede quitar ni degradar.
+        await nA4.cambiarRol(idD, 'trabajador');
+        await expectLater(nA4.quitarAcceso(idA), throwsA(isA<UltimoAdministrador>()));
+        await expectLater(nA4.cambiarRol(idA, 'trabajador'), throwsA(isA<UltimoAdministrador>()));
+        await expectLater(Nube.borrarCuenta(), throwsA(isA<UltimoAdministrador>()));
+        expect(auth.currentUser, isNotNull, reason: 'no se ha borrado nada');
+        // Vuelve a administrador; a C se le quita el acceso.
+        await nA4.cambiarRol(idD, 'admin');
+        final idC = accesos.firstWhere((a) => a.rol == 'trabajador').usuarioId;
+        await nA4.quitarAcceso(idC);
+        accesos = await nA4.accesos();
+        expect(accesos.map((a) => a.usuarioId), isNot(contains(idC)));
+        // Invitaciones pendientes: la nueva sale; las usadas no; anularla la quita.
+        await nA4.crearInvitacion(rol: 'admin');
+        var pendientes = await nA4.invitacionesPendientes();
+        expect(pendientes.length, 1);
+        await nA4.anularInvitacion(pendientes.single.id);
+        pendientes = await nA4.invitacionesPendientes();
+        expect(pendientes, isEmpty);
+        await Nube.cerrarSesion();
+
+        // B: su primera empresa y otra de ascensores, que arranca solo con la plantilla de ascensor.
+        await auth.signInWithPassword(email: _env['SB_CORREO_B']!, password: 'prueba-123456');
+        expect((await db.from('perfiles').select().eq('usuario_id', idD)), isEmpty, reason: 'perfil ajeno');
+        final nB = await Nube.abrir();
+        final sB = Store();
+        await sB.cargarDesdeNube(nB);
+        await nB.guardado;
+        final antes = Nube.reabrir.value;
+        await Nube.crearEmpresa('Ascensores Prueba', 'Ascensores');
+        expect(Nube.reabrir.value, antes + 1, reason: 'la app vuelve a abrir la empresa');
+        final nB2 = await Nube.abrir();
+        expect(nB2.empresaId, isNot(nB.empresaId), reason: 'entra en la recién creada');
+        expect(nB2.nueva, isTrue);
+        expect(nB2.tipo, 'Ascensores');
+        final sB2 = Store();
+        await sB2.cargarDesdeNube(nB2);
+        await nB2.guardado;
+        expect(sB2.tareas.map((t) => t.tipo), ['Ascensor']);
+        expect((await Nube.empresas()).map((e) => e.nombre), ['Ascensores Prueba', 'Mi empresa']);
+        await nB2.guardarEmpresa({'cif': 'B12345678', 'telefono': '944000000', 'direccion': 'Calle Prueba 1'});
+        expect((await nB2.datosEmpresa())['cif'], 'B12345678');
+        // Cambiar de empresa y volver: se recuerda la elegida.
+        await Nube.entrarEn(nB.empresaId);
+        expect((await Nube.abrir()).empresaId, nB.empresaId);
+        await Nube.entrarEn(nB2.empresaId);
+        expect((await Nube.abrir()).empresaId, nB2.empresaId);
+        // Borrar la de ascensores: se va con sus trabajos y queda la otra.
+        await nB2.borrarEmpresa();
+        expect((await Nube.empresas()).map((e) => e.id), [nB.empresaId]);
+        expect((await Nube.abrir()).empresaId, nB.empresaId);
+        // Borrar la cuenta (función borrar-cuenta): se va su empresa y ya no puede entrar.
+        await Nube.borrarCuenta();
+        await expectLater(
+          auth.signInWithPassword(email: _env['SB_CORREO_B']!, password: 'prueba-123456'),
+          throwsA(isA<AuthException>()),
+        );
       });
     },
     timeout: const Timeout(Duration(minutes: 5)),
