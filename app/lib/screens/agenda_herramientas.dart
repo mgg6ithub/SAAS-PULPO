@@ -245,7 +245,7 @@ class _FichaRapida extends StatelessWidget {
                   style: TextButton.styleFrom(foregroundColor: P.rojo),
                   onPressed: () async {
                     final nav = Navigator.of(context);
-                    if (await confirmar(context, '¿Eliminar "${t.nombre}"?')) {
+                    if (await confirmar(context, preguntaBorrarTrabajos([t.id], nombre: '"${t.nombre}"'))) {
                       store.borrarTarea(t.id);
                       nav.pop();
                     }

@@ -92,4 +92,15 @@ void main() {
     await store.cargar();
     expect(store.plantillasPorUso.first.id, ids[1]);
   });
+  testWidgets('al borrar un trabajo avisa de sus subtrabajos y los borra con él (DEV-003)', (tester) async {
+    store.guardarTarea(Tarea(id: 's1', padreId: 't2', nombre: 'Cuarto de máquinas'));
+    store.guardarTarea(Tarea(id: 's2', padreId: 's1', nombre: 'Lubricar guías'));
+    await pintar(tester, TareaForm(original: store.tarea('t2')!));
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+    expect(find.text('¿Eliminar "Ascensor portal A"? También se eliminarán sus 2 subtrabajos.'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Eliminar'));
+    await tester.pumpAndSettle();
+    expect([store.tarea('t2'), store.tarea('s1'), store.tarea('s2')], everyElement(isNull));
+  });
 }
