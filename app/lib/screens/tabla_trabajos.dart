@@ -44,7 +44,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? widget.nombre : '${widget.nombre}s'}?')) return;
+    final nombre = '$n ${n == 1 ? widget.nombre : '${widget.nombre}s'}';
+    if (!await confirmar(context, preguntaBorrarTrabajos(seleccion, nombre: nombre))) return;
     for (final id in seleccion) {
       store.borrarTarea(id);
     }

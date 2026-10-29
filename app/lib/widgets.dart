@@ -1728,6 +1728,17 @@ Widget pillVencimiento(Tarea t) {
   return Pill(relativo(t.proximo!), color, icono: n < 0 ? Icons.warning_amber_rounded : Icons.event_outlined);
 }
 
+/// Pregunta para borrar trabajos: avisa de los subtrabajos que se borran con ellos (DEV-003).
+String preguntaBorrarTrabajos(Iterable<String> ids, {required String nombre}) {
+  final sub = {for (final id in ids) ...store.descendientes(id).map((h) => h.id)}.difference(ids.toSet()).length;
+  final aviso = switch (sub) {
+    0 => '',
+    1 => ' También se eliminará su subtrabajo.',
+    _ => ' También se eliminarán sus $sub subtrabajos.',
+  };
+  return '¿Eliminar $nombre?$aviso';
+}
+
 Future<bool> confirmar(BuildContext context, String texto) async =>
     await showDialog<bool>(
       context: context,

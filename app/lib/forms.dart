@@ -1531,7 +1531,7 @@ class _TareaFormState extends State<TareaForm> {
           ? null
           : () async {
               final nav = Navigator.of(context);
-              if (await confirmar(context, '¿Eliminar "${t.nombre}"?')) {
+              if (await confirmar(context, preguntaBorrarTrabajos([t.id], nombre: '"${t.nombre}"'))) {
                 store.borrarTarea(t.id);
                 if (!widget.incrustada) nav.pop();
               }
