@@ -57,6 +57,20 @@ async function reclamar(id: string): Promise<boolean> {
   return r.ok && ((await r.json()) as unknown[]).length === 1
 }
 
+const escapar = (t: string) =>
+  t.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+
+/** La misma carta en HTML sencillo (Gmail desconfía de los emails solo de texto): párrafos y la firma en gris. */
+function html(cuerpo: string): string {
+  const [texto, firma] = cuerpo.split('\n-- \n')
+  const parrafos = texto.trim().split(/\n{2,}/).map((p) => `<p>${escapar(p).replaceAll('\n', '<br>')}</p>`).join('')
+  const pie = firma
+    ? `<p style="color:#6b7280;font-size:13px">${escapar(firma.trim()).replaceAll('\n', '<br>')}</p>`
+    : ''
+  return `<!doctype html><html lang="es"><body style="font-family:Arial,sans-serif;font-size:15px;color:#111827">` +
+    `${parrafos}${pie}</body></html>`
+}
+
 // Dominios reservados de las pruebas (`ana@prueba.invalid`): nunca salen, así no rebotan en la cuenta de Pultec.
 const DE_PRUEBA = /\.(invalid|test|example|localhost)$/i
 
@@ -72,6 +86,9 @@ async function enviar(e: Envio): Promise<void> {
       to: e.destinatario,
       subject: e.asunto,
       text: e.cuerpo,
+      html: html(e.cuerpo),
+      // Sin esto nodemailer firma el Message-ID con el nombre de la máquina de la función (señal de spam).
+      messageId: `<${e.id}@${DIRECCION.split('@')[1] ?? 'pultec'}>`,
     })
     await marcar(e.id, { estado: 'enviado', enviado_en: new Date().toISOString(), error: null })
   } catch (err) {

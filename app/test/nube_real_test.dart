@@ -386,6 +386,18 @@ void main() {
           proximo: hoy(),
           trabajadorIds: [pepe.id],
           precio: 80,
+          // Puntual con aviso al completarse: al marcarlo hecho ya no tiene próxima fecha (salía «—» en el email).
+          periodicidad: Periodicidad.unica,
+          automatizaciones: [
+            Automatizacion(
+              id: limpio.nuevoId(),
+              nombre: 'Hecho',
+              disparador: Disparador.alCompletar,
+              aTrabajadores: false,
+              cuerpo: 'Hecho el {fecha}.',
+              extras: ['aviso@prueba.invalid'],
+            ),
+          ],
         );
         final trabajoQ = Tarea(id: limpio.nuevoId(), clienteId: cli2.id, nombre: 'Trabajo de otro', proximo: hoy());
         limpio
@@ -503,6 +515,11 @@ void main() {
         final nD = await Nube.abrir();
         expect(nD.rol, 'admin');
         expect(await _filas('empresas'), 1, reason: 'el socio sin empresa propia');
+        final aviso = (await db.from('envios_automatizacion').select('cuerpo')).single['cuerpo'] as String;
+        final d = hoy();
+        final dia = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+        expect(aviso, startsWith('Hecho el $dia.'), reason: 'el email lleva el día hecho, no «—»');
+        expect(aviso, contains('\n-- \n'), reason: 'pie como firma');
         expect(nD.empresaId, n2.empresaId);
         final sD = Store();
         await sD.cargarDesdeNube(nD);
