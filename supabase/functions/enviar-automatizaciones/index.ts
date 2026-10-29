@@ -21,8 +21,18 @@ const smtp = Deno.env.get('SMTP_HOST')
   })
   : null
 const DESDE = Deno.env.get('MAIL_FROM') ?? Deno.env.get('SMTP_USER') ?? 'Pultec <no-reply@localhost>'
+// La dirección real es siempre la de la cuenta; el nombre que se ve cambia por empresa («Pultec · Empresa»).
+const DIRECCION = DESDE.match(/<([^>]+)>/)?.[1] ?? DESDE.match(/\S+@\S+/)?.[0] ?? DESDE
 
-type Envio = { id: string; destinatario: string; asunto: string; cuerpo: string; intentos: number }
+type Envio = {
+  id: string
+  destinatario: string
+  asunto: string
+  cuerpo: string
+  intentos: number
+  remitente: string
+  responder_a: string | null
+}
 
 const rest = (ruta: string, init: RequestInit = {}) =>
   fetch(`${URL_BASE}/rest/v1/${ruta}`, {
@@ -47,13 +57,22 @@ async function reclamar(id: string): Promise<boolean> {
   return r.ok && ((await r.json()) as unknown[]).length === 1
 }
 
+// Dominios reservados de las pruebas (`ana@prueba.invalid`): nunca salen, así no rebotan en la cuenta de Pultec.
+const DE_PRUEBA = /\.(invalid|test|example|localhost)$/i
+
 async function enviar(e: Envio): Promise<void> {
-  if (!smtp) {
+  if (!smtp || DE_PRUEBA.test(e.destinatario)) {
     await marcar(e.id, { estado: 'simulado', enviado_en: new Date().toISOString() })
     return
   }
   try {
-    await smtp.sendMail({ from: DESDE, to: e.destinatario, subject: e.asunto, text: e.cuerpo })
+    await smtp.sendMail({
+      from: { name: e.remitente, address: DIRECCION },
+      replyTo: e.responder_a ?? undefined,
+      to: e.destinatario,
+      subject: e.asunto,
+      text: e.cuerpo,
+    })
     await marcar(e.id, { estado: 'enviado', enviado_en: new Date().toISOString(), error: null })
   } catch (err) {
     await marcar(e.id, { estado: 'error', intentos: e.intentos + 1, error: String(err).slice(0, 500) })
@@ -69,7 +88,7 @@ Deno.serve(async (req) => {
   const r = await rest(
     `envios_automatizacion?intentos=lt.${MAX_INTENTOS}` +
       `&or=(estado.in.(pendiente,error),and(estado.eq.enviando,reclamado_en.lt.${caducado}))` +
-      '&order=created_at&limit=50&select=id,destinatario,asunto,cuerpo,intentos',
+      '&order=created_at&limit=50&select=id,destinatario,asunto,cuerpo,intentos,remitente,responder_a',
     { headers: { Prefer: '' } },
   )
   if (!r.ok) return new Response(`No se pudo leer la cola: ${r.status}`, { status: 500 })
