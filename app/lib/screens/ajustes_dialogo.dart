@@ -5,6 +5,7 @@ import '../ajustes.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'importar_exportar.dart';
 import 'tipos_competencias.dart';
 
 /// Ajustes de la app, agrupados en tarjetas como los ajustes de iOS: apariencia, letra, agenda,
@@ -158,19 +159,27 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                   child: Enlace('Editar', onTap: () => abrirCompetencias(context)),
                 ),
               ]),
-              if (store.nube == null)
+              if (!(store.nube?.esTrabajador ?? false))
                 _Grupo('Datos', [
                   _Fila(
-                    titulo: 'En este navegador',
-                    subtitulo: 'Tus clientes, trabajadores y trabajos',
-                    child: TextButton(
-                      style: TextButton.styleFrom(foregroundColor: P.rojo),
-                      onPressed: () async {
-                        if (await confirmar(context, '¿Borrar todos los datos y empezar de cero?')) store.restablecer();
-                      },
-                      child: const Text('Borrar todo'),
-                    ),
+                    titulo: 'Importar y exportar',
+                    subtitulo: 'Clientes, trabajadores y trabajos en CSV (Excel)',
+                    child: Enlace('Abrir', onTap: () => abrirImportarExportar(context)),
                   ),
+                  if (store.nube == null)
+                    _Fila(
+                      titulo: 'En este navegador',
+                      subtitulo: 'Tus clientes, trabajadores y trabajos',
+                      child: TextButton(
+                        style: TextButton.styleFrom(foregroundColor: P.rojo),
+                        onPressed: () async {
+                          if (await confirmar(context, '¿Borrar todos los datos y empezar de cero?')) {
+                            store.restablecer();
+                          }
+                        },
+                        child: const Text('Borrar todo'),
+                      ),
+                    ),
                 ]),
             ],
           ),

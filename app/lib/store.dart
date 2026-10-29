@@ -633,6 +633,18 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
+  /// Añade de una vez lo importado de un CSV (un solo guardado).
+  void importar({
+    List<Cliente> clientes = const [],
+    List<Trabajador> trabajadores = const [],
+    List<Tarea> tareas = const [],
+  }) {
+    this.clientes.addAll(clientes);
+    this.trabajadores.addAll(trabajadores);
+    this.tareas.addAll(tareas);
+    _cambio();
+  }
+
   void guardarTarea(Tarea t) {
     if (t.padreId != null) {
       // El subtrabajo comparte el cliente de su padre.
