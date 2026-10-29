@@ -35,7 +35,8 @@ class VistaPulpo extends StatelessWidget {
           final hora = a.inicioMin!.compareTo(b.inicioMin!);
           return hora != 0 ? hora : a.finMin!.compareTo(b.finMin!);
         });
-      return LayoutBuilder(
+      return SegunTamano(
+        clave: (box) => box.maxWidth < 920,
         builder: (context, box) {
           final estrecho = box.maxWidth < 920;
           final pendientes = _PanelSinConcretar(

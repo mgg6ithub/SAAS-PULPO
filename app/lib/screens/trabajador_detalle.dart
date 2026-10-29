@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../forms.dart';
 import '../models.dart';
+import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -80,11 +81,7 @@ class TrabajadorDetalle extends StatelessWidget {
                       : const Pill('Inactivo', P.gris, punto: true),
                   if (!conFicha)
                     OutlinedButton(onPressed: () => abrirTrabajadorForm(context, w), child: const Text('Editar ficha')),
-                  if (store.nube != null)
-                    OutlinedButton(
-                      onPressed: () => invitarTrabajador(context, w),
-                      child: const Text('Invitar a la app'),
-                    ),
+                  if (store.nube != null) _Acceso(w, key: ValueKey('acceso-${w.id}')),
                   // Sin tareas, el botón está en el centro; arriba solo cuando ya hay alguna.
                   if (tareas.isNotEmpty)
                     BotonPrimario(
@@ -117,6 +114,60 @@ class TrabajadorDetalle extends StatelessWidget {
 
   /// Por día y hora; lo que no tiene fecha, al final.
   static DateTime _orden(Tarea t) => (t.proximo ?? DateTime(2100)).add(Duration(minutes: t.inicioMin ?? 0));
+}
+
+/// «Tiene acceso» si la ficha ya está ligada a una cuenta; si no, el botón para invitarlo (DEV-020).
+class _Acceso extends StatefulWidget {
+  final Trabajador w;
+  const _Acceso(this.w, {super.key});
+
+  @override
+  State<_Acceso> createState() => _AccesoState();
+}
+
+class _AccesoState extends State<_Acceso> {
+  /// null mientras se lee la base (no se pinta nada para no parpadear).
+  ({bool cuenta, bool invitado})? _estado;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    final nube = store.nube!;
+    var estado = (cuenta: false, invitado: false);
+    try {
+      final r = await Future.wait([nube.accesos(), nube.invitacionesPendientes()]);
+      estado = (
+        cuenta: (r[0] as List<Acceso>).any((a) => nube.esFicha(widget.w.id, a.trabajadorId)),
+        invitado: (r[1] as List<InvitacionPendiente>).any((i) => nube.esFicha(widget.w.id, i.trabajadorId)),
+      );
+    } catch (e) {
+      debugPrint('Pulpo: no se pudo leer el acceso de ${widget.w.nombre}: $e');
+    }
+    if (mounted) setState(() => _estado = estado);
+  }
+
+  Future<void> _invitar() async {
+    await invitarTrabajador(context, widget.w);
+    await _cargar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final e = _estado;
+    if (e == null) return const SizedBox.shrink();
+    if (e.cuenta) return const Pill('Tiene acceso', P.verde, punto: true);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (e.invitado) ...[const Pill('Invitación pendiente', P.ambar, punto: true), const SizedBox(width: 8)],
+        OutlinedButton(onPressed: _invitar, child: Text(e.invitado ? 'Invitar de nuevo' : 'Invitar a la app')),
+      ],
+    );
+  }
 }
 
 class _TareaAsignada extends StatelessWidget {

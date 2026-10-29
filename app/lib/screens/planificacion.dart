@@ -38,7 +38,10 @@ class _PlanificacionState extends State<Planificacion> {
   final _marcoGuiaKey = GlobalKey();
   final _organizarGuiaKey = GlobalKey();
   bool _mostrarSinConcretar = true;
-  Rect? _organizarRect;
+
+  /// Hueco del botón Organizar en la guía. En un ValueNotifier: al mover la barra lateral el botón se
+  /// desplaza en cada fotograma y solo debe repintarse el velo, no toda la página.
+  final _organizarRect = ValueNotifier<Rect?>(null);
   bool _medicionPendiente = false;
 
   // ?v=0..4 abre una vista concreta (útil para enlaces y capturas): 0 Día, 1 Semana, 2 Mes, 3 Tablero, 4 Línea.
@@ -63,6 +66,7 @@ class _PlanificacionState extends State<Planificacion> {
   @override
   void dispose() {
     anchoMapa.dispose();
+    _organizarRect.dispose();
     super.dispose();
   }
 
@@ -100,7 +104,7 @@ class _PlanificacionState extends State<Planificacion> {
       if (boton is! RenderBox || marco is! RenderBox || !boton.hasSize || !marco.hasSize) return;
       final posicion = boton.localToGlobal(Offset.zero, ancestor: marco);
       final rect = posicion & boton.size;
-      if (rect != _organizarRect) setState(() => _organizarRect = rect);
+      _organizarRect.value = rect;
     });
   }
 
@@ -382,15 +386,20 @@ class _PlanificacionState extends State<Planificacion> {
           fit: StackFit.expand,
           children: [
             pagina,
-            if (mostrarGuia && _organizarRect != null)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Semantics(
-                    label: 'Pulsa Organizar para que Pulpo asigne el trabajo al técnico.',
-                    liveRegion: true,
-                    child: CustomPaint(painter: _GuiaOrganizarPainter(_organizarRect!)),
-                  ),
-                ),
+            if (mostrarGuia)
+              ValueListenableBuilder<Rect?>(
+                valueListenable: _organizarRect,
+                builder: (context, rect, _) => rect == null
+                    ? const SizedBox.shrink()
+                    : Positioned.fill(
+                        child: IgnorePointer(
+                          child: Semantics(
+                            label: 'Pulsa Organizar para que Pulpo asigne el trabajo al técnico.',
+                            liveRegion: true,
+                            child: CustomPaint(painter: _GuiaOrganizarPainter(rect)),
+                          ),
+                        ),
+                      ),
               ),
           ],
         );

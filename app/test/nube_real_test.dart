@@ -101,7 +101,10 @@ void main() {
           }),
         );
         await n.subirPendiente();
-        expect((await db0.from('trabajos').select('notas').eq('id', enVivo.id).single())['notas'], 'Hecho sin conexión');
+        expect(
+          (await db0.from('trabajos').select('notas').eq('id', enVivo.id).single())['notas'],
+          'Hecho sin conexión',
+        );
         expect(prefs.getString('pulpo_pendiente_${n.empresaId}'), isNull);
         await Future<void>.delayed(const Duration(seconds: 2)); // el eco en vivo lo trae al Store
 
@@ -499,6 +502,10 @@ void main() {
         expect(sA3.tarea(trabajoP.id)!.historial, isNotEmpty);
         expect(await _filas('invitaciones'), 2);
         expect(await _filas('miembros'), 3);
+        // «Tiene acceso» en la ficha del trabajador: la cuenta de C se reconoce desde la ficha de Pepe.
+        expect((await nA3.accesos()).where((a) => nA3.esFicha(pepe.id, a.trabajadorId)).map((a) => a.rol), [
+          'trabajador',
+        ]);
         await db.storage.from('fotos').remove([...parte.fotos, parte.firma!]);
         await sA3.vaciarNube();
         // ── El botón de borrar la deja solo con las cuentas ──
