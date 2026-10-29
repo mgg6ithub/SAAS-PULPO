@@ -102,7 +102,7 @@ class _PuertaNubeState extends State<PuertaNube> {
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
             children: [
-              for (final (aviso, color) in [(Nube.choque, P.tinta), (Nube.error, P.rojo)])
+              for (final (aviso, color) in [(Nube.subiendo, P.tinta), (Nube.choque, P.tinta), (Nube.error, P.rojo)])
                 ValueListenableBuilder<String?>(
                   valueListenable: aviso,
                   builder: (_, e, _) => e == null

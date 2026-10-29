@@ -214,12 +214,17 @@ class Nube {
 
   /// Sube las fotos (JPEG) y la firma (PNG) a `<empresa>/informes/<informe>/` y guarda el informe. Espera
   /// antes a que el trabajo esté guardado, porque el informe apunta a él.
-  Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma) async {
+  Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma, {String? id}) async {
     await _cola;
-    final id = store.nuevoId();
+    id ??= store.nuevoId();
     Future<String> subir(String nombre, Uint8List bytes, String tipo) async {
       final ruta = '$empresaId/informes/$id/$nombre';
-      await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
+      try {
+        await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
+      } on StorageException catch (e) {
+        // Ya subida en un intento anterior que se cortó (sin conexión): vale la que hay.
+        if (e.statusCode != '409' && !e.message.contains('already exists')) rethrow;
+      }
       _fotos[ruta] = Future.value(bytes);
       return ruta;
     }
@@ -228,7 +233,7 @@ class Nube {
     final rutaFirma = firma == null ? null : await subir('firma.png', firma, 'image/png');
     final x = await _db
         .from('informes')
-        .insert({
+        .upsert({
           'id': id,
           'empresa_id': empresaId,
           'trabajo_id': _u(i.trabajoId),
@@ -240,14 +245,13 @@ class Nube {
           'fotos': rutas,
           'firma': rutaFirma,
           'firmante': i.firmante,
-        })
-        .select('created_at')
-        .single();
+        }, onConflict: 'id', ignoreDuplicates: true)
+        .select('created_at');
     return i.guardado(
       id: id,
       fotos: rutas,
       firma: rutaFirma,
-      cuando: DateTime.parse(x['created_at'] as String).toLocal(),
+      cuando: x.isEmpty ? i.cuando : DateTime.parse(x.first['created_at'] as String).toLocal(),
     );
   }
 
@@ -650,51 +654,104 @@ class Nube {
       if (quitadas.isNotEmpty) borrar[t] = quitadas;
     }
     if (subir.isEmpty && borrar.isEmpty) return;
-    _envios++;
+    final envio = ++_envios;
     _reintento?.cancel();
+    // Se apunta en el dispositivo antes de mandarlo: si se cierra la app sin conexión, se sube al volver.
+    _apuntarPendiente(subir, borrar);
     _cola = _cola.then((_) async {
+      if (error.value != null) subiendo.value = 'Subiendo cambios…';
       try {
-        for (final t in _orden) {
-          var filas = subir[t];
-          if (filas == null) continue;
-          if (esTrabajador) {
-            // Solo puede cambiar sus trabajos (estado y fechas) y marcarlos como hechos.
-            if (t == 'trabajos') {
-              for (final f in filas) {
-                await _db.from(t).update(f).eq('id', f['id']);
-              }
-            } else if (t == 'trabajo_historial') {
-              await _db.from(t).upsert(filas, onConflict: _clave[t]!, ignoreDuplicates: true);
-            }
-            continue;
-          }
-          if (t == 'clientes' || t == 'trabajadores') {
-            filas = [for (final f in filas) await _conFotoSubida(t, f)];
-          }
-          for (var i = 0; i < filas.length; i += 200) {
-            await _db
-                .from(t)
-                .upsert(filas.sublist(i, i + 200 > filas.length ? filas.length : i + 200), onConflict: _clave[t]!);
-          }
-        }
-        for (final t in _orden.reversed) {
-          if (esTrabajador && t != 'trabajo_historial') continue;
-          for (final k in borrar[t] ?? const <String>[]) {
-            await _borrar(t, k);
-          }
-        }
+        await _subir(subir, borrar);
         _enviado
           ..clear()
           ..addAll({
             for (final t in _orden) t: {for (final e in ahora[t]!.entries) e.key: jsonEncode(e.value)},
           });
+        if (envio == _envios) await _apuntarPendiente(const {}, const {});
         error.value = null;
       } catch (e) {
         debugPrint('Pulpo: no se pudo guardar en Supabase: $e');
-        error.value = 'No se pudo guardar. Se reintentará solo.';
+        error.value = sinConexion(e)
+            ? 'Sin conexión. Los cambios se guardan aquí y se subirán al volver.'
+            : 'No se pudo guardar. Se reintentará solo.';
         _reintento = Timer(const Duration(seconds: 10), sincronizar);
+      } finally {
+        subiendo.value = null;
       }
     });
+  }
+
+  /// Manda a la base las filas cambiadas y borra las quitadas, en orden.
+  Future<void> _subir(Map<String, List<Map<String, dynamic>>> subir, Map<String, List<String>> borrar) async {
+    for (final t in _orden) {
+      var filas = subir[t];
+      if (filas == null) continue;
+      if (esTrabajador) {
+        // Solo puede cambiar sus trabajos (estado y fechas) y marcarlos como hechos.
+        if (t == 'trabajos') {
+          for (final f in filas) {
+            await _db.from(t).update(f).eq('id', f['id']);
+          }
+        } else if (t == 'trabajo_historial') {
+          await _db.from(t).upsert(filas, onConflict: _clave[t]!, ignoreDuplicates: true);
+        }
+        continue;
+      }
+      if (t == 'clientes' || t == 'trabajadores') {
+        filas = [for (final f in filas) await _conFotoSubida(t, f)];
+      }
+      for (var i = 0; i < filas.length; i += 200) {
+        await _db
+            .from(t)
+            .upsert(filas.sublist(i, i + 200 > filas.length ? filas.length : i + 200), onConflict: _clave[t]!);
+      }
+    }
+    for (final t in _orden.reversed) {
+      if (esTrabajador && t != 'trabajo_historial') continue;
+      for (final k in borrar[t] ?? const <String>[]) {
+        await _borrar(t, k);
+      }
+    }
+  }
+
+  // ── Sin conexión ──
+
+  /// «Subiendo cambios…» mientras se sube lo que antes no se pudo guardar (null = nada).
+  static final subiendo = ValueNotifier<String?>(null);
+
+  /// El fallo es de red (sin cobertura o el servidor no responde), no de la base.
+  static bool sinConexion(Object e) =>
+      e is TimeoutException ||
+      e is AuthRetryableFetchException ||
+      e is RealtimeSubscribeException ||
+      RegExp(r'SocketException|ClientException|Failed to fetch|Connection|XMLHttpRequest').hasMatch('$e');
+
+  String get _clavePendiente => 'pulpo_pendiente_$empresaId';
+
+  Future<void> _apuntarPendiente(Map<String, List<Map<String, dynamic>>> subir, Map<String, List<String>> borrar) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (subir.isEmpty && borrar.isEmpty) {
+      await prefs.remove(_clavePendiente);
+    } else {
+      await prefs.setString(_clavePendiente, jsonEncode({'subir': subir, 'borrar': borrar}));
+    }
+  }
+
+  /// Sube lo que quedó sin guardar en este dispositivo la última vez (sin conexión). Si sigue sin haber
+  /// conexión, falla y no se abre la empresa.
+  Future<void> subirPendiente() async {
+    final prefs = await SharedPreferences.getInstance();
+    final j = prefs.getString(_clavePendiente);
+    if (j == null) return;
+    final p = jsonDecode(j) as Map<String, dynamic>;
+    await _subir(
+      {
+        for (final e in (p['subir'] as Map<String, dynamic>).entries)
+          e.key: [for (final f in e.value as List) Map<String, dynamic>.from(f as Map)],
+      },
+      {for (final e in (p['borrar'] as Map<String, dynamic>).entries) e.key: List<String>.from(e.value as List)},
+    );
+    await prefs.remove(_clavePendiente);
   }
 
   // ── En vivo ──

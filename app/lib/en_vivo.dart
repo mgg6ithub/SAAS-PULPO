@@ -34,6 +34,7 @@ class EnVivo {
 
   RealtimeChannel? _canal;
   Timer? _timer;
+  bool _caido = false;
   final _tablas = <String>{};
 
   void empezar() {
@@ -59,6 +60,13 @@ class EnVivo {
     }
     _canal = c..subscribe((estado, [error]) {
       if (error != null) debugPrint('Pulpo: en vivo $estado: $error');
+      // Al volver la conexión no llegan los cambios de mientras: se vuelve a leer todo.
+      if (estado == RealtimeSubscribeStatus.subscribed) {
+        if (_caido) alCambiar({...tablasEnVivo});
+        _caido = false;
+      } else {
+        _caido = true;
+      }
     });
   }
 

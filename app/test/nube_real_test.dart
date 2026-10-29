@@ -68,6 +68,7 @@ void main() {
         expect(await _filas('trabajos'), 4, reason: 'plantillas iniciales');
 
         // ── En vivo: otra sesión de la misma empresa cambia un trabajo y aquí aparece solo ──
+        final db0 = Supabase.instance.client;
         final otra = SupabaseClient(supabaseUrl, supabasePublicable);
         await otra.auth.signInWithPassword(email: _env['SB_CORREO_A']!, password: 'prueba-123456');
         await Future<void>.delayed(const Duration(seconds: 2)); // que la suscripción esté lista
@@ -78,6 +79,31 @@ void main() {
         }
         expect(s.tarea(enVivo.id)?.nombre, 'Cambiado en otra sesión', reason: 'llega por Realtime');
         await otra.dispose();
+
+        // ── Sin conexión: lo pendiente se apunta en el dispositivo y se borra al subirlo ──
+        final prefs = await SharedPreferences.getInstance();
+        s.guardarTarea(s.tarea(enVivo.id)!..notas = 'Apuntado antes de subir');
+        await Future<void>.delayed(Duration.zero);
+        expect(prefs.getString('pulpo_pendiente_${n.empresaId}'), contains('Apuntado antes de subir'));
+        await n.guardado;
+        expect(prefs.getString('pulpo_pendiente_${n.empresaId}'), isNull);
+        // Lo que quedó apuntado al cerrar sin conexión se sube al volver a entrar.
+        final fila = await db0.from('trabajos').select().eq('id', enVivo.id).single();
+        await prefs.setString(
+          'pulpo_pendiente_${n.empresaId}',
+          jsonEncode({
+            'subir': {
+              'trabajos': [
+                {...fila, 'notas': 'Hecho sin conexión'},
+              ],
+            },
+            'borrar': {},
+          }),
+        );
+        await n.subirPendiente();
+        expect((await db0.from('trabajos').select('notas').eq('id', enVivo.id).single())['notas'], 'Hecho sin conexión');
+        expect(prefs.getString('pulpo_pendiente_${n.empresaId}'), isNull);
+        await Future<void>.delayed(const Duration(seconds: 2)); // el eco en vivo lo trae al Store
 
         // ── Una fila con TODAS las columnas rellenas en cada tabla ──
         final etiqueta = EtiquetaTrabajo(id: s.nuevoId(), nombre: 'Urgente', color: 0xFFE5484D);
@@ -368,6 +394,14 @@ void main() {
           png,
         );
         expect(parte.fotos.single, endsWith('/0.jpg'));
+        // Reintento de un parte que se hizo sin conexión (mismo id): no falla ni lo duplica.
+        final otraVez = await nC.crearInforme(
+          Informe(trabajoId: trabajoP.id, trabajadorId: pepe.id, resultado: 1, notas: 'Correa cambiada'),
+          [jpg],
+          png,
+          id: parte.id,
+        );
+        expect(otraVez.fotos, parte.fotos);
         await expectLater(
           nC.crearInforme(Informe(trabajoId: trabajoQ.id, trabajadorId: pepe.id, resultado: 0, notas: 'x'), [], null),
           throwsA(anything),
