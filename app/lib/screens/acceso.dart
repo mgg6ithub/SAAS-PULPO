@@ -73,19 +73,9 @@ class _PuertaNubeState extends State<PuertaNube> {
       if (Nube.creadaAlEntrar) {
         Nube.creadaAlEntrar = false;
         final proveedores = Supabase.instance.client.auth.currentUser?.appMetadata['providers'] as List? ?? [];
-        // Con Google no se elige «Crear cuenta»: se dice qué ha pasado por si esperaba unirse a otra empresa.
-        if (proveedores.contains('google') && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(seconds: 12),
-              content: const Text(
-                'Hemos creado una empresa nueva para tu cuenta. Si querías unirte a la de otra persona, '
-                'pídele un enlace de invitación.',
-              ),
-              action: SnackBarAction(label: 'Entendido', onPressed: () {}),
-            ),
-          );
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) nombrarEmpresa(context, porGoogle: proveedores.contains('google'));
+        });
       }
       if (_pedirClave) {
         _pedirClave = false;
@@ -201,7 +191,7 @@ class _Marco extends StatelessWidget {
   );
 }
 
-/// Correo y contraseña: entrar o crear cuenta.
+/// Entrar o crear cuenta en una sola pantalla (DEV-019): Google arriba; debajo, correo y contraseña.
 class PantallaAcceso extends StatefulWidget {
   const PantallaAcceso({super.key});
 
@@ -212,12 +202,38 @@ class PantallaAcceso extends StatefulWidget {
 class _PantallaAccesoState extends State<PantallaAcceso> {
   final _correo = TextEditingController();
   final _clave = TextEditingController();
-  bool _nueva = false, _enviando = false;
+  bool _nueva = false, _enviando = false, _verClave = false;
   String? _aviso;
   bool _avisoMalo = true;
 
   /// Correo de una cuenta creada que aún no se ha confirmado: deja reenviar el correo.
   String? _porConfirmar;
+
+  /// Qué dice la invitación pendiente: null mientras se consulta o si no hay.
+  String? _invitacion;
+
+  @override
+  void initState() {
+    super.initState();
+    Nube.correoRecordado().then((c) {
+      if (c != null && mounted && _correo.text.isEmpty) _correo.text = c;
+    });
+    if (Nube.invitacion != null) _leerInvitacion();
+  }
+
+  Future<void> _leerInvitacion() async {
+    String texto;
+    try {
+      final i = await Nube.verInvitacion();
+      texto = i == null
+          ? 'Esta invitación ya se usó o ha caducado. Pide a quien te invitó un enlace nuevo.'
+          : 'Te unes a ${i.empresa} como ${i.rol == 'admin' ? 'administrador' : 'trabajador'}'
+                '${i.trabajador == null || i.trabajador!.isEmpty ? '' : ' (${i.trabajador})'}.';
+    } catch (_) {
+      texto = 'Te han invitado a una empresa. Entra o crea tu cuenta para unirte.';
+    }
+    if (mounted) setState(() => _invitacion = texto);
+  }
 
   @override
   void dispose() {
@@ -226,52 +242,37 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     super.dispose();
   }
 
+  bool get _correoValido => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(_correo.text.trim());
+
+  Future<void> _intentar(Future<void> Function() accion) async {
+    setState(() {
+      _enviando = true;
+      _aviso = null;
+    });
+    try {
+      await accion();
+    } on AuthException catch (e) {
+      _ponerAviso(_traducir(e.message));
+      if (e.message.toLowerCase().contains('not confirmed')) _porConfirmar = _correo.text.trim();
+    } catch (_) {
+      _ponerAviso('No se pudo conectar. Comprueba la conexión y vuelve a intentarlo.');
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
   Future<void> _recuperar() async {
-    final correo = _correo.text.trim();
-    if (!correo.contains('@')) {
-      setState(() {
-        _aviso = 'Escribe tu correo y vuelve a pulsar.';
-        _avisoMalo = true;
-      });
-      return;
-    }
-    setState(() => _enviando = true);
-    try {
-      await Nube.recuperarClave(correo);
+    if (!_correoValido) return _ponerAviso('Escribe arriba tu correo y vuelve a pulsar.');
+    await _intentar(() async {
+      await Nube.recuperarClave(_correo.text.trim());
       _ponerAviso('Si hay una cuenta con ese correo, te llegará un enlace para poner otra contraseña.', malo: false);
-    } on AuthException catch (e) {
-      _ponerAviso(_traducir(e.message));
-    } catch (_) {
-      _ponerAviso('No se pudo conectar. Comprueba la conexión.');
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
+    });
   }
 
-  Future<void> _google() async {
-    setState(() => _enviando = true);
-    try {
-      await Nube.entrarConGoogle();
-    } catch (_) {
-      _ponerAviso('No se pudo abrir Google. Comprueba la conexión.');
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
-  }
-
-  Future<void> _reenviar() async {
-    setState(() => _enviando = true);
-    try {
-      await Nube.reenviarConfirmacion(_porConfirmar!);
-      _ponerAviso('Te lo hemos vuelto a enviar.', malo: false);
-    } on AuthException catch (e) {
-      _ponerAviso(_traducir(e.message));
-    } catch (_) {
-      _ponerAviso('No se pudo conectar. Comprueba la conexión.');
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
-  }
+  Future<void> _reenviar() => _intentar(() async {
+    await Nube.reenviarConfirmacion(_porConfirmar!);
+    _ponerAviso('Te lo hemos vuelto a enviar. Mira también en spam.', malo: false);
+  });
 
   void _ponerAviso(String texto, {bool malo = true}) {
     if (!mounted) return;
@@ -283,116 +284,161 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
 
   Future<void> _enviar() async {
     final correo = _correo.text.trim();
-    if (!correo.contains('@') || _clave.text.length < 6) {
-      setState(() {
-        _aviso = 'Escribe un correo válido y una contraseña de al menos 6 caracteres.';
-        _avisoMalo = true;
-      });
-      return;
-    }
-    setState(() {
-      _enviando = true;
-      _aviso = null;
+    if (!_correoValido) return _ponerAviso('Revisa el correo: falta algo (como nombre@empresa.com).');
+    if (_clave.text.length < 6) return _ponerAviso('La contraseña necesita al menos 6 caracteres.');
+    await _intentar(() async {
+      await Nube.recordarCorreo(correo);
+      if (!_nueva) {
+        await Supabase.instance.client.auth.signInWithPassword(email: correo, password: _clave.text);
+        return;
+      }
+      final r = await Nube.crearCuenta(correo, _clave.text);
+      if (r.session == null && mounted) {
+        setState(() {
+          _aviso = 'Te hemos enviado un correo a $correo. Ábrelo para confirmar la cuenta y después entra.';
+          _avisoMalo = false;
+          _nueva = false;
+          _porConfirmar = correo;
+        });
+      }
     });
-    final auth = Supabase.instance.client.auth;
-    try {
-      if (_nueva) {
-        final r = await Nube.crearCuenta(correo, _clave.text);
-        if (r.session == null && mounted) {
-          setState(() {
-            _aviso = 'Revisa tu correo y confirma la cuenta. Después, entra.';
-            _avisoMalo = false;
-            _nueva = false;
-            _porConfirmar = correo;
-          });
-        }
-      } else {
-        await auth.signInWithPassword(email: correo, password: _clave.text);
-      }
-    } on AuthException catch (e) {
-      if (mounted) {
-        setState(() {
-          _aviso = _traducir(e.message);
-          _avisoMalo = true;
-          if (e.message.toLowerCase().contains('not confirmed')) _porConfirmar = correo;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _aviso = 'No se pudo conectar. Comprueba la conexión.';
-          _avisoMalo = true;
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
   }
 
-  String _traducir(String m) {
+  void _cambiarModo() => setState(() {
+    _nueva = !_nueva;
+    _aviso = null;
+  });
+
+  /// Los errores de Supabase llegan en inglés: cada uno con una frase que diga qué hacer.
+  static String _traducir(String m) {
     final t = m.toLowerCase();
-    if (t.contains('invalid login')) return 'Correo o contraseña incorrectos.';
-    if (t.contains('already registered')) return 'Ya hay una cuenta con ese correo.';
-    if (t.contains('not confirmed')) return 'Confirma primero el correo que te hemos enviado.';
-    if (t.contains('rate limit')) return 'Demasiados intentos. Espera un poco.';
-    return m;
+    if (t.contains('invalid login')) {
+      return 'Correo o contraseña incorrectos. Revísalos o pulsa «¿Has olvidado la contraseña?».';
+    }
+    if (t.contains('already registered') || t.contains('already been registered')) {
+      return 'Ya hay una cuenta con ese correo. Entra con ella o recupera la contraseña.';
+    }
+    if (t.contains('not confirmed')) return 'Falta confirmar el correo. Abre el enlace que te enviamos o pide otro.';
+    if (t.contains('rate limit') || t.contains('security purposes')) {
+      return 'Demasiados intentos seguidos. Espera un minuto y vuelve a probar.';
+    }
+    if (t.contains('password')) return 'La contraseña no vale: usa al menos 6 caracteres.';
+    if (t.contains('email') && (t.contains('invalid') || t.contains('validate'))) {
+      return 'Ese correo no es válido. Revisa que esté bien escrito.';
+    }
+    if (t.contains('signups not allowed') || t.contains('signup is disabled')) {
+      return 'Ahora no se pueden crear cuentas. Pide a tu empresa que te invite.';
+    }
+    return 'Algo ha fallado. Vuelve a intentarlo en un momento.';
   }
 
   @override
-  Widget build(BuildContext context) => _Marco(
-    children: [
-      if (Nube.invitacion != null)
+  Widget build(BuildContext context) {
+    final suave = TextStyle(color: P.textoSuave, fontSize: 13.5, height: 1.4);
+    return _Marco(
+      children: [
+        Text(
+          _nueva ? 'Crea tu cuenta' : 'Entra en Pulpo',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          Nube.invitacion != null
+              ? (_invitacion ?? 'Mirando tu invitación…')
+              : _nueva
+              ? 'Solo correo y contraseña. El nombre de la empresa, al entrar.'
+              : 'Tu empresa, tus clientes y tus trabajos.',
+          textAlign: TextAlign.center,
+          style: Nube.invitacion != null ? suave.copyWith(color: P.texto, fontWeight: FontWeight.w600) : suave,
+        ),
+        const SizedBox(height: 20),
+        OutlinedButton(
+          onPressed: _enviando ? null : () => _intentar(Nube.entrarConGoogle),
+          child: const Text('Continuar con Google'),
+        ),
         Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: Text(
-            'Te han invitado a una empresa. Entra o crea tu cuenta para unirte.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: P.texto, fontSize: 13.5, height: 1.4),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            spacing: 10,
+            children: [
+              Expanded(child: Divider(color: P.borde, height: 1)),
+              Text('o con tu correo', style: suave.copyWith(fontSize: 12.5)),
+              Expanded(child: Divider(color: P.borde, height: 1)),
+            ],
           ),
         ),
-      TextField(
-        controller: _correo,
-        keyboardType: TextInputType.emailAddress,
-        autofillHints: const [AutofillHints.email],
-        textInputAction: TextInputAction.next,
-        decoration: const InputDecoration(hintText: 'Correo'),
-      ),
-      const SizedBox(height: 10),
-      TextField(
-        controller: _clave,
-        obscureText: true,
-        autofillHints: [_nueva ? AutofillHints.newPassword : AutofillHints.password],
-        onSubmitted: (_) => _enviando ? null : _enviar(),
-        decoration: const InputDecoration(hintText: 'Contraseña'),
-      ),
-      SizedBox(
-        height: 36,
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(_aviso ?? '', style: TextStyle(color: _avisoMalo ? P.rojo : P.verde, fontSize: 13)),
-        ),
-      ),
-      Align(
-        alignment: Alignment.centerRight,
-        child: _enviando
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-            : BotonPrimario(
-                _nueva ? 'Crear cuenta' : 'Entrar',
-                icono: Icons.arrow_forward_rounded,
-                conIcono: true,
-                onPressed: _enviar,
+        AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _correo,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(hintText: 'Correo'),
               ),
-      ),
-      const SizedBox(height: 16),
-      OutlinedButton(onPressed: _enviando ? null : _google, child: const Text('Continuar con Google')),
-      const SizedBox(height: 8),
-      TextButton(
-        onPressed: _enviando ? null : () => setState(() => _nueva = !_nueva),
-        child: Text(_nueva ? 'Ya tengo cuenta' : 'Crear una cuenta'),
-      ),
-      if (!_nueva) TextButton(onPressed: _enviando ? null : _recuperar, child: const Text('¿Olvidaste la contraseña?')),
-      if (!_nueva && _porConfirmar != null)
-        TextButton(onPressed: _enviando ? null : _reenviar, child: const Text('Reenviar el correo de confirmación')),
-    ],
-  );
+              const SizedBox(height: 10),
+              TextField(
+                controller: _clave,
+                obscureText: !_verClave,
+                autofillHints: [_nueva ? AutofillHints.newPassword : AutofillHints.password],
+                onSubmitted: (_) => _enviando ? null : _enviar(),
+                decoration: InputDecoration(
+                  hintText: _nueva ? 'Contraseña (mín. 6 caracteres)' : 'Contraseña',
+                  suffixIcon: IconButton(
+                    tooltip: _verClave ? 'Ocultar contraseña' : 'Ver contraseña',
+                    onPressed: () => setState(() => _verClave = !_verClave),
+                    icon: Icon(_verClave ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!_nueva)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _enviando ? null : _recuperar,
+              child: const Text('¿Has olvidado la contraseña?'),
+            ),
+          )
+        else
+          const SizedBox(height: 10),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: _aviso == null
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _aviso!,
+                    style: TextStyle(color: _avisoMalo ? P.rojo : P.verde, fontSize: 13, height: 1.4),
+                  ),
+                ),
+        ),
+        FilledButton(
+          onPressed: _enviando ? null : _enviar,
+          child: _enviando
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(_nueva ? 'Crear cuenta' : 'Entrar'),
+        ),
+        if (!_nueva && _porConfirmar != null)
+          TextButton(onPressed: _enviando ? null : _reenviar, child: const Text('Reenviar el correo de confirmación')),
+        const SizedBox(height: 14),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(_nueva ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?', style: suave),
+            TextButton(onPressed: _enviando ? null : _cambiarModo, child: Text(_nueva ? 'Entra' : 'Crea una')),
+          ],
+        ),
+      ],
+    );
+  }
 }

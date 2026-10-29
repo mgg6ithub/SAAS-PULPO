@@ -96,6 +96,14 @@ class Nube {
     invitacion = prefs.getString('pulpo_invitacion');
   }
 
+  /// A qué empresa y con qué rol une la invitación pendiente (null si ya no vale). Se puede ver sin sesión.
+  static Future<({String empresa, String rol, String? trabajador})?> verInvitacion() async {
+    final r = await _db.rpc('ver_invitacion', params: {'p_codigo': invitacion}) as List;
+    if (r.isEmpty) return null;
+    final i = r.first as Map;
+    return (empresa: i['empresa'] as String, rol: i['rol'] as String, trabajador: i['trabajador'] as String?);
+  }
+
   static Future<void> _olvidarInvitacion() async {
     invitacion = null;
     await (await SharedPreferences.getInstance()).remove('pulpo_invitacion');
@@ -364,6 +372,12 @@ class Nube {
   /// Crea la cuenta; el enlace del correo de confirmación vuelve a esta misma dirección de la app.
   static Future<AuthResponse> crearCuenta(String correo, String clave) =>
       _db.auth.signUp(email: correo, password: clave, emailRedirectTo: _aqui());
+
+  /// Último correo con el que se entró o se creó la cuenta en este navegador, para no reescribirlo.
+  static Future<String?> correoRecordado() async => (await SharedPreferences.getInstance()).getString('pulpo_correo');
+
+  static Future<void> recordarCorreo(String correo) async =>
+      (await SharedPreferences.getInstance()).setString('pulpo_correo', correo);
 
   /// Entra con Google (DEV-012): sale a Google y vuelve a esta misma dirección con la sesión puesta. Si ya hay
   /// una cuenta con ese correo, Supabase enlaza las dos (Google verifica el correo).

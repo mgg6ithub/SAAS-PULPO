@@ -395,6 +395,95 @@ class _ClaveNuevaState extends State<_ClaveNueva> {
   );
 }
 
+/// Primer arranque de una cuenta sin empresa (DEV-019): se le ha creado una y aquí le pone nombre. Con
+/// [porGoogle] además se explica que se ha creado, por si esperaba unirse a la de otra persona.
+Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => showDialog<void>(
+  context: context,
+  barrierDismissible: false,
+  builder: (_) => _Dialogo(child: _NombrarEmpresa(porGoogle: porGoogle)),
+);
+
+class _NombrarEmpresa extends StatefulWidget {
+  final bool porGoogle;
+  const _NombrarEmpresa({required this.porGoogle});
+
+  @override
+  State<_NombrarEmpresa> createState() => _NombrarEmpresaState();
+}
+
+class _NombrarEmpresaState extends State<_NombrarEmpresa> {
+  final _nombre = TextEditingController();
+  String? _aviso;
+  bool _enviando = false;
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    final nombre = _nombre.text.trim();
+    if (nombre.isEmpty) return setState(() => _aviso = 'Ponle un nombre (luego se puede cambiar).');
+    setState(() => _enviando = true);
+    try {
+      final nube = store.nube!;
+      Navigator.pop(context);
+      await nube.guardarEmpresa({'nombre': nombre});
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _enviando = false;
+          _aviso = _error(e);
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        '¿Cómo se llama tu empresa?',
+        style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        widget.porGoogle
+            ? 'Hemos creado una empresa nueva para tu cuenta. Si querías unirte a la de otra persona, '
+                  'pídele un enlace de invitación.'
+            : 'Sale en la barra, en los partes y en los emails. Podrás cambiarlo en Mi cuenta.',
+        style: TextStyle(color: P.textoSuave, height: 1.4),
+      ),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _nombre,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        onSubmitted: (_) => _enviando ? null : _guardar(),
+        decoration: const InputDecoration(hintText: 'Ascensores Altura'),
+      ),
+      SizedBox(
+        height: 32,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(_aviso ?? '', style: const TextStyle(color: P.rojo, fontSize: 13)),
+        ),
+      ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Ahora no')),
+          const SizedBox(width: 8),
+          FilledButton(onPressed: _enviando ? null : _guardar, child: const Text('Empezar')),
+        ],
+      ),
+    ],
+  );
+}
+
 /// Confirmación fuerte: solo se puede aceptar escribiendo [palabra] (el nombre de la empresa, «BORRAR»…).
 Future<bool> confirmarEscribiendo(
   BuildContext context, {
