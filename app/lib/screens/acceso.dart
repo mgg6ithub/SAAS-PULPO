@@ -78,18 +78,26 @@ class _PuertaNubeState extends State<PuertaNube> {
         Positioned(
           left: 12,
           bottom: 12,
-          child: ValueListenableBuilder<String?>(
-            valueListenable: Nube.error,
-            builder: (_, e, _) => e == null
-                ? const SizedBox.shrink()
-                : Material(
-                    color: P.rojo,
-                    borderRadius: BorderRadius.circular(P.radioControl),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Text(e, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                    ),
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              for (final (aviso, color) in [(Nube.choque, P.tinta), (Nube.error, P.rojo)])
+                ValueListenableBuilder<String?>(
+                  valueListenable: aviso,
+                  builder: (_, e, _) => e == null
+                      ? const SizedBox.shrink()
+                      : Material(
+                          color: color,
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Text(e, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                          ),
+                        ),
+                ),
+            ],
           ),
         ),
       ],

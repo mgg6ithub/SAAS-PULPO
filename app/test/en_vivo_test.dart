@@ -24,9 +24,12 @@ void main() {
     });
   });
 
-  test('choque: lo cambiado aquí que otra persona cambió después de leerlo', () {
-    const visto = {'trabajos|a': '2026-10-28T10:00:00Z', 'trabajos|b': '2026-10-28T10:00:00Z'};
-    const base = {'trabajos|a': '2026-10-28T10:05:00Z', 'trabajos|b': '2026-10-28T10:00:00Z'};
-    expect(choques(visto, base, ['trabajos|a', 'trabajos|b', 'trabajos|nuevo']), {'trabajos|a'});
+  test('choque: lo cambiado aquí que otra persona cambió o borró después de leerlo', () {
+    const visto = {'trabajos|a': 'v1', 'trabajos|b': 'v1', 'trabajos|c': 'v1'};
+    const base = {'trabajos|a': 'v2', 'trabajos|b': 'v1', 'trabajos|otra': 'v1'};
+    expect(choques(visto, base, ['trabajos|a', 'trabajos|b', 'trabajos|c', 'trabajos|nuevo']), {
+      'trabajos|a',
+      'trabajos|c',
+    });
   });
 }

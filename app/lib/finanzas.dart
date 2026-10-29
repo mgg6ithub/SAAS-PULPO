@@ -150,6 +150,15 @@ typedef ResumenMes = ({double facturado, double cobrado, double pendiente});
 
 /// Los presupuestos y proformas de la empresa: se piden a la base al abrir Finanzas; sin sesión, en memoria.
 class Finanzas extends ChangeNotifier {
+  Finanzas() {
+    // Otra persona ha cambiado algún documento: se vuelven a pedir.
+    Nube.cambiado.addListener(() {
+      if (!Nube.cambiado.value.contains('documentos') || _docs == null || store.nube == null) return;
+      _docs = null;
+      notifyListeners();
+    });
+  }
+
   List<Documento>? _docs;
   Nube? _nube;
   bool _pidiendo = false;

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'en_vivo.dart';
 import 'informes.dart';
 import 'models.dart';
 import 'store.dart';
@@ -81,6 +82,7 @@ class Nube {
       }
       await _olvidarInvitacion();
     }
+    await _abierta?._enVivo?.parar();
     final ms = await _db.from('miembros').select('empresa_id, rol, trabajador_id');
     if (ms.isNotEmpty) {
       final m = ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first);
@@ -241,6 +243,7 @@ class Nube {
 
   static Future<void> cerrarSesion() async {
     await _abierta?._cola;
+    await _abierta?._enVivo?.parar();
     await _db.auth.signOut();
   }
 
@@ -329,6 +332,7 @@ class Nube {
   void vincular(Store s, {bool vacio = false}) {
     _store = s;
     _enviado.clear();
+    (_enVivo ??= EnVivo(empresaId, _alCambiar)).empezar();
     if (!vacio) {
       _filas(s).forEach(
         (t, filas) => _enviado[t] = {
@@ -379,6 +383,7 @@ class Nube {
       if (quitadas.isNotEmpty) borrar[t] = quitadas;
     }
     if (subir.isEmpty && borrar.isEmpty) return;
+    _envios++;
     _reintento?.cancel();
     _cola = _cola.then((_) async {
       try {
@@ -424,6 +429,89 @@ class Nube {
       }
     });
   }
+
+  // ── En vivo ──
+
+  /// Tablas que otra persona acaba de cambiar (informes y documentos se vuelven a pedir al verlo).
+  static final cambiado = ValueNotifier<Set<String>>({});
+
+  /// Otra persona cambió algo que también se estaba cambiando aquí: se queda lo de aquí.
+  static final choque = ValueNotifier<String?>(null);
+
+  EnVivo? _enVivo;
+  bool _recargando = false, _otraVez = false;
+
+  /// Veces que se ha puesto algo en la cola de guardar: si cambia mientras se lee, la lectura no vale.
+  int _envios = 0;
+
+  void _alCambiar(Set<String> tablas) {
+    cambiado.value = tablas;
+    if (tablas.any(_orden.contains)) _recargar();
+  }
+
+  /// Vuelve a leer la empresa y la pone en el [Store]. Lo propio que aún no se ha subido no se pisa: se sube
+  /// primero y se vuelve a leer después. Los ecos de lo que se guardó aquí no cambian nada.
+  Future<void> _recargar() async {
+    if (_recargando) {
+      _otraVez = true;
+      return;
+    }
+    _recargando = true;
+    try {
+      do {
+        _otraVez = false;
+        await _cola;
+        final envios = _envios;
+        final s = _store;
+        if (s == null) return;
+        final d = await cargar();
+        if (envios != _envios || _store != s) {
+          _otraVez = true;
+          continue;
+        }
+        final remoto = _filas(
+          Store()
+            ..clientes = d.clientes
+            ..trabajadores = d.trabajadores
+            ..etiquetas = d.etiquetas
+            ..tareas = d.tareas
+            ..subtareas = d.subtareas,
+        );
+        final aqui = _filas(s);
+        final visto = _comoClaves(_enviado), base = _comoClaves(remoto), local = _comoClaves(aqui);
+        if (mapEquals(visto, base)) continue;
+        final pendientes = [
+          for (final k in {...visto.keys, ...local.keys})
+            if (visto[k] != local[k]) k,
+        ];
+        if (pendientes.isNotEmpty) {
+          if (choques(visto, base, pendientes).isNotEmpty) {
+            choque.value = 'Otra persona ha cambiado lo mismo que tú: se ha quedado tu versión.';
+            Timer(const Duration(seconds: 6), () => choque.value = null);
+          }
+          sincronizar();
+          _otraVez = true;
+          continue;
+        }
+        s.ponerDeLaNube(d);
+        _enviado
+          ..clear()
+          ..addAll({
+            for (final t in _orden) t: {for (final e in remoto[t]!.entries) e.key: jsonEncode(e.value)},
+          });
+      } while (_otraVez);
+    } catch (e) {
+      debugPrint('Pulpo: no se pudo leer en vivo: $e');
+    } finally {
+      _recargando = false;
+    }
+  }
+
+  /// Filas por `tabla|clave`, en JSON.
+  static Map<String, String> _comoClaves(Map<String, Map<String, Object?>> filas) => {
+    for (final t in filas.entries)
+      for (final f in t.value.entries) '${t.key}|${f.key}': f.value is String ? f.value as String : jsonEncode(f.value),
+  };
 
   static const _clave = {
     'clientes': 'id',

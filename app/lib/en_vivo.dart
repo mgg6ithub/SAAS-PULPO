@@ -79,9 +79,9 @@ class EnVivo {
   }
 }
 
-/// Filas que se han cambiado aquí (sin subir todavía) y que otra persona cambió después de leerlas: las
-/// claves `tabla|id` cuya fecha de modificación en la base es más nueva que la que se vio al cargar.
+/// Filas que se han cambiado aquí (sin subir todavía) y que otra persona también cambió: las claves
+/// `tabla|clave` de [cambiadasAqui] cuya versión en la base ya no es la que se vio al leer.
 Set<String> choques(Map<String, String> visto, Map<String, String> enLaBase, Iterable<String> cambiadasAqui) => {
   for (final k in cambiadasAqui)
-    if (enLaBase[k] != null && visto[k] != null && enLaBase[k]!.compareTo(visto[k]!) > 0) k,
+    if (visto.containsKey(k) && enLaBase[k] != visto[k]) k,
 };
