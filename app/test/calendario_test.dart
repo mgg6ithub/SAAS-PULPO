@@ -75,7 +75,12 @@ void main() {
     store.clientes.clear();
   });
 
-  Future<void> montar(WidgetTester tester, ModoCalendario modo, {double ancho = 1200, double escala = 1}) async {
+  Future<void> montar(
+    WidgetTester tester,
+    ModoCalendario modo, {
+    double ancho = 1200,
+    double escala = 1,
+  }) async {
     tester.view.physicalSize = Size(ancho, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -103,7 +108,9 @@ void main() {
   for (final modo in ModoCalendario.values) {
     for (final ancho in [1440.0, 980.0, 700.0, 600.0, 420.0, 360.0]) {
       testWidgets('$modo con carga a $ancho px', (tester) async {
-        store.tareas.addAll(List.generate(120, (i) => trabajo('$i', hoy(), i < 100 ? 540 : 600 + (i - 100) * 15)));
+        store.tareas.addAll(
+          List.generate(120, (i) => trabajo('$i', hoy(), i < 100 ? 540 : 600 + (i - 100) * 15)),
+        );
         store.tareas.add(trabajo('sin hora', hoy(), null));
         await montar(tester, modo, ancho: ancho, escala: ancho == 420 ? 1.4 : 1);
         expect(tester.takeException(), isNull);
