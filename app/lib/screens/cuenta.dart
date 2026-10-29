@@ -108,6 +108,10 @@ class _CuentaFormState extends State<CuentaForm> {
     try {
       await Nube.borrarCuenta();
       if (mounted) Navigator.pop(context);
+    } on UltimoAdministrador {
+      if (mounted) {
+        _avisar(context, 'Eres el único administrador de una empresa con más gente: nombra a otro antes de irte.');
+      }
     } catch (e) {
       if (mounted) _avisar(context, 'No se pudo borrar la cuenta: ${_error(e)}');
     }
