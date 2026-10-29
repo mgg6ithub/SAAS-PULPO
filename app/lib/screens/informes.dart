@@ -30,6 +30,7 @@ class FilaInforme extends StatelessWidget {
       lider: puntoResultado(i.resultado),
       titulo: resultadosInforme[i.resultado],
       subtitulo: [
+        if (informes.sinSubir(i)) 'Sin subir',
         if (w != null) w.nombreCompleto,
         if (i.fotos.isNotEmpty) '${i.fotos.length} ${i.fotos.length == 1 ? 'foto' : 'fotos'}',
         i.notas,

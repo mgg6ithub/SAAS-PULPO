@@ -251,6 +251,7 @@ class Store extends ChangeNotifier {
 
   /// Carga la empresa de la cuenta desde Supabase; una empresa nueva empieza con las plantillas iniciales.
   Future<void> cargarDesdeNube(Nube n) async {
+    await n.subirPendiente();
     final d = await n.cargar();
     _deLaNube(d);
     usoPlantillas = [];

@@ -1,6 +1,8 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/en_vivo.dart';
+import 'package:pulpo/nube.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   test('una ráfaga de cambios avisa una sola vez con todas las tablas', () {
@@ -31,5 +33,11 @@ void main() {
       'trabajos|a',
       'trabajos|c',
     });
+  });
+
+  test('sin conexión: los fallos de red se distinguen de los de la base', () {
+    expect(Nube.sinConexion(Exception('ClientException: Failed to fetch')), isTrue);
+    expect(Nube.sinConexion(AuthRetryableFetchException()), isTrue);
+    expect(Nube.sinConexion(const PostgrestException(message: 'new row violates row-level security policy')), isFalse);
   });
 }
