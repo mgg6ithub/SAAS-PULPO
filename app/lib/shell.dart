@@ -5,7 +5,6 @@ import 'ajustes.dart';
 import 'finanzas.dart';
 import 'forms.dart';
 import 'models.dart';
-import 'screens/ajustes_dialogo.dart';
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
 import 'screens/clientes.dart';
@@ -598,6 +597,11 @@ class _BarraState extends State<_Barra> {
                   const SizedBox(height: 10),
                 ] else
                   const SizedBox(height: 18),
+                // Empresa abierta, para cambiar de una a otra (solo con sesión).
+                if (store.nube != null) ...[
+                  SelectorEmpresa(compacto: iconos, escala: escala),
+                  SizedBox(height: iconos ? 8 : 10),
+                ],
                 _BotonCrear(compacto: iconos, menu: widget.crear),
                 SizedBox(height: iconos ? 10 : 14),
                 _menu(vencidas),
@@ -618,15 +622,7 @@ class _BarraState extends State<_Barra> {
                   builder: (context) =>
                       _fila(Icons.badge_outlined, 'Vista de trabajador', () => abrirVistaTrabajador(context)),
                 ),
-                Builder(builder: (context) => _fila(Icons.settings_outlined, 'Ajustes', () => abrirAjustes(context))),
-                Builder(
-                  builder: (context) => _fila(
-                    null,
-                    'Mi cuenta',
-                    () => abrirMiCuenta(context),
-                    lider: Avatar(inicialesCuenta(), P.tinta, size: 22 * escala, cuadrado: true),
-                  ),
-                ),
+                BotonUsuario(compacto: iconos, escala: escala),
               ],
             ),
           ),
@@ -829,7 +825,7 @@ class _BarraState extends State<_Barra> {
 }
 
 /// Barra de abajo en móvil: las secciones solo con icono (la activa sobre fondo morado suave), «Crear»
-/// y «Más» (Simulaciones, vista de trabajador, Ajustes y Mi cuenta).
+/// y «Más» (Simulaciones, vista de trabajador, empresas y tu cuenta).
 class _BarraInferior extends StatelessWidget {
   final Seccion seccion;
   final ValueChanged<Seccion> onTap;
@@ -910,26 +906,27 @@ class _BarraInferior extends StatelessWidget {
                 onSelected: (i) => switch (i) {
                   0 => abrirSimulaciones(context),
                   1 => abrirVistaTrabajador(context),
-                  2 => abrirAjustes(context),
-                  _ => abrirMiCuenta(context),
+                  2 => abrirSelectorEmpresa(context),
+                  _ => abrirMenuUsuario(context),
                 },
                 opciones: [
                   for (final (i, (icono, texto)) in const [
                     (Icons.science_outlined, 'Simulaciones'),
                     (Icons.badge_outlined, 'Vista de trabajador'),
-                    (Icons.settings_outlined, 'Ajustes'),
-                    (Icons.person_outline_rounded, 'Mi cuenta'),
+                    (Icons.unfold_more_rounded, 'Empresas'),
+                    (Icons.person_outline_rounded, 'Tu cuenta y ajustes'),
                   ].indexed)
-                    (
-                      i,
-                      Row(
-                        children: [
-                          Icon(icono, size: 18, color: P.textoSuave),
-                          const SizedBox(width: 10),
-                          Text(texto),
-                        ],
+                    if (i != 2 || store.nube != null)
+                      (
+                        i,
+                        Row(
+                          children: [
+                            Icon(icono, size: 18, color: P.textoSuave),
+                            const SizedBox(width: 10),
+                            Text(texto),
+                          ],
+                        ),
                       ),
-                    ),
                 ],
                 child: SizedBox(
                   width: 44,

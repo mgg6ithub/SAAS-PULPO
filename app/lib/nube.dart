@@ -11,7 +11,7 @@ import 'en_vivo.dart';
 import 'informes.dart';
 import 'models.dart';
 import 'store.dart';
-import 'theme.dart' show TipoInfo, tipos, competencias;
+import 'theme.dart' show P, TipoInfo, competencias, iconosTipo, tipos;
 
 const supabaseUrl = 'https://gvasthxiqckmekwvhtrg.supabase.co';
 
@@ -30,6 +30,9 @@ class UltimoAdministrador implements Exception {
 
 /// Una cuenta con acceso a la empresa.
 typedef Acceso = ({String usuarioId, String correo, String nombre, String rol, String? trabajadorId});
+
+/// Una empresa de la cuenta, para el selector de empresas: [icono] es una clave de `iconosTipo`.
+typedef EmpresaDeCuenta = ({String id, String nombre, String rol, String icono, Color color});
 
 /// Invitación sin usar y sin caducar.
 typedef InvitacionPendiente = ({String id, String codigo, String rol, String? trabajadorId, DateTime caduca});
@@ -348,6 +351,18 @@ class Nube {
 
   static String? get correo => _db.auth.currentUser?.email;
 
+  /// Correo nuevo a la espera de confirmar (null si no hay un cambio en marcha).
+  static String? get correoPendiente {
+    final n = _db.auth.currentUser?.newEmail;
+    return n == null || n.isEmpty ? null : n;
+  }
+
+  /// Vuelve a leer la cuenta de Supabase: la sesión guarda el usuario de cuando se entró, y el correo
+  /// cambiado (confirmado en otra pestaña) no se ve hasta renovarla.
+  static Future<void> refrescarCuenta() async {
+    await _db.auth.refreshSession();
+  }
+
   /// Nombre y foto de la cuenta (vacío si aún no los ha puesto).
   static Future<({String nombre, String? foto})> perfil() async {
     final r = await _db.from('perfiles').select('nombre, foto').eq('usuario_id', _db.auth.currentUser!.id);
@@ -403,17 +418,40 @@ class Nube {
 
   // ── Empresas ──
 
-  /// Empresas de la cuenta con su rol, por nombre.
-  static Future<List<({String id, String nombre, String rol})>> empresas() async {
+  /// Empresas de la cuenta con su rol, icono y color, por nombre.
+  static Future<List<EmpresaDeCuenta>> empresas() async {
     final ms = await _db
         .from('miembros')
-        .select('empresa_id, rol, empresas(nombre)')
+        .select('empresa_id, rol, empresas(nombre, tipo, icono, color)')
         .eq('usuario_id', _db.auth.currentUser!.id);
     return [
       for (final m in ms)
-        (id: m['empresa_id'] as String, nombre: (m['empresas'] as Map)['nombre'] as String, rol: m['rol'] as String),
+        (
+          id: m['empresa_id'] as String,
+          nombre: (m['empresas'] as Map)['nombre'] as String,
+          rol: m['rol'] as String,
+          icono: iconoEmpresa(
+            (m['empresas'] as Map)['icono'] as String? ?? '',
+            (m['empresas'] as Map)['tipo'] as String?,
+          ),
+          color: colorEmpresa((m['empresas'] as Map)['color'] as int? ?? 0),
+        ),
     ]..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
   }
+
+  /// Clave de [iconosTipo] de una empresa: la elegida o, si no eligió, la de su tipo.
+  static String iconoEmpresa(String icono, String? tipo) => iconosTipo.containsKey(icono)
+      ? icono
+      : switch (tipo) {
+          'Ascensores' => 'ascensor',
+          'Calderas' => 'caldera',
+          'Jardinería' => 'jardin',
+          'Limpieza' => 'limpieza',
+          _ => 'otro',
+        };
+
+  /// Color de una empresa: el elegido o, si no eligió (0), el morado de Pulpo.
+  static Color colorEmpresa(int argb) => argb == 0 ? P.morado : Color(argb);
 
   /// Cambia a otra empresa de la cuenta (se recuerda para la próxima vez).
   static Future<void> entrarEn(String empresaId) async {
@@ -431,13 +469,13 @@ class Nube {
     await entrarEn(id);
   }
 
-  /// Nombre, tipo, CIF, dirección, teléfono y logo de la empresa abierta.
-  Future<Map<String, dynamic>> datosEmpresa() =>
-      _db.from('empresas').select('nombre, tipo, cif, direccion, telefono, logo').eq('id', empresaId).single();
+  /// Nombre, tipo, CIF, dirección, teléfono, logo, icono y color de una empresa de la cuenta.
+  static Future<Map<String, dynamic>> datosEmpresa(String id) =>
+      _db.from('empresas').select('nombre, tipo, cif, direccion, telefono, logo, icono, color').eq('id', id).single();
 
-  Future<void> guardarEmpresa(Map<String, dynamic> datos) async {
-    await _db.from('empresas').update(datos).eq('id', empresaId);
-    reabrir.value++; // el nombre sale en Mi cuenta y en la barra
+  static Future<void> guardarEmpresa(String id, Map<String, dynamic> datos) async {
+    await _db.from('empresas').update(datos).eq('id', id);
+    reabrir.value++; // el nombre, el icono y el color salen en el selector de empresas
   }
 
   // ── Accesos (solo administradores) ──
@@ -791,7 +829,10 @@ class Nube {
 
   String get _clavePendiente => 'pulpo_pendiente_$empresaId';
 
-  Future<void> _apuntarPendiente(Map<String, List<Map<String, dynamic>>> subir, Map<String, List<String>> borrar) async {
+  Future<void> _apuntarPendiente(
+    Map<String, List<Map<String, dynamic>>> subir,
+    Map<String, List<String>> borrar,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     if (subir.isEmpty && borrar.isEmpty) {
       await prefs.remove(_clavePendiente);
