@@ -101,9 +101,11 @@ class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
       physics: const ClampingScrollPhysics(),
     ),
     // Tamaño de letra de Ajustes (accesibilidad): escala todo el texto, ventanas incluidas.
+    // El Scaffold de fuera envuelve al navegador: los avisos (SnackBar) salen en él, por encima de las ventanas
+    // emergentes y su fondo oscuro, aunque se lancen desde una de ellas.
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(ajustes.escalaTexto)),
-      child: child!,
+      child: Scaffold(backgroundColor: P.fondo, resizeToAvoidBottomInset: false, body: child!),
     ),
     home: widget.local ? const Shell() : const PuertaNube(),
   );

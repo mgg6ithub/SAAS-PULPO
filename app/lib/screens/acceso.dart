@@ -27,6 +27,9 @@ class _PuertaNubeState extends State<PuertaNube> {
   String? _usuario;
   bool _pedirClave = false;
 
+  /// La app se abrió desde el primer enlace del cambio de correo (Supabase pide pulsar el de los dos correos).
+  static bool _avisoCorreo = (Uri.base.queryParameters['message'] ?? '').contains('other email');
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +78,19 @@ class _PuertaNubeState extends State<PuertaNube> {
         final proveedores = Supabase.instance.client.auth.currentUser?.appMetadata['providers'] as List? ?? [];
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) nombrarEmpresa(context, porGoogle: proveedores.contains('google'));
+        });
+      }
+      // Vuelve del primer enlace del cambio de correo: falta el del otro correo.
+      if (_avisoCorreo) {
+        _avisoCorreo = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              const SnackBar(
+                content: Text('Enlace aceptado. Para cambiar el correo, pulsa también el del otro correo.'),
+              ),
+            );
+          }
         });
       }
       if (_pedirClave) {

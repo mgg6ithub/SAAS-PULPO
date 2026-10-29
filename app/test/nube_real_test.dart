@@ -10,6 +10,7 @@ import 'package:pulpo/informes.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/nube.dart';
 import 'package:pulpo/store.dart';
+import 'package:pulpo/theme.dart' show P;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -628,8 +629,18 @@ void main() {
         await nB2.guardado;
         expect(sB2.tareas.map((t) => t.tipo), ['Ascensor']);
         expect((await Nube.empresas()).map((e) => e.nombre), ['Ascensores Prueba', 'Mi empresa']);
-        await nB2.guardarEmpresa({'cif': 'B12345678', 'telefono': '944000000', 'direccion': 'Calle Prueba 1'});
-        expect((await nB2.datosEmpresa())['cif'], 'B12345678');
+        await Nube.guardarEmpresa(nB2.empresaId, {
+          'cif': 'B12345678',
+          'telefono': '944000000',
+          'direccion': 'Calle Prueba 1',
+        });
+        expect((await Nube.datosEmpresa(nB2.empresaId))['cif'], 'B12345678');
+        // Icono y color: sin elegir, el de su tipo y el morado; se pueden editar los de otra empresa de la cuenta.
+        final asc = (await Nube.empresas()).first;
+        expect((asc.icono, asc.color), ('ascensor', P.morado));
+        await Nube.guardarEmpresa(nB.empresaId, {'icono': 'jardin', 'color': 0xFF16A34A});
+        final mia = (await Nube.empresas()).last;
+        expect((mia.id, mia.icono, mia.color.toARGB32()), (nB.empresaId, 'jardin', 0xFF16A34A));
         // Cambiar de empresa y volver: se recuerda la elegida.
         await Nube.entrarEn(nB.empresaId);
         expect((await Nube.abrir()).empresaId, nB.empresaId);

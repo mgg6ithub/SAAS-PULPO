@@ -2,9 +2,11 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import '../ajustes.dart';
+import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'cuenta.dart';
 import 'importar_exportar.dart';
 import 'tipos_competencias.dart';
 
@@ -59,6 +61,15 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                 ],
               ),
               const SizedBox(height: 18),
+              // Tu cuenta: perfil, correo, contraseña, sesiones y borrarla (en su propia ventana).
+              if (store.nube != null)
+                _Grupo('Cuenta', [
+                  _Fila(
+                    titulo: Nube.correo ?? 'Tu cuenta',
+                    subtitulo: 'Perfil, correo, contraseña, sesiones y borrar la cuenta',
+                    child: Enlace('Editar', onTap: () => abrirCuenta(context)),
+                  ),
+                ]),
               _Grupo('Apariencia', [
                 _Fila(
                   titulo: 'Tema',
@@ -146,7 +157,6 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                   ),
                 ),
               ]),
-              // Los datos propios de la empresa (nombre, logo, contacto) irán aquí con DEV-018.
               _Grupo('Empresa', [
                 _Fila(
                   titulo: 'Tipos de trabajo',
