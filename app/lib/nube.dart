@@ -250,6 +250,33 @@ class Nube {
     );
   }
 
+  // ── Documentos de los equipos ──
+
+  static const _bucketDocumentos = 'documentos';
+
+  /// Tipos que admite el bucket `documentos`.
+  static const extensionesDocumento = ['pdf', 'png', 'jpg', 'jpeg', 'webp'];
+
+  /// Sube un documento (certificado, libro de mantenimiento, foto) a `<empresa>/equipos/<equipo>/<nombre>`
+  /// y devuelve su ruta. Con el mismo nombre, lo sustituye.
+  Future<String> subirDocumento(String equipoId, String nombre, Uint8List bytes) async {
+    final ruta = '$empresaId/equipos/$equipoId/$nombre';
+    final tipo = switch (nombre.split('.').last.toLowerCase()) {
+      'pdf' => 'application/pdf',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'image/jpeg',
+    };
+    await _db.storage
+        .from(_bucketDocumentos)
+        .uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo, upsert: true));
+    return ruta;
+  }
+
+  Future<Uint8List> documento(String ruta) => _db.storage.from(_bucketDocumentos).download(ruta);
+
+  Future<void> borrarDocumento(String ruta) => _db.storage.from(_bucketDocumentos).remove([ruta]);
+
   /// Sube a Storage la foto en base64 de una fila de `clientes` o `trabajadores` y devuelve la fila con la
   /// ruta. El nombre sale del contenido, así que reintentar no duplica.
   Future<Map<String, dynamic>> _conFotoSubida(String tabla, Map<String, dynamic> f) async {
@@ -283,7 +310,9 @@ class Nube {
   /// Nombre y foto de la cuenta (vacío si aún no los ha puesto).
   static Future<({String nombre, String? foto})> perfil() async {
     final r = await _db.from('perfiles').select('nombre, foto').eq('usuario_id', _db.auth.currentUser!.id);
-    return r.isEmpty ? (nombre: '', foto: null) : (nombre: r.first['nombre'] as String, foto: r.first['foto'] as String?);
+    return r.isEmpty
+        ? (nombre: '', foto: null)
+        : (nombre: r.first['nombre'] as String, foto: r.first['foto'] as String?);
   }
 
   /// El perfil ya existe: lo crea la base al crear la cuenta (trigger `copiar_correo`).

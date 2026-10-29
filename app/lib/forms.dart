@@ -1409,6 +1409,19 @@ class _TareaFormState extends State<TareaForm> {
   late final marca = TextEditingController(text: t.marca);
   late final modelo = TextEditingController(text: t.modelo);
   late final serie = TextEditingController(text: t.numeroSerie);
+
+  /// Enlaza el trabajo al equipo y copia sus datos (marca, modelo, serie, ubicación, instalación).
+  void _ponerEquipo(String? id) {
+    t.equipoId = id;
+    final e = store.equipo(id);
+    if (e == null) return;
+    if (e.marca.isNotEmpty) marca.text = e.marca;
+    if (e.modelo.isNotEmpty) modelo.text = e.modelo;
+    if (e.numeroSerie.isNotEmpty) serie.text = e.numeroSerie;
+    if (e.ubicacion.isNotEmpty) ubicacion.text = e.ubicacion;
+    t.instalacion = e.instalacion ?? t.instalacion;
+  }
+
   late final ubicacion = TextEditingController(text: t.ubicacion);
   late final notas = TextEditingController(text: t.notas);
   bool intentoGuardar = false;
@@ -1595,7 +1608,13 @@ class _TareaFormState extends State<TareaForm> {
                         ),
                       )
                     else
-                      SelectorCliente(t.clienteId, (id) => setState(() => t.clienteId = id)),
+                      SelectorCliente(
+                        t.clienteId,
+                        (id) => setState(() {
+                          if (id != t.clienteId) t.equipoId = null;
+                          t.clienteId = id;
+                        }),
+                      ),
                   ],
                 ),
               ),
@@ -1661,6 +1680,19 @@ class _TareaFormState extends State<TareaForm> {
                 hasta: hoy(), // lo que ya se hizo no puede ser futuro
               ),
               CampoFecha('Solicitado el', t.solicitud, (d) => setState(() => t.solicitud = d)),
+            ),
+          if (t.clienteId != null && store.equiposDe(t.clienteId!).isNotEmpty)
+            conMargen(
+              DropdownButtonFormField<String?>(
+                isExpanded: true,
+                initialValue: store.equipo(t.equipoId)?.id,
+                decoration: const InputDecoration(labelText: 'Equipo del cliente'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Sin equipo')),
+                  for (final e in store.equiposDe(t.clienteId!)) DropdownMenuItem(value: e.id, child: Text(e.nombre)),
+                ],
+                onChanged: (id) => setState(() => _ponerEquipo(id)),
+              ),
             ),
           campo('Ubicación', ubicacion, hint: 'Sala de máquinas, planta 2…'),
           dos(campo('Marca', marca), campo('Modelo', modelo)),

@@ -532,6 +532,17 @@ class _Pendientes extends StatelessWidget {
           derecha: _cat('Trabajos'),
           onTap: () => onIr(Seccion.tareas),
         ),
+      if (store.vencimientosPorAvisar.isNotEmpty)
+        FilaLista(
+          lider: _punto(store.vencimientosPorAvisar.any((v) => diasHasta(v.vence) < 0) ? P.rojo : P.ambar),
+          titulo:
+              '${store.vencimientosPorAvisar.length} ${store.vencimientosPorAvisar.length == 1 ? 'vencimiento legal' : 'vencimientos legales'} por renovar',
+          subtitulo: [
+            for (final v in store.vencimientosPorAvisar.take(3)) '${v.nombre} ${store.equipo(v.equipoId)!.nombre}',
+          ].join(' · '),
+          derecha: _cat('Clientes'),
+          onTap: () => onIr(Seccion.clientes),
+        ),
       if (averiadas > 0)
         FilaLista(
           lider: _punto(P.ambar),

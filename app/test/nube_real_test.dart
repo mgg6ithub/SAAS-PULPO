@@ -229,6 +229,49 @@ void main() {
         expect(await _filas('trabajo_historial'), 1);
         expect(await _filas('automatizaciones'), 1);
 
+        // ── Equipo del cliente: su vencimiento, un documento y el trabajo enlazado ──
+        final equipo = Equipo(
+          id: s.nuevoId(),
+          clienteId: cliente.id,
+          tipo: 'Ascensor',
+          nombre: 'Ascensor 1',
+          marca: 'Orona',
+          modelo: '3G',
+          numeroSerie: 'S-1',
+          ubicacion: 'Portal',
+          notas: 'Llave en conserjería',
+          instalacion: DateTime(2015, 3, 2),
+          estado: EstadoMaquina.revision,
+        );
+        s.guardarEquipo(equipo);
+        final oca = Vencimiento(
+          id: s.nuevoId(),
+          equipoId: equipo.id,
+          nombre: 'Inspección OCA',
+          vence: DateTime(2026, 12, 1),
+          avisarDias: 60,
+        );
+        s.guardarVencimiento(oca);
+        s.guardarTarea(trabajo..equipoId = equipo.id);
+        final pdf = Uint8List.fromList('%PDF-1.4'.codeUnits);
+        final ruta = await n.subirDocumento(equipo.id, 'certificado.pdf', pdf);
+        s.guardarEquipo(equipo..documentos = [ruta]);
+        await n.guardado;
+        expect(Nube.error.value, isNull);
+        r = await _recargar();
+        expect(_j(r.equipos.single.toJson()), _j(equipo.toJson()), reason: 'equipo');
+        expect(_j(r.vencimientos.single.toJson()), _j(oca.toJson()), reason: 'vencimiento');
+        expect(r.tarea(trabajo.id)!.equipoId, equipo.id, reason: 'trabajo enlazado al equipo');
+        expect(await n.documento(ruta), pdf, reason: 'documento en Storage');
+        await n.borrarDocumento(ruta);
+        s.borrarEquipo(equipo.id);
+        await n.guardado;
+        expect(Nube.error.value, isNull);
+        r = await _recargar();
+        expect(r.equipos, isEmpty);
+        expect(r.vencimientos, isEmpty);
+        expect(r.tarea(trabajo.id)!.equipoId, isNull, reason: 'el trabajo se queda sin equipo');
+
         // ── Simulaciones: ids no uuid (c1, d5, w2…) también se guardan y se recargan ──
         s.cargarSimulacion(
           equipo: 3,

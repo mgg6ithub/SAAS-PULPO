@@ -5,9 +5,10 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'equipos.dart';
 
 /// Ficha de un cliente con pestañas (como la ficha de contacto de Holded):
-/// Resumen (cifras y próximos), Mantenimientos (tabla) y Datos.
+/// Resumen (cifras y próximos), Mantenimientos (tabla), Equipos, Historial y Datos.
 class ClienteDetalle extends StatefulWidget {
   final String clienteId;
   final VoidCallback onVolver;
@@ -63,8 +64,8 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
-            opciones: const ['Resumen', 'Trabajos', 'Historial', 'Datos'],
-            contadores: [null, tareas.length, null, null],
+            opciones: const ['Resumen', 'Trabajos', 'Equipos', 'Historial', 'Datos'],
+            contadores: [null, tareas.length, store.equiposDe(c.id).length, null, null],
             seleccion: pestana,
             onChanged: (i) => setState(() => pestana = i),
           ),
@@ -78,7 +79,8 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
                 child: switch (pestana) {
                   0 => _Resumen(c, tareas, onVerTodo: () => setState(() => pestana = 1)),
                   1 => _Mantenimientos(c, tareas),
-                  2 => LayoutBuilder(builder: (context, box) => _Historial(tareas, alto: box.maxHeight)),
+                  2 => LayoutBuilder(builder: (context, box) => EquiposCliente(c.id, alto: box.maxHeight)),
+                  3 => LayoutBuilder(builder: (context, box) => _Historial(tareas, alto: box.maxHeight)),
                   _ => SingleChildScrollView(
                     child: Align(
                       alignment: Alignment.topLeft,
