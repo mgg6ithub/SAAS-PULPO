@@ -115,50 +115,52 @@ class Nube {
   /// Empresa recién creada desde la cuenta: al abrirla arranca con sus plantillas.
   static String? _recienCreada;
 
-  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una): la última elegida o, si no,
-  /// una donde sea administradora. Si no tiene ninguna, crea una y la hace administradora.
+  /// Entra en la empresa de la cuenta (primero acepta la invitación, si trae una): la de la invitación, la última
+  /// elegida o, si no, una donde sea administradora. Si no tiene ninguna, la base le crea una y la hace
+  /// administradora. Todo eso lo decide la función `entrar` de una en una por cuenta: varias pestañas comparten
+  /// la sesión y, si no, una aceptaba la invitación mientras otra creaba una empresa propia.
   static Future<Nube> abrir() async {
-    if (invitacion != null) {
-      try {
-        await _db.rpc('aceptar_invitacion', params: {'p_codigo': invitacion});
-      } on PostgrestException catch (e) {
-        if (e.code == 'P0001') {
-          await _olvidarInvitacion();
-          throw const InvitacionNoValida();
-        }
-        rethrow;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload(); // otra pestaña puede haber guardado o gastado el código
+    invitacion ??= prefs.getString('pulpo_invitacion');
+    final Map r;
+    try {
+      r = (await _db.rpc('entrar', params: {'p_codigo': invitacion}) as List).single as Map;
+    } on PostgrestException catch (e) {
+      if (e.code == 'P0001') {
+        await _olvidarInvitacion();
+        throw const InvitacionNoValida();
       }
-      await _olvidarInvitacion();
+      rethrow;
+    }
+    if (invitacion != null) await _olvidarInvitacion();
+    if (r['empresa'] != null) await prefs.setString('pulpo_empresa', r['empresa'] as String);
+    if (r['creada'] == true) {
+      _recienCreada = r['empresa'] as String;
+      creadaAlEntrar = true;
     }
     await _abierta?._enVivo?.parar();
     final ms = await _db
         .from('miembros')
         .select('empresa_id, rol, trabajador_id')
         .eq('usuario_id', _db.auth.currentUser!.id);
-    if (ms.isNotEmpty) {
-      final elegida = (await SharedPreferences.getInstance()).getString('pulpo_empresa');
-      final m = ms.firstWhere(
-        (x) => x['empresa_id'] == elegida,
-        orElse: () => ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first),
-      );
-      final id = m['empresa_id'] as String;
-      final e = await _db.from('empresas').select('nombre, tipo').eq('id', id).single();
-      final nueva = id == _recienCreada;
-      _recienCreada = null;
-      return _abierta = Nube._(
-        id,
-        nueva: nueva,
-        nombre: e['nombre'] as String,
-        tipo: e['tipo'] as String,
-        rol: m['rol'] as String,
-        trabajadorId: m['trabajador_id'] as String?,
-      );
-    }
-    final e = await _db.from('empresas').insert({'nombre': 'Mi empresa'}).select('id').single();
-    final id = e['id'] as String;
-    await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
-    creadaAlEntrar = true;
-    return _abierta = Nube._(id, nueva: true, nombre: 'Mi empresa');
+    final elegida = prefs.getString('pulpo_empresa');
+    final m = ms.firstWhere(
+      (x) => x['empresa_id'] == elegida,
+      orElse: () => ms.firstWhere((x) => x['rol'] == 'admin', orElse: () => ms.first),
+    );
+    final id = m['empresa_id'] as String;
+    final e = await _db.from('empresas').select('nombre, tipo').eq('id', id).single();
+    final nueva = id == _recienCreada;
+    _recienCreada = null;
+    return _abierta = Nube._(
+      id,
+      nueva: nueva,
+      nombre: e['nombre'] as String,
+      tipo: e['tipo'] as String,
+      rol: m['rol'] as String,
+      trabajadorId: m['trabajador_id'] as String?,
+    );
   }
 
   /// La cuenta no tenía empresa ni invitación y se le acaba de crear una (se avisa al entrar).
@@ -369,9 +371,14 @@ class Nube {
   /// Manda el correo de «olvidé mi contraseña»; el enlace vuelve a la app para poner una nueva.
   static Future<void> recuperarClave(String correo) => _db.auth.resetPasswordForEmail(correo, redirectTo: _aqui());
 
-  /// Crea la cuenta; el enlace del correo de confirmación vuelve a esta misma dirección de la app.
-  static Future<AuthResponse> crearCuenta(String correo, String clave) =>
-      _db.auth.signUp(email: correo, password: clave, emailRedirectTo: _aqui());
+  /// Crea la cuenta; el enlace del correo de confirmación vuelve a esta misma dirección de la app. El código de
+  /// la invitación va en la cuenta, para que valga aunque se confirme el correo en otra pestaña.
+  static Future<AuthResponse> crearCuenta(String correo, String clave) => _db.auth.signUp(
+    email: correo,
+    password: clave,
+    emailRedirectTo: _aqui(),
+    data: invitacion == null ? null : {'invitacion': invitacion},
+  );
 
   /// Último correo con el que se entró o se creó la cuenta en este navegador, para no reescribirlo.
   static Future<String?> correoRecordado() async => (await SharedPreferences.getInstance()).getString('pulpo_correo');

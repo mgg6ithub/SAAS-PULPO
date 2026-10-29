@@ -414,14 +414,25 @@ void main() {
         Nube.invitacion = 'no-existe';
         expect(await Nube.verInvitacion(), isNull);
 
-        // Trabajador: acepta, entra con su ficha y ve solo lo suyo.
+        // Trabajador: acepta, entra con su ficha y ve solo lo suyo. Como al confirmar el correo: el código va en
+        // la cuenta (se guarda al crearla) y dos pestañas entran a la vez, una con el código y otra sin él;
+        // ninguna le crea una empresa propia (BUG del enlace de trabajador que entraba como administrador).
         await auth.signInWithPassword(email: _env['SB_CORREO_C']!, password: 'prueba-123456');
-        Nube.invitacion = codigoW;
+        await auth.updateUser(UserAttributes(data: {'invitacion': codigoW}));
+        final pestanas = await Future.wait([
+          Supabase.instance.client.rpc('entrar', params: {'p_codigo': codigoW}),
+          Supabase.instance.client.rpc('entrar', params: {'p_codigo': null}),
+        ]);
+        expect(pestanas.map((r) => (r as List).single['creada']), [false, false]);
+        Nube.invitacion = null;
+        Nube.creadaAlEntrar = false;
         final nC = await Nube.abrir();
         expect(nC.rol, 'trabajador');
         expect(nC.trabajadorId, pepe.id);
         expect(nC.empresaId, n2.empresaId);
         expect(Nube.invitacion, isNull);
+        expect(Nube.creadaAlEntrar, isFalse);
+        expect(await _filas('empresas'), 1, reason: 'solo la de su invitación, sin empresa propia');
         final sC = Store();
         await sC.cargarDesdeNube(nC);
         expect(sC.tareas.map((t) => t.id), [trabajoP.id], reason: 'solo su trabajo');
@@ -482,9 +493,16 @@ void main() {
 
         // Socio: acepta la de administrador y ve y edita todo.
         await auth.signInWithPassword(email: _env['SB_CORREO_D']!, password: 'prueba-123456');
+        // Dos pestañas con el mismo código a la vez: las dos entran (la segunda ve que ya es suya).
         Nube.invitacion = codigoA;
+        final dos = await Future.wait([
+          Supabase.instance.client.rpc('entrar', params: {'p_codigo': codigoA}),
+          Supabase.instance.client.rpc('entrar', params: {'p_codigo': codigoA}),
+        ]);
+        expect(dos.map((r) => (r as List).single['empresa']), [n2.empresaId, n2.empresaId]);
         final nD = await Nube.abrir();
         expect(nD.rol, 'admin');
+        expect(await _filas('empresas'), 1, reason: 'el socio sin empresa propia');
         expect(nD.empresaId, n2.empresaId);
         final sD = Store();
         await sD.cargarDesdeNube(nD);
