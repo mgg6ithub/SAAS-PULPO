@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'plataforma_io.dart' if (dart.library.js_interop) 'plataforma_web.dart';
 import 'models.dart';
@@ -74,10 +76,94 @@ const maxFotosInforme = 6;
 
 /// Informes por trabajo: se piden a la base la primera vez que se ven y se guardan aquí.
 class Informes extends ChangeNotifier {
+  Informes() {
+    // Otra persona ha hecho un parte: se vuelven a pedir los de cada trabajo al verlo.
+    Nube.cambiado.addListener(() {
+      if (!Nube.cambiado.value.contains('informes') || _pedidos.isEmpty) return;
+      _de.clear();
+      _pedidos.clear();
+      notifyListeners();
+    });
+  }
+
   final _local = <Informe>[];
   final _de = <String, List<Informe>>{};
   final _pedidos = <String>{};
   Nube? _nube;
+
+  /// Partes hechos sin conexión, guardados en el dispositivo hasta poder subirlos (fotos y firma en base64).
+  List<Map<String, dynamic>>? _sinSubir;
+  Timer? _reintento;
+  static const _clave = 'pulpo_informes_sin_subir';
+
+  /// El parte aún no se ha subido (se hizo sin conexión).
+  bool sinSubir(Informe i) => _sinSubir?.any((x) => x['id'] == i.id) ?? false;
+
+  Informe _deApunte(Map<String, dynamic> x) => Informe(
+    id: x['id'],
+    trabajoId: x['trabajo_id'],
+    trabajadorId: x['trabajador_id'],
+    resultado: x['resultado'],
+    notas: x['notas'],
+    material: x['material'],
+    minutos: x['minutos'],
+    fotos: List<String>.from(x['fotos'] as List),
+    firma: x['firma'],
+    firmante: x['firmante'],
+    cuando: DateTime.parse(x['cuando'] as String),
+  );
+
+  Future<void> _apuntar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final l = _sinSubir ?? [];
+    l.isEmpty ? await prefs.remove(_clave) : await prefs.setString(_clave, jsonEncode(l));
+  }
+
+  Future<List<Map<String, dynamic>>> _apuntados() async => _sinSubir ??= [
+    for (final x in jsonDecode((await SharedPreferences.getInstance()).getString(_clave) ?? '[]') as List)
+      Map<String, dynamic>.from(x as Map),
+  ];
+
+  void _reintentar() {
+    if (!(_reintento?.isActive ?? false)) _reintento = Timer(const Duration(seconds: 15), _subirApuntados);
+  }
+
+  /// Intenta subir los partes guardados en el dispositivo; si sigue sin conexión, vuelve a probar en 15 s.
+  Future<void> _subirApuntados() async {
+    _reintento?.cancel();
+    final n = store.nube;
+    if (n == null) return;
+    final todos = [
+      for (final x in await _apuntados())
+        if (x['empresa_id'] == n.empresaId) x,
+    ];
+    if (todos.isEmpty) return;
+    if (_de.isEmpty) notifyListeners(); // que se vean ya los que estaban en el dispositivo
+    var cambio = false;
+    Nube.subiendo.value = 'Subiendo partes…';
+    for (final x in todos) {
+      try {
+        final g = await n.crearInforme(
+          _deApunte(x),
+          [for (final f in x['fotos'] as List) base64Decode(f as String)],
+          x['firma'] == null ? null : base64Decode(x['firma'] as String),
+          id: x['id'],
+        );
+        _sinSubir!.remove(x);
+        await _apuntar();
+        final l = _de[g.trabajoId];
+        if (l != null) _de[g.trabajoId] = [g, ...l.where((i) => i.id != g.id)];
+        cambio = true;
+      } catch (e) {
+        debugPrint('Pulpo: parte sin subir: $e');
+        if (!Nube.sinConexion(e)) continue;
+        _reintentar();
+        break;
+      }
+    }
+    Nube.subiendo.value = null;
+    if (cambio) notifyListeners();
+  }
 
   /// Informes del trabajo, el más reciente primero (null = cargando).
   List<Informe>? de(String trabajoId) {
@@ -92,6 +178,7 @@ class Informes extends ChangeNotifier {
       _nube = n;
       _de.clear();
       _pedidos.clear();
+      _subirApuntados();
     }
     if (_pedidos.add(trabajoId)) {
       n
@@ -108,11 +195,18 @@ class Informes extends ChangeNotifier {
             },
           );
     }
-    return _de[trabajoId];
+    final pendientes = [
+      for (final x in _sinSubir ?? const <Map<String, dynamic>>[])
+        if (x['empresa_id'] == n.empresaId && x['trabajo_id'] == trabajoId) _deApunte(x),
+    ];
+    final l = _de[trabajoId];
+    if (pendientes.isEmpty) return l;
+    return [...pendientes.reversed, ...?l?.where((i) => !pendientes.any((p) => p.id == i.id))];
   }
 
-  /// Guarda el informe [i] (sin id) y sube sus fotos, ya comprimidas, y la firma.
-  Future<void> crear(Informe i, {List<Uint8List> fotos = const [], Uint8List? firma}) async {
+  /// Guarda el informe [i] (sin id) y sube sus fotos, ya comprimidas, y la firma. Sin conexión lo guarda
+  /// en el dispositivo y lo sube al volver: devuelve false.
+  Future<bool> crear(Informe i, {List<Uint8List> fotos = const [], Uint8List? firma}) async {
     final n = store.nube;
     if (n == null) {
       _local.add(
@@ -123,10 +217,34 @@ class Informes extends ChangeNotifier {
         ),
       );
     } else {
-      final g = await n.crearInforme(i, fotos, firma);
-      if (_de[i.trabajoId] != null) _de[i.trabajoId] = [g, ..._de[i.trabajoId]!];
+      final id = store.nuevoId();
+      try {
+        final g = await n.crearInforme(i, fotos, firma, id: id);
+        if (_de[i.trabajoId] != null) _de[i.trabajoId] = [g, ..._de[i.trabajoId]!];
+      } catch (e) {
+        if (!Nube.sinConexion(e)) rethrow;
+        (await _apuntados()).add({
+          'id': id,
+          'empresa_id': n.empresaId,
+          'trabajo_id': i.trabajoId,
+          'trabajador_id': i.trabajadorId,
+          'resultado': i.resultado,
+          'notas': i.notas,
+          'material': i.material,
+          'minutos': i.minutos,
+          'fotos': [for (final f in fotos) base64Encode(f)],
+          'firma': firma == null ? null : base64Encode(firma),
+          'firmante': i.firmante,
+          'cuando': i.cuando.toIso8601String(),
+        });
+        await _apuntar();
+        _reintentar();
+        notifyListeners();
+        return false;
+      }
     }
     notifyListeners();
+    return true;
   }
 }
 

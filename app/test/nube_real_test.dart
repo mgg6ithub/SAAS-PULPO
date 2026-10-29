@@ -67,6 +67,44 @@ void main() {
         expect(Nube.error.value, isNull);
         expect(await _filas('trabajos'), 4, reason: 'plantillas iniciales');
 
+        // ── En vivo: otra sesión de la misma empresa cambia un trabajo y aquí aparece solo ──
+        final db0 = Supabase.instance.client;
+        final otra = SupabaseClient(supabaseUrl, supabasePublicable);
+        await otra.auth.signInWithPassword(email: _env['SB_CORREO_A']!, password: 'prueba-123456');
+        await Future<void>.delayed(const Duration(seconds: 2)); // que la suscripción esté lista
+        final enVivo = s.tareas.first;
+        await otra.from('trabajos').update({'nombre': 'Cambiado en otra sesión'}).eq('id', enVivo.id);
+        for (var i = 0; i < 40 && s.tarea(enVivo.id)?.nombre != 'Cambiado en otra sesión'; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+        expect(s.tarea(enVivo.id)?.nombre, 'Cambiado en otra sesión', reason: 'llega por Realtime');
+        await otra.dispose();
+
+        // ── Sin conexión: lo pendiente se apunta en el dispositivo y se borra al subirlo ──
+        final prefs = await SharedPreferences.getInstance();
+        s.guardarTarea(s.tarea(enVivo.id)!..notas = 'Apuntado antes de subir');
+        await Future<void>.delayed(Duration.zero);
+        expect(prefs.getString('pulpo_pendiente_${n.empresaId}'), contains('Apuntado antes de subir'));
+        await n.guardado;
+        expect(prefs.getString('pulpo_pendiente_${n.empresaId}'), isNull);
+        // Lo que quedó apuntado al cerrar sin conexión se sube al volver a entrar.
+        final fila = await db0.from('trabajos').select().eq('id', enVivo.id).single();
+        await prefs.setString(
+          'pulpo_pendiente_${n.empresaId}',
+          jsonEncode({
+            'subir': {
+              'trabajos': [
+                {...fila, 'notas': 'Hecho sin conexión'},
+              ],
+            },
+            'borrar': {},
+          }),
+        );
+        await n.subirPendiente();
+        expect((await db0.from('trabajos').select('notas').eq('id', enVivo.id).single())['notas'], 'Hecho sin conexión');
+        expect(prefs.getString('pulpo_pendiente_${n.empresaId}'), isNull);
+        await Future<void>.delayed(const Duration(seconds: 2)); // el eco en vivo lo trae al Store
+
         // ── Una fila con TODAS las columnas rellenas en cada tabla ──
         final etiqueta = EtiquetaTrabajo(id: s.nuevoId(), nombre: 'Urgente', color: 0xFFE5484D);
         s.guardarEtiqueta(etiqueta);
@@ -120,6 +158,8 @@ void main() {
           clienteId: cliente.id,
           plantillaId: plantilla.id,
           nombre: 'Mantenimiento ascensor',
+          precio: 120.5,
+          iva: 10,
           tipo: 'Ascensor',
           marca: 'Otis',
           modelo: 'Gen2',
@@ -254,7 +294,7 @@ void main() {
         s.guardarVencimiento(oca);
         s.guardarTarea(trabajo..equipoId = equipo.id);
         final pdf = Uint8List.fromList('%PDF-1.4'.codeUnits);
-        final ruta = await n.subirDocumento(equipo.id, 'certificado.pdf', pdf);
+        final ruta = await n.subirDocumentoEquipo(equipo.id, 'certificado.pdf', pdf);
         s.guardarEquipo(equipo..documentos = [ruta]);
         await n.guardado;
         expect(Nube.error.value, isNull);
@@ -262,8 +302,8 @@ void main() {
         expect(_j(r.equipos.single.toJson()), _j(equipo.toJson()), reason: 'equipo');
         expect(_j(r.vencimientos.single.toJson()), _j(oca.toJson()), reason: 'vencimiento');
         expect(r.tarea(trabajo.id)!.equipoId, equipo.id, reason: 'trabajo enlazado al equipo');
-        expect(await n.documento(ruta), pdf, reason: 'documento en Storage');
-        await n.borrarDocumento(ruta);
+        expect(await n.documentoEquipo(ruta), pdf, reason: 'documento en Storage');
+        await n.borrarDocumentoEquipo(ruta);
         s.borrarEquipo(equipo.id);
         await n.guardado;
         expect(Nube.error.value, isNull);
@@ -342,12 +382,20 @@ void main() {
           nombre: 'Trabajo de Pepe',
           proximo: hoy(),
           trabajadorIds: [pepe.id],
+          precio: 80,
         );
         final trabajoQ = Tarea(id: limpio.nuevoId(), clienteId: cli2.id, nombre: 'Trabajo de otro', proximo: hoy());
         limpio
           ..guardarTarea(trabajoP)
           ..guardarTarea(trabajoQ);
         await n2.guardado;
+        // Presupuestos y proformas: la base numera cada tipo por separado.
+        final f1 = await n2.guardarDocumento({'tipo': 'proforma', 'cliente_id': cli1.id, 'lineas': []});
+        final f2 = await n2.guardarDocumento({'tipo': 'proforma', 'cliente_id': cli1.id, 'lineas': []});
+        final p1 = await n2.guardarDocumento({'tipo': 'presupuesto', 'lineas': []});
+        expect((f1['numero'], f2['numero'], p1['numero']), (1, 2, 1));
+        await n2.guardarDocumento({...f1, 'cobrada_el': '2026-10-28'});
+        expect((await n2.documentos()).length, 3);
         final codigoW = await n2.crearInvitacion(rol: 'trabajador', trabajadorId: pepe.id);
         final codigoA = await n2.crearInvitacion(rol: 'admin');
         expect(Nube.enlace(codigoW), contains('invitacion=$codigoW'));
@@ -366,6 +414,8 @@ void main() {
         expect(sC.tareas.map((t) => t.id), [trabajoP.id], reason: 'solo su trabajo');
         expect(sC.clientes.map((c) => c.id), [cli1.id], reason: 'solo el cliente de su trabajo');
         expect(sC.trabajadores.map((w) => w.id), [pepe.id], reason: 'solo su ficha');
+        expect(sC.tarea(trabajoP.id)!.precio, 0, reason: 'el trabajador no ve precios');
+        expect(await nC.documentos(), isEmpty, reason: 'ni facturas');
         // Marca su trabajo como hecho; se guarda (estado, fechas e histórico).
         sC.marcarHecha(sC.tarea(trabajoP.id)!);
         await nC.guardado;
@@ -387,6 +437,14 @@ void main() {
           png,
         );
         expect(parte.fotos.single, endsWith('/0.jpg'));
+        // Reintento de un parte que se hizo sin conexión (mismo id): no falla ni lo duplica.
+        final otraVez = await nC.crearInforme(
+          Informe(trabajoId: trabajoP.id, trabajadorId: pepe.id, resultado: 1, notas: 'Correa cambiada'),
+          [jpg],
+          png,
+          id: parte.id,
+        );
+        expect(otraVez.fotos, parte.fotos);
         await expectLater(
           nC.crearInforme(Informe(trabajoId: trabajoQ.id, trabajadorId: pepe.id, resultado: 0, notas: 'x'), [], null),
           throwsA(anything),
@@ -402,6 +460,7 @@ void main() {
         await Nube.cerrarSesion();
         await auth.signInWithPassword(email: _env['SB_CORREO_B']!, password: 'prueba-123456');
         expect(await _filas('informes'), 0, reason: 'otra empresa no ve los partes');
+        expect(await _filas('documentos'), 0, reason: 'ni sus facturas');
         expect(await db.storage.from('fotos').list(path: '${n2.empresaId}/informes/${parte.id}'), isEmpty);
         Nube.invitacion = codigoW;
         await expectLater(Nube.abrir(), throwsA(isA<InvitacionNoValida>()));
@@ -419,6 +478,7 @@ void main() {
         expect(sD.clientes.length, 2);
         expect(sD.tarea(trabajoP.id)!.historial, isNotEmpty, reason: 'el socio ve lo que marcó el trabajador');
         expect(sD.tarea(trabajoP.id)!.ultimo, isNotNull);
+        expect(sD.tarea(trabajoP.id)!.precio, 80, reason: 'el socio administrador sí ve precios');
         final leido = (await nD.informes(trabajoP.id)).single;
         expect((leido.material, leido.minutos, leido.firmante, leido.resultado), ('Correa', 45, 'Ana', 1));
         expect(await nD.foto(leido.fotos.single), jpg);
@@ -451,6 +511,8 @@ void main() {
         expect(await _filas('trabajo_trabajadores'), 0);
         expect(await _filas('trabajo_historial'), 0);
         expect(await _filas('informes'), 0);
+        expect(await _filas('trabajo_precios'), 0);
+        expect(await _filas('documentos'), 0);
         r = await _recargar();
         expect(r.tareas, isEmpty);
         expect(r.clientes, isEmpty);

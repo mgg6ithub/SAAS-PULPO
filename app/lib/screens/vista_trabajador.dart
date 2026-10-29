@@ -796,8 +796,9 @@ class _FormularioInformeState extends State<FormularioInforme> {
     final messenger = ScaffoldMessenger.of(context);
     void aviso(String texto) =>
         messenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
+    bool subido;
     try {
-      await informes.crear(
+      subido = await informes.crear(
         Informe(
           trabajoId: widget.t.id,
           trabajadorId: widget.w.id,
@@ -817,7 +818,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
       return;
     }
     if (mounted) Navigator.pop(context);
-    aviso('Informe guardado');
+    aviso(subido ? 'Informe guardado' : 'Sin conexión: el informe se ha guardado aquí y se subirá al volver');
   }
 
   Widget _miniatura(int n) => Stack(

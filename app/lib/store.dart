@@ -251,16 +251,9 @@ class Store extends ChangeNotifier {
 
   /// Carga la empresa de la cuenta desde Supabase; una empresa nueva empieza con las plantillas iniciales.
   Future<void> cargarDesdeNube(Nube n) async {
+    await n.subirPendiente();
     final d = await n.cargar();
-    clientes = d.clientes;
-    trabajadores = d.trabajadores;
-    tareas = d.tareas;
-    subtareas = d.subtareas;
-    etiquetas = d.etiquetas;
-    equipos = d.equipos;
-    vencimientos = d.vencimientos;
-    tipos = d.tipos.isEmpty ? [...tiposBase] : d.tipos;
-    competencias = d.competencias.isEmpty ? [...competenciasBase] : d.competencias;
+    _deLaNube(d);
     usoPlantillas = [];
     demo = false;
     nube = n;
@@ -275,6 +268,24 @@ class Store extends ChangeNotifier {
       }
       _cambio();
     }
+    notifyListeners();
+  }
+
+  void _deLaNube(DatosNube d) {
+    clientes = d.clientes;
+    trabajadores = d.trabajadores;
+    tareas = d.tareas;
+    subtareas = d.subtareas;
+    etiquetas = d.etiquetas;
+    equipos = d.equipos;
+    vencimientos = d.vencimientos;
+    tipos = d.tipos.isEmpty ? [...tiposBase] : d.tipos;
+    competencias = d.competencias.isEmpty ? [...competenciasBase] : d.competencias;
+  }
+
+  /// Lo que otra persona ha cambiado en la base (en vivo). No se vuelve a guardar: ya está allí.
+  void ponerDeLaNube(DatosNube d) {
+    _deLaNube(d);
     notifyListeners();
   }
 

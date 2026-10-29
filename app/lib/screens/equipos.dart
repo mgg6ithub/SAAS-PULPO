@@ -132,7 +132,7 @@ class _EquipoFormState extends State<EquipoForm> {
     if (f?.bytes == null) return;
     setState(() => subiendo = true);
     try {
-      final ruta = await nube.subirDocumento(e.id, f!.name, f.bytes!);
+      final ruta = await nube.subirDocumentoEquipo(e.id, f!.name, f.bytes!);
       _guardarDocumentos([...e.documentos.where((d) => d != ruta), ruta]);
     } catch (_) {
       if (mounted) avisar('No se pudo subir ${f!.name}');
@@ -143,7 +143,7 @@ class _EquipoFormState extends State<EquipoForm> {
 
   Future<void> quitarDocumento(String ruta) async {
     try {
-      await store.nube!.borrarDocumento(ruta);
+      await store.nube!.borrarDocumentoEquipo(ruta);
     } catch (_) {}
     _guardarDocumentos([...e.documentos]..remove(ruta));
   }
@@ -177,7 +177,7 @@ class _EquipoFormState extends State<EquipoForm> {
               final nav = Navigator.of(context);
               if (await confirmar(context, '¿Eliminar ${e.nombre}? Sus trabajos se quedan, sin equipo.')) {
                 for (final d in e.documentos) {
-                  store.nube?.borrarDocumento(d).catchError((_) {});
+                  store.nube?.borrarDocumentoEquipo(d).catchError((_) {});
                 }
                 store.borrarEquipo(e.id);
                 nav.pop();
@@ -300,7 +300,7 @@ class _EquipoFormState extends State<EquipoForm> {
                     onTap: () async {
                       try {
                         await descargar(
-                          await store.nube!.documento(d),
+                          await store.nube!.documentoEquipo(d),
                           d.split('/').last,
                           d.endsWith('.pdf') ? 'application/pdf' : 'image/*',
                         );

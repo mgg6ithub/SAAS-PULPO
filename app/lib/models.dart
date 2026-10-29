@@ -342,6 +342,9 @@ class Tarea {
   /// Reglas que mandan emails cuando pasa algo de este trabajo.
   List<Automatizacion> automatizaciones;
 
+  /// Lo que se cobra cada vez que se hace, sin IVA (0 = sin precio), y su % de IVA. Solo lo ve el administrador.
+  double precio, iva;
+
   Tarea({
     required this.id,
     this.clienteId,
@@ -375,6 +378,8 @@ class Tarea {
     this.padreId,
     List<DateTime>? historial,
     List<Automatizacion>? automatizaciones,
+    this.precio = 0,
+    this.iva = 21,
   }) : plantilla = plantilla ?? clienteId == null,
        competencias = competencias ?? [],
        trabajadorIds = trabajadorIds ?? [],
@@ -434,6 +439,8 @@ class Tarea {
     'padreId': padreId,
     'historial': [for (final d in historial) _f(d)],
     'automatizaciones': [for (final a in automatizaciones) a.toJson()],
+    'precio': precio,
+    'iva': iva,
   };
 
   factory Tarea.fromJson(Map<String, dynamic> j) => Tarea(
@@ -469,6 +476,8 @@ class Tarea {
     padreId: j['padreId'] as String?,
     historial: [for (final x in j['historial'] as List? ?? []) DateTime.parse(x as String)],
     automatizaciones: [for (final x in j['automatizaciones'] as List? ?? []) Automatizacion.fromJson(x)],
+    precio: (j['precio'] as num? ?? 0).toDouble(),
+    iva: (j['iva'] as num? ?? 21).toDouble(),
   );
 
   Tarea copia() => Tarea.fromJson(toJson());
