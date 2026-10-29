@@ -67,6 +67,18 @@ void main() {
         expect(Nube.error.value, isNull);
         expect(await _filas('trabajos'), 4, reason: 'plantillas iniciales');
 
+        // ── En vivo: otra sesión de la misma empresa cambia un trabajo y aquí aparece solo ──
+        final otra = SupabaseClient(supabaseUrl, supabasePublicable);
+        await otra.auth.signInWithPassword(email: _env['SB_CORREO_A']!, password: 'prueba-123456');
+        await Future<void>.delayed(const Duration(seconds: 2)); // que la suscripción esté lista
+        final enVivo = s.tareas.first;
+        await otra.from('trabajos').update({'nombre': 'Cambiado en otra sesión'}).eq('id', enVivo.id);
+        for (var i = 0; i < 40 && s.tarea(enVivo.id)?.nombre != 'Cambiado en otra sesión'; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+        expect(s.tarea(enVivo.id)?.nombre, 'Cambiado en otra sesión', reason: 'llega por Realtime');
+        await otra.dispose();
+
         // ── Una fila con TODAS las columnas rellenas en cada tabla ──
         final etiqueta = EtiquetaTrabajo(id: s.nuevoId(), nombre: 'Urgente', color: 0xFFE5484D);
         s.guardarEtiqueta(etiqueta);
