@@ -147,7 +147,7 @@ class _CuentaFormState extends State<CuentaForm> {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              'Pendiente de confirmar: $pendiente',
+              'Pendiente: $pendiente. Confirma el enlace en los dos correos.',
               style: TextStyle(fontSize: 13.5, color: P.ambar, fontWeight: FontWeight.w600),
             ),
           ),
