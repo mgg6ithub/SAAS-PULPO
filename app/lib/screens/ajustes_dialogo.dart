@@ -173,7 +173,11 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                       child: TextButton(
                         style: TextButton.styleFrom(foregroundColor: P.rojo),
                         onPressed: () async {
-                          if (await confirmar(context, '¿Borrar todos los datos y empezar de cero?')) {
+                          if (await confirmar(
+                            context,
+                            '¿Borrar todos los datos y empezar de cero?',
+                            accion: 'Borrar todo',
+                          )) {
                             store.restablecer();
                           }
                         },

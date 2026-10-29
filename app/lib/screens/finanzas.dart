@@ -32,10 +32,15 @@ class _VistaFinanzasState extends State<VistaFinanzas> {
     final nuevas = finanzas.porFacturar(mes);
     if (nuevas.isEmpty) return _aviso('No hay trabajos con precio hechos en ${mesYAno(mes)} sin facturar.');
     final total = nuevas.fold(0.0, (s, d) => s + d.total);
+    final una = nuevas.length == 1;
     final ok = await confirmar(
       context,
-      '¿Crear ${nuevas.length} ${nuevas.length == 1 ? 'factura proforma' : 'facturas proforma'} '
-      'con lo hecho en ${mesYAno(mes)}? Total: ${euros(total)}.',
+      'Se ${una ? 'creará 1 factura proforma' : 'crearán ${nuevas.length} facturas proforma'} con los trabajos '
+      'hechos en ${mesYAno(mes)} (total ${euros(total)}).',
+      accion: una ? 'Crear 1 factura' : 'Crear ${nuevas.length} facturas',
+      icono: Icons.receipt_long_outlined,
+      destructivo: false,
+      nota: 'Podrás revisarlas y borrarlas después.',
     );
     if (!ok) return;
     try {
@@ -161,7 +166,6 @@ class _Resumen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _Importe('Facturado', r.facturado)),
-            Expanded(child: _Importe('Cobrado', r.cobrado, punto: P.verde)),
             Expanded(
               child: _Importe(
                 'Pendiente',
@@ -170,6 +174,7 @@ class _Resumen extends StatelessWidget {
                 ayuda: 'Lo que falta por cobrar, de todos los meses',
               ),
             ),
+            Expanded(child: _Importe('Cobrado', r.cobrado, punto: P.verde)),
           ],
         ),
       ],
@@ -362,7 +367,14 @@ class _DocumentoFormState extends State<DocumentoForm> {
   Future<void> _borrar() async {
     final m = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
-    if (!await confirmar(context, '¿Borrar ${d.tipo.etiqueta.toLowerCase()} ${d.codigo}?')) return;
+    final que = d.tipo == TipoDocumento.proforma ? 'factura' : 'presupuesto';
+    if (!await confirmar(
+      context,
+      '¿Eliminar ${que == 'factura' ? 'la factura' : 'el presupuesto'} ${d.codigo}?',
+      accion: 'Eliminar $que',
+    )) {
+      return;
+    }
     try {
       await finanzas.borrar(widget.original);
       nav.pop();

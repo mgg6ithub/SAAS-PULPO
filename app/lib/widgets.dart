@@ -1739,7 +1739,16 @@ String preguntaBorrarTrabajos(Iterable<String> ids, {required String nombre}) {
   return '¿Eliminar $nombre?$aviso';
 }
 
-Future<bool> confirmar(BuildContext context, String texto) async =>
+/// Pide confirmar una acción. Por defecto es borrar (papelera roja, «Eliminar», «No se puede deshacer»); lo que
+/// no borra pasa `destructivo: false` con su [accion] e [icono] y, si quiere, una [nota] bajo el texto.
+Future<bool> confirmar(
+  BuildContext context,
+  String texto, {
+  String accion = 'Eliminar',
+  IconData icono = Icons.delete_outline_rounded,
+  bool destructivo = true,
+  String? nota,
+}) async =>
     await showDialog<bool>(
       context: context,
       builder: (c) => Dialog(
@@ -1755,8 +1764,11 @@ Future<bool> confirmar(BuildContext context, String texto) async =>
                   child: Container(
                     width: 56,
                     height: 56,
-                    decoration: BoxDecoration(color: P.rojo.withValues(alpha: .1), shape: BoxShape.circle),
-                    child: const Icon(Icons.delete_outline_rounded, color: P.rojo, size: 26),
+                    decoration: BoxDecoration(
+                      color: (destructivo ? P.rojo : P.morado).withValues(alpha: .1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icono, color: destructivo ? P.rojo : P.morado, size: 26),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -1767,15 +1779,15 @@ Future<bool> confirmar(BuildContext context, String texto) async =>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'No se puede deshacer.',
+                  nota ?? (destructivo ? 'No se puede deshacer.' : ''),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: P.textoSuave, fontSize: 13),
                 ),
                 const SizedBox(height: 18),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: P.rojo),
+                  style: FilledButton.styleFrom(backgroundColor: destructivo ? P.rojo : P.morado),
                   onPressed: () => Navigator.pop(c, true),
-                  child: const Text('Eliminar'),
+                  child: Text(accion),
                 ),
                 const SizedBox(height: 6),
                 TextButton(

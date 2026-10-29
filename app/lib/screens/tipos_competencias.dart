@@ -225,6 +225,7 @@ class _FilaTipo extends StatelessWidget {
                       if (await confirmar(
                         context,
                         '¿Quitar «${t.nombre}»? Sus trabajos pasan a «${tipos.last.nombre}».',
+                        accion: 'Quitar',
                       )) {
                         store.borrarTipo(t.id);
                       }
@@ -253,7 +254,11 @@ class _FilaCompetencia extends StatelessWidget {
           child: IconButton(
             tooltip: 'Quitar',
             onPressed: () async {
-              if (await confirmar(context, '¿Quitar «$c»? Se quita también de trabajadores y trabajos.')) {
+              if (await confirmar(
+                context,
+                '¿Quitar «$c»? Se quita también de trabajadores y trabajos.',
+                accion: 'Quitar',
+              )) {
                 store.borrarCompetencia(c);
               }
             },

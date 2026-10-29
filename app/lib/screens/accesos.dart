@@ -223,7 +223,7 @@ class _AccesosState extends State<Accesos> {
   }
 
   Future<void> _quitar(Acceso a, String nombre) async {
-    if (!await confirmar(context, '¿Quitar el acceso a $nombre?')) return;
+    if (!await confirmar(context, '¿Quitar el acceso a $nombre?', accion: 'Quitar acceso')) return;
     await _hacer(() => _nube.quitarAcceso(a.usuarioId));
   }
 

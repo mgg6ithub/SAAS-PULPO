@@ -57,6 +57,49 @@ void main() {
     await finanzas.borrar(nuevas.single);
   });
 
+  testWidgets('Facturar lo hecho pide confirmar sin aspecto de borrar; eliminar una factura, sí', (tester) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    store.marcarHecha(store.tarea('t1')!);
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: VistaFinanzas())));
+    await tester.pumpAndSettle();
+    // Resumen del mes: Facturado, Pendiente, Cobrado.
+    final x = [for (final t in ['Facturado', 'Pendiente', 'Cobrado']) tester.getTopLeft(find.text(t).first).dx];
+    expect(x, [...x]..sort());
+
+    await tester.tap(find.text('Facturar lo hecho'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Se creará 1 factura proforma'), findsOneWidget);
+    expect(find.text('Crear 1 factura'), findsOneWidget);
+    expect(find.text('Podrás revisarlas y borrarlas después.'), findsOneWidget);
+    expect(find.text('No se puede deshacer.'), findsNothing);
+    expect(find.text('Eliminar'), findsNothing);
+    expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Crear 1 factura'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    final d = finanzas.documentos!.single;
+
+    // Desde la ficha de la factura se puede eliminar, con su aviso de borrar.
+    await tester.tap(find.text('Comunidad Mayor 12').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+    expect(find.text('¿Eliminar la factura ${d.codigo}?'), findsOneWidget);
+    expect(find.text('Eliminar factura'), findsOneWidget);
+    expect(find.text('No se puede deshacer.'), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Eliminar factura'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(finanzas.documentos, isEmpty);
+  });
+
   for (final ancho in [1440.0, 700.0, 420.0, 360.0]) {
     testWidgets('Finanzas cabe a $ancho px y crea una factura', (tester) async {
       tester.view.physicalSize = Size(ancho, 1000);

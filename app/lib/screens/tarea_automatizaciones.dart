@@ -46,7 +46,9 @@ class TareaAutomatizaciones extends StatelessWidget {
                   IconButton(
                     tooltip: 'Borrar',
                     onPressed: () async {
-                      if (!await confirmar(context, '¿Borrar la automatización «${a.nombre}»?')) return;
+                      if (!await confirmar(context, '¿Borrar la automatización «${a.nombre}»?', accion: 'Borrar')) {
+                        return;
+                      }
                       t.automatizaciones.remove(a);
                       store.guardarTarea(t);
                     },
