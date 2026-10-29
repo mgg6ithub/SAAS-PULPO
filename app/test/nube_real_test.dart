@@ -404,6 +404,16 @@ void main() {
         expect(Nube.enlace(codigoW), contains('invitacion=$codigoW'));
         await Nube.cerrarSesion();
 
+        // Sin sesión, la pantalla de acceso ve a qué empresa y con qué rol une cada invitación (DEV-019).
+        Nube.invitacion = codigoW;
+        final verW = await Nube.verInvitacion();
+        expect((verW?.rol, verW?.trabajador), ('trabajador', pepe.nombre));
+        expect(verW?.empresa, isNotEmpty);
+        Nube.invitacion = codigoA;
+        expect((await Nube.verInvitacion())?.rol, 'admin');
+        Nube.invitacion = 'no-existe';
+        expect(await Nube.verInvitacion(), isNull);
+
         // Trabajador: acepta, entra con su ficha y ve solo lo suyo.
         await auth.signInWithPassword(email: _env['SB_CORREO_C']!, password: 'prueba-123456');
         Nube.invitacion = codigoW;
@@ -466,6 +476,7 @@ void main() {
         expect(await _filas('documentos'), 0, reason: 'ni sus facturas');
         expect(await db.storage.from('fotos').list(path: '${n2.empresaId}/informes/${parte.id}'), isEmpty);
         Nube.invitacion = codigoW;
+        expect(await Nube.verInvitacion(), isNull, reason: 'ya usada');
         await expectLater(Nube.abrir(), throwsA(isA<InvitacionNoValida>()));
         await Nube.cerrarSesion();
 
