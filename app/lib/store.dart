@@ -848,6 +848,9 @@ class Store extends ChangeNotifier {
 
   bool esApto(Trabajador w, Tarea t) => w.activo && faltan(w, t).isEmpty;
 
+  /// iPultec: la OT solo se le puede dar a un técnico de su categoría. En Pultec, a cualquiera (con aviso).
+  bool puedeRecibir(Trabajador w, Tarea t) => !industrial || esApto(w, t);
+
   /// Apto y disponible hoy con menos tareas asignadas. Primer paso de la automatización.
   Trabajador? mejorPara(Tarea t) {
     final aptos = trabajadores.where((w) => esApto(w, t)).toList();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pulpo/forms.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
 import 'package:pulpo/industrial/plan.dart';
@@ -66,6 +67,26 @@ void main() {
     // Borrar el activo se lleva los mantenimientos de sus componentes.
     store.borrarActivo('a1');
     expect(store.planes, isEmpty);
+  });
+
+  testWidgets('IPT-008: la OT solo se le puede dar a un técnico de su categoría', (tester) async {
+    final apto = Trabajador(id: 'wA', nombre: 'Ane', competencias: ['Electricidad']);
+    final otro = Trabajador(id: 'wB', nombre: 'Beñat', competencias: ['Jardinería']);
+    store.trabajadores = [apto, otro];
+    final ot = Tarea(id: 'ot5', nombre: 'Motor', activoId: 'a2', competencias: ['Electricidad']);
+    expect(store.puedeRecibir(apto, ot), isTrue);
+    expect(store.puedeRecibir(otro, ot), isFalse);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SelectorTrabajadores(ot, () {}))));
+    await tester.tap(find.byType(SelectorTrabajadores));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Beñat'));
+    await tester.tap(find.text('Ane'));
+    await tester.pump();
+    expect(ot.trabajadorIds, ['wA']);
+    // El alta del técnico pide su categoría.
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: TrabajadorForm())));
+    await tester.pumpAndSettle();
+    expect(find.text('Categorías'), findsOneWidget);
   });
 
   for (final ancho in [1440.0, 700.0, 420.0]) {

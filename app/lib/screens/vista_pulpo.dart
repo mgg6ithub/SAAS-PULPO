@@ -407,7 +407,7 @@ class _FilaTrabajo extends StatelessWidget {
                       ],
                     ),
                   ),
-                for (final w in tecnicos)
+                for (final w in tecnicos.where((w) => store.puedeRecibir(w, tarea)))
                   (
                     w.id,
                     Row(

@@ -206,11 +206,13 @@ class _FichaRapida extends StatelessWidget {
                           w,
                           asignado: t.trabajadorIds.contains(w.id),
                           faltan: store.faltan(w, t),
-                          onTap: () => guardar(
-                            (c) => c.trabajadorIds.contains(w.id)
-                                ? c.trabajadorIds.remove(w.id)
-                                : c.trabajadorIds.add(w.id),
-                          ),
+                          onTap: t.trabajadorIds.contains(w.id) || store.puedeRecibir(w, t)
+                              ? () => guardar(
+                                  (c) => c.trabajadorIds.contains(w.id)
+                                      ? c.trabajadorIds.remove(w.id)
+                                      : c.trabajadorIds.add(w.id),
+                                )
+                              : null,
                         ),
                     ],
                   ),
@@ -293,7 +295,7 @@ class _ChipTecnico extends StatelessWidget {
   final Trabajador w;
   final bool asignado;
   final List<String> faltan;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _ChipTecnico(this.w, {required this.asignado, required this.faltan, required this.onTap});
 
   @override
