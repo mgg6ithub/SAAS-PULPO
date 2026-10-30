@@ -62,6 +62,14 @@ class _PlanFormState extends State<PlanForm> {
   late final procedimiento = TextEditingController(text: p.procedimiento);
   bool intentoGuardar = false;
 
+  /// Cómo se programa: 0 = cada N días, 1 = cada N horas de uso, 2 = una fecha concreta.
+  late int modo = p.cadaHoras != null
+      ? 1
+      : p.cadaDias == null && p.proximo != null
+      ? 2
+      : 0;
+  static const _modos = ['Días', 'Horas de uso', 'Fecha concreta'];
+
   int? _entero(TextEditingController c) {
     final n = int.tryParse(c.text.trim());
     return n == null || n <= 0 ? null : n;
@@ -75,7 +83,14 @@ class _PlanFormState extends State<PlanForm> {
 
   String? get errorNombre => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
   String? get errorCada =>
-      intentoGuardar && _entero(dias) == null && _entero(horasC) == null ? 'Cada cuántos días u horas' : null;
+      intentoGuardar &&
+          switch (modo) {
+            0 => _entero(dias) == null,
+            1 => _entero(horasC) == null,
+            _ => p.proximo == null,
+          }
+      ? (modo == 2 ? 'Elige la fecha' : 'Cada cuánto toca')
+      : null;
 
   void guardar() {
     setState(() => intentoGuardar = true);
@@ -83,8 +98,8 @@ class _PlanFormState extends State<PlanForm> {
     p
       ..nombre = nombre.text.trim()
       ..descripcion = descripcion.text.trim()
-      ..cadaDias = _entero(dias)
-      ..cadaHoras = _entero(horasC)
+      ..cadaDias = modo == 0 ? _entero(dias) : null
+      ..cadaHoras = modo == 1 ? _entero(horasC) : null
       ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.'))
       ..repuestos = repuestos.text.trim()
       ..procedimiento = procedimiento.text.trim();
@@ -119,10 +134,34 @@ class _PlanFormState extends State<PlanForm> {
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
           campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
         ]),
-        Bloque('Cada cuánto', descripcion: 'Por días, por horas de uso o por lo que llegue antes. Sin próximo, se estima con el contador.', [
+        Bloque('Cada cuánto', descripcion: 'Por días, por horas de uso o en una fecha. Por horas, sin próximo, se estima con el contador.', [
           dos(
-            campo('Cada (días)', dias, hint: '90', error: errorCada, obligatorio: true),
-            campo('Cada (horas de uso)', horasC, hint: '500', obligatorio: true),
+            conMargen(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  etiqueta('Programar por'),
+                  BotonMenu<int>(
+                    relleno: EdgeInsets.zero,
+                    tooltip: 'Cómo se programa el mantenimiento',
+                    seleccionado: modo,
+                    opciones: [for (final (i, m) in _modos.indexed) (i, Text(m))],
+                    onSelected: (m) => setState(() => modo = m),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+                      ),
+                      child: Text(_modos[modo]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            switch (modo) {
+              0 => campo('Cada cuántos días', dias, hint: '90', error: errorCada, obligatorio: true),
+              1 => campo('Cada cuántas horas', horasC, hint: '500', error: errorCada, obligatorio: true),
+              _ => CampoFecha('Fecha', p.proximo, (d) => setState(() => p.proximo = d)),
+            },
           ),
           const SizedBox(height: 16),
           dos(
@@ -130,7 +169,7 @@ class _PlanFormState extends State<PlanForm> {
               p.ultimo = d;
               _alCambiarDias();
             }, hasta: hoy()),
-            CampoFecha('Próximo', p.proximo, (d) => setState(() => p.proximo = d)),
+            modo == 2 ? const SizedBox() : CampoFecha('Próximo', p.proximo, (d) => setState(() => p.proximo = d)),
           ),
           dos(
             campo(
