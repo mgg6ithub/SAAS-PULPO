@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/iconos.dart';
+import 'package:pulpo/industrial/vistazo.dart';
 import 'package:pulpo/industrial/activos.dart';
 import 'package:pulpo/industrial/plantillas.dart';
 import 'package:pulpo/marca.dart';
@@ -182,6 +183,17 @@ void main() {
       expect(store.activo('a1')!.icono, 'camion');
       expect(store.activo('a1')!.copia().icono, 'camion');
       expect(find.byIcon(iconoIndustrial('camion')), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Inicio muestra el icono elegido en la tarjeta del activo', (tester) async {
+      store.activo('a1')!.icono = 'camion';
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(
+        child: VistazoActivos(onAbrir: (_) {}, onVerMas: (_) {}, columnas: 1),
+      ))));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.local_shipping_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.event_available_rounded), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

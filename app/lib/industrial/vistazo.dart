@@ -5,6 +5,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
+import 'iconos.dart';
 import 'activos.dart';
 import 'gravedad.dart';
 import 'tipo_mantenimiento.dart';
@@ -105,7 +106,6 @@ class VistazoActivos extends StatelessWidget {
   }
 }
 
-const _iconos = [Icons.event_available_rounded, Icons.warning_amber_rounded, Icons.error_outline_rounded];
 
 class _Columna extends StatelessWidget {
   final TipoMantenimiento tipo;
@@ -130,14 +130,8 @@ class _Columna extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icono en su círculo de color, como el de las cifras de arriba.
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(color: tipo.color.withValues(alpha: .1), shape: BoxShape.circle),
-                    child: Icon(_iconos[tipo.index], size: 16, color: tipo.color),
-                  ),
-                  const SizedBox(width: 10),
+                  puntoTipo(tipo.color),
+                  const SizedBox(width: 8),
                   Text(tipo.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(width: 6),
                   Text('${activos.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
@@ -158,11 +152,19 @@ class _Columna extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  a.titulo,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -.2),
+                Row(
+                  children: [
+                    Icon(iconoIndustrial(a.icono), size: 20, color: tipo.color),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        a.titulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -.2),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(

@@ -8,6 +8,7 @@ import 'package:pulpo/models.dart';
 import 'package:pulpo/screens/tabla_trabajos.dart';
 import 'package:pulpo/store.dart';
 import 'package:pulpo/theme.dart';
+import 'package:pulpo/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -63,6 +64,7 @@ void main() {
           expect(find.text('Calderas (RITE)'), findsNothing);
           expect(find.text('Piscinas'), findsNothing);
           expect(find.text('Precio'), findsNothing);
+          expect(find.byType(SelectorColorTarea), findsNothing);
           expect(tester.takeException(), isNull);
         }
       });
@@ -158,6 +160,34 @@ void main() {
       expect(a.horasUso, 7);
       expect(a.proximoMantenimiento, DateTime(hoy().year, hoy().month, hoy().day + 715));
       expect(a.copia().proximoMantenimiento, a.proximoMantenimiento);
+    });
+
+    testWidgets('las OT tienen dos estados y muestran si tienen automatizaciones', (tester) async {
+      tester.view.physicalSize = const Size(980, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final t = store.tareas.single;
+      t.automatizaciones.add(Automatizacion(id: 'correo', nombre: 'Aviso'));
+      t.periodicidad = Periodicidad.mensual;
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: TablaTrabajos(
+        [t, Tarea(id: 'sin', nombre: 'Sin reglas', plantilla: false)], onAbrir: (_) {},
+      ))));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Sin automatizaciones'), findsOneWidget);
+      expect(find.byTooltip('1 automatizaciones · 1 activas'), findsOneWidget);
+      expect(find.byType(BarraTipo), findsNothing);
+      expect(estadosTrabajo, [EstadoTrabajo.pendiente, EstadoTrabajo.realizado]);
+      await tester.tap(find.byType(SelectorEstado).first);
+      await tester.pumpAndSettle();
+      expect(find.text('En curso'), findsNothing);
+      expect(find.text('No realizado'), findsNothing);
+      await tester.tap(find.text('Completada'));
+      await tester.pumpAndSettle();
+      expect(t.estado, EstadoTrabajo.realizado);
+      expect(t.proximo, isNull);
+      expect(t.historial, isNotEmpty);
+      expect(t.automatizaciones.single.id, 'correo');
+      expect(tester.takeException(), isNull);
     });
 
     test('el catálogo industrial no contiene especialidades residenciales', () {

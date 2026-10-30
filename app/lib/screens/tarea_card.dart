@@ -67,12 +67,14 @@ class TareaCard extends StatelessWidget {
             const SizedBox(height: 6),
             Row(
               children: [
+                if (!industrial) ...[
                 Container(
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(color: t.colorBloque, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 8),
+                ],
                 Expanded(
                   child: Text(
                     detalle.join(' · '),
@@ -92,7 +94,7 @@ class TareaCard extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       if (realizada)
-                        const Pill('Hecho', P.verde, punto: true)
+                        industrial ? const Text('Completada') : const Pill('Hecho', P.verde, punto: true)
                       else if (t.esPlantilla)
                         pillEstado(t)
                       else

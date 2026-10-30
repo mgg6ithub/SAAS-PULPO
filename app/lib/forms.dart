@@ -1614,7 +1614,7 @@ class _TareaFormState extends State<TareaForm> {
               ),
             ],
           ],
-          pie: t.esPlantilla ? null : SelectorColorTarea(t, () => setState(() {})),
+          pie: t.esPlantilla || industrial ? null : SelectorColorTarea(t, () => setState(() {})),
         ),
         if (!t.esPlantilla)
           Bloque(industrial ? 'Activo y técnico' : m('Cliente y equipo'), descripcion: industrial ? 'Dónde se realiza la intervención y quién la hace.' : 'Para quién es y quién la hace.', [
@@ -2153,14 +2153,16 @@ class SelectorEstado extends StatelessWidget {
       shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
     ),
     menuChildren: [
-      for (final e in EstadoTrabajo.values)
+      for (final e in estadosTrabajo)
         MenuItemButton(
-          leadingIcon: Container(
+          leadingIcon: industrial
+              ? Icon(e == EstadoTrabajo.realizado ? Icons.check_circle_outline_rounded : Icons.radio_button_unchecked_rounded, size: 18, color: P.textoSuave)
+              : Container(
             width: 8,
             height: 8,
             decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
           ),
-          trailingIcon: e == t.estado ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
+          trailingIcon: e == t.estado || (industrial && e == EstadoTrabajo.pendiente && t.estado != EstadoTrabajo.realizado) ? Icon(Icons.check_rounded, size: 18, color: P.textoSuave) : null,
           onPressed: () => _elegir(context, e),
           child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 110), child: Text(e.etiqueta)),
         ),
@@ -2169,7 +2171,7 @@ class SelectorEstado extends StatelessWidget {
       abierto: menu.isOpen,
       compacta: true,
       onTap: () => menu.isOpen ? menu.close() : menu.open(),
-      child: Tooltip(message: 'Cambiar el estado', child: Pill(t.estado.etiqueta, t.estado.color, punto: true)),
+      child: Tooltip(message: 'Cambiar el estado', child: industrial ? Text(t.estado.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)) : Pill(t.estado.etiqueta, t.estado.color, punto: true)),
     ),
   );
 }

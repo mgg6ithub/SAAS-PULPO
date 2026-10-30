@@ -13,7 +13,7 @@ import 'package:pulpo/models.dart';
 import 'package:pulpo/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// iPultec (IPT-005/006): el color de un activo es el de la OT pendiente más grave de su árbol.
+/// iPultec: clasificación propia del activo, independiente de sus órdenes de trabajo.
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -28,15 +28,15 @@ void main() {
       ..guardarActivo(Activo(id: 'a3', padreId: 'a2', tag: 'CAM-01-MOT-B', nombre: 'Bomba'));
   });
 
-  test('la gravedad sube por el árbol y deja de contar al terminar la OT', () {
-    expect(gravedadDe('a1'), isNull);
+  test('la clasificación pertenece al activo y no cambia al completar una OT', () {
+    expect(gravedadDe('a1'), TipoMantenimiento.preventivo);
+    store.activo('a2')!.tipo = TipoMantenimiento.correctivoNoCritico;
     final ot = Tarea(id: 'ot1', nombre: 'Fuga', activoId: 'a3', tipoMantenimiento: TipoMantenimiento.correctivoCritico);
     store.tareas.add(ot);
-    store.tareas.add(Tarea(id: 'ot2', activoId: 'a2', tipoMantenimiento: TipoMantenimiento.preventivo));
-    expect(gravedadDe('a1'), TipoMantenimiento.correctivoCritico);
-    expect(gravedadDe('a2'), TipoMantenimiento.correctivoCritico);
-    ot.estado = EstadoTrabajo.realizado;
     expect(gravedadDe('a1'), TipoMantenimiento.preventivo);
+    expect(gravedadDe('a2'), TipoMantenimiento.correctivoNoCritico);
+    ot.estado = EstadoTrabajo.realizado;
+    expect(gravedadDe('a2'), TipoMantenimiento.correctivoNoCritico);
   });
 
   test('borrar un activo quita sus componentes y deja sus OT sin activo', () {
@@ -168,6 +168,8 @@ void main() {
       expect(find.text('CAM-01 · Camión'), findsOneWidget);
       await tester.tap(find.text('CAM-01 · Camión'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('CAM-01-MOT · Motor'));
+      await tester.pumpAndSettle();
       expect(find.text('CAM-01-MOT-B · Bomba'), findsOneWidget);
       expect(find.text('Nuevo mantenimiento'), findsNothing);
       expect(find.text('Resumen'), findsOneWidget);
@@ -181,27 +183,25 @@ void main() {
   }
 
   for (final columnas in [3, 1]) {
-    testWidgets('Inicio: vistazo de máquinas con leyenda en $columnas columnas, la más grave primero', (tester) async {
+    testWidgets('Inicio: máquinas agrupadas por su clasificación en $columnas columnas', (tester) async {
       tester.view.physicalSize = Size(columnas == 3 ? 1280 : 420, 1000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       store.guardarActivo(Activo(id: 'b1', tag: 'PRE-01', nombre: 'Prensa'));
-      store.tareas.add(Tarea(id: 'ot1', activoId: 'a3', tipoMantenimiento: TipoMantenimiento.correctivoCritico));
+      store.activo('a1')!.tipo = TipoMantenimiento.correctivoCritico;
       String? abierto;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(
-              child: VistazoActivos(columnas: columnas, onAbrir: (id) => abierto = id),
+              child: VistazoActivos(columnas: columnas, onVerMas: (_) {}, onAbrir: (id) => abierto = id),
             ),
           ),
         ),
       );
-      expect(find.textContaining('El activo no puede funcionar'), findsOneWidget);
-      final camion = tester.getTopLeft(find.text('CAM-01 · Camión'));
-      final prensa = tester.getTopLeft(find.text('PRE-01 · Prensa'));
-      expect(camion.dy < prensa.dy || camion.dx < prensa.dx, isTrue);
-      expect(find.text('Correctivo crítico · 1 pendiente'), findsOneWidget);
+      expect(find.byTooltip(TipoMantenimiento.correctivoCritico.descripcion), findsOneWidget);
+      expect(find.text('CAM-01 · Camión'), findsOneWidget);
+      expect(find.text('Correctivo crítico'), findsOneWidget);
       await tester.tap(find.text('PRE-01 · Prensa'));
       expect(abierto, 'b1');
     });

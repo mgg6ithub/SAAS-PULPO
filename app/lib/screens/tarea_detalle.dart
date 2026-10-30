@@ -57,8 +57,10 @@ class _TareaDetalleState extends State<TareaDetalle> {
                   onPressed: padre == null ? widget.onVolver : () => widget.onAbrir(padre.id),
                   icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                 ),
-                const SizedBox(width: 4),
-                BarraTipo(t.tipo, alto: 40, color: t.colorBloque),
+                if (!industrial) ...[
+                  const SizedBox(width: 4),
+                  BarraTipo(t.tipo, alto: 40, color: t.colorBloque),
+                ],
               ],
             ),
             titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
@@ -189,6 +191,10 @@ class _Resumen extends StatelessWidget {
               Text('Asignado a', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
               const SizedBox(height: 6),
               SelectorTrabajadores(t, () => store.guardarTarea(t), ofrecerSubtrabajos: !industrial),
+              if (industrial && !t.esPlantilla) ...[
+                const SizedBox(height: 10),
+                SelectorEstado(t),
+              ],
             ],
           ),
         ),
