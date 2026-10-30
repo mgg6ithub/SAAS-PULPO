@@ -137,7 +137,7 @@ Future<void> abrirSelectorEmpresa(BuildContext context, {List<EmpresaDeCuenta>? 
           ),
         ),
       const PopupMenuDivider(),
-      _opcion('nueva', 'Crear empresa', color: P.morado),
+      _opcion('nueva', industrial ? 'Crear planta' : 'Crear empresa', color: P.morado),
     ],
   );
   if (!context.mounted) return;
@@ -183,7 +183,9 @@ class _SelectorEmpresaState extends State<SelectorEmpresa> {
       size: 28 * widget.escala,
     );
     return Tooltip(
-      message: widget.compacto ? '${nube.nombre} · Cambiar de empresa' : 'Cambiar de empresa',
+      message: widget.compacto
+          ? '${nube.nombre} · Cambiar de ${industrial ? 'planta' : 'empresa'}'
+          : 'Cambiar de ${industrial ? 'planta' : 'empresa'}',
       child: InkWell(
         borderRadius: BorderRadius.circular(P.radioControl),
         mouseCursor: SystemMouseCursors.click,

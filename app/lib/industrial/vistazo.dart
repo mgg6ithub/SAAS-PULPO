@@ -55,7 +55,7 @@ class LeyendaEstados extends StatelessWidget {
   }
 }
 
-/// Inicio de iPultec: una columna por tipo de mantenimiento pendiente con sus 3 primeras máquinas.
+/// Inicio de iPultec: una columna por estado de mantenimiento con sus 3 primeros activos.
 /// «Ver más» lleva a Activos filtrado por ese tipo; al pulsar una máquina se abre su ficha.
 class VistazoActivos extends StatelessWidget {
   final ValueChanged<String> onAbrir;
@@ -70,7 +70,6 @@ class VistazoActivos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activos = [for (final a in store.hijosDe(null).where((a) => a.activo)) (a, gravedadDe(a.id))];
-    final alDia = activos.where((x) => x.$2 == null).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -78,11 +77,11 @@ class VistazoActivos extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Estado de las máquinas',
+                'Estado de los activos',
                 style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
               ),
             ),
-            Enlace(alDia == 0 ? 'Ver todas' : 'Ver todas · $alDia al día', onTap: () => onVerMas(0)),
+            Enlace('Ver todos', onTap: () => onVerMas(0)),
           ],
         ),
         const SizedBox(height: 14),
@@ -117,33 +116,36 @@ class _Columna extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      // Qué significa cada tipo: al pasar el ratón, como el resto de ayudas.
+      // Qué significa cada tipo, al pasar el ratón; al pulsar, Activos con ese filtro.
       Align(
         alignment: Alignment.centerLeft,
         child: Tooltip(
           message: tipo.descripcion,
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                puntoTipo(tipo.color),
-                const SizedBox(width: 8),
-                Text(tipo.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                const SizedBox(width: 6),
-                Text('${activos.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
-              ],
+          child: GestureDetector(
+            onTap: onVerMas,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  puntoTipo(tipo.color),
+                  const SizedBox(width: 8),
+                  Text(tipo.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text('${activos.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
+                ],
+              ),
             ),
           ),
         ),
       ),
       const SizedBox(height: 10),
       if (activos.isEmpty)
-        Text('Ninguna máquina', style: TextStyle(color: P.textoSuave, fontSize: 13))
+        Text('Ningún activo', style: TextStyle(color: P.textoSuave, fontSize: 13))
       else
         for (final a in activos.take(VistazoActivos._maximo)) ...[
           HoverCard(
-            padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+            padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
             onTap: () => onAbrir(a.id),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,7 +171,7 @@ class _Columna extends StatelessWidget {
       if (activos.length > VistazoActivos._maximo)
         Align(
           alignment: Alignment.centerLeft,
-          child: Enlace('Ver más (${activos.length - VistazoActivos._maximo})', onTap: onVerMas),
+          child: Enlace('Ver todos (${activos.length})', onTap: onVerMas),
         ),
     ],
   );

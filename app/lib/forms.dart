@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'ajustes.dart';
 import 'geo.dart';
 import 'industrial/activos.dart' show arbolActivos;
-import 'industrial/tipo_mantenimiento.dart';
 import 'informes.dart';
 import 'marca.dart';
 import 'models.dart';
@@ -1519,13 +1518,8 @@ class _TareaFormState extends State<TareaForm> {
     }
   }
 
-  /// Arriba a la derecha: la criticidad en Pultec; en iPultec, el tipo de mantenimiento de la OT.
-  Widget _menuGravedad() => industrial
-      ? MenuTipoMantenimiento(
-          t.tipoMantenimiento ?? TipoMantenimiento.preventivo,
-          (x) => setState(() => t.tipoMantenimiento = x),
-        )
-      : _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c));
+  /// Arriba a la derecha: la criticidad en Pultec. En iPultec el tipo de mantenimiento es del activo, no de la OT.
+  Widget? _menuGravedad() => industrial ? null : _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c));
 
   @override
   Widget build(BuildContext context) {
@@ -1564,12 +1558,12 @@ class _TareaFormState extends State<TareaForm> {
       // Mismo esquema que cliente y trabajador: bloques con su título a la izquierda y los campos a la derecha.
       campos: [
         // Sin cabecera no hay sitio para la criticidad: va arriba a la derecha de los campos.
-        if (widget.incrustada)
+        if (widget.incrustada && !industrial)
           Align(
             alignment: Alignment.centerRight,
             child: Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: _menuGravedad(),
+              child: _menuGravedad()!,
             ),
           ),
         Bloque(

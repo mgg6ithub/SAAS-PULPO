@@ -1114,6 +1114,7 @@ class Nube {
           'uso_horas': a.horasUso,
           'uso_semanal': a.usoSemanal,
           'lectura_fecha': a.fechaLectura.toIso8601String().substring(0, 10),
+          'mantenimiento_tipo': a.tipo.index,
           'activo': a.activo,
         };
       }
@@ -1408,6 +1409,7 @@ Activo _activo(Map x) => Activo(
   horasUso: (x['uso_horas'] as num?)?.toDouble() ?? 0,
   usoSemanal: x['uso_semanal'] as bool? ?? false,
   fechaLectura: DateTime.tryParse(x['lectura_fecha'] as String? ?? ''),
+  tipo: TipoMantenimiento.values[(x['mantenimiento_tipo'] as num?)?.toInt() ?? 0],
 );
 
 PlanMantenimiento _plan(Map x) => PlanMantenimiento(

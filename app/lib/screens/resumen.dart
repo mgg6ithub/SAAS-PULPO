@@ -856,7 +856,7 @@ class _HeroState extends State<_Hero> {
 
   String get saludo {
     // iPultec: tono de planta, sin saludo ni sol.
-    if (industrial) return 'Estado de la planta';
+    if (industrial) return 'Estado de ${store.nube?.nombre ?? 'la planta'}';
     final h = _ahora.hour;
     return h >= 6 && h < 14 ? 'Buenos días' : (h >= 14 && h < 21 ? 'Buenas tardes' : 'Buenas noches');
   }

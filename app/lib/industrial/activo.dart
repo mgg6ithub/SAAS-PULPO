@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import '../models.dart' show TipoMantenimiento;
+
 enum FrecuenciaActivo { sinDefinir, horas, meses, fecha }
 
 /// Máquina o componente de iPultec. Forman un árbol como trabajos y subtrabajos: un activo (sin
@@ -19,6 +21,9 @@ class Activo {
   double horasUltimoMantenimiento, horasUso;
   bool usoSemanal;
   DateTime fechaLectura;
+
+  /// Estado de mantenimiento del activo: preventivo, correctivo no crítico o crítico.
+  TipoMantenimiento tipo;
 
   Activo({
     required this.id,
@@ -42,6 +47,7 @@ class Activo {
     this.horasUso = 0,
     this.usoSemanal = false,
     DateTime? fechaLectura,
+    this.tipo = TipoMantenimiento.preventivo,
   }) : fechaLectura = fechaLectura ?? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
   /// "CAM-01 · Camión cisterna", o lo que haya.
@@ -98,6 +104,7 @@ class Activo {
     'horasUso': horasUso,
     'usoSemanal': usoSemanal,
     'fechaLectura': fechaLectura.toIso8601String(),
+    'tipo': tipo.index,
   };
 
   factory Activo.fromJson(Map<String, dynamic> j) => Activo(
@@ -122,6 +129,7 @@ class Activo {
     horasUso: (j['horasUso'] as num?)?.toDouble() ?? 0,
     usoSemanal: j['usoSemanal'] as bool? ?? false,
     fechaLectura: DateTime.tryParse(j['fechaLectura'] as String? ?? ''),
+    tipo: TipoMantenimiento.values[j['tipo'] as int? ?? 0],
   );
 
   Activo copia() => Activo.fromJson(toJson());

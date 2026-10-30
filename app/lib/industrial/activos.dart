@@ -16,18 +16,18 @@ import '../screens/tarea_detalle.dart';
 
 /// Color del estado de un activo: el de su mantenimiento pendiente más grave (él y sus componentes).
 /// Sin nada pendiente, verde: puede funcionar.
-TipoMantenimiento? gravedadDe(String activoId) => masGrave(store.otsDe(activoId));
+/// El estado de mantenimiento lo marca cada activo en su ficha (no sus OT).
+TipoMantenimiento? gravedadDe(String activoId) => store.activo(activoId)?.tipo;
 Color colorEstado(TipoMantenimiento? g) => g?.color ?? P.verde;
 String textoEstado(TipoMantenimiento? g) => g?.etiqueta ?? 'Al día';
 
-/// Filtro de la lista de Activos por estado: 0 = todos; 1.. = tipo de mantenimiento; el último, al día.
+/// Filtro de la lista de Activos por estado: 0 = todos; 1.. = tipo de mantenimiento.
 /// Fuera del estado para que «Ver más» de Inicio pueda dejarlo puesto antes de ir.
 final filtroActivos = ValueNotifier(0);
-const _filtros = ['Todos', 'Preventivo', 'No crítico', 'Crítico', 'Al día'];
+const _filtros = ['Todos', 'Preventivo', 'No crítico', 'Crítico'];
 
 bool _pasaFiltro(TipoMantenimiento? g) => switch (filtroActivos.value) {
   0 => true,
-  4 => g == null,
   final f => g?.index == f - 1,
 };
 
@@ -73,7 +73,7 @@ class _ActivosState extends State<Activos> {
             izquierda: const [TituloVista('Activos')],
             derecha: [
               SizedBox(
-                width: 440,
+                width: 380,
                 child: Pestanas(
                   opciones: _filtros,
                   seleccion: filtroActivos.value,
@@ -674,6 +674,7 @@ class _ActivoFormState extends State<ActivoForm> {
       titulo: existe ? 'Editar $que' : 'Nuevo $que',
       tituloDesplazado: [tag.text, nombre.text].where((x) => x.isNotEmpty).join(' · '),
       onGuardar: guardar,
+      bajoBotones: MenuTipoMantenimiento(a.tipo, (t) => setState(() => a.tipo = t)),
       avisos: [
         if (error != null) ('Te falta el tag o el nombre', () => _irA(_claveIdentificacion)),
         if (intentoGuardar && _erroresMantenimiento.isNotEmpty)
