@@ -8,7 +8,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
-import 'ajustes.dart';
 import 'geo.dart';
 import 'industrial/activos.dart' show arbolActivos;
 import 'informes.dart';
@@ -1125,7 +1124,6 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         }
       });
     }
-    if (widget.original == null && store.trabajadores.isEmpty) ajustes.reiniciarGuiaOrganizar();
     store.guardarTrabajador(w.copia());
     if (widget.incrustada) {
       ScaffoldMessenger.of(context).showSnackBar(

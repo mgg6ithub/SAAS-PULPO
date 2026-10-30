@@ -45,17 +45,12 @@ class Ajustes extends ChangeNotifier {
     _prefs?.setBool('ajustes_guia_itinerario', true);
   }
 
-  /// Paso final de Inicio: Organizar ha incluido al menos un trabajo en una ruta.
+  /// Tutorial completado: Organizar ha incluido un trabajo. No se reinicia al borrar datos.
   bool guiaOrganizar = false;
 
   void marcarGuiaOrganizar() {
     guiaOrganizar = true;
     _prefs?.setBool('ajustes_guia_organizar', true);
-  }
-
-  void reiniciarGuiaOrganizar() {
-    guiaOrganizar = false;
-    _prefs?.setBool('ajustes_guia_organizar', false);
   }
 
   Future<void> cargar() async {

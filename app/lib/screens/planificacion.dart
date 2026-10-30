@@ -85,13 +85,10 @@ class _PlanificacionState extends State<Planificacion> {
   DateTime get lunes => lunesDe(dia);
 
   bool get _guiaOrganizarVisible {
-    final trabajoAsignado = store.tareas.any(
-      (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
-    );
-    return ajustes.guiaItinerario &&
+    return !ajustes.guiaOrganizar &&
+        ajustes.guiaItinerario &&
         store.tareas.any((t) => !t.esPlantilla) &&
-        store.trabajadores.any((w) => w.activo) &&
-        !(ajustes.guiaOrganizar && trabajoAsignado);
+        store.trabajadores.any((w) => w.activo);
   }
 
   void _medirBotonOrganizar() {

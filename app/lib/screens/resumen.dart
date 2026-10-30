@@ -37,13 +37,13 @@ class Resumen extends StatelessWidget {
     final semana = conFecha.where((t) => diasHasta(t.proximo!) >= 0 && diasHasta(t.proximo!) <= 7).toList();
     final hechas30 = activas.where((t) => t.ultimo != null && diasHasta(t.ultimo!) >= -30).length;
     final sinTrabajador = conFecha.where((t) => t.trabajadorIds.isEmpty && diasHasta(t.proximo!) <= 7).toList();
-    // Pasos de la guía, siempre según los datos de ahora: si se borra el cliente, vuelve a pedirlo.
+    // Antes de completar la guía, los pasos reflejan los datos; después quedan completados.
     final hayTarea = store.tareas.any((t) => !t.esPlantilla);
     final hayTrabajador = store.trabajadores.any((w) => w.activo);
     final hayTrabajoAsignado = store.tareas.any(
       (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
     );
-    final pasos = [
+    final pasos = ajustes.guiaOrganizar ? const [true, true, true, true] : [
       industrial ? store.activos.isNotEmpty : store.clientes.isNotEmpty,
       hayTarea,
       hayTarea && ajustes.guiaItinerario,
@@ -86,7 +86,7 @@ class Resumen extends StatelessWidget {
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pulpo.
-                  if (!hayTarea) _ComoFunciona(columnas: dosCol),
+                  if (!hayTarea && !ajustes.guiaOrganizar) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
                     _Kpis(
                       hoy: hoyT.length,
@@ -967,7 +967,7 @@ class _HeroState extends State<_Hero> {
               const SizedBox(height: 4),
               Text(frase, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 14.5)),
               const SizedBox(height: 8),
-              if (clientes == 0)
+              if (clientes == 0 && !ajustes.guiaOrganizar)
                 const Text(
                   'Completa los primeros pasos',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
