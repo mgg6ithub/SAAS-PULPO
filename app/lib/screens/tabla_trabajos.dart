@@ -115,7 +115,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             for (final w in store.trabajadores.where((w) => w.activo))
               opcion(
                 w.nombreCompleto,
-                () => aplicar((t) => t.trabajadorIds = [w.id]),
+                // iPultec: las OT de otra categoría se quedan como estaban.
+                () => aplicar((t) => store.puedeRecibir(w, t) ? t.trabajadorIds = [w.id] : null),
                 icono: Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 20),
               ),
           ],

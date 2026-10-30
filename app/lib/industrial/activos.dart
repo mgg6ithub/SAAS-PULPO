@@ -7,6 +7,8 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'gravedad.dart';
+import 'mantenimientos.dart';
+import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
 /// Color del estado de un activo: el de su mantenimiento pendiente más grave (él y sus componentes).
@@ -27,6 +29,11 @@ class _ActivosState extends State<Activos> {
   String q = '';
   String? abierto;
 
+  /// Pestaña: 0 los activos, 1 sus mantenimientos (con el filtro [incidencias] y el activo [filtro]).
+  int pestana = 0;
+  bool incidencias = false;
+  String? filtro;
+
   @override
   Widget build(BuildContext context) {
     if (abierto != null) return ActivoDetalle(activoId: abierto!, onVolver: () => setState(() => abierto = null));
@@ -40,13 +47,43 @@ class _ActivosState extends State<Activos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BarraVista(
-            izquierda: const [TituloVista('Activos')],
-            derecha: [Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v))],
-            principal: BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
+            izquierda: [
+              const TituloVista('Activos'),
+              Pestanas(
+                opciones: const ['Activos', 'Mantenimientos'],
+                seleccion: pestana,
+                onChanged: (i) => setState(() => pestana = i),
+              ),
+              if (pestana == 1) ...[
+                Pestanas(
+                  opciones: const ['Pendientes', 'Incidencias'],
+                  seleccion: incidencias ? 1 : 0,
+                  onChanged: (i) => setState(() => incidencias = i == 1),
+                ),
+                FiltroActivo(filtro, (v) => setState(() => filtro = v)),
+              ],
+            ],
+            derecha: [
+              Buscador(
+                hint: pestana == 0 ? 'Buscar activo…' : 'Buscar…',
+                onChanged: (v) => setState(() => q = v),
+              ),
+            ],
+            principal: pestana == 0
+                ? BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context))
+                : BotonPrimario(
+                    'Nueva incidencia',
+                    // Sin activos aún, primero hay que dar de alta alguno.
+                    onPressed: () => store.activos.isEmpty
+                        ? abrirActivoForm(context)
+                        : abrirIncidenciaForm(context, activoId: filtro),
+                  ),
           ),
           const SizedBox(height: huecoVista),
           Expanded(
-            child: activos.isEmpty
+            child: pestana == 1
+                ? Mantenimientos(incidencias: incidencias, activoId: store.activo(filtro)?.id, q: q)
+                : activos.isEmpty
                 ? Vacio(
                     icono: Icons.precision_manufacturing_outlined,
                     titulo: q.isEmpty ? 'Aún no tienes activos' : null,
@@ -281,7 +318,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   }
 }
 
-/// Mantenimientos del nodo elegido (y sus componentes): pendientes, del más grave al más leve, y futuros.
+/// Mantenimientos del nodo elegido: su plan periódico y las OT (de él y sus componentes), pendientes, del
+/// más grave al más leve, y futuras.
 class _Mantenimientos extends StatelessWidget {
   final Activo a;
   const _Mantenimientos(this.a);
@@ -307,6 +345,7 @@ class _Mantenimientos extends StatelessWidget {
       ].where((x) => x.isNotEmpty).join(' · '),
       onTap: () => abrirTareaForm(context, t),
     );
+    final planes = store.planesDe(a.id);
     return SeccionTarjeta(
       alto: double.infinity,
       titulo: 'Mantenimientos',
@@ -319,6 +358,7 @@ class _Mantenimientos extends StatelessWidget {
           borrador: Tarea(
             id: store.nuevoId(),
             activoId: a.id,
+            plantilla: false,
             tipoMantenimiento: TipoMantenimiento.preventivo,
             proximo: hoy(),
             periodicidad: Periodicidad.unica,
@@ -327,10 +367,19 @@ class _Mantenimientos extends StatelessWidget {
         ),
       ),
       children: [
+        _titulo('Plan de mantenimiento'),
+        for (final p in planes) filaPlan(context, p),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Enlace('Nuevo mantenimiento', onTap: () => abrirPlanForm(context, activoId: a.id)),
+          ),
+        ),
         if (ots.isEmpty)
           Padding(
             padding: const EdgeInsets.all(18),
-            child: Text('Sin mantenimientos pendientes.', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+            child: Text('Sin OT pendientes.', style: TextStyle(fontSize: 13, color: P.textoSuave)),
           ),
         if (pendientes.isNotEmpty) _titulo('Pendientes'),
         for (final t in pendientes) fila(t),
@@ -383,9 +432,8 @@ class _ActivoFormState extends State<ActivoForm> {
   bool intentoGuardar = false;
 
   bool get componente => a.padreId != null;
-  String? get error => intentoGuardar && tag.text.trim().isEmpty && nombre.text.trim().isEmpty
-      ? 'Ponle un tag o un nombre'
-      : null;
+  String? get error =>
+      intentoGuardar && tag.text.trim().isEmpty && nombre.text.trim().isEmpty ? 'Ponle un tag o un nombre' : null;
 
   void guardar() {
     setState(() => intentoGuardar = true);

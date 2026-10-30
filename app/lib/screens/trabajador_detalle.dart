@@ -367,7 +367,9 @@ class _AsignarState extends State<_Asignar> {
       opacity: choques.isNotEmpty ? .55 : 1,
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: choques.isNotEmpty ? null : () => asignada ? store.desasignar(t, w.id) : store.asignar(t, w.id),
+        onTap: choques.isNotEmpty || (!asignada && !store.puedeRecibir(w, t))
+            ? null
+            : () => asignada ? store.desasignar(t, w.id) : store.asignar(t, w.id),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'industrial/activo.dart';
+import 'industrial/incidencia.dart';
+import 'industrial/plan.dart';
 import 'models.dart';
 import 'nube.dart';
 import 'theme.dart' show TipoInfo, tipos, tiposBase, competencias, competenciasBase;
@@ -249,6 +251,12 @@ class Store extends ChangeNotifier {
 
   /// iPultec: máquinas y componentes en árbol (vacío en Pultec).
   List<Activo> activos = [];
+
+  /// iPultec: mantenimientos periódicos de cada activo o componente.
+  List<PlanMantenimiento> planes = [];
+
+  /// iPultec: avisos de avería de los activos.
+  List<Incidencia> incidencias = [];
   SharedPreferences? _prefs;
 
   /// Con sesión iniciada, cada cambio se guarda en Supabase en vez de en el navegador.
@@ -285,6 +293,8 @@ class Store extends ChangeNotifier {
     equipos = d.equipos;
     vencimientos = d.vencimientos;
     activos = d.activos;
+    planes = d.planes;
+    incidencias = d.incidencias;
     tipos = d.tipos.isEmpty ? [...tiposBase] : d.tipos;
     competencias = d.competencias.isEmpty ? [...competenciasBase] : d.competencias;
   }
@@ -311,6 +321,8 @@ class Store extends ChangeNotifier {
     equipos = [];
     vencimientos = [];
     activos = [];
+    planes = [];
+    incidencias = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     usoPlantillas = [];
@@ -328,6 +340,8 @@ class Store extends ChangeNotifier {
     equipos = [];
     vencimientos = [];
     activos = [];
+    planes = [];
+    incidencias = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     notifyListeners();
@@ -354,6 +368,8 @@ class Store extends ChangeNotifier {
       equipos = [for (final x in j['equipos'] as List? ?? []) Equipo.fromJson(x)];
       vencimientos = [for (final x in j['vencimientos'] as List? ?? []) Vencimiento.fromJson(x)];
       activos = [for (final x in j['activos'] as List? ?? []) Activo.fromJson(x)];
+      planes = [for (final x in j['planes'] as List? ?? []) PlanMantenimiento.fromJson(x)];
+      incidencias = [for (final x in j['incidencias'] as List? ?? []) Incidencia.fromJson(x)];
       if (j['tipos'] case final List l when l.isNotEmpty) tipos = [for (final x in l) TipoInfo.fromJson(x)];
       if (j['competencias'] case final List l when l.isNotEmpty) competencias = List<String>.from(l);
       // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
@@ -388,6 +404,8 @@ class Store extends ChangeNotifier {
         'equipos': [for (final x in equipos) x.toJson()],
         'vencimientos': [for (final x in vencimientos) x.toJson()],
         if (activos.isNotEmpty) 'activos': [for (final x in activos) x.toJson()],
+        if (planes.isNotEmpty) 'planes': [for (final x in planes) x.toJson()],
+        if (incidencias.isNotEmpty) 'incidencias': [for (final x in incidencias) x.toJson()],
         'competencias': competencias,
       }),
     );
@@ -582,9 +600,35 @@ class Store extends ChangeNotifier {
   void borrarActivo(String id) {
     final rama = ramaDe(id);
     activos.removeWhere((a) => rama.contains(a.id));
+    planes.removeWhere((p) => rama.contains(p.activoId));
+    incidencias.removeWhere((x) => rama.contains(x.activoId));
     for (final t in [...tareas, ...subtareas].where((t) => rama.contains(t.activoId))) {
       t.activoId = null;
     }
+    _cambio();
+  }
+
+  /// Mantenimientos periódicos del activo o componente (solo los suyos, no los de sus componentes).
+  List<PlanMantenimiento> planesDe(String activoId) =>
+      planes.where((p) => p.activoId == activoId).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
+
+  void guardarPlan(PlanMantenimiento p) {
+    _poner(planes, p, (x) => x.id == p.id);
+    _cambio();
+  }
+
+  void borrarPlan(String id) {
+    planes.removeWhere((p) => p.id == id);
+    _cambio();
+  }
+
+  void guardarIncidencia(Incidencia x) {
+    _poner(incidencias, x, (y) => y.id == x.id);
+    _cambio();
+  }
+
+  void borrarIncidencia(String id) {
+    incidencias.removeWhere((x) => x.id == id);
     _cambio();
   }
 
@@ -823,6 +867,9 @@ class Store extends ChangeNotifier {
   List<String> faltan(Trabajador w, Tarea t) => t.competencias.where((c) => !w.competencias.contains(c)).toList();
 
   bool esApto(Trabajador w, Tarea t) => w.activo && faltan(w, t).isEmpty;
+
+  /// iPultec: la OT solo se le puede dar a un técnico de su categoría. En Pultec, a cualquiera (con aviso).
+  bool puedeRecibir(Trabajador w, Tarea t) => !industrial || esApto(w, t);
 
   /// Apto y disponible hoy con menos tareas asignadas. Primer paso de la automatización.
   Trabajador? mejorPara(Tarea t) {
@@ -1170,6 +1217,8 @@ class Store extends ChangeNotifier {
     equipos = [];
     vencimientos = [];
     activos = [];
+    planes = [];
+    incidencias = [];
     tareas = [
       Tarea(
         id: 'p1',

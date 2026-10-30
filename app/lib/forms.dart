@@ -1080,7 +1080,8 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
   final _claveNombre = GlobalKey(), _claveCompetencias = GlobalKey();
 
   String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
-  String? get errorCompetencias => intentoGuardar && w.competencias.isEmpty ? 'Elige una competencia' : null;
+  String? get errorCompetencias =>
+      intentoGuardar && w.competencias.isEmpty ? (industrial ? 'Elige una categoría' : 'Elige una competencia') : null;
 
   void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
     final contexto = clave.currentContext;
@@ -1167,13 +1168,18 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         ),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ], pie: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20)),
-      Bloque('Competencias', descripcion: m('Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.'), [
+      Bloque(
+        industrial ? 'Categoría' : 'Competencias',
+        descripcion: industrial
+            ? 'Qué es capaz de hacer. Solo recibe OT de sus categorías.'
+            : m('Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.'),
+        [
         KeyedSubtree(
           key: _claveCompetencias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              etiqueta('Competencias'),
+              etiqueta(industrial ? 'Categorías' : 'Competencias'),
               DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
@@ -1704,7 +1710,12 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ),
         ]),
-        Bloque('Competencias', descripcion: m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'), [
+        Bloque(
+          industrial ? 'Categoría de técnico' : 'Competencias',
+          descripcion: industrial
+              ? 'Qué categoría tiene que tener el técnico. Solo se le puede dar a quien la tiene.'
+              : m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'),
+          [
           conMargen(chipsCompetencias(t.competencias, () => setState(() {}))),
         ]),
         Bloque('Equipo y notas', descripcion: 'La máquina, dónde está y lo que haya que saber.', [
@@ -2193,10 +2204,12 @@ class SelectorTrabajadores extends StatelessWidget {
             trailingIcon: store.esApto(w, t)
                 ? const Pill('Apto', P.verde, punto: true)
                 : Pill('Le falta: ${store.faltan(w, t).join(', ')}', P.gris),
-            onPressed: () {
-              t.trabajadorIds.contains(w.id) ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id);
-              onCambio();
-            },
+            onPressed: t.trabajadorIds.contains(w.id) || store.puedeRecibir(w, t)
+                ? () {
+                    t.trabajadorIds.contains(w.id) ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id);
+                    onCambio();
+                  }
+                : null,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: 180),
               child: Row(

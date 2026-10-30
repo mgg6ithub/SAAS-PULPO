@@ -9,6 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'en_vivo.dart';
 import 'industrial/activo.dart';
+import 'industrial/incidencia.dart';
+import 'industrial/plan.dart';
 import 'informes.dart';
 import 'marca.dart';
 import 'models.dart';
@@ -625,6 +627,8 @@ class Nube {
       _db.from('trabajo_precios').select('trabajo_id, precio, iva').eq('empresa_id', empresaId),
       // iPultec: en Pultec no se piden (no hay activos).
       if (industrial) _todo('activos'),
+      if (industrial) _todo('planes_mantenimiento'),
+      if (industrial) _todo('incidencias'),
     ]);
     final precioDe = {for (final x in r[11]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
@@ -702,6 +706,8 @@ class Nube {
           ),
       ],
       activos: [if (industrial) for (final x in r[12]) _activo(x)],
+      planes: [if (industrial) for (final x in r[13]) _plan(x)],
+      incidencias: [if (industrial) for (final x in r[14]) _incidencia(x)],
     );
   }
 
@@ -768,11 +774,13 @@ class Nube {
     'equipos',
     'vencimientos',
     if (industrial) 'activos',
+    if (industrial) 'planes_mantenimiento',
     'trabajos',
     'trabajo_precios',
     'trabajo_trabajadores',
     'trabajo_historial',
     'automatizaciones',
+    if (industrial) 'incidencias',
   ];
 
   /// Compara el [Store] con lo ya guardado y manda solo la diferencia, en orden y sin solaparse.
@@ -985,6 +993,8 @@ class Nube {
     'equipos': 'id',
     'vencimientos': 'id',
     'activos': 'id',
+    'planes_mantenimiento': 'id',
+    'incidencias': 'id',
     'trabajos': 'id',
     'trabajo_precios': 'trabajo_id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
@@ -1051,6 +1061,25 @@ class Nube {
           'notas': a.notas,
           'horas': a.horas,
           'activo': a.activo,
+        };
+      }
+      for (final p in s.planes.where((p) => activos.contains(p.activoId))) {
+        r['planes_mantenimiento']![_u(p.id)] = {
+          'id': _u(p.id),
+          'empresa_id': e,
+          'activo_id': _u(p.activoId),
+          'nombre': p.nombre,
+          'tipo_mantenimiento': p.tipo.index,
+          'cada_dias': p.cadaDias,
+          'cada_horas': p.cadaHoras,
+          'categoria': p.categoria,
+          'repuestos': p.repuestos,
+          'procedimiento': p.procedimiento,
+          'duracion_min': p.duracionMin,
+          'ultimo': _dia(p.ultimo),
+          'ultimo_horas': p.ultimoHoras,
+          'proximo': _dia(p.proximo),
+          'activa': p.activa,
         };
       }
     }
@@ -1210,6 +1239,18 @@ class Nube {
         };
       }
     }
+    // Quien la creó y cuándo los pone la base; las fotos, de momento, solo se leen.
+    for (final x in s.incidencias.where((x) => activos.contains(x.activoId))) {
+      r['incidencias']![_u(x.id)] = {
+        'id': _u(x.id),
+        'empresa_id': e,
+        'activo_id': _u(x.activoId),
+        'trabajo_id': ids.contains(x.trabajoId) ? _u(x.trabajoId!) : null,
+        'descripcion': x.descripcion,
+        'gravedad': x.gravedad.index,
+        'estado': x.estado.index,
+      };
+    }
     return r;
   }
 }
@@ -1227,6 +1268,8 @@ class DatosNube {
   final List<Equipo> equipos;
   final List<Vencimiento> vencimientos;
   final List<Activo> activos;
+  final List<PlanMantenimiento> planes;
+  final List<Incidencia> incidencias;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
@@ -1238,6 +1281,8 @@ class DatosNube {
     this.equipos = const [],
     this.vencimientos = const [],
     this.activos = const [],
+    this.planes = const [],
+    this.incidencias = const [],
   });
 }
 
@@ -1300,6 +1345,34 @@ Activo _activo(Map x) => Activo(
   notas: x['notas'],
   horas: (x['horas'] as num).toDouble(),
   activo: x['activo'],
+);
+
+PlanMantenimiento _plan(Map x) => PlanMantenimiento(
+  id: x['id'],
+  activoId: x['activo_id'],
+  nombre: x['nombre'],
+  tipo: TipoMantenimiento.values[x['tipo_mantenimiento'] as int],
+  cadaDias: x['cada_dias'],
+  cadaHoras: x['cada_horas'],
+  categoria: x['categoria'],
+  repuestos: x['repuestos'],
+  procedimiento: x['procedimiento'],
+  duracionMin: x['duracion_min'],
+  ultimo: _fecha(x['ultimo']),
+  ultimoHoras: (x['ultimo_horas'] as num?)?.toDouble(),
+  proximo: _fecha(x['proximo']),
+  activa: x['activa'],
+);
+
+Incidencia _incidencia(Map x) => Incidencia(
+  id: x['id'],
+  activoId: x['activo_id'],
+  trabajoId: x['trabajo_id'],
+  descripcion: x['descripcion'],
+  gravedad: Gravedad.values[x['gravedad'] as int],
+  estado: EstadoIncidencia.values[x['estado'] as int],
+  fotos: List<String>.from(x['fotos'] as List),
+  creada: DateTime.parse(x['created_at'] as String).toLocal(),
 );
 
 Automatizacion _automatizacion(Map x) => Automatizacion(
