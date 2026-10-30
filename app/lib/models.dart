@@ -36,9 +36,19 @@ extension CriticidadX on Criticidad {
 enum EstadoTrabajo { pendiente, enCurso, realizado, noRealizado }
 
 extension EstadoTrabajoX on EstadoTrabajo {
-  String get etiqueta => const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
-  Color get color => const [P.ambar, P.azul, P.verde, P.rojo][index];
+  String get etiqueta => industrial
+      ? (this == EstadoTrabajo.realizado ? 'Completada' : 'Pendiente')
+      : const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
+  // iPultec: completada en verde y pendiente en rojo.
+  Color get color => industrial
+      ? (this == EstadoTrabajo.realizado ? P.verde : P.rojo)
+      : const [P.ambar, P.azul, P.verde, P.rojo][index];
 }
+
+/// Opciones de la interfaz; conserva los valores guardados del flujo residencial y del técnico.
+List<EstadoTrabajo> get estadosTrabajo => industrial
+    ? const [EstadoTrabajo.pendiente, EstadoTrabajo.realizado]
+    : EstadoTrabajo.values;
 
 enum EstadoMaquina { operativa, revision, averiada }
 
