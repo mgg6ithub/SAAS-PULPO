@@ -14,6 +14,7 @@ import 'agenda_herramientas.dart';
 import 'calendario_datos.dart';
 import 'tarea_detalle.dart';
 import 'vista_dias.dart' show lunesDe, diasSemana;
+import '../marca.dart';
 
 enum ModoCalendario { mes, semana, dia }
 
@@ -158,8 +159,8 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
                             padding: const EdgeInsets.only(left: 16, right: 4),
                             child: Row(
                               children: [
-                                const Expanded(
-                                  child: Text('Detalles del trabajo', style: TextStyle(fontWeight: FontWeight.w600)),
+                                Expanded(
+                                  child: Text(m('Detalles del trabajo'), style: TextStyle(fontWeight: FontWeight.w600)),
                                 ),
                                 IconButton(
                                   tooltip: 'Cerrar detalles',
@@ -482,7 +483,7 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$ocultas trabajos →',
+                      m('$ocultas trabajos →'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: P.moradoOscuro),
@@ -862,7 +863,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                                   style: TextStyle(color: v.hecha ? P.verde : P.textoSuave, fontSize: 12),
                                 ),
                                 const SizedBox(height: 14),
-                                _dato(Icons.business_outlined, store.cliente(t.clienteId)?.nombre ?? 'Sin cliente'),
+                                _dato(Marca.iconoCliente, store.cliente(t.clienteId)?.nombre ?? m('Sin cliente')),
                                 _dato(
                                   Icons.schedule_rounded,
                                   '${fecha(v.dia)} · ${v.inicio == null ? 'Sin hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'} · ${t.duracionMin} min',
@@ -875,7 +876,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                                       : t.trabajadorIds
                                             .map(
                                               (id) =>
-                                                  store.trabajador(id)?.nombreCompleto ?? 'Trabajador no disponible',
+                                                  store.trabajador(id)?.nombreCompleto ?? m('Trabajador no disponible'),
                                             )
                                             .join(', '),
                                 ),
@@ -973,7 +974,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                         ),
                       if (!widget.compacto && box.maxHeight >= 55 * MediaQuery.textScalerOf(context).scale(1))
                         Text(
-                          store.cliente(t.clienteId)?.nombre ?? 'Sin cliente',
+                          store.cliente(t.clienteId)?.nombre ?? m('Sin cliente'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 11, color: P.textoSuave),

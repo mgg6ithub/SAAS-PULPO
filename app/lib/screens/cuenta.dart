@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'accesos.dart';
 import 'invitar.dart';
+import '../marca.dart';
 
 /// Ventanas de la cuenta (DEV-018): perfil, correo, contraseña, sesiones y borrar la cuenta; datos de la empresa,
 /// crear otra y borrarla.
@@ -276,7 +277,7 @@ class _EmpresaFormState extends State<EmpresaForm> {
     if (!await confirmarEscribiendo(
       context,
       titulo: 'Borrar $nombre',
-      texto: 'Se borran sus clientes, trabajadores, trabajos y accesos, para todas las personas de la empresa.',
+      texto: m('Se borran sus clientes, trabajadores, trabajos y accesos, para todas las personas de la empresa.'),
       palabra: nombre,
     )) {
       return;
@@ -293,7 +294,7 @@ class _EmpresaFormState extends State<EmpresaForm> {
   Widget build(BuildContext context) => VentanaFormulario(
     etiqueta: 'EMPRESAS',
     titulo: widget.nueva ? 'Nueva empresa' : (_faltaNombre ? 'Tu empresa' : _nombre.text.trim()),
-    subtitulo: widget.nueva ? 'Con sus propios clientes, trabajadores y trabajos.' : null,
+    subtitulo: widget.nueva ? m('Con sus propios clientes, trabajadores y trabajos.') : null,
     lider: widget.nueva
         ? null
         : FotoFormulario(foto: _logo, cuadrado: true, onCambio: (f) => setState(() => _logo = f)),

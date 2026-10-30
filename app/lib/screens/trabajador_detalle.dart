@@ -7,6 +7,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'invitar.dart';
+import '../marca.dart';
 
 /// Vista de un trabajador: en el centro, su trabajo (tareas asignadas); a la derecha, su ficha.
 class TrabajadorDetalle extends StatelessWidget {
@@ -28,8 +29,8 @@ class TrabajadorDetalle extends StatelessWidget {
     final lista = tareas.isEmpty
         ? Vacio(
             icono: Icons.assignment_outlined,
-            texto: 'No tiene ningún trabajo asignado.',
-            accion: FilledButton(onPressed: () => abrirAsignar(context, w), child: const Text('Asignar trabajo')),
+            texto: m('No tiene ningún trabajo asignado.'),
+            accion: FilledButton(onPressed: () => abrirAsignar(context, w), child: Text(m('Asignar trabajo'))),
           )
         : SingleChildScrollView(
             child: SeccionTarjeta(
@@ -43,7 +44,14 @@ class TrabajadorDetalle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          const Text('Trabajos asignados', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          Flexible(
+            child: Text(
+              m('Trabajos asignados'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
           const SizedBox(width: 8),
           Pill('${tareas.length}', P.gris),
         ],
@@ -65,7 +73,7 @@ class TrabajadorDetalle extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      tooltip: 'Volver a Trabajadores',
+                      tooltip: m('Volver a Trabajadores'),
                       onPressed: onVolver,
                       icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                     ),
@@ -85,7 +93,7 @@ class TrabajadorDetalle extends StatelessWidget {
                   // Sin tareas, el botón está en el centro; arriba solo cuando ya hay alguna.
                   if (tareas.isNotEmpty)
                     BotonPrimario(
-                      'Asignar trabajo',
+                      m('Asignar trabajo'),
                       icono: Icons.add_task_rounded,
                       onPressed: () => abrirAsignar(context, w),
                     ),
@@ -258,7 +266,7 @@ class _AsignarState extends State<_Asignar> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ASIGNAR TRABAJO',
+                        m('ASIGNAR TRABAJO'),
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.morado),
                       ),
                       Text(
@@ -266,7 +274,7 @@ class _AsignarState extends State<_Asignar> {
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.4),
                       ),
                       Text(
-                        'Toca un trabajo para asignarlo. Los que se solapan con su horario no se pueden elegir.',
+                        m('Toca un trabajo para asignarlo. Los que se solapan con su horario no se pueden elegir.'),
                         style: TextStyle(fontSize: 13, color: P.textoSuave),
                       ),
                     ],
@@ -278,7 +286,7 @@ class _AsignarState extends State<_Asignar> {
             const SizedBox(height: 12),
             Expanded(
               child: porCliente.isEmpty
-                  ? const Vacio(icono: Icons.business_outlined, texto: 'Ningún cliente tiene trabajos todavía')
+                  ? Vacio(icono: Marca.iconoCliente, texto: m('Ningún cliente tiene trabajos todavía'))
                   : ListView(
                       padding: const EdgeInsets.only(right: 8),
                       children: [for (final e in porCliente.entries) _cliente(e.key, e.value, w)],

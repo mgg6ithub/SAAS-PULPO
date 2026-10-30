@@ -8,6 +8,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agenda_herramientas.dart';
+import '../marca.dart';
 
 const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const meses = [
@@ -197,7 +198,7 @@ List<(Cliente, List<Tarea>)> clientesDelDia(DateTime dia) {
   return [
     for (final id in porCliente.keys)
       if (id.isEmpty)
-        (Cliente(id: '', nombre: 'Sin cliente', color: 7), porCliente[id]!)
+        (Cliente(id: '', nombre: m('Sin cliente'), color: 7), porCliente[id]!)
       else if (store.cliente(id) case final c?)
         (c, porCliente[id]!),
   ]..sort((a, b) => a.$1.nombre.compareTo(b.$1.nombre));

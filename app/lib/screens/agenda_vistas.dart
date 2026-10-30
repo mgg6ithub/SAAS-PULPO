@@ -16,6 +16,7 @@ import '../planificador.dart';
 import 'agenda_herramientas.dart';
 import 'rutas_mapa.dart';
 import 'vista_dias.dart';
+import '../marca.dart';
 
 // Horas visibles en las vistas Día y Semana.
 const _desde = 7, _hasta = 21;
@@ -904,7 +905,7 @@ class _MapaAgendaState extends State<MapaAgenda> {
                               ),
                             ),
                             child: Tooltip(
-                              message: '${g.length} clientes · acercar',
+                              message: m('${g.length} clientes · acercar'),
                               child: _Chincheta(P.morado, g.length, false, grupo: true),
                             ),
                           ),
@@ -955,7 +956,7 @@ class _MapaAgendaState extends State<MapaAgenda> {
                   Text('Mapa · ${widget.periodo}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                   Text(
                     [
-                      '${ubicados.length} ${ubicados.length == 1 ? 'cliente' : 'clientes'}',
+                      m('${ubicados.length} ${ubicados.length == 1 ? 'cliente' : 'clientes'}'),
                       if (sinUbicar > 0) '$sinUbicar sin ubicar',
                     ].join(' · '),
                     style: TextStyle(fontSize: 11.5, color: sinUbicar > 0 ? P.ambar : P.textoSuave),
@@ -1022,7 +1023,7 @@ class _MapaAgendaState extends State<MapaAgenda> {
                 child: Text(
                   clientes.isEmpty
                       ? 'Nada programado en este periodo'
-                      : 'Añade la dirección de tus clientes para verlos aquí',
+                      : m('Añade la dirección de tus clientes para verlos aquí'),
                   style: TextStyle(color: P.textoSuave, fontSize: 13),
                 ),
               ),
@@ -1155,7 +1156,7 @@ class _ArmarRuta extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              paradas == 0 ? 'Pulsa los clientes en el orden de la ruta' : '$paradas paradas',
+              paradas == 0 ? m('Pulsa los clientes en el orden de la ruta') : '$paradas paradas',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -1238,7 +1239,7 @@ class _HerramientasMapa extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: FittedBox(
                   child: Pestanas(
-                    opciones: const ['Cliente', 'Técnico', 'Tipo'],
+                    opciones: [m('Cliente'), 'Técnico', 'Tipo'],
                     seleccion: colorPor,
                     onChanged: onColor,
                   ),
@@ -1247,7 +1248,7 @@ class _HerramientasMapa extends StatelessWidget {
             ),
             if (onArmarRuta != null)
               Tooltip(
-                message: 'Armar una ruta a mano: pulsa los clientes en orden',
+                message: m('Armar una ruta a mano: pulsa los clientes en orden'),
                 child: IconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: onArmarRuta,
@@ -1299,7 +1300,7 @@ class _AvisoSinAsignar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: '$n ${n == 1 ? 'trabajo sin asignar' : 'trabajos sin asignar'}',
+    message: m('$n ${n == 1 ? 'trabajo sin asignar' : 'trabajos sin asignar'}'),
     child: IconButton(
       onPressed: onTap,
       mouseCursor: SystemMouseCursors.click,

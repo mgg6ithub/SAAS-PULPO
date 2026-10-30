@@ -14,6 +14,7 @@ import '../widgets.dart';
 import 'estadisticas.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
+import '../marca.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
 /// como las tarjetas de la landing. Sin gráficas de relleno: solo lo que se mira cada mañana.
@@ -136,13 +137,13 @@ class _ComoFunciona extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const etapas = [
-      (P.azul, 'Tus clientes', 'Cada edificio, local o instalación que mantienes, con su dirección en el mapa.'),
-      (P.teal, 'Sus trabajos', 'Qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca y avisa de lo que vence.'),
+    final etapas = [
+      (P.azul, m('Tus clientes'), 'Cada edificio, local o instalación que mantienes, con su dirección en el mapa.'),
+      (P.teal, m('Sus trabajos'), m('Qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca y avisa de lo que vence.')),
       (
         P.ambar,
-        'Pulpo organiza',
-        'Reparte los trabajos entre tu equipo según lo que sabe hacer y traza la ruta del día.',
+        m('Pulpo organiza'),
+        m('Reparte los trabajos entre tu equipo según lo que sabe hacer y traza la ruta del día.'),
       ),
     ];
     final tarjetas = [
@@ -213,7 +214,7 @@ class _ComoFunciona extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
-            'Cómo funciona Pulpo',
+            m('Cómo funciona Pulpo'),
             style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
           ),
         ),
@@ -283,35 +284,35 @@ class _PrimerosPasos extends StatelessWidget {
     final hayTrabajador = store.trabajadores.any((w) => w.activo);
     final pasos = [
       (
-        'Crea tu primer cliente',
+        m('Crea tu primer cliente'),
         'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación…',
-        (Icons.apartment_outlined, 'Clientes', 'Nuevo cliente', Seccion.clientes, abrirClienteForm),
+        (Marca.iconoCliente, m('Clientes'), m('Nuevo cliente'), Seccion.clientes, abrirClienteForm),
         null,
       ),
       (
-        'Crea un trabajo',
-        'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
-            'También puedes crearlo desde la ficha del cliente.',
-        (Icons.handyman_outlined, 'Trabajos', 'Nuevo trabajo', Seccion.tareas, (c) => abrirTareaForm(c, null)),
+        m('Crea un trabajo'),
+        m('Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
+            'También puedes crearlo desde la ficha del cliente.'),
+        (Marca.iconoTrabajo, m('Trabajos'), m('Nuevo trabajo'), Seccion.tareas, (c) => abrirTareaForm(c, null)),
         null,
       ),
       (
-        'Mira tu trabajo en el itinerario',
-        'El itinerario es tu semana: cada trabajo en su día y a su hora, y en el mapa.',
+        m('Mira tu trabajo en el itinerario'),
+        m('El itinerario es tu semana: cada trabajo en su día y a su hora, y en el mapa.'),
         null,
         BotonPrimario('Ir al itinerario', icono: Icons.calendar_month_outlined, onPressed: _verItinerario),
       ),
       (
-        !hayTrabajador ? 'Añade un trabajador' : 'Deja que Pulpo organice tu primer trabajo',
+        !hayTrabajador ? m('Añade un trabajador') : m('Deja que Pulpo organice tu primer trabajo'),
         !hayTrabajador
-            ? 'Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.'
-            : 'Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico y trazará la ruta.',
+            ? m('Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.')
+            : m('Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico y trazará la ruta.'),
         !hayTrabajador
             // Con las competencias de los trabajos ya creados, Organizar podrá asignar el primero.
             ? (
-                Icons.badge_outlined,
-                'Trabajadores',
-                'Nuevo trabajador',
+                Marca.iconoTrabajador,
+                m('Trabajadores'),
+                m('Nuevo trabajador'),
                 Seccion.trabajadores,
                 (c) => abrirTrabajadorForm(
                   c,
@@ -535,8 +536,8 @@ class _Pendientes extends StatelessWidget {
       if (sinTrabajador.isNotEmpty)
         FilaLista(
           lider: _punto(P.morado),
-          titulo: '${sinTrabajador.length} sin trabajador esta semana',
-          derecha: _cat('Trabajos'),
+          titulo: m('${sinTrabajador.length} sin trabajador esta semana'),
+          derecha: _cat(m('Trabajos')),
           onTap: () => onIr(Seccion.tareas),
         ),
       if (store.vencimientosPorAvisar.isNotEmpty)
@@ -547,14 +548,14 @@ class _Pendientes extends StatelessWidget {
           subtitulo: [
             for (final v in store.vencimientosPorAvisar.take(3)) '${v.nombre} ${store.equipo(v.equipoId)!.nombre}',
           ].join(' · '),
-          derecha: _cat('Clientes'),
+          derecha: _cat(m('Clientes')),
           onTap: () => onIr(Seccion.clientes),
         ),
       if (averiadas > 0)
         FilaLista(
           lider: _punto(P.ambar),
           titulo: '$averiadas ${averiadas == 1 ? 'equipo' : 'equipos'} en revisión o averiados',
-          derecha: _cat('Trabajos'),
+          derecha: _cat(m('Trabajos')),
           onTap: () => onIr(Seccion.tareas),
         ),
       for (final e in equiposQueFallan(store))
@@ -562,7 +563,7 @@ class _Pendientes extends StatelessWidget {
           lider: _punto(P.rojo),
           titulo: '${e.nombre} falla demasiado',
           subtitulo: '${store.cliente(e.clienteId)?.nombre ?? ''} · 3 o más averías en un año',
-          derecha: _cat('Clientes'),
+          derecha: _cat(m('Clientes')),
           onTap: () => onIr(Seccion.clientes),
         ),
       for (final w in sobrecargados(store))
@@ -570,30 +571,30 @@ class _Pendientes extends StatelessWidget {
           lider: _punto(P.ambar),
           titulo: '${w.nombreCompleto} va sobrecargado',
           subtitulo: 'Más de 40 h asignadas en los próximos 7 días',
-          derecha: _cat('Trabajadores'),
+          derecha: _cat(m('Trabajadores')),
           onTap: () => onIr(Seccion.trabajadores),
         ),
       if (clientesOlvidados(store) case final olvidados when olvidados.isNotEmpty)
         FilaLista(
           lider: _punto(P.azul),
           titulo:
-              '${olvidados.length} ${olvidados.length == 1 ? 'cliente' : 'clientes'} sin revisión desde hace más de un año',
+              m('${olvidados.length} ${olvidados.length == 1 ? 'cliente' : 'clientes'} sin revisión desde hace más de un año'),
           subtitulo: olvidados.take(3).map((c) => c.nombre).join(' · '),
-          derecha: _cat('Clientes'),
+          derecha: _cat(m('Clientes')),
           onTap: () => onIr(Seccion.clientes),
         ),
       if (sinTareas > 0)
         FilaLista(
           lider: _punto(P.azul),
-          titulo: '$sinTareas ${sinTareas == 1 ? 'cliente' : 'clientes'} sin mantenimientos',
-          derecha: _cat('Clientes'),
+          titulo: m('$sinTareas ${sinTareas == 1 ? 'cliente' : 'clientes'} sin mantenimientos'),
+          derecha: _cat(m('Clientes')),
           onTap: () => onIr(Seccion.clientes),
         ),
       if (ausentes > 0)
         FilaLista(
           lider: _punto(P.gris),
-          titulo: '$ausentes ${ausentes == 1 ? 'trabajador ausente' : 'trabajadores ausentes'} hoy',
-          derecha: _cat('Trabajadores'),
+          titulo: m('$ausentes ${ausentes == 1 ? 'trabajador ausente' : 'trabajadores ausentes'} hoy'),
+          derecha: _cat(m('Trabajadores')),
           onTap: () => onIr(Seccion.trabajadores),
         ),
     ];
@@ -641,13 +642,13 @@ class _CargaTrabajadores extends StatelessWidget {
     final maximo = max(1, ws.isEmpty ? 1 : carga(ws.first));
     return SeccionTarjeta(
       titulo: 'Carga del equipo',
-      subtitulo: 'Trabajos asignados en los próximos 7 días',
+      subtitulo: m('Trabajos asignados en los próximos 7 días'),
       sinFilas: true,
       children: [
         if (ws.isEmpty)
-          const SizedBox(
+          SizedBox(
             height: 140,
-            child: Vacio(icono: Icons.badge_outlined, texto: 'Aún no hay trabajadores'),
+            child: Vacio(icono: Marca.iconoTrabajador, texto: m('Aún no hay trabajadores')),
           )
         else
           for (final w in ws.take(6))
@@ -795,7 +796,7 @@ class _HeroState extends State<_Hero> {
     final pasos = widget.pasos;
     final quedan = pasos.where((p) => !p).length;
     if (quedan == pasos.length) {
-      return 'Te damos la bienvenida a Pulpo. En unos minutos tendrás tu mantenimiento en marcha.';
+      return m('Te damos la bienvenida a Pulpo. En unos minutos tendrás tu mantenimiento en marcha.');
     }
     if (quedan == 1) return 'Ya casi está: solo te falta un paso.';
     if (quedan > 1) return 'Vas bien: en nada tendrás tu mantenimiento en marcha.';
@@ -816,7 +817,7 @@ class _HeroState extends State<_Hero> {
       final cuando = diasHasta(d) == 1 ? 'mañana' : 'el ${_dias[d.weekday - 1]} ${d.day}';
       return 'Hoy no hay nada programado. El próximo mantenimiento es $cuando.';
     }
-    return 'Todo al día. Pulpo te avisará cuando toque el siguiente mantenimiento.';
+    return m('Todo al día. Pulpo te avisará cuando toque el siguiente mantenimiento.');
   }
 
   @override
@@ -826,9 +827,9 @@ class _HeroState extends State<_Hero> {
     final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
     final trabajadores = store.trabajadores.length;
     final cifras = [
-      (clientes, clientes == 1 ? 'cliente' : 'clientes'),
-      (trabajos, trabajos == 1 ? 'trabajo' : 'trabajos'),
-      (trabajadores, trabajadores == 1 ? 'trabajador' : 'trabajadores'),
+      (clientes, m(clientes == 1 ? 'cliente' : 'clientes')),
+      (trabajos, m(trabajos == 1 ? 'trabajo' : 'trabajos')),
+      (trabajadores, m(trabajadores == 1 ? 'trabajador' : 'trabajadores')),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -10,6 +10,7 @@ import '../planificador.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 Color _color(Trabajador w) => colorPaleta(w.color);
 
@@ -419,9 +420,9 @@ class _BotonPulpoState extends State<BotonPulpo> {
         width: 460,
         content: Text(
           asignacionTutorial
-              ? 'Pulpo ha asignado el trabajo al técnico.'
-              : 'Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
-                    '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}',
+              ? m('Pulpo ha asignado el trabajo al técnico.')
+              : m('Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
+                    '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}'),
         ),
       ),
     );
@@ -430,7 +431,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
   /// Como el "✦ Organizar" de la landing: morado del logo, plano; al pasar, sube un pelo y se ilumina.
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: 'Organizar: Pulpo reparte los trabajos del día y traza las rutas',
+    message: m('Organizar: Pulpo reparte los trabajos del día y traza las rutas'),
     child: MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => hover = true),
@@ -544,12 +545,12 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
               ),
               const SizedBox(height: 14),
               Text(
-                'El pulpo está planificando…',
+                m('El pulpo está planificando…'),
                 style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.4),
               ),
               const SizedBox(height: 6),
               Text(
-                '${widget.trabajos} trabajos · ${widget.tecnicos} técnicos · calculando distancias y franjas',
+                m('${widget.trabajos} trabajos · ${widget.tecnicos} técnicos · calculando distancias y franjas'),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13.5, color: P.textoSuave),
               ),

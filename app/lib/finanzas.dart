@@ -10,6 +10,7 @@ import 'nube.dart';
 import 'plataforma_io.dart' if (dart.library.js_interop) 'plataforma_web.dart';
 import 'store.dart';
 import 'theme.dart';
+import 'marca.dart';
 
 /// Finanzas básicas SIN valor fiscal: presupuestos y facturas proforma (la factura legal con Verifactu
 /// llega después). Solo para el administrador.
@@ -287,7 +288,7 @@ class Finanzas extends ChangeNotifier {
     String n(double v) => v.toStringAsFixed(2).replaceAll('.', ',');
     String q(String s) => '"${s.replaceAll('"', '""')}"';
     return [
-      'Tipo;Número;Fecha;Cliente;CIF;Base;IVA;Total;Vence;Cobrada el;Estado',
+      m('Tipo;Número;Fecha;Cliente;CIF;Base;IVA;Total;Vence;Cobrada el;Estado'),
       for (final d in docs)
         [
           d.tipo.etiqueta,
@@ -382,7 +383,7 @@ Future<Uint8List> documentoPdf(Documento d) async {
         ),
         pw.SizedBox(height: 20),
         if (c != null) ...[
-          pw.Text('Cliente', style: pw.TextStyle(color: suave, fontSize: 9)),
+          pw.Text(m('Cliente'), style: pw.TextStyle(color: suave, fontSize: 9)),
           pw.Text(c.nombre, style: negrita),
           if (c.cif.isNotEmpty) pw.Text(c.cif, style: normal),
           if (c.direccionCompleta.isNotEmpty) pw.Text(c.direccionCompleta, style: normal),

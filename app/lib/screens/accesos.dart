@@ -8,6 +8,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'invitar.dart';
+import '../marca.dart';
 
 /// Quién tiene acceso a la empresa (DEV-020): cuentas con su rol y ficha, invitaciones pendientes y
 /// trabajadores que aún no tienen cuenta. Solo para administradores.
@@ -132,7 +133,7 @@ class _AccesosState extends State<Accesos> {
                   ..._invitaciones.map(_filaInvitacion),
                 ],
                 if (_sinCuenta.where((w) => !_invitado(w)).isNotEmpty) ...[
-                  _titulo('Trabajadores sin cuenta'),
+                  _titulo(m('Trabajadores sin cuenta')),
                   for (final w in _sinCuenta.where((w) => !_invitado(w))) _filaSinCuenta(w),
                 ],
               ],
@@ -194,7 +195,7 @@ class _AccesosState extends State<Accesos> {
     final yo = a.usuarioId == Supabase.instance.client.auth.currentUser?.id;
     final ficha = _ficha(a.trabajadorId);
     final nombre = a.nombre.isEmpty ? a.correo : a.nombre;
-    final rol = a.rol == 'admin' ? 'Administrador' : 'Trabajador${ficha == null ? '' : ' · ${ficha.nombre}'}';
+    final rol = a.rol == 'admin' ? 'Administrador' : m('Trabajador${ficha == null ? '' : ' · ${ficha.nombre}'}');
     return _fila(
       lider: Avatar(inicialesDe(nombre), a.rol == 'admin' ? P.morado : P.textoSuave, size: 32),
       titulo: yo ? '$nombre (tú)' : nombre,
@@ -211,7 +212,7 @@ class _AccesosState extends State<Accesos> {
           ('admin', const Text('Administrador: ve y gestiona todo')),
           // Para pasar a trabajador hay que ligarlo a una ficha libre (o a la suya).
           for (final w in [?ficha, ..._sinCuenta.where((w) => w != ficha)])
-            ('tb:${w.id}', Text('Trabajador · ${w.nombre}')),
+            ('tb:${w.id}', Text(m('Trabajador · ${w.nombre}'))),
           ('quitar', Text('Quitar acceso', style: TextStyle(color: P.rojo))),
         ],
         child: Padding(
@@ -232,7 +233,7 @@ class _AccesosState extends State<Accesos> {
     final dias = i.caduca.difference(DateTime.now()).inDays;
     return _fila(
       lider: Avatar('?', P.borde, size: 32),
-      titulo: i.rol == 'admin' ? 'Socio (administrador)' : 'Trabajador · ${ficha?.nombre ?? ''}',
+      titulo: i.rol == 'admin' ? 'Socio (administrador)' : m('Trabajador · ${ficha?.nombre ?? ''}'),
       subtitulo: dias < 1 ? 'Caduca hoy' : 'Caduca en $dias ${dias == 1 ? 'día' : 'días'}',
       accion: Row(
         mainAxisSize: MainAxisSize.min,

@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 class Clientes extends StatefulWidget {
   final ValueChanged<String> onAbrir;
@@ -32,7 +33,7 @@ class _ClientesState extends State<Clientes> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'cliente' : 'clientes'} y sus trabajos?')) return;
+    if (!await confirmar(context, m('¿Eliminar $n ${n == 1 ? 'cliente' : 'clientes'} y sus trabajos?'))) return;
     for (final id in seleccion) {
       store.borrarCliente(id);
     }
@@ -64,7 +65,7 @@ class _ClientesState extends State<Clientes> {
                     // Una sola barra: título y filtros a la izquierda; buscador y acciones a la derecha.
                     BarraVista(
                       izquierda: [
-                        const TituloVista('Clientes'),
+                        TituloVista(m('Clientes')),
                         Pestanas(
                           opciones: ['Todos · ${store.clientes.length}', 'Activos', 'Inactivos'],
                           seleccion: filtro,
@@ -72,10 +73,10 @@ class _ClientesState extends State<Clientes> {
                         ),
                       ],
                       derecha: [
-                        Buscador(hint: 'Buscar cliente…', onChanged: (v) => setState(() => q = v)),
+                        Buscador(hint: m('Buscar cliente…'), onChanged: (v) => setState(() => q = v)),
                         SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
                       ],
-                      principal: BotonPrimario('Nuevo cliente', tecla: 'N', onPressed: () => abrirClienteForm(context)),
+                      principal: BotonPrimario(m('Nuevo cliente'), tecla: 'N', onPressed: () => abrirClienteForm(context)),
                     ),
                   ],
                 ),
@@ -84,11 +85,11 @@ class _ClientesState extends State<Clientes> {
               Expanded(
                 child: clientes.isEmpty
                     ? Vacio(
-                        icono: Icons.apartment_outlined,
-                        titulo: q.isEmpty ? 'Aún no tienes clientes' : null,
+                        icono: Marca.iconoCliente,
+                        titulo: q.isEmpty ? m('Aún no tienes clientes') : null,
                         texto: q.isEmpty
                             ? 'Añade los edificios, colegios u hospitales a los que das mantenimiento.'
-                            : 'Ningún cliente coincide con la búsqueda',
+                            : m('Ningún cliente coincide con la búsqueda'),
                         accion: q.isEmpty
                             ? FilledButton(
                                 onPressed: () => abrirClienteForm(context),
@@ -132,7 +133,7 @@ class _ClientesState extends State<Clientes> {
               child: BarraSeleccion(
                 seleccionados: seleccion.length,
                 total: clientes.length,
-                nombre: 'clientes',
+                nombre: m('clientes'),
                 onTodos: () => setState(() {
                   if (seleccion.length == clientes.length) {
                     seleccion.clear();
@@ -207,7 +208,7 @@ class _Bloques extends StatelessWidget {
                     Padding(padding: const EdgeInsets.only(right: 6), child: BarraTipo(t, alto: 28)),
                   const Spacer(),
                   Text(
-                    '${tareas.length} ${tareas.length == 1 ? 'trabajo' : 'trabajos'}',
+                    m('${tareas.length} ${tareas.length == 1 ? 'trabajo' : 'trabajos'}'),
                     style: TextStyle(color: P.textoSuave, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   if (vencidas > 0) ...[
@@ -251,13 +252,13 @@ class _Tabla extends StatelessWidget {
             if (ancho) const Col('CIF/NIF', flex: 2),
             if (medio) const Col('Población', flex: 2),
             if (ancho) const Col('Contacto', flex: 3),
-            if (medio) const Col('Trabajos', flex: 2),
+            if (medio) Col(m('Trabajos'), flex: 2),
             if (medio) const Col('Próximo', flex: 2),
             const Col('Estado', ancho: 80, derecha: true),
           ],
           filas: clientes.length,
           onTap: (i) => onAbrir(clientes[i].id),
-          pie: pieTabla(clientes.length, clientes.length == 1 ? 'cliente' : 'clientes'),
+          pie: pieTabla(clientes.length, m(clientes.length == 1 ? 'cliente' : 'clientes')),
           celdas: (i) {
             final c = clientes[i];
             final tareas = store.tareasDe(c.id);

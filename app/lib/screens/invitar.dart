@@ -6,12 +6,13 @@ import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// Invitación para que un trabajador entre con su propia cuenta y vea solo sus trabajos.
 Future<void> invitarTrabajador(BuildContext context, Trabajador w) => _ventana(
   context,
   titulo: 'Invitar a ${w.nombre}',
-  texto: 'Entrará con su propia cuenta y solo verá sus trabajos.',
+  texto: m('Entrará con su propia cuenta y solo verá sus trabajos.'),
   crear: () => store.nube!.crearInvitacion(rol: 'trabajador', trabajadorId: w.id),
 );
 

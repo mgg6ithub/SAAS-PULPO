@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
+import 'marca.dart';
 
 String _s(Map j, String k) => (j[k] ?? '') as String;
 DateTime? _d(Map j, String k) => j[k] == null ? null : DateTime.tryParse(j[k] as String);
@@ -74,7 +75,7 @@ extension PeriodicidadX on Periodicidad {
 enum Disparador { antes, alCompletar, noHecho, alAsignar }
 
 extension DisparadorX on Disparador {
-  String get etiqueta => const ['Antes del trabajo', 'Al completarse', 'Si no se hace a tiempo', 'Al asignar'][index];
+  String get etiqueta => [m('Antes del trabajo'), 'Al completarse', 'Si no se hace a tiempo', 'Al asignar'][index];
 
   /// Los que llevan un margen en horas o días respecto a la fecha del trabajo.
   bool get llevaMargen => this == Disparador.antes || this == Disparador.noHecho;

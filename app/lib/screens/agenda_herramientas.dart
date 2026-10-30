@@ -6,6 +6,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 // ── Filtros de la agenda ─────────────────────────────────
 
@@ -160,7 +161,7 @@ class _FichaRapida extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  etiqueta('Cliente'),
+                  etiqueta(m('Cliente')),
                   DropdownButtonFormField<String>(
                     isExpanded: true,
                     initialValue: t.clienteId,
@@ -224,8 +225,8 @@ class _FichaRapida extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Nadie tiene ${t.competencias.join(', ')}. Pulpo no puede asignarlo: añádesela a un '
-                              'trabajador o elige uno a mano.',
+                              m('Nadie tiene ${t.competencias.join(', ')}. Pulpo no puede asignarlo: añádesela a un '
+                              'trabajador o elige uno a mano.'),
                               style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                             ),
                           ),
@@ -371,11 +372,11 @@ class PanelSinAsignar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Trabajos sin asignar',
+                      m('Trabajos sin asignar'),
                       style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                     Text(
-                      'Pulsa un trabajo para asignarlo o arrástralo',
+                      m('Pulsa un trabajo para asignarlo o arrástralo'),
                       style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                     ),
                   ],

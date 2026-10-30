@@ -69,6 +69,8 @@ String _industrial(String texto) => texto.replaceAllMapped(_palabras, (c) {
     final antes = c[1] == null ? '' : '${_antes[c[1]!.toLowerCase()]} ';
     nuevo = '$antes${plural ? 'órdenes de trabajo' : 'orden de trabajo'}${_femenino(c[3])}';
   } else {
+    // «el pulpo» en minúscula es el de Organizar, no la marca: se queda.
+    if (c[4] == 'pulpo') return todo;
     final p = c[4]!.toLowerCase();
     nuevo = switch (p) {
       'pulpo' => Marca.nombre,

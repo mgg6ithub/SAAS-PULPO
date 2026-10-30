@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'cuenta.dart';
 import 'vista_trabajador.dart';
+import '../marca.dart';
 
 /// Entrada de la app con Supabase: sin sesión pide acceso; con sesión carga la empresa y abre Pulpo.
 class PuertaNube extends StatefulWidget {
@@ -243,7 +244,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
       final i = await Nube.verInvitacion();
       texto = i == null
           ? 'Esta invitación ya se usó o ha caducado. Pide a quien te invitó un enlace nuevo.'
-          : 'Te unes a ${i.empresa} como ${i.rol == 'admin' ? 'administrador' : 'trabajador'}'
+          : 'Te unes a ${i.empresa} como ${i.rol == 'admin' ? 'administrador' : m('trabajador')}'
                 '${i.trabajador == null || i.trabajador!.isEmpty ? '' : ' (${i.trabajador})'}.';
     } catch (_) {
       texto = 'Te han invitado a una empresa. Entra o crea tu cuenta para unirte.';
@@ -354,7 +355,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     return _Marco(
       children: [
         Text(
-          _nueva ? 'Crea tu cuenta' : 'Entra en Pulpo',
+          _nueva ? 'Crea tu cuenta' : m('Entra en Pulpo'),
           textAlign: TextAlign.center,
           style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700),
         ),
@@ -364,7 +365,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
               ? (_invitacion ?? 'Mirando tu invitación…')
               : _nueva
               ? 'Solo correo y contraseña. El nombre de la empresa, al entrar.'
-              : 'Tu empresa, tus clientes y tus trabajos.',
+              : m('Tu empresa, tus clientes y tus trabajos.'),
           textAlign: TextAlign.center,
           style: Nube.invitacion != null ? suave.copyWith(color: P.texto, fontWeight: FontWeight.w600) : suave,
         ),

@@ -11,6 +11,7 @@ import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.d
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// Importar clientes, trabajadores y trabajos desde CSV con vista previa, y exportarlo todo a CSV.
 Future<void> abrirImportarExportar(BuildContext context) => showDialog(
@@ -86,7 +87,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ],
       ),
       Text(
-        'Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pulpo no se duplica.',
+        m('Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pulpo no se duplica.'),
         style: TextStyle(fontSize: 13, color: P.textoSuave),
       ),
       const SizedBox(height: 18),
@@ -105,7 +106,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Text(
-            'Cada trabajo va a un cliente que ya exista en Pulpo (por nombre o CIF): importa antes los clientes.',
+            m('Cada trabajo va a un cliente que ya exista en Pulpo (por nombre o CIF): importa antes los clientes.'),
             style: TextStyle(fontSize: 12.5, color: P.textoSuave),
           ),
         ),
@@ -133,9 +134,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
                 lider: const SizedBox(width: 4),
                 titulo: q.etiqueta,
                 subtitulo: switch (q) {
-                  QueImportar.clientes => '${store.clientes.length} clientes',
-                  QueImportar.trabajadores => '${store.trabajadores.length} trabajadores',
-                  QueImportar.trabajos => '${store.tareas.where((t) => !t.esPlantilla).length} trabajos',
+                  QueImportar.clientes => m('${store.clientes.length} clientes'),
+                  QueImportar.trabajadores => m('${store.trabajadores.length} trabajadores'),
+                  QueImportar.trabajos => m('${store.tareas.where((t) => !t.esPlantilla).length} trabajos'),
                 },
                 derecha: Enlace(
                   'Descargar',

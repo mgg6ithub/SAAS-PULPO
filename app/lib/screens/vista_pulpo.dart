@@ -7,6 +7,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agenda_herramientas.dart';
+import '../marca.dart';
 
 const _quitarTrabajador = '__quitar_trabajador__';
 
@@ -93,9 +94,9 @@ class _PanelSinConcretar extends StatelessWidget {
                 style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
-            BotonAccion('Crear', onPressed: onCrear, tooltip: 'Crear trabajo', color: P.tinta),
+            BotonAccion('Crear', onPressed: onCrear, tooltip: m('Crear trabajo'), color: P.tinta),
             IconButton(
-              tooltip: 'Ocultar trabajos sin concretar',
+              tooltip: m('Ocultar trabajos sin concretar'),
               onPressed: onOcultar,
               icon: const Icon(Icons.visibility_off_rounded),
               visualDensity: VisualDensity.compact,
@@ -107,7 +108,7 @@ class _PanelSinConcretar extends StatelessWidget {
           child: tareas.isEmpty
               ? Center(
                   child: Text(
-                    'No hay trabajos pendientes',
+                    m('No hay trabajos pendientes'),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: P.textoSuave),
                   ),
@@ -200,24 +201,24 @@ class _TrabajosDia extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Trabajos del día',
+                  m('Trabajos del día'),
                   style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.badge_outlined, size: 18, color: P.textoSuave),
+                  Icon(Marca.iconoTrabajador, size: 18, color: P.textoSuave),
                   const SizedBox(width: 6),
                   Text(
-                    'Trabajadores',
+                    m('Trabajadores'),
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
                   ),
                 ],
               ),
               if (!mostrarSinConcretar)
                 IconButton(
-                  tooltip: 'Mostrar trabajos sin concretar',
+                  tooltip: m('Mostrar trabajos sin concretar'),
                   onPressed: onMostrarSinConcretar,
                   icon: const Icon(Icons.visibility_rounded),
                   visualDensity: VisualDensity.compact,
@@ -228,7 +229,7 @@ class _TrabajosDia extends StatelessWidget {
           Expanded(
             child: tareas.isEmpty
                 ? Center(
-                    child: Text('No hay trabajos con horario para este día', style: TextStyle(color: P.textoSuave)),
+                    child: Text(m('No hay trabajos con horario para este día'), style: TextStyle(color: P.textoSuave)),
                   )
                 : ListView.separated(
                     itemCount: horarios.length,
@@ -390,7 +391,7 @@ class _FilaTrabajo extends StatelessWidget {
           SizedBox(
             width: movil ? 120 : 178,
             child: BotonMenu<String>(
-              tooltip: asignada ? 'Cambiar o quitar trabajador' : 'Elegir trabajador',
+              tooltip: asignada ? m('Cambiar o quitar trabajador') : m('Elegir trabajador'),
               seleccionado: tecnico?.id,
               onSelected: (id) =>
                   store.guardarTarea(tarea.copia()..trabajadorIds = id == _quitarTrabajador ? [] : [id]),
@@ -398,11 +399,11 @@ class _FilaTrabajo extends StatelessWidget {
                 if (asignada)
                   (
                     _quitarTrabajador,
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.person_remove_outlined, size: 18, color: P.rojo),
                         SizedBox(width: 8),
-                        Text('Quitar trabajador'),
+                        Text(m('Quitar trabajador')),
                       ],
                     ),
                   ),
@@ -411,7 +412,7 @@ class _FilaTrabajo extends StatelessWidget {
                     w.id,
                     Row(
                       children: [
-                        Icon(Icons.badge_outlined, size: 18, color: P.morado),
+                        Icon(Marca.iconoTrabajador, size: 18, color: P.morado),
                         const SizedBox(width: 8),
                         Text(w.nombreCompleto),
                       ],
@@ -424,10 +425,10 @@ class _FilaTrabajo extends StatelessWidget {
                 decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(10)),
                 child: Row(
                   children: [
-                    if (!movil) ...[Icon(Icons.badge_outlined, size: 18, color: P.morado), const SizedBox(width: 8)],
+                    if (!movil) ...[Icon(Marca.iconoTrabajador, size: 18, color: P.morado), const SizedBox(width: 8)],
                     Expanded(
                       child: Text(
-                        tecnico?.nombreCompleto ?? (asignada ? 'Trabajador no disponible' : 'Sin asignar'),
+                        tecnico?.nombreCompleto ?? (asignada ? m('Trabajador no disponible') : 'Sin asignar'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 13, color: tecnico == null ? P.textoSuave : P.texto),

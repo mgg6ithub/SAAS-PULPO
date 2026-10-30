@@ -7,6 +7,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 Future<void> abrirSimulaciones(BuildContext context) =>
     showDialog(context: context, builder: (_) => const _Simulaciones());
@@ -20,7 +21,7 @@ class _Simulaciones extends StatefulWidget {
 
 class _SimulacionesState extends State<_Simulaciones> {
   final _form = GlobalKey<FormState>();
-  static const _nombres = ['Trabajadores', 'Clientes', 'Trabajos'];
+  static final _nombres = [m('Trabajadores'), m('Clientes'), m('Trabajos')];
   static const _minimos = [0, 0, 0];
   static const _maximos = [100, 200, 1000];
   final _valores = [6, 8, 40];
@@ -163,7 +164,7 @@ class _SimulacionesState extends State<_Simulaciones> {
   Future<void> _vaciarNube() async {
     if (!await confirmar(
       context,
-      '¿Borrar de la base de datos todos los clientes, trabajadores, trabajos y plantillas? Las cuentas se quedan.',
+      m('¿Borrar de la base de datos todos los clientes, trabajadores, trabajos y plantillas? Las cuentas se quedan.'),
       accion: 'Vaciar base',
     ))
       return;
@@ -173,7 +174,7 @@ class _SimulacionesState extends State<_Simulaciones> {
 
   Future<void> _crearSimulacion() async {
     if (!_form.currentState!.validate()) {
-      _mostrarResultado('Revisa las cantidades y los trabajos simultáneos.');
+      _mostrarResultado(m('Revisa las cantidades y los trabajos simultáneos.'));
       return;
     }
     if (!await _puedeSustituir()) return;
@@ -218,7 +219,7 @@ class _SimulacionesState extends State<_Simulaciones> {
                 ),
                 Text(
                   activa
-                      ? '${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · $trabajos trabajos${store.subtareas.isEmpty ? '' : ' · ${store.subtareas.length} subtrabajos'}'
+                      ? m('${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · $trabajos trabajos${store.subtareas.isEmpty ? '' : ' · ${store.subtareas.length} subtrabajos'}')
                       : 'Crea una simulación para cargar datos de prueba.',
                   style: TextStyle(fontSize: 12, color: P.textoSuave),
                 ),
@@ -318,7 +319,7 @@ class _SimulacionesState extends State<_Simulaciones> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Cuándo generar los trabajos',
+                      m('Cuándo generar los trabajos'),
                       style: TextStyle(fontFamily: P.titulos, fontSize: 15.5, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
@@ -356,7 +357,7 @@ class _SimulacionesState extends State<_Simulaciones> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Crear trabajos que se solapan', style: TextStyle(fontWeight: FontWeight.w600)),
+                          Text(m('Crear trabajos que se solapan'), style: TextStyle(fontWeight: FontWeight.w600)),
                           Text(
                             'Mismo día y misma hora para revisar el calendario.',
                             style: TextStyle(fontSize: 12, color: P.textoSuave),
@@ -399,7 +400,7 @@ class _SimulacionesState extends State<_Simulaciones> {
                             children: [
                               const Text('Crear subtrabajos', style: TextStyle(fontWeight: FontWeight.w600)),
                               Text(
-                                'Algunos trabajos se dividen en varios subtrabajos.',
+                                m('Algunos trabajos se dividen en varios subtrabajos.'),
                                 style: TextStyle(fontSize: 12, color: P.textoSuave),
                               ),
                             ],
@@ -417,7 +418,7 @@ class _SimulacionesState extends State<_Simulaciones> {
                               max: 10,
                               divisions: 9,
                               label: '${_cadaSubtrabajos.round()}',
-                              semanticFormatterCallback: (v) => 'Uno de cada ${v.round()} trabajos',
+                              semanticFormatterCallback: (v) => m('Uno de cada ${v.round()} trabajos'),
                               onChanged: (v) => setState(() => _cadaSubtrabajos = v),
                             ),
                           ),
@@ -425,8 +426,8 @@ class _SimulacionesState extends State<_Simulaciones> {
                             width: 150,
                             child: Text(
                               _cadaSubtrabajos.round() == 1
-                                  ? 'Todos los trabajos'
-                                  : 'Uno de cada ${_cadaSubtrabajos.round()} trabajos',
+                                  ? m('Todos los trabajos')
+                                  : m('Uno de cada ${_cadaSubtrabajos.round()} trabajos'),
                               style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                             ),
                           ),

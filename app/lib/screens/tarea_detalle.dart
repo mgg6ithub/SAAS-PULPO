@@ -10,6 +10,7 @@ import '../widgets.dart';
 import 'informes.dart';
 import 'tabla_trabajos.dart';
 import 'tarea_automatizaciones.dart';
+import '../marca.dart';
 
 /// Ficha de un trabajo con pestañas, como la de un cliente: Resumen (cifras, subtrabajos e histórico)
 /// y Datos (el formulario del trabajo, editable directamente).
@@ -52,7 +53,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  tooltip: padre == null ? 'Volver a Trabajos' : 'Volver a ${padre.nombre}',
+                  tooltip: padre == null ? m('Volver a Trabajos') : 'Volver a ${padre.nombre}',
                   onPressed: padre == null ? widget.onVolver : () => widget.onAbrir(padre.id),
                   icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                 ),
@@ -64,7 +65,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
             subtitulo: [
               t.tipo,
               if (padre != null) 'Subtrabajo de ${padre.nombre}',
-              cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : 'Sin cliente'),
+              cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : m('Sin cliente')),
             ].join(' · '),
             // Resumen: añadir subtrabajo; Datos: editar; Histórico: nada; Automatizaciones: añadir regla.
             acciones: [
@@ -196,11 +197,11 @@ class _Resumen extends StatelessWidget {
     final hijas = store.hijas(t.id)
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
     if (hijas.isEmpty) {
-      return const Align(
+      return Align(
         alignment: Alignment.topLeft,
         child: Consejo(
-          'Un trabajo grande se puede dividir en subtrabajos, cada uno con su fecha, color y equipo. '
-          'Pulsa «Subtrabajo» arriba para añadir el primero.',
+          m('Un trabajo grande se puede dividir en subtrabajos, cada uno con su fecha, color y equipo. '
+          'Pulsa «Subtrabajo» arriba para añadir el primero.'),
         ),
       );
     }

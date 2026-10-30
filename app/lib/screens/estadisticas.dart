@@ -6,6 +6,7 @@ import '../estadisticas.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 const _mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -66,8 +67,8 @@ class Estadisticas extends StatelessWidget {
     );
 
     final porTipos = SeccionTarjeta(
-      titulo: 'Por tipo de trabajo',
-      subtitulo: 'Trabajos, duración media y averías',
+      titulo: m('Por tipo de trabajo'),
+      subtitulo: m('Trabajos, duración media y averías'),
       sinFilas: true,
       children: [
         for (final t in tipos)
@@ -113,7 +114,7 @@ class Estadisticas extends StatelessWidget {
     );
 
     final clientes = SeccionTarjeta(
-      titulo: 'Clientes con más averías',
+      titulo: m('Clientes con más averías'),
       subtitulo: 'Equipos averiados o en revisión y avisos urgentes',
       children: averias.isEmpty
           ? [

@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'models.dart';
 import 'store.dart';
+import 'marca.dart';
 
 /// Planificador de rutas, primera versión ("el pulpo planifica").
 ///
@@ -238,7 +239,7 @@ Plan rutaManual(DateTime dia, Trabajador w, List<Tarea> orden) {
   for (final t in orden) {
     final c = store.cliente(t.clienteId);
     if (c == null || !c.ubicado) {
-      sinProgramar.add((t, 'Su cliente no está ubicado en el mapa'));
+      sinProgramar.add((t, m('Su cliente no está ubicado en el mapa')));
       continue;
     }
     final prueba = [...paradas, Parada(t, LatLng(c.lat!, c.lng!))];

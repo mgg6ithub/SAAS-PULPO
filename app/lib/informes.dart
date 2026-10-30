@@ -15,6 +15,7 @@ import 'models.dart';
 import 'nube.dart';
 import 'store.dart';
 import 'theme.dart';
+import 'marca.dart';
 
 /// Informe de un trabajo hecho por un trabajador. Con sesión vive en la tabla `informes` y sus fotos en Storage;
 /// sin sesión (demo), en memoria con las fotos en base64.
@@ -356,10 +357,10 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
           style: pw.TextStyle(color: morado, fontSize: 9, fontWeight: pw.FontWeight.bold, letterSpacing: 1),
         ),
         pw.SizedBox(height: 4),
-        pw.Text('Parte de trabajo', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+        pw.Text(m('Parte de trabajo'), style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 18),
-        dato('Trabajo', t.nombre),
-        if (cliente != null) dato('Cliente', cliente.nombre),
+        dato(m('Trabajo'), t.nombre),
+        if (cliente != null) dato(m('Cliente'), cliente.nombre),
         dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '-')),
         dato('Fecha', '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}'),
         if (w != null) dato('Técnico', w.nombreCompleto),
@@ -389,7 +390,7 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
         ],
         if (firma != null) ...[
           pw.SizedBox(height: 18),
-          pw.Text('Conforme, el cliente', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.Text(m('Conforme, el cliente'), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 6),
           pw.Image(pw.MemoryImage(firma), width: 200, height: 80, fit: pw.BoxFit.contain),
           if (i.firmante.isNotEmpty) pw.Text(i.firmante, style: const pw.TextStyle(fontSize: 10.5)),
