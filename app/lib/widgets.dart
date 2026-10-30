@@ -1217,7 +1217,9 @@ class _TablaState extends State<Tabla> {
       ),
       clipBehavior: Clip.antiAlias,
       // Pocas filas: la tabla mide lo que su contenido. Muchas: ocupa el alto y solo construye las visibles.
-      child: CustomPaint(
+      child: TooltipVisibility(
+        visible: _columnaArrastrando == null,
+        child: CustomPaint(
         key: _lienzo,
         foregroundPainter: _columnaArrastrando == null
             ? null
@@ -1268,6 +1270,7 @@ class _TablaState extends State<Tabla> {
                                   if (j < columnas.length - 1 && c.titulo.isNotEmpty)
                                     _AsaColumna(
                                       onInicio: () {
+                                        Tooltip.dismissAllToolTips();
                                         final siguiente = columnas[j + 1];
                                         final izquierda =
                                             _claves[c.titulo]?.currentContext?.findRenderObject() as RenderBox?;
@@ -1350,6 +1353,7 @@ class _TablaState extends State<Tabla> {
             ],
           ],
         ),
+      ),
       ),
     );
   }

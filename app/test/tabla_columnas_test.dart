@@ -23,9 +23,13 @@ void main() {
     final comienzoPeriodicidad = tester.getTopLeft(find.text('Periodicidad')).dx;
     final comienzoEstado = tester.getTopLeft(find.text('Estado')).dx;
     final limiteDerechoCliente = tester.getCenter(asas.at(1)).dx;
+    final tooltip = find.byWidgetPredicate((w) => w is Tooltip && w.message == 'Arrastrar para intercambiar Cliente');
     final gesto = await tester.startGesture(tester.getCenter(asas.first));
     await gesto.moveBy(const Offset(30, 0));
     await tester.pump();
+    expect(tester.state<TooltipState>(tooltip).ensureTooltipVisible(), isFalse);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Arrastrar para intercambiar Cliente'), findsNothing);
     for (final dx in [40.0, -80.0, 10000.0, -10000.0]) {
       await gesto.moveBy(Offset(dx, 0));
       await tester.pump();
@@ -49,6 +53,9 @@ void main() {
     await gesto.up();
     await tester.pump();
     expect(tester.widget<CustomPaint>(guias).foregroundPainter, isNull);
+    expect(tester.state<TooltipState>(tooltip).ensureTooltipVisible(), isTrue);
+    Tooltip.dismissAllToolTips();
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
   testWidgets('intercambiar columnas mueve títulos y datos juntos y permite redimensionar después', (tester) async {
