@@ -157,10 +157,10 @@ class _TablaActivos extends StatelessWidget {
             Col(componentes ? 'Componente' : 'Activo', flex: 3),
             if (ancho) const Col('Fabricante y modelo', flex: 2),
             if (ancho) const Col('División', flex: 2),
-            if (medio) const Col('Componentes', ancho: 120, derecha: true),
             if (ancho) const Col('Horas', ancho: 100, derecha: true),
             if (medio) const Col('Próximo mantenimiento', ancho: 175),
             const Col('Tipo de mantenimiento', ancho: 160),
+            if (medio) const Col('Comp.', ancho: 60, derecha: true, ayuda: 'Componentes'),
           ],
           filas: activos.length,
           celdas: (i) {
@@ -176,13 +176,13 @@ class _TablaActivos extends StatelessWidget {
               ),
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
               if (ancho) celdaTexto(a.division, suave: true),
-              if (medio) Padding(padding: const EdgeInsets.only(right: 12), child: celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true)),
               if (ancho) celdaTexto(horas(a.horas), suave: true),
               if (medio) celdaTexto(fecha(a.proximoMantenimiento), suave: true),
               Align(
                 alignment: Alignment.centerLeft,
                 child: g == null ? const Pill('Al día', P.verde, punto: true) : PillTipo(g),
               ),
+              if (medio) celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
             ];
           },
           onTap: (i) => onAbrir(activos[i].id),
@@ -293,7 +293,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               if (pestana == 1 && !editando)
                 BotonPrimario('Editar', icono: Icons.edit_outlined, onPressed: () => setState(() => editando = true)),
               if (pestana == 2)
-                BotonPrimario('Nueva orden de trabajo', icono: Icons.add_rounded, onPressed: () => _nuevaOt(a)),
+                BotonPrimario('Nueva orden de trabajo', conIcono: true, icono: Icons.add_rounded, onPressed: () => _nuevaOt(a)),
             ],
           ),
           const SizedBox(height: 18),

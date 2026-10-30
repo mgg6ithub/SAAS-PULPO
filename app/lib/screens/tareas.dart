@@ -70,6 +70,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ],
                 principal: BotonPrimario(
                   pestana == 1 ? 'Nueva plantilla' : m('Nuevo trabajo'),
+                  conIcono: industrial,
                   tecla: 'N',
                   onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                 ),

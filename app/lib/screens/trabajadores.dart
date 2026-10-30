@@ -76,6 +76,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ],
                       principal: BotonPrimario(
                         m('Nuevo trabajador'),
+                        conIcono: industrial,
                         tecla: 'N',
                         onPressed: () => abrirTrabajadorForm(context),
                       ),
