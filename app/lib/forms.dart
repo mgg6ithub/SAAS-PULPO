@@ -10,7 +10,9 @@ import 'package:flutter/material.dart';
 
 import 'ajustes.dart';
 import 'geo.dart';
+import 'industrial/tipo_mantenimiento.dart';
 import 'informes.dart';
+import 'marca.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -1404,6 +1406,7 @@ class _TareaFormState extends State<TareaForm> {
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
         criticidad: Criticidad.rutinaria,
+        tipoMantenimiento: industrial ? TipoMantenimiento.preventivo : null,
       );
   late final nombre = TextEditingController(text: t.nombre)..addListener(() => setState(() {}));
   late final marca = TextEditingController(text: t.marca);
@@ -1502,6 +1505,14 @@ class _TareaFormState extends State<TareaForm> {
     }
   }
 
+  /// Arriba a la derecha: la criticidad en Pultec; en iPultec, el tipo de mantenimiento de la OT.
+  Widget _menuGravedad() => industrial
+      ? MenuTipoMantenimiento(
+          t.tipoMantenimiento ?? TipoMantenimiento.preventivo,
+          (x) => setState(() => t.tipoMantenimiento = x),
+        )
+      : _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c));
+
   @override
   Widget build(BuildContext context) {
     final aptos = store.trabajadores.where((w) => store.esApto(w, t)).length;
@@ -1516,7 +1527,7 @@ class _TareaFormState extends State<TareaForm> {
       subtitulo: t.esPlantilla
           ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
           : store.cliente(t.clienteId)?.nombre,
-      bajoBotones: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
+      bajoBotones: _menuGravedad(),
       incrustada: widget.incrustada,
       sinCabecera: widget.incrustada,
       soloLectura: widget.soloLectura,
@@ -1544,7 +1555,7 @@ class _TareaFormState extends State<TareaForm> {
             alignment: Alignment.centerRight,
             child: Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
+              child: _menuGravedad(),
             ),
           ),
         Bloque(

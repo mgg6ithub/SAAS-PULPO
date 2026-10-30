@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../industrial/tipo_mantenimiento.dart';
+import '../marca.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -95,6 +97,7 @@ class TareaCard extends StatelessWidget {
                         pillEstado(t)
                       else
                         SelectorEstado(t),
+                      if (industrial && t.tipoMantenimiento != null) PillTipo(t.tipoMantenimiento!),
                       if (averiada) Pill(t.estadoMaquina.etiqueta, t.estadoMaquina.color),
                       if (t.esPlantilla)
                         for (final c in t.competencias) Etiqueta(c, P.morado),
