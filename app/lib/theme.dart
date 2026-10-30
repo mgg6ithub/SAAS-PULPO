@@ -69,12 +69,10 @@ class LogoPulpo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Image.asset(
-    'assets/pulpo.png',
+    // En iPultec, el mismo pulpo en el azul de la marca (PNG propio, sin fondo).
+    industrial ? 'assets/ipultec.png' : 'assets/pulpo.png',
     width: size,
     height: size,
-    // En iPultec, el mismo pulpo con el tono de la marca.
-    color: industrial ? Marca.color : null,
-    colorBlendMode: industrial ? BlendMode.hue : null,
     filterQuality: FilterQuality.medium,
     semanticLabel: Marca.nombre,
   );

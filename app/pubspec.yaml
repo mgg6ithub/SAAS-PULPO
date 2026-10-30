@@ -75,6 +75,7 @@ flutter:
 
   assets:
     - assets/pulpo.png
+    - assets/ipultec.png
     - assets/videos/pulpo-animacione.mp4
 
   # To add assets to your application, add an assets section, like this:

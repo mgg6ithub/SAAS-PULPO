@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'ajustes.dart';
 import 'marca.dart';
 import 'nube.dart';
+import 'plataforma_io.dart' if (dart.library.js_interop) 'plataforma_web.dart';
 import 'screens/acceso.dart';
 import 'shell.dart';
 import 'store.dart';
@@ -41,6 +42,7 @@ Future<void> main() async {
     await Nube.iniciar();
     await Nube.recordarInvitacion(Uri.base.queryParameters['invitacion']);
   }
+  if (industrial) ponerPestana('favicon-ipultec.png', Marca.nombre);
   runApp(PulpoApp(local: local));
 }
 

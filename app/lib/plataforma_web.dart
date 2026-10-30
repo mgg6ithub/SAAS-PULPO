@@ -15,3 +15,9 @@ Future<void> descargar(Uint8List bytes, String nombre, String tipo) async {
 
 /// Abre un enlace (`tel:`, mapas…) en una pestaña nueva o en la app que lo maneje.
 void abrirEnlace(String url) => web.window.open(url, '_blank');
+
+/// Cambia el icono y el título de la pestaña (iPultec compila con el `web/` de Pultec).
+void ponerPestana(String icono, String titulo) {
+  (web.document.querySelector('link[rel="icon"]') as web.HTMLLinkElement?)?.href = icono;
+  web.document.title = titulo;
+}

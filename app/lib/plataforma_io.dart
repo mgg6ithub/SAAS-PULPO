@@ -12,3 +12,5 @@ Future<void> descargar(Uint8List bytes, String nombre, String tipo) async {
 /// Abre un enlace (`tel:`, mapas…) con el programa del sistema.
 void abrirEnlace(String url) =>
     Process.run(Platform.isWindows ? 'explorer' : (Platform.isMacOS ? 'open' : 'xdg-open'), [url]);
+
+void ponerPestana(String icono, String titulo) {}
