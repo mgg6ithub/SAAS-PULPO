@@ -61,7 +61,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Orden de trabajo',
     'Asignado a',
   ];
-  static final _visibles = {'Código', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Asignado a'};
+  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Asignado a'};
+  static final _visibles = {..._porDefecto};
 
   static const _cols = {
     'Código': Col('Código', flex: 2),
@@ -101,6 +102,17 @@ class _TablaPlanesState extends State<TablaPlanes> {
           onPressed: () => setState(() => _visibles.contains(c) ? _visibles.remove(c) : _visibles.add(c)),
           child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c)),
         ),
+      const Divider(height: 8),
+      MenuItemButton(
+        closeOnActivate: false,
+        leadingIcon: Icon(Icons.restart_alt_rounded, size: 20, color: P.textoSuave),
+        onPressed: () => setState(
+          () => _visibles
+            ..clear()
+            ..addAll(_porDefecto),
+        ),
+        child: const Text('Volver a las de por defecto'),
+      ),
     ],
     builder: (context, menu, _) => IconButton(
       tooltip: 'Elegir columnas',
@@ -130,103 +142,117 @@ class _TablaPlanesState extends State<TablaPlanes> {
         for (final c in _opcionales)
           if (medio ? _visibles.contains(c) : c == 'Próximo') c,
       ];
-      return Align(
-        alignment: Alignment.topCenter,
-        child: Tabla(
-          columnas: [
-            const Col('Mantenimiento', flex: 4),
-            for (final c in vistas) _cols[c]!,
-            if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
-          ],
-          filas: ps.length,
-          onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
-          pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
-          celdas: (i) {
-            final p = ps[i];
-            final nodo = nodos[p.activoId];
-            final d = proximos[p.id];
-            final otPendienteDe = ots['${p.activoId}|${p.nombre}'];
-            Widget celda(String c) {
-              switch (c) {
-                case 'Código':
-                  return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
-                case 'Componente':
-                  return celdaTexto(nodo?.nombre ?? '—', suave: true);
-                case 'Tipo':
-                  return PillTipo(p.tipo);
-                case 'Cada cuánto':
-                  return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);
-                case 'Horas restantes':
-                  final h = horasRestantesPlan(p);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
-                  );
-                case 'Próximo':
-                  final vencido = d != null && d.isBefore(hoy());
-                  return Text(
-                    d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: vencido ? P.rojo : P.textoSuave,
-                      fontWeight: vencido ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  );
-                case 'Último hecho':
-                  return celdaTexto(p.ultimo == null ? '—' : fecha(p.ultimo!), suave: true);
-                case 'Categoría':
-                  return celdaTexto(p.categoria.isEmpty ? 'Cualquiera' : p.categoria, suave: true);
-                case 'Duración':
-                  return celdaTexto(duracion(p.duracionMin), suave: true);
-                case 'Repuestos':
-                  return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
-                case 'Orden de trabajo':
-                  return otPendienteDe == null
-                      ? celdaTexto('Sin crear', suave: true)
-                      : Pill(otPendienteDe.trabajadorIds.isEmpty ? 'Sin técnico' : 'Asignada', P.morado, punto: true);
-                default:
-                  final ot = otPendienteDe ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
-                  return SelectorTrabajadores(ot, () {
-                    // La primera asignación crea la OT; luego se edita la misma.
-                    store.guardarTarea(ot);
-                    setState(() => _borradores.remove(p.id));
-                  }, compacto: true);
-              }
-            }
+      final columnas = [
+        const Col('Mantenimiento', flex: 4),
+        for (final c in vistas) _cols[c]!,
+        if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
+      ];
+      // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
+      final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 110.0 * c.flex));
+      final anchoTabla = necesario > box.maxWidth ? necesario : box.maxWidth;
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: anchoTabla,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Tabla(
+              columnas: columnas,
+              filas: ps.length,
+              onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
+              pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
+              celdas: (i) {
+                final p = ps[i];
+                final nodo = nodos[p.activoId];
+                final d = proximos[p.id];
+                final otPendienteDe = ots['${p.activoId}|${p.nombre}'];
+                Widget celda(String c) {
+                  switch (c) {
+                    case 'Código':
+                      return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
+                    case 'Componente':
+                      return celdaTexto(nodo?.nombre ?? '—', suave: true);
+                    case 'Tipo':
+                      return PillTipo(p.tipo);
+                    case 'Cada cuánto':
+                      return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);
+                    case 'Horas restantes':
+                      final h = horasRestantesPlan(p);
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
+                      );
+                    case 'Próximo':
+                      final vencido = d != null && d.isBefore(hoy());
+                      return Text(
+                        d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: vencido ? P.rojo : P.textoSuave,
+                          fontWeight: vencido ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      );
+                    case 'Último hecho':
+                      return celdaTexto(p.ultimo == null ? '—' : fecha(p.ultimo!), suave: true);
+                    case 'Categoría':
+                      return celdaTexto(p.categoria.isEmpty ? 'Cualquiera' : p.categoria, suave: true);
+                    case 'Duración':
+                      return celdaTexto(duracion(p.duracionMin), suave: true);
+                    case 'Repuestos':
+                      return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
+                    case 'Orden de trabajo':
+                      return otPendienteDe == null
+                          ? celdaTexto('Sin crear', suave: true)
+                          : Pill(
+                              otPendienteDe.trabajadorIds.isEmpty ? 'Sin técnico' : 'Asignada',
+                              P.morado,
+                              punto: true,
+                            );
+                    default:
+                      final ot = otPendienteDe ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
+                      return SelectorTrabajadores(ot, () {
+                        // La primera asignación crea la OT; luego se edita la misma.
+                        store.guardarTarea(ot);
+                        setState(() => _borradores.remove(p.id));
+                      }, compacto: true);
+                  }
+                }
 
-            return [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
+                return [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
+                        ),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true),
+                              if (p.descripcion.isNotEmpty)
+                                Text(
+                                  p.descripcion,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12, color: P.textoSuave, height: 1.35),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true),
-                          if (p.descripcion.isNotEmpty)
-                            Text(
-                              p.descripcion,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: P.textoSuave, height: 1.35),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              for (final c in vistas) celda(c),
-              if (medio) const SizedBox(),
-            ];
-          },
+                  ),
+                  for (final c in vistas) celda(c),
+                  if (medio) const SizedBox(),
+                ];
+              },
+            ),
+          ),
         ),
       );
     },
@@ -330,53 +356,57 @@ class _PlanFormState extends State<PlanForm> {
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
           campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
         ]),
-        Bloque('Cada cuánto', descripcion: 'Por días, por horas de uso o en una fecha. Por horas, sin próximo, se estima con el contador.', [
-          dos(
-            conMargen(
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  etiqueta('Programar por'),
-                  BotonMenu<int>(
-                    relleno: EdgeInsets.zero,
-                    tooltip: 'Cómo se programa el mantenimiento',
-                    seleccionado: modo,
-                    opciones: [for (final (i, m) in _modos.indexed) (i, Text(m))],
-                    onSelected: (m) => setState(() => modo = m),
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+        Bloque(
+          'Cada cuánto',
+          descripcion: 'Por días, por horas de uso o en una fecha. Por horas, sin próximo, se estima con el contador.',
+          [
+            dos(
+              conMargen(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    etiqueta('Programar por'),
+                    BotonMenu<int>(
+                      relleno: EdgeInsets.zero,
+                      tooltip: 'Cómo se programa el mantenimiento',
+                      seleccionado: modo,
+                      opciones: [for (final (i, m) in _modos.indexed) (i, Text(m))],
+                      onSelected: (m) => setState(() => modo = m),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+                        ),
+                        child: Text(_modos[modo]),
                       ),
-                      child: Text(_modos[modo]),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              switch (modo) {
+                0 => campo('Cada cuántos días', dias, hint: '90', error: errorCada, obligatorio: true),
+                1 => campo('Cada cuántas horas', horasC, hint: '500', error: errorCada, obligatorio: true),
+                _ => CampoFecha('Fecha', p.proximo, (d) => setState(() => p.proximo = d)),
+              },
             ),
-            switch (modo) {
-              0 => campo('Cada cuántos días', dias, hint: '90', error: errorCada, obligatorio: true),
-              1 => campo('Cada cuántas horas', horasC, hint: '500', error: errorCada, obligatorio: true),
-              _ => CampoFecha('Fecha', p.proximo, (d) => setState(() => p.proximo = d)),
-            },
-          ),
-          const SizedBox(height: 16),
-          dos(
-            CampoFecha('Último hecho', p.ultimo, (d) {
-              p.ultimo = d;
-              _alCambiarDias();
-            }, hasta: hoy()),
-            modo == 2 ? const SizedBox() : CampoFecha('Próximo', p.proximo, (d) => setState(() => p.proximo = d)),
-          ),
-          dos(
-            campo(
-              'Contador en el último (h)',
-              contador,
-              teclado: const TextInputType.numberWithOptions(decimal: true),
-              hint: '0',
+            const SizedBox(height: 16),
+            dos(
+              CampoFecha('Último hecho', p.ultimo, (d) {
+                p.ultimo = d;
+                _alCambiarDias();
+              }, hasta: hoy()),
+              modo == 2 ? const SizedBox() : CampoFecha('Próximo', p.proximo, (d) => setState(() => p.proximo = d)),
             ),
-            const SizedBox(),
-          ),
-        ]),
+            dos(
+              campo(
+                'Contador en el último (h)',
+                contador,
+                teclado: const TextInputType.numberWithOptions(decimal: true),
+                hint: '0',
+              ),
+              const SizedBox(),
+            ),
+          ],
+        ),
         Bloque('Quién y cuánto', descripcion: 'Solo los técnicos de esta categoría pueden recibir la OT.', [
           dos(
             conMargen(
