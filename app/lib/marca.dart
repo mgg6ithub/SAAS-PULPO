@@ -15,6 +15,9 @@ class Marca {
   /// Itinerario con mapa y rutas (iPultec, de momento, sin rutas).
   static const mapa = !industrial;
 
+  /// Sección de Finanzas (iPultec, de momento, sin ella).
+  static const finanzas = !industrial;
+
   /// Iconos de clientes/activos, trabajadores/técnicos y trabajos/órdenes de trabajo.
   static const iconoCliente = industrial ? Icons.precision_manufacturing_outlined : Icons.apartment_outlined;
   static const iconoTrabajador = industrial ? Icons.engineering_outlined : Icons.badge_outlined;

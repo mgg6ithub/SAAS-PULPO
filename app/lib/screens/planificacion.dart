@@ -50,7 +50,7 @@ class _PlanificacionState extends State<Planificacion> {
   // y guardar), el itinerario sigue exactamente donde estaba.
   static int? _vista;
   static DateTime? _dia;
-  int get vista => _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? ajustes.vistaInicio).clamp(0, 1);
+  int get vista => _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? (industrial ? 1 : ajustes.vistaInicio)).clamp(0, 1);
   set vista(int v) => _vista = v;
   DateTime get dia => _dia ??= hoy();
   set dia(DateTime d) => _dia = d;

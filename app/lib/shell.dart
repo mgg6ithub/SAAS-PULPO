@@ -724,7 +724,7 @@ class _BarraState extends State<_Barra> {
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
-      (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
+      if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
     return Stack(
@@ -847,7 +847,7 @@ class _BarraInferior extends StatelessWidget {
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
-      (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
+      if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     return Container(
       decoration: BoxDecoration(
