@@ -30,6 +30,11 @@ class CuentaDeOtraMarca implements Exception {
   const CuentaDeOtraMarca();
 }
 
+/// iPultec (IPT-013): la cuenta no trae invitación ni es de ninguna empresa industrial.
+class SinInvitacion implements Exception {
+  const SinInvitacion();
+}
+
 /// La empresa se quedaría sin administrador (quitar o degradar al último, o borrar su cuenta).
 class UltimoAdministrador implements Exception {
   const UltimoAdministrador();
@@ -145,6 +150,10 @@ class Nube {
       if (e.code == 'P0002') {
         await _db.auth.signOut(scope: SignOutScope.local);
         throw const CuentaDeOtraMarca();
+      }
+      if (e.code == 'P0003') {
+        await _db.auth.signOut(scope: SignOutScope.local);
+        throw const SinInvitacion();
       }
       rethrow;
     }

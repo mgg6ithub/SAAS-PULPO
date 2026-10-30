@@ -113,6 +113,13 @@ class _PuertaNubeState extends State<PuertaNube> {
           ),
         );
       }
+    } on SinInvitacion {
+      if (mounted) {
+        setState(() => _fase = _Fase.acceso);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('En iPultec solo se entra con invitación. Pide a tu empresa que te invite.')),
+        );
+      }
     } on InvitacionNoValida {
       if (mounted) setState(() => _fase = _Fase.invitacionMala);
     } catch (e) {
@@ -459,15 +466,18 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         ),
         if (!_nueva && _porConfirmar != null)
           TextButton(onPressed: _enviando ? null : _reenviar, child: const Text('Reenviar el correo de confirmación')),
-        const SizedBox(height: 14),
-        Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(_nueva ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?', style: suave),
-            TextButton(onPressed: _enviando ? null : _cambiarModo, child: Text(_nueva ? 'Entra' : 'Crea una')),
-          ],
-        ),
+        // iPultec: solo por invitación (IPT-013); sin enlace, solo se entra.
+        if (!industrial || Nube.invitacion != null) ...[
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(_nueva ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?', style: suave),
+              TextButton(onPressed: _enviando ? null : _cambiarModo, child: Text(_nueva ? 'Entra' : 'Crea una')),
+            ],
+          ),
+        ],
       ],
     );
   }
