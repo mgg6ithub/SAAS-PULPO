@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'marca.dart';
+
 /// Tablas de la empresa que se escuchan en vivo (publicadas en `supabase_realtime`).
 const tablasEnVivo = [
   'clientes',
@@ -12,6 +14,7 @@ const tablasEnVivo = [
   'competencias',
   'equipos',
   'vencimientos',
+  if (industrial) 'activos',
   'trabajos',
   'trabajo_trabajadores',
   'trabajo_historial',

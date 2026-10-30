@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'en_vivo.dart';
+import 'industrial/activo.dart';
 import 'informes.dart';
 import 'marca.dart';
 import 'models.dart';
@@ -604,6 +605,8 @@ class Nube {
       _todo('vencimientos'),
       // El trabajador no ve precios: la base le devuelve la lista vacía.
       _db.from('trabajo_precios').select('trabajo_id, precio, iva').eq('empresa_id', empresaId),
+      // iPultec: en Pultec no se piden (no hay activos).
+      if (industrial) _todo('activos'),
     ]);
     final precioDe = {for (final x in r[11]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
@@ -680,6 +683,7 @@ class Nube {
             avisarDias: x['avisar_dias'],
           ),
       ],
+      activos: [if (industrial) for (final x in r[12]) _activo(x)],
     );
   }
 
@@ -690,6 +694,7 @@ class Nube {
     for (final t in [
       'documentos',
       'trabajos',
+      if (industrial) 'activos',
       'equipos',
       'clientes',
       'trabajadores',
@@ -744,6 +749,7 @@ class Nube {
     'competencias',
     'equipos',
     'vencimientos',
+    if (industrial) 'activos',
     'trabajos',
     'trabajo_precios',
     'trabajo_trabajadores',
@@ -960,6 +966,7 @@ class Nube {
     'competencias': 'id',
     'equipos': 'id',
     'vencimientos': 'id',
+    'activos': 'id',
     'trabajos': 'id',
     'trabajo_precios': 'trabajo_id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
@@ -1001,7 +1008,34 @@ class Nube {
     final trabajos = [...s.tareas, ...s.subtareas];
     final ids = {for (final t in trabajos) t.id};
     final equipos = {for (final x in s.equipos) x.id};
+    final activos = {for (final x in s.activos) x.id};
     final r = <String, Map<String, Map<String, dynamic>>>{for (final t in _orden) t: {}};
+    if (industrial) {
+      // Padres antes que hijos: se suben por tandas y un componente no puede llegar antes que su activo.
+      final porNivel = <Activo>[];
+      for (var nivel = s.activos.where((a) => !activos.contains(a.padreId)).toList(); nivel.isNotEmpty;) {
+        porNivel.addAll(nivel);
+        final ids = {for (final a in nivel) a.id};
+        nivel = s.activos.where((a) => ids.contains(a.padreId)).toList();
+      }
+      for (final a in porNivel) {
+        r['activos']![_u(a.id)] = {
+          'id': _u(a.id),
+          'empresa_id': e,
+          'padre_id': activos.contains(a.padreId) ? _u(a.padreId!) : null,
+          'tag': a.tag,
+          'nombre': a.nombre,
+          'fabricante': a.fabricante,
+          'modelo': a.modelo,
+          'numero_serie': a.numeroSerie,
+          'division': a.division,
+          'repuestos': a.repuestos,
+          'notas': a.notas,
+          'horas': a.horas,
+          'activo': a.activo,
+        };
+      }
+    }
     for (final c in s.clientes) {
       r['clientes']![_u(c.id)] = {
         'id': _u(c.id),
@@ -1099,6 +1133,7 @@ class Nube {
         'cliente_id': clientes.contains(t.clienteId) ? _u(t.clienteId!) : null,
         'equipo_id': equipos.contains(t.equipoId) ? _u(t.equipoId!) : null,
         'tipo_mantenimiento': t.tipoMantenimiento?.index,
+        if (industrial) 'activo_id': activos.contains(t.activoId) ? _u(t.activoId!) : null,
         'plantilla': t.plantilla,
         'color': t.color,
         'plantilla_id': ids.contains(t.plantillaId) ? _u(t.plantillaId!) : null,
@@ -1173,6 +1208,7 @@ class DatosNube {
   final List<String> competencias;
   final List<Equipo> equipos;
   final List<Vencimiento> vencimientos;
+  final List<Activo> activos;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
@@ -1183,6 +1219,7 @@ class DatosNube {
     this.competencias = const [],
     this.equipos = const [],
     this.vencimientos = const [],
+    this.activos = const [],
   });
 }
 
@@ -1232,6 +1269,21 @@ Trabajador _trabajador(Map x) => Trabajador(
   color: (x['color'] as num).toInt(),
 );
 
+Activo _activo(Map x) => Activo(
+  id: x['id'],
+  padreId: x['padre_id'],
+  tag: x['tag'],
+  nombre: x['nombre'],
+  fabricante: x['fabricante'],
+  modelo: x['modelo'],
+  numeroSerie: x['numero_serie'],
+  division: x['division'],
+  repuestos: x['repuestos'],
+  notas: x['notas'],
+  horas: (x['horas'] as num).toDouble(),
+  activo: x['activo'],
+);
+
 Automatizacion _automatizacion(Map x) => Automatizacion(
   id: x['id'],
   nombre: x['nombre'],
@@ -1251,6 +1303,7 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       id: x['id'],
       clienteId: x['cliente_id'],
       equipoId: x['equipo_id'],
+      activoId: x['activo_id'],
       tipoMantenimiento: x['tipo_mantenimiento'] == null
           ? null
           : TipoMantenimiento.values[x['tipo_mantenimiento'] as int],

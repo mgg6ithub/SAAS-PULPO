@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'ajustes.dart';
 import 'geo.dart';
+import 'industrial/activos.dart' show arbolActivos;
 import 'industrial/tipo_mantenimiento.dart';
 import 'informes.dart';
 import 'marca.dart';
@@ -1719,6 +1720,23 @@ class _TareaFormState extends State<TareaForm> {
                 hasta: hoy(), // lo que ya se hizo no puede ser futuro
               ),
               CampoFecha('Solicitado el', t.solicitud, (d) => setState(() => t.solicitud = d)),
+            ),
+          if (industrial && store.activos.isNotEmpty)
+            conMargen(
+              DropdownButtonFormField<String?>(
+                isExpanded: true,
+                initialValue: store.activo(t.activoId)?.id,
+                decoration: const InputDecoration(labelText: 'Activo o componente'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Sin activo')),
+                  for (final (a, nivel) in arbolActivos())
+                    DropdownMenuItem(
+                      value: a.id,
+                      child: Padding(padding: EdgeInsets.only(left: 16.0 * nivel), child: Text(a.titulo)),
+                    ),
+                ],
+                onChanged: (id) => setState(() => t.activoId = id),
+              ),
             ),
           if (t.clienteId != null && store.equiposDe(t.clienteId!).isNotEmpty)
             conMargen(

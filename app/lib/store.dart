@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'industrial/activo.dart';
 import 'models.dart';
 import 'nube.dart';
 import 'theme.dart' show TipoInfo, tipos, tiposBase, competencias, competenciasBase;
@@ -244,6 +245,9 @@ class Store extends ChangeNotifier {
   /// Equipos de los clientes y sus vencimientos legales.
   List<Equipo> equipos = [];
   List<Vencimiento> vencimientos = [];
+
+  /// iPultec: máquinas y componentes en árbol (vacío en Pultec).
+  List<Activo> activos = [];
   SharedPreferences? _prefs;
 
   /// Con sesión iniciada, cada cambio se guarda en Supabase en vez de en el navegador.
@@ -279,6 +283,7 @@ class Store extends ChangeNotifier {
     etiquetas = d.etiquetas;
     equipos = d.equipos;
     vencimientos = d.vencimientos;
+    activos = d.activos;
     tipos = d.tipos.isEmpty ? [...tiposBase] : d.tipos;
     competencias = d.competencias.isEmpty ? [...competenciasBase] : d.competencias;
   }
@@ -304,6 +309,7 @@ class Store extends ChangeNotifier {
     etiquetas = [];
     equipos = [];
     vencimientos = [];
+    activos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     usoPlantillas = [];
@@ -320,6 +326,7 @@ class Store extends ChangeNotifier {
     etiquetas = [];
     equipos = [];
     vencimientos = [];
+    activos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     notifyListeners();
@@ -345,6 +352,7 @@ class Store extends ChangeNotifier {
       etiquetas = [for (final x in j['etiquetas'] as List? ?? []) EtiquetaTrabajo.fromJson(x)];
       equipos = [for (final x in j['equipos'] as List? ?? []) Equipo.fromJson(x)];
       vencimientos = [for (final x in j['vencimientos'] as List? ?? []) Vencimiento.fromJson(x)];
+      activos = [for (final x in j['activos'] as List? ?? []) Activo.fromJson(x)];
       if (j['tipos'] case final List l when l.isNotEmpty) tipos = [for (final x in l) TipoInfo.fromJson(x)];
       if (j['competencias'] case final List l when l.isNotEmpty) competencias = List<String>.from(l);
       // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
@@ -378,6 +386,7 @@ class Store extends ChangeNotifier {
         'tipos': [for (final x in tipos) x.toJson()],
         'equipos': [for (final x in equipos) x.toJson()],
         'vencimientos': [for (final x in vencimientos) x.toJson()],
+        if (activos.isNotEmpty) 'activos': [for (final x in activos) x.toJson()],
         'competencias': competencias,
       }),
     );
@@ -538,6 +547,43 @@ class Store extends ChangeNotifier {
 
   void borrarVencimiento(String id) {
     vencimientos.removeWhere((v) => v.id == id);
+    _cambio();
+  }
+
+  // ── Activos (iPultec) ──
+  Activo? activo(String? id) => id == null ? null : activos.where((a) => a.id == id).firstOrNull;
+
+  /// Componentes directos de un activo (o los activos raíz con null), por tag y nombre.
+  List<Activo> hijosDe(String? padreId) =>
+      activos.where((a) => a.padreId == padreId).toList()..sort((a, b) => a.titulo.compareTo(b.titulo));
+
+  /// El activo y todos sus componentes, a cualquier nivel.
+  Set<String> ramaDe(String id) {
+    final r = {id};
+    for (var nuevos = {id}; nuevos.isNotEmpty;) {
+      nuevos = {for (final a in activos) if (a.padreId != null && nuevos.contains(a.padreId) && r.add(a.id)) a.id};
+    }
+    return r;
+  }
+
+  /// OT sobre el activo o cualquiera de sus componentes.
+  List<Tarea> otsDe(String activoId) {
+    final rama = ramaDe(activoId);
+    return [...tareas, ...subtareas].where((t) => rama.contains(t.activoId)).toList();
+  }
+
+  void guardarActivo(Activo a) {
+    _poner(activos, a, (x) => x.id == a.id);
+    _cambio();
+  }
+
+  /// Quita el activo con todos sus componentes; sus OT se quedan, sin activo.
+  void borrarActivo(String id) {
+    final rama = ramaDe(id);
+    activos.removeWhere((a) => rama.contains(a.id));
+    for (final t in [...tareas, ...subtareas].where((t) => rama.contains(t.activoId))) {
+      t.activoId = null;
+    }
     _cambio();
   }
 
@@ -1122,6 +1168,7 @@ class Store extends ChangeNotifier {
     subtareas = [];
     equipos = [];
     vencimientos = [];
+    activos = [];
     tareas = [
       Tarea(
         id: 'p1',

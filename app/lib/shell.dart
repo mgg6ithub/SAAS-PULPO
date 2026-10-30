@@ -6,6 +6,7 @@ import 'finanzas.dart';
 import 'forms.dart';
 import 'marca.dart';
 import 'models.dart';
+import 'industrial/activos.dart';
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
 import 'screens/clientes.dart';
@@ -223,7 +224,9 @@ class _ShellState extends State<Shell> {
     ),
     // ignore: prefer_const_constructors
     Seccion.planificacion => Planificacion(),
-    Seccion.clientes => Clientes(onAbrir: (id) => setState(() => clienteId = id)),
+    // iPultec: los clientes son activos (máquinas con su árbol de componentes).
+    // ignore: prefer_const_constructors
+    Seccion.clientes => industrial ? Activos() : Clientes(onAbrir: (id) => setState(() => clienteId = id)),
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
     Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
     Seccion.finanzas => const VistaFinanzas(),

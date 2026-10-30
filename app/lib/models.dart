@@ -323,6 +323,9 @@ class Tarea {
 
   /// OT industrial (iPultec): su tipo de mantenimiento; null en Pultec.
   TipoMantenimiento? tipoMantenimiento;
+
+  /// OT industrial: activo o componente sobre el que se hace (null = sin activo, siempre en Pultec).
+  String? activoId;
   DateTime? instalacion, ultimo, proximo;
 
   /// Cuándo pidió el cliente este mantenimiento.
@@ -366,6 +369,7 @@ class Tarea {
     this.clienteId,
     this.equipoId,
     this.tipoMantenimiento,
+    this.activoId,
     bool? plantilla,
     this.color,
     this.plantillaId,
@@ -428,6 +432,7 @@ class Tarea {
     'clienteId': clienteId,
     'equipoId': equipoId,
     if (tipoMantenimiento != null) 'tipoMantenimiento': tipoMantenimiento!.index,
+    if (activoId != null) 'activoId': activoId,
     'plantilla': plantilla,
     'color': color,
     'plantillaId': plantillaId,
@@ -468,6 +473,7 @@ class Tarea {
     tipoMantenimiento: j['tipoMantenimiento'] == null
         ? null
         : TipoMantenimiento.values[j['tipoMantenimiento'] as int],
+    activoId: j['activoId'] as String?,
     plantilla: j['plantilla'] as bool?,
     color: j['color'] as int?,
     plantillaId: j['plantillaId'] as String?,
