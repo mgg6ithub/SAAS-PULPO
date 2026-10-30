@@ -426,12 +426,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   'Nuevo mantenimiento',
                                   conIcono: true,
                                   icono: Icons.add_rounded,
+                                  tecla: 'N',
                                   onPressed: () => abrirPlanForm(context, activoId: a.id),
                                 )
                               : BotonPrimario(
                                   'Nuevo componente',
                                   conIcono: true,
                                   icono: Icons.add_rounded,
+                                  tecla: 'N',
                                   onPressed: () => abrirActivoForm(context, padreId: a.id),
                                 ),
                         ],
