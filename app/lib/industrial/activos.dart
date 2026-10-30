@@ -20,6 +20,17 @@ TipoMantenimiento? gravedadDe(String activoId) => masGrave(store.otsDe(activoId)
 Color colorEstado(TipoMantenimiento? g) => g?.color ?? P.verde;
 String textoEstado(TipoMantenimiento? g) => g?.etiqueta ?? 'Al día';
 
+/// Filtro de la lista de Activos por estado: 0 = todos; 1.. = tipo de mantenimiento; el último, al día.
+/// Fuera del estado para que «Ver más» de Inicio pueda dejarlo puesto antes de ir.
+final filtroActivos = ValueNotifier(0);
+const _filtros = ['Todos', 'Preventivo', 'No crítico', 'Crítico', 'Al día'];
+
+bool _pasaFiltro(TipoMantenimiento? g) => switch (filtroActivos.value) {
+  0 => true,
+  4 => g == null,
+  final f => g?.index == f - 1,
+};
+
 /// Sección «Activos» de iPultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
   const Activos({super.key});
@@ -33,11 +44,25 @@ class _ActivosState extends State<Activos> {
   String? abierto;
 
   @override
+  void initState() {
+    super.initState();
+    filtroActivos.addListener(_cambio);
+  }
+
+  @override
+  void dispose() {
+    filtroActivos.removeListener(_cambio);
+    super.dispose();
+  }
+
+  void _cambio() => setState(() => abierto = null);
+
+  @override
   Widget build(BuildContext context) {
     if (abierto != null) return ActivoDetalle(activoId: abierto!, onVolver: () => setState(() => abierto = null));
     final activos = store.hijosDe(null).where((a) {
       final t = '${a.tag} ${a.nombre} ${a.fabricante} ${a.modelo} ${a.division}'.toLowerCase();
-      return t.contains(q.toLowerCase());
+      return t.contains(q.toLowerCase()) && _pasaFiltro(gravedadDe(a.id));
     }).toList();
     return Padding(
       padding: margenPagina,
@@ -46,7 +71,17 @@ class _ActivosState extends State<Activos> {
         children: [
           BarraVista(
             izquierda: const [TituloVista('Activos')],
-            derecha: [Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v))],
+            derecha: [
+              SizedBox(
+                width: 440,
+                child: Pestanas(
+                  opciones: _filtros,
+                  seleccion: filtroActivos.value,
+                  onChanged: (i) => filtroActivos.value = i,
+                ),
+              ),
+              Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
+            ],
             principal: BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
           ),
           const SizedBox(height: huecoVista),
@@ -54,11 +89,13 @@ class _ActivosState extends State<Activos> {
             child: activos.isEmpty
                 ? Vacio(
                     icono: Icons.precision_manufacturing_outlined,
-                    titulo: q.isEmpty ? 'Aún no tienes activos' : null,
-                    texto: q.isEmpty
+                    titulo: q.isEmpty && filtroActivos.value == 0 ? 'Aún no tienes activos' : null,
+                    texto: q.isEmpty && filtroActivos.value != 0
+                        ? 'Ninguna máquina con este estado'
+                        : q.isEmpty
                         ? 'Da de alta tus máquinas (camiones, compresores, prensas…) y sus componentes.'
                         : 'Ningún activo coincide con la búsqueda',
-                    accion: q.isEmpty
+                    accion: q.isEmpty && filtroActivos.value == 0
                         ? FilledButton(
                             onPressed: () => abrirActivoForm(context),
                             child: const Text('Añadir el primero'),
@@ -502,6 +539,7 @@ class _ActivoFormState extends State<ActivoForm> {
           etiqueta('Programar por'),
           conMargen(
             BotonMenu<FrecuenciaActivo>(
+              relleno: EdgeInsets.zero,
               tooltip: 'Cómo se programa el mantenimiento',
               seleccionado: a.frecuencia,
               opciones: [
@@ -557,7 +595,7 @@ class _ActivoFormState extends State<ActivoForm> {
               obligatorio: true,
             ),
             campo(
-              'Contador en el último mantenimiento (h)',
+              'Contador al último mantenimiento (h)',
               ultimoContador,
               teclado: const TextInputType.numberWithOptions(decimal: true),
               error: errores['ultimo'],
@@ -565,10 +603,10 @@ class _ActivoFormState extends State<ActivoForm> {
             ),
           ),
           CampoFecha('Fecha de la lectura', a.fechaLectura, (d) => setState(() => a.fechaLectura = d), hasta: hoy()),
-          const SizedBox(height: 12),
           etiqueta('Ritmo de uso'),
           conMargen(
             BotonMenu<bool>(
+              relleno: EdgeInsets.zero,
               tooltip: 'Horas de uso diarias o semanales',
               seleccionado: a.usoSemanal,
               opciones: const [(false, Text('Media por día natural')), (true, Text('Total por semana'))],

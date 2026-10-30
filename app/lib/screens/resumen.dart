@@ -15,7 +15,7 @@ import 'estadisticas.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
 import '../marca.dart';
-import '../industrial/activos.dart' show abrirActivoForm;
+import '../industrial/activos.dart' show abrirActivoForm, filtroActivos;
 import '../industrial/vistazo.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
@@ -86,11 +86,6 @@ class Resumen extends StatelessWidget {
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pulpo.
-                  // iPultec: lo primero, todas las máquinas con el color de su estado.
-                  if (industrial && store.activos.isNotEmpty) ...[
-                    VistazoActivos(onAbrir: onCliente ?? (_) {}, columnas: dosCol ? 3 : 1),
-                    const SizedBox(height: 32),
-                  ],
                   if (!hayTarea) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
                     _Kpis(
@@ -100,7 +95,20 @@ class Resumen extends StatelessWidget {
                       hechas: hechas30,
                       dosCol: dosCol,
                     ),
-                    const SizedBox(height: 16),
+                    // iPultec: bajo las cifras, las máquinas por tipo de mantenimiento pendiente.
+                    if (industrial && store.activos.isNotEmpty) ...[
+                      const SizedBox(height: 32),
+                      VistazoActivos(
+                        onAbrir: onCliente ?? (_) {},
+                        onVerMas: (f) {
+                          filtroActivos.value = f;
+                          onIr(Seccion.clientes);
+                        },
+                        columnas: dosCol ? 3 : 1,
+                      ),
+                      const SizedBox(height: 32),
+                    ] else
+                      const SizedBox(height: 16),
                     par(
                       _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
                       _CargaTrabajadores(onTrabajador: onTrabajador),
@@ -847,6 +855,8 @@ class _HeroState extends State<_Hero> {
   }
 
   String get saludo {
+    // iPultec: tono de planta, sin saludo ni sol.
+    if (industrial) return 'Estado de la planta';
     final h = _ahora.hour;
     return h >= 6 && h < 14 ? 'Buenos días' : (h >= 14 && h < 21 ? 'Buenas tardes' : 'Buenas noches');
   }
@@ -887,11 +897,11 @@ class _HeroState extends State<_Hero> {
   @override
   Widget build(BuildContext context) {
     // Desde el primer cliente, mostrar las cifras aunque la guía siga pendiente.
-    final clientes = store.clientes.length;
+    final clientes = industrial ? store.hijosDe(null).length : store.clientes.length;
     final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
     final trabajadores = store.trabajadores.length;
     final cifras = [
-      (clientes, m(clientes == 1 ? 'cliente' : 'clientes')),
+      (clientes, industrial ? (clientes == 1 ? 'activo' : 'activos') : m(clientes == 1 ? 'cliente' : 'clientes')),
       (trabajos, m(trabajos == 1 ? 'trabajo' : 'trabajos')),
       (trabajadores, m(trabajadores == 1 ? 'trabajador' : 'trabajadores')),
     ];
@@ -918,10 +928,13 @@ class _HeroState extends State<_Hero> {
           padding: const EdgeInsets.fromLTRB(_sangriaHero, 18, _sangriaHero, 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
-            // Claro a la izquierda y el morado del logo a la derecha, como la versión antigua.
-            gradient: LinearGradient(
-              colors: [Color.lerp(P.morado, Colors.white, .22)!, Color.lerp(P.morado, Colors.white, .04)!],
-            ),
+            // iPultec: color liso, más sobrio. Pulpo: claro a la izquierda y el morado del logo a la derecha.
+            color: industrial ? P.morado : null,
+            gradient: industrial
+                ? null
+                : LinearGradient(
+                    colors: [Color.lerp(P.morado, Colors.white, .22)!, Color.lerp(P.morado, Colors.white, .04)!],
+                  ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -930,15 +943,16 @@ class _HeroState extends State<_Hero> {
                 TextSpan(
                   text: saludo,
                   children: [
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 10),
-                        child: ExcludeSemantics(
-                          child: CustomPaint(size: const Size.square(36), painter: _IconoSaludo(_ahora.hour)),
+                    if (!industrial)
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: ExcludeSemantics(
+                            child: CustomPaint(size: const Size.square(36), painter: _IconoSaludo(_ahora.hour)),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 style: TextStyle(

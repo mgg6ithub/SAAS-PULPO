@@ -2140,7 +2140,11 @@ class BotonMenu<T> extends StatefulWidget {
     required this.onSelected,
     required this.child,
     this.seleccionado,
+    this.relleno = const EdgeInsets.symmetric(horizontal: 8),
   });
+
+  /// Sin relleno cuando hace de campo de formulario, para alinearse con los demás campos.
+  final EdgeInsets relleno;
 
   @override
   State<BotonMenu<T>> createState() => _BotonMenuState<T>();
@@ -2181,7 +2185,7 @@ class _BotonMenuState<T> extends State<BotonMenu<T>> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: widget.relleno,
           decoration: BoxDecoration(
             color: hover && !abierto ? P.hover : P.hover.withValues(alpha: 0),
             borderRadius: BorderRadius.circular(P.radioControl),

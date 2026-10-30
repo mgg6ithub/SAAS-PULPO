@@ -4,6 +4,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'activo.dart';
 import 'activos.dart';
 import 'gravedad.dart';
 import 'tipo_mantenimiento.dart';
@@ -54,73 +55,127 @@ class LeyendaEstados extends StatelessWidget {
   }
 }
 
-/// Inicio de iPultec: todas las máquinas de un vistazo con el color de su mantenimiento pendiente más
-/// grave, de más a menos grave. Al pulsar una se abre su ficha con el árbol de componentes.
+/// Inicio de iPultec: una columna por tipo de mantenimiento pendiente con sus 3 primeras máquinas.
+/// «Ver más» lleva a Activos filtrado por ese tipo; al pulsar una máquina se abre su ficha.
 class VistazoActivos extends StatelessWidget {
   final ValueChanged<String> onAbrir;
+
+  /// Abre Activos con el filtro ya puesto (0 = todos; 1.. = tipo de mantenimiento).
+  final ValueChanged<int> onVerMas;
   final int columnas;
-  const VistazoActivos({super.key, required this.onAbrir, required this.columnas});
+  const VistazoActivos({super.key, required this.onAbrir, required this.onVerMas, required this.columnas});
+
+  static const _maximo = 3;
 
   @override
   Widget build(BuildContext context) {
-    final activos = [for (final a in store.hijosDe(null).where((a) => a.activo)) (a, gravedadDe(a.id))]
-      ..sort((x, y) => (y.$2?.index ?? -1).compareTo(x.$2?.index ?? -1));
+    final activos = [for (final a in store.hijosDe(null).where((a) => a.activo)) (a, gravedadDe(a.id))];
+    final alDia = activos.where((x) => x.$2 == null).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Estado de las máquinas',
-          style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Estado de las máquinas',
+                style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
+              ),
+            ),
+            Enlace(alDia == 0 ? 'Ver todas' : 'Ver todas · $alDia al día', onTap: () => onVerMas(0)),
+          ],
         ),
-        const SizedBox(height: 10),
-        LeyendaEstados(columnas: columnas > 1),
         const SizedBox(height: 14),
         Rejilla(
           columnas: columnas,
           children: [
-            for (final (a, g) in activos)
-              HoverCard(
-                padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-                onTap: () => onAbrir(a.id),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        puntoTipo(colorEstado(g), tam: 10),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            a.titulo,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: -.2),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      [
-                        textoEstado(g),
-                        _pendientes(a.id),
-                        if (a.division.isNotEmpty) a.division,
-                      ].where((x) => x.isNotEmpty).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: P.textoSuave, fontSize: 13),
-                    ),
-                  ],
-                ),
+            for (final t in TipoMantenimiento.values)
+              _Columna(
+                tipo: t,
+                activos: [
+                  for (final (a, g) in activos)
+                    if (g == t) a,
+                ],
+                onAbrir: onAbrir,
+                onVerMas: () => onVerMas(t.index + 1),
               ),
           ],
         ),
       ],
     );
   }
+}
+
+class _Columna extends StatelessWidget {
+  final TipoMantenimiento tipo;
+  final List<Activo> activos;
+  final ValueChanged<String> onAbrir;
+  final VoidCallback onVerMas;
+  const _Columna({required this.tipo, required this.activos, required this.onAbrir, required this.onVerMas});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      // Qué significa cada tipo: al pasar el ratón, como el resto de ayudas.
+      Align(
+        alignment: Alignment.centerLeft,
+        child: Tooltip(
+          message: tipo.descripcion,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                puntoTipo(tipo.color),
+                const SizedBox(width: 8),
+                Text(tipo.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(width: 6),
+                Text('${activos.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      if (activos.isEmpty)
+        Text('Ninguna máquina', style: TextStyle(color: P.textoSuave, fontSize: 13))
+      else
+        for (final a in activos.take(VistazoActivos._maximo)) ...[
+          HoverCard(
+            padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+            onTap: () => onAbrir(a.id),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  a.titulo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -.2),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  [_pendientes(a.id), if (a.division.isNotEmpty) a.division].where((x) => x.isNotEmpty).join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: P.textoSuave, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      if (activos.length > VistazoActivos._maximo)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Enlace('Ver más (${activos.length - VistazoActivos._maximo})', onTap: onVerMas),
+        ),
+    ],
+  );
 
   String _pendientes(String id) {
     final n = store.otsDe(id).where(otPendiente).length;
-    return n == 0 ? '' : '$n ${n == 1 ? 'pendiente' : 'pendientes'}';
+    return '$n ${n == 1 ? 'orden pendiente' : 'órdenes pendientes'}';
   }
 }
