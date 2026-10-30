@@ -348,17 +348,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           ),
           const SizedBox(height: 10),
         ],
-        Flexible(
-          child: Tarjeta(
-            padding: EdgeInsets.zero,
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: lista.length,
-              separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
-              itemBuilder: (context, i) => filaPlan(context, lista[i], conCodigo: lista[i].activoId != a.id),
-            ),
-          ),
-        ),
+        Flexible(child: TablaPlanes(lista, activoId: a.id)),
       ],
     );
   }

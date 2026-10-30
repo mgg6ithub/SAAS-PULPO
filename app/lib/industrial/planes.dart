@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'gravedad.dart';
 import 'plan.dart';
 import 'tipo_mantenimiento.dart';
 
@@ -21,21 +22,110 @@ DateTime? proximoPlan(PlanMantenimiento p) {
   return masDias(a.fechaLectura, dias);
 }
 
-/// Fila de un mantenimiento: lo que hay que hacer. «Asignar a técnico» crea su OT ya rellena para revisarla.
-/// Con [conCodigo], el tag del activo o componente al que pertenece.
-Widget filaPlan(BuildContext context, PlanMantenimiento p, {bool conCodigo = false}) => FilaLista(
-  lider: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
-  titulo: p.nombre.isEmpty ? 'Sin nombre' : p.nombre,
-  subtitulo: [
-    p.descripcion,
-    if (conCodigo) store.activo(p.activoId)?.titulo ?? '',
-    p.cada,
-    p.categoria,
-    if (proximoPlan(p) != null) 'Próximo ${p.proximo == null ? '≈ ' : ''}${fecha(proximoPlan(p)!)}',
-  ].where((x) => x.isNotEmpty).join(' · '),
-  derecha: Enlace('Asignar a técnico', onTap: () => abrirTareaForm(context, null, borrador: p.ot(store.nuevoId()))),
-  onTap: () => abrirPlanForm(context, activoId: p.activoId, original: p),
-);
+/// Horas que le quedan a un mantenimiento por horas, con el contador de su activo o componente.
+double? horasRestantesPlan(PlanMantenimiento p) {
+  final a = store.activo(p.activoId);
+  if (p.cadaHoras == null || a == null) return null;
+  return p.cadaHoras! - (a.horas - (p.ultimoHoras ?? 0));
+}
+
+/// La OT pendiente que salió de este mantenimiento (mismo activo y nombre), si la hay.
+Tarea? otDePlan(PlanMantenimiento p) => store.tareas
+    .where((t) => !t.esPlantilla && t.activa && t.activoId == p.activoId && t.nombre == p.nombre && otPendiente(t))
+    .firstOrNull;
+
+/// Lista de mantenimientos en tabla, como la de componentes: qué es (con su breve descripción), cada cuánto,
+/// horas que quedan, próximo y a quién se asigna. Asignar a un técnico crea su OT.
+class TablaPlanes extends StatefulWidget {
+  final List<PlanMantenimiento> planes;
+
+  /// Id del activo abierto: los de sus componentes llevan delante su código.
+  final String activoId;
+  const TablaPlanes(this.planes, {super.key, required this.activoId});
+
+  @override
+  State<TablaPlanes> createState() => _TablaPlanesState();
+}
+
+class _TablaPlanesState extends State<TablaPlanes> {
+  /// Borradores de OT de los mantenimientos aún sin asignar, para el selector de técnicos.
+  final _borradores = <String, Tarea>{};
+
+  @override
+  Widget build(BuildContext context) => SegunTamano(
+    clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
+    builder: (context, box) {
+      final ancho = box.maxWidth > 980;
+      final medio = box.maxWidth > 600;
+      final ps = widget.planes;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Tabla(
+          columnas: [
+            const Col('Mantenimiento', flex: 4),
+            if (ancho) const Col('Cada cuánto', flex: 2),
+            if (medio) const Col('Horas restantes', ancho: 130, derecha: true),
+            const Col('Próximo', ancho: 140),
+            if (medio) const Col('Asignado a', ancho: 96),
+          ],
+          filas: ps.length,
+          onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
+          pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
+          celdas: (i) {
+            final p = ps[i];
+            final codigo = p.activoId == widget.activoId ? '' : store.activo(p.activoId)?.titulo ?? '';
+            final h = horasRestantesPlan(p);
+            final d = proximoPlan(p);
+            final ot = otDePlan(p) ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
+            return [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true),
+                          if (codigo.isNotEmpty || p.descripcion.isNotEmpty)
+                            Text(
+                              [codigo, p.descripcion].where((x) => x.isNotEmpty).join(' · '),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, color: P.textoSuave, height: 1.35),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (ancho) celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true),
+              if (medio)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
+                ),
+              celdaTexto(d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}', suave: true),
+              if (medio)
+                SelectorTrabajadores(ot, () {
+                  // La primera asignación crea la OT; luego se edita la misma.
+                  store.guardarTarea(ot);
+                  setState(() => _borradores.remove(p.id));
+                }, compacto: true),
+            ];
+          },
+        ),
+      );
+    },
+  );
+}
 
 Future<void> abrirPlanForm(BuildContext context, {required String activoId, PlanMantenimiento? original}) =>
     abrirPanel(context, PlanForm(activoId: activoId, original: original));
