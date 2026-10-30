@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'ajustes.dart';
 import 'finanzas.dart';
 import 'forms.dart';
+import 'marca.dart';
 import 'models.dart';
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
@@ -569,7 +570,7 @@ class _BarraState extends State<_Barra> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Pulpo',
+                          Marca.nombre,
                           maxLines: 1,
                           overflow: TextOverflow.clip,
                           style: TextStyle(
