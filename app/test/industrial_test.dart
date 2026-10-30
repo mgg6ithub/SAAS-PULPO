@@ -10,6 +10,7 @@ import 'package:pulpo/industrial/plan.dart';
 import 'package:pulpo/industrial/planes.dart';
 import 'package:pulpo/industrial/vistazo.dart';
 import 'package:pulpo/models.dart';
+import 'package:pulpo/marca.dart';
 import 'package:pulpo/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -93,7 +94,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: TrabajadorForm())));
     await tester.pumpAndSettle();
     expect(find.text('Especialidades industriales'), findsOneWidget);
-  });
+  }, skip: !industrial);
 
   for (final ancho in [1440.0, 700.0, 420.0]) {
     testWidgets('IPT-007: el formulario de mantenimiento se pinta y valida a ${ancho.round()} px', (tester) async {

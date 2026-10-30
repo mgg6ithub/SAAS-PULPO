@@ -11,7 +11,7 @@ SaaS de automatización de mantenimiento para empresas pequeñas de mantenimient
 
 ## Interfaz: coherencia visual obligatoria
 Antes de implementar, cambiar o crear cualquier vista:
-- Lee `~/Desktop/CEREBRO/Proyectos/Pulpo/Apariencia/MOC - Apariencia.md` (sistema, componentes, vistas de referencia y reglas) con la skill `pulpo-coherencia-visual`.
+- Lee `~/Desktop/CEREBRO/Proyectos/Pulpo/Pultec/Apariencia/MOC - Apariencia.md` (sistema, componentes, vistas de referencia y reglas) con la skill `pulpo-coherencia-visual`.
 - Estilo = demo de la landing (`landing/`): tarjetas blancas de borde fino sin sombra, tinta + morado del logo, Geist, mucho aire, pocos botones.
 - Solo tokens de `app/lib/theme.dart` (`P`, `margenPagina`) y componentes de `app/lib/widgets.dart`; nada de valores sueltos. Formularios con `VentanaFormulario` + `Bloque`.
 - Pensado para portátil 1080p: lo importante (calendario, mapa) ocupa el alto.
