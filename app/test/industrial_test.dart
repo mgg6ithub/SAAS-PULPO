@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
+import 'package:pulpo/industrial/incidencia.dart';
+import 'package:pulpo/industrial/mantenimientos.dart';
 import 'package:pulpo/industrial/plan.dart';
 import 'package:pulpo/industrial/planes.dart';
 import 'package:pulpo/models.dart';
@@ -16,6 +18,7 @@ void main() {
     await store.cargar();
     store.activos = [];
     store.planes = [];
+    store.incidencias = [];
     store.tareas.removeWhere((t) => t.id.startsWith('ot'));
     store
       ..guardarActivo(Activo(id: 'a1', tag: 'CAM-01', nombre: 'Camión'))
@@ -94,13 +97,73 @@ void main() {
       tester.view.physicalSize = Size(ancho, 1000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: PlanForm(activoId: 'a2'))));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: PlanForm(activoId: 'a2')),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Guardar').last);
       await tester.pumpAndSettle();
       expect(find.text('Ponle un nombre'), findsOneWidget);
       expect(store.planes, isEmpty);
+    });
+  }
+
+  for (final ancho in [1440.0, 980.0, 700.0, 420.0]) {
+    testWidgets('IPT-010: pendientes e incidencias por activo, con su gravedad, a ${ancho.round()} px', (tester) async {
+      tester.view.physicalSize = Size(ancho, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      store
+        ..guardarActivo(Activo(id: 'b1', tag: 'PRE-01', nombre: 'Prensa'))
+        ..guardarIncidencia(
+          Incidencia(id: 'i1', activoId: 'a3', descripcion: 'Fuga de aceite', gravedad: Gravedad.grave),
+        )
+        ..guardarIncidencia(Incidencia(id: 'i2', activoId: 'b1', descripcion: 'Ruido raro', gravedad: Gravedad.leve));
+      store.tareas
+        ..add(
+          Tarea(
+            id: 'ot1',
+            nombre: 'Cambiar junta',
+            activoId: 'a3',
+            tipoMantenimiento: TipoMantenimiento.correctivoCritico,
+          ),
+        )
+        ..add(Tarea(id: 'ot2', nombre: 'Engrasar', activoId: 'b1', tipoMantenimiento: TipoMantenimiento.preventivo));
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
+      await tester.pumpAndSettle();
+      // Móvil: las pestañas son un desplegable.
+      Future<void> pestana(String t, int cual) async {
+        if (find.text(t).evaluate().isEmpty) {
+          await tester.tap(find.byType(PopupMenuButton<int>).at(cual));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text(t).last);
+        await tester.pumpAndSettle();
+      }
+
+      await pestana('Mantenimientos', 0);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Cambiar junta'), findsOneWidget);
+      expect(find.text('Engrasar'), findsOneWidget);
+      await pestana('Incidencias', 1);
+      expect(find.text('Fuga de aceite'), findsOneWidget);
+      expect(find.text('Ruido raro'), findsOneWidget);
+      // Solo las de la prensa.
+      await tester.tap(find.byType(FiltroActivo));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('PRE-01 · Prensa').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Fuga de aceite'), findsNothing);
+      expect(find.text('Ruido raro'), findsOneWidget);
+      if (ancho > 980) expect(find.text('Leve'), findsOneWidget);
+      // La incidencia abre su ficha con la gravedad.
+      await tester.tap(find.text('Ruido raro'));
+      await tester.pumpAndSettle();
+      expect(find.text('Crear OT'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   }
 

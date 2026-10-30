@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'industrial/activo.dart';
+import 'industrial/incidencia.dart';
 import 'industrial/plan.dart';
 import 'models.dart';
 import 'nube.dart';
@@ -253,6 +254,9 @@ class Store extends ChangeNotifier {
 
   /// iPultec: mantenimientos periódicos de cada activo o componente.
   List<PlanMantenimiento> planes = [];
+
+  /// iPultec: avisos de avería de los activos.
+  List<Incidencia> incidencias = [];
   SharedPreferences? _prefs;
 
   /// Con sesión iniciada, cada cambio se guarda en Supabase en vez de en el navegador.
@@ -290,6 +294,7 @@ class Store extends ChangeNotifier {
     vencimientos = d.vencimientos;
     activos = d.activos;
     planes = d.planes;
+    incidencias = d.incidencias;
     tipos = d.tipos.isEmpty ? [...tiposBase] : d.tipos;
     competencias = d.competencias.isEmpty ? [...competenciasBase] : d.competencias;
   }
@@ -317,6 +322,7 @@ class Store extends ChangeNotifier {
     vencimientos = [];
     activos = [];
     planes = [];
+    incidencias = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     usoPlantillas = [];
@@ -335,6 +341,7 @@ class Store extends ChangeNotifier {
     vencimientos = [];
     activos = [];
     planes = [];
+    incidencias = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     notifyListeners();
@@ -362,6 +369,7 @@ class Store extends ChangeNotifier {
       vencimientos = [for (final x in j['vencimientos'] as List? ?? []) Vencimiento.fromJson(x)];
       activos = [for (final x in j['activos'] as List? ?? []) Activo.fromJson(x)];
       planes = [for (final x in j['planes'] as List? ?? []) PlanMantenimiento.fromJson(x)];
+      incidencias = [for (final x in j['incidencias'] as List? ?? []) Incidencia.fromJson(x)];
       if (j['tipos'] case final List l when l.isNotEmpty) tipos = [for (final x in l) TipoInfo.fromJson(x)];
       if (j['competencias'] case final List l when l.isNotEmpty) competencias = List<String>.from(l);
       // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
@@ -397,6 +405,7 @@ class Store extends ChangeNotifier {
         'vencimientos': [for (final x in vencimientos) x.toJson()],
         if (activos.isNotEmpty) 'activos': [for (final x in activos) x.toJson()],
         if (planes.isNotEmpty) 'planes': [for (final x in planes) x.toJson()],
+        if (incidencias.isNotEmpty) 'incidencias': [for (final x in incidencias) x.toJson()],
         'competencias': competencias,
       }),
     );
@@ -592,6 +601,7 @@ class Store extends ChangeNotifier {
     final rama = ramaDe(id);
     activos.removeWhere((a) => rama.contains(a.id));
     planes.removeWhere((p) => rama.contains(p.activoId));
+    incidencias.removeWhere((x) => rama.contains(x.activoId));
     for (final t in [...tareas, ...subtareas].where((t) => rama.contains(t.activoId))) {
       t.activoId = null;
     }
@@ -609,6 +619,16 @@ class Store extends ChangeNotifier {
 
   void borrarPlan(String id) {
     planes.removeWhere((p) => p.id == id);
+    _cambio();
+  }
+
+  void guardarIncidencia(Incidencia x) {
+    _poner(incidencias, x, (y) => y.id == x.id);
+    _cambio();
+  }
+
+  void borrarIncidencia(String id) {
+    incidencias.removeWhere((x) => x.id == id);
     _cambio();
   }
 
@@ -1198,6 +1218,7 @@ class Store extends ChangeNotifier {
     vencimientos = [];
     activos = [];
     planes = [];
+    incidencias = [];
     tareas = [
       Tarea(
         id: 'p1',

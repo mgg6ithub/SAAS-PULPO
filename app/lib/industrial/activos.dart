@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'gravedad.dart';
+import 'mantenimientos.dart';
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
@@ -28,6 +29,11 @@ class _ActivosState extends State<Activos> {
   String q = '';
   String? abierto;
 
+  /// Pestaña: 0 los activos, 1 sus mantenimientos (con el filtro [incidencias] y el activo [filtro]).
+  int pestana = 0;
+  bool incidencias = false;
+  String? filtro;
+
   @override
   Widget build(BuildContext context) {
     if (abierto != null) return ActivoDetalle(activoId: abierto!, onVolver: () => setState(() => abierto = null));
@@ -41,13 +47,43 @@ class _ActivosState extends State<Activos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BarraVista(
-            izquierda: const [TituloVista('Activos')],
-            derecha: [Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v))],
-            principal: BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
+            izquierda: [
+              const TituloVista('Activos'),
+              Pestanas(
+                opciones: const ['Activos', 'Mantenimientos'],
+                seleccion: pestana,
+                onChanged: (i) => setState(() => pestana = i),
+              ),
+              if (pestana == 1) ...[
+                Pestanas(
+                  opciones: const ['Pendientes', 'Incidencias'],
+                  seleccion: incidencias ? 1 : 0,
+                  onChanged: (i) => setState(() => incidencias = i == 1),
+                ),
+                FiltroActivo(filtro, (v) => setState(() => filtro = v)),
+              ],
+            ],
+            derecha: [
+              Buscador(
+                hint: pestana == 0 ? 'Buscar activo…' : 'Buscar…',
+                onChanged: (v) => setState(() => q = v),
+              ),
+            ],
+            principal: pestana == 0
+                ? BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context))
+                : BotonPrimario(
+                    'Nueva incidencia',
+                    // Sin activos aún, primero hay que dar de alta alguno.
+                    onPressed: () => store.activos.isEmpty
+                        ? abrirActivoForm(context)
+                        : abrirIncidenciaForm(context, activoId: filtro),
+                  ),
           ),
           const SizedBox(height: huecoVista),
           Expanded(
-            child: activos.isEmpty
+            child: pestana == 1
+                ? Mantenimientos(incidencias: incidencias, activoId: store.activo(filtro)?.id, q: q)
+                : activos.isEmpty
                 ? Vacio(
                     icono: Icons.precision_manufacturing_outlined,
                     titulo: q.isEmpty ? 'Aún no tienes activos' : null,
