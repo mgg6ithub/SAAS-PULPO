@@ -27,6 +27,7 @@ Widget filaPlan(BuildContext context, PlanMantenimiento p, {bool conCodigo = fal
   lider: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
   titulo: p.nombre.isEmpty ? 'Sin nombre' : p.nombre,
   subtitulo: [
+    p.descripcion,
     if (conCodigo) store.activo(p.activoId)?.titulo ?? '',
     p.cada,
     p.categoria,
@@ -56,6 +57,7 @@ class _PlanFormState extends State<PlanForm> {
   late final dias = TextEditingController(text: p.cadaDias?.toString() ?? '')..addListener(_alCambiarDias);
   late final horasC = TextEditingController(text: p.cadaHoras?.toString() ?? '')..addListener(() => setState(() {}));
   late final contador = TextEditingController(text: p.ultimoHoras == null ? '' : '${p.ultimoHoras}');
+  late final descripcion = TextEditingController(text: p.descripcion);
   late final repuestos = TextEditingController(text: p.repuestos);
   late final procedimiento = TextEditingController(text: p.procedimiento);
   bool intentoGuardar = false;
@@ -80,6 +82,7 @@ class _PlanFormState extends State<PlanForm> {
     if (errorNombre != null || errorCada != null) return;
     p
       ..nombre = nombre.text.trim()
+      ..descripcion = descripcion.text.trim()
       ..cadaDias = _entero(dias)
       ..cadaHoras = _entero(horasC)
       ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.'))
@@ -114,6 +117,7 @@ class _PlanFormState extends State<PlanForm> {
       campos: [
         Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
+          campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
         ]),
         Bloque('Cada cuánto', descripcion: 'Por días, por horas de uso o por lo que llegue antes. Sin próximo, se estima con el contador.', [
           dos(

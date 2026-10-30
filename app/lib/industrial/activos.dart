@@ -272,7 +272,8 @@ class ActivoDetalle extends StatefulWidget {
 class _ActivoDetalleState extends State<ActivoDetalle> {
   late String elegido = widget.activoId;
   int pestana = 0;
-  bool editando = false;
+  /// Sube al guardar o cancelar en Datos: el formulario vuelve a leer el activo.
+  int vuelta = 0;
   String? tareaId;
 
   /// Bloques plegables de Resumen y filtro de mantenimientos por código (null = todos).
@@ -283,7 +284,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     Tooltip.dismissAllToolTips();
     elegido = id;
     pestana = 0;
-    editando = false;
     codigo = null;
   });
 
@@ -432,8 +432,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               a.modelo,
             ].where((x) => x.isNotEmpty).join(' · '),
             acciones: [
-              if (pestana == 1 && !editando)
-                BotonPrimario('Editar', icono: Icons.edit_outlined, onPressed: () => setState(() => editando = true)),
               if (pestana == 2)
                 BotonPrimario('Nueva orden de trabajo', conIcono: true, icono: Icons.add_rounded, onPressed: () => _nuevaOt(a)),
             ],
@@ -444,7 +442,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             seleccion: pestana,
             onChanged: (i) => setState(() {
               pestana = i;
-              editando = false;
             }),
           ),
           const SizedBox(height: 16),
@@ -521,11 +518,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                     ],
                   ),
                   1 => ActivoForm(
-                    key: ValueKey(editando ? '${a.id}-editar' : '${a.id}-${jsonEncode(a.toJson())}'),
+                    key: ValueKey('${a.id}-$vuelta-${jsonEncode(a.toJson())}'),
                     original: a,
                     incrustada: true,
-                    soloLectura: !editando,
-                    onTerminar: () => setState(() => editando = false),
+                    onTerminar: () => setState(() => vuelta++),
                   ),
                   2 =>
                     ots.isEmpty

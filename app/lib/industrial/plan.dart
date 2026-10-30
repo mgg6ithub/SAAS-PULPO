@@ -3,7 +3,7 @@ import '../models.dart';
 /// Mantenimiento periódico de un activo o componente de iPultec: cada cuántos días u horas toca, de qué
 /// tipo es, qué categoría de técnico puede hacerlo, con qué repuestos y cómo. De él salen las OT.
 class PlanMantenimiento {
-  String id, activoId, nombre, categoria, repuestos, procedimiento;
+  String id, activoId, nombre, descripcion, categoria, repuestos, procedimiento;
   TipoMantenimiento tipo;
 
   /// Cada cuántos días o cada cuántas horas de uso (lo que llegue antes); null = sin ese límite.
@@ -17,6 +17,7 @@ class PlanMantenimiento {
     required this.id,
     required this.activoId,
     this.nombre = '',
+    this.descripcion = '',
     this.tipo = TipoMantenimiento.preventivo,
     this.cadaDias,
     this.cadaHoras,
@@ -60,6 +61,7 @@ class PlanMantenimiento {
     'id': id,
     'activoId': activoId,
     'nombre': nombre,
+    'descripcion': descripcion,
     'tipo': tipo.index,
     'cadaDias': cadaDias,
     'cadaHoras': cadaHoras,
@@ -77,6 +79,7 @@ class PlanMantenimiento {
     id: j['id'] as String,
     activoId: j['activoId'] as String,
     nombre: j['nombre'] as String? ?? '',
+    descripcion: j['descripcion'] as String? ?? '',
     tipo: TipoMantenimiento.values[j['tipo'] as int? ?? 0],
     cadaDias: j['cadaDias'] as int?,
     cadaHoras: j['cadaHoras'] as int?,
