@@ -143,13 +143,15 @@ void main() {
         ..fechaLectura = DateTime(2026, 10, 30);
       expect(horasRestantes(a), '≈ 2600 h');
       expect(proximaFecha(a), '≈ 06/11/2027');
-      tester.view.physicalSize = const Size(980, 1000);
+      tester.view.physicalSize = const Size(1440, 1000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       filtroActivos.value = 0;
       await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
       await tester.pumpAndSettle();
+      expect(find.text('Horas totales'), findsOneWidget);
       expect(find.text('Horas restantes'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('≈ 2600 h')).dx - tester.getTopRight(find.text('2400 h')).dx, greaterThanOrEqualTo(28));
       expect(find.text('≈ 2600 h'), findsOneWidget);
       expect(find.text('≈ 06/11/2027'), findsOneWidget);
       await tester.tap(find.text('CAM-01 · Camión'));

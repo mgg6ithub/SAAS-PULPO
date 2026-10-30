@@ -157,7 +157,7 @@ class _TablaActivos extends StatelessWidget {
             Col(componentes ? 'Componente' : 'Activo', flex: 3),
             if (ancho) const Col('Fabricante y modelo', flex: 2),
             if (ancho) const Col('División', flex: 2),
-            if (ancho) const Col('Horas', ancho: 100, derecha: true),
+            if (ancho) const Col('Horas totales', ancho: 120, derecha: true),
             if (medio) const Col('Horas restantes', ancho: 120),
             if (medio) const Col('Próximo mantenimiento', ancho: 160),
             const Col('Tipo de mantenimiento', ancho: 160),
@@ -186,8 +186,8 @@ class _TablaActivos extends StatelessWidget {
               ),
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
               if (ancho) celdaTexto(a.division, suave: true),
-              if (ancho) celdaTexto(horas(a.horas), suave: true),
-              if (medio) celdaTexto(horasRestantes(a), suave: true),
+              if (ancho) Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(a.horas), suave: true)),
+              if (medio) Padding(padding: const EdgeInsets.only(left: 12), child: celdaTexto(horasRestantes(a), suave: true)),
               if (medio)
                 Tooltip(
                   message: a.frecuencia == FrecuenciaActivo.horas
