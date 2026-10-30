@@ -516,6 +516,8 @@ class _ActivoFormState extends State<ActivoForm> {
     if (actual == null || actual < 0) errores['actual'] = 'Escribe un contador válido, desde 0';
     if (uso == null || uso < 0 || uso > (a.usoSemanal ? 168 : 24)) {
       errores['uso'] = a.usoSemanal ? 'Entre 0 y 168 horas semanales' : 'Entre 0 y 24 horas al día';
+    } else if (a.frecuencia == FrecuenciaActivo.horas && uso == 0) {
+      errores['uso'] = a.usoSemanal ? 'Indica las horas de uso por semana' : 'Indica las horas de uso por día';
     }
     if (a.frecuencia == FrecuenciaActivo.horas && (_valor(cadaHoras) == null || _valor(cadaHoras)! < .1)) {
       errores['intervalo'] = 'Indica un intervalo de al menos 0,1 horas';
@@ -543,7 +545,7 @@ class _ActivoFormState extends State<ActivoForm> {
     ..horasUso = _valor(ritmo, vacio: 0) ?? 0;
 
   String get _estimacion {
-    if (_erroresMantenimiento.isNotEmpty) return 'Completa los datos del mantenimiento para calcular la previsión.';
+    if (_erroresMantenimiento.isNotEmpty) return _erroresMantenimiento.values.first;
     final p = _prevision;
     final siguiente = p.proximoMantenimiento;
     if (p.frecuencia == FrecuenciaActivo.horas && (p.horasRestantes ?? 1) <= 0) {
@@ -681,9 +683,9 @@ class _ActivoFormState extends State<ActivoForm> {
               a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
               ritmo,
               teclado: const TextInputType.numberWithOptions(decimal: true),
-              hint: a.usoSemanal ? '35' : '7',
+              hint: 'Sin indicar',
               error: errores['uso'],
-              obligatorio: true,
+              obligatorio: a.frecuencia == FrecuenciaActivo.horas,
             ),
           ),
           if (a.frecuencia != FrecuenciaActivo.sinDefinir) Consejo(_estimacion),

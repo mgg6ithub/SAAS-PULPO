@@ -151,6 +151,11 @@ void main() {
       await tester.tap(find.text('Horas de uso'));
       await tester.pumpAndSettle();
       await escribir(tester, 'Cada cuántas horas', '5.000');
+      expect(find.text('Sin indicar'), findsOneWidget);
+      await tester.tap(find.text('Guardar').last);
+      await tester.pumpAndSettle();
+      expect(store.activos.any((a) => a.tag == 'CAM-02'), isFalse);
+      expect(find.text('Indica las horas de uso por día'), findsWidgets);
       await escribir(tester, 'Horas de uso por día', '7');
       expect(find.textContaining('Fecha estimada:'), findsOneWidget);
       await tester.tap(find.text('Guardar').last);
