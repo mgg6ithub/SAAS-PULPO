@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'en_vivo.dart';
 import 'informes.dart';
+import 'marca.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart' show P, TipoInfo, competencias, iconosTipo, tipos;
@@ -128,7 +129,8 @@ class Nube {
     invitacion ??= prefs.getString('pulpo_invitacion');
     final Map r;
     try {
-      r = (await _db.rpc('entrar', params: {'p_codigo': invitacion}) as List).single as Map;
+      final datos = {'p_codigo': invitacion, if (industrial) 'p_marca': _marca};
+      r = (await _db.rpc('entrar', params: datos) as List).single as Map;
     } on PostgrestException catch (e) {
       if (e.code == 'P0001') {
         await _olvidarInvitacion();
@@ -145,8 +147,9 @@ class Nube {
     await _abierta?._enVivo?.parar();
     final ms = await _db
         .from('miembros')
-        .select('empresa_id, rol, trabajador_id')
-        .eq('usuario_id', _db.auth.currentUser!.id);
+        .select('empresa_id, rol, trabajador_id, empresas!inner(marca)')
+        .eq('usuario_id', _db.auth.currentUser!.id)
+        .eq('empresas.marca', _marca);
     final elegida = prefs.getString('pulpo_empresa');
     final m = ms.firstWhere(
       (x) => x['empresa_id'] == elegida,
@@ -425,12 +428,16 @@ class Nube {
 
   // ── Empresas ──
 
+  /// Cada app solo ve y crea empresas de su marca (`empresas.marca`).
+  static const _marca = industrial ? 'industrial' : 'residencial';
+
   /// Empresas de la cuenta con su rol, icono y color, por nombre.
   static Future<List<EmpresaDeCuenta>> empresas() async {
     final ms = await _db
         .from('miembros')
-        .select('empresa_id, rol, empresas(nombre, tipo, icono, color)')
-        .eq('usuario_id', _db.auth.currentUser!.id);
+        .select('empresa_id, rol, empresas!inner(nombre, tipo, icono, color, marca)')
+        .eq('usuario_id', _db.auth.currentUser!.id)
+        .eq('empresas.marca', _marca);
     return [
       for (final m in ms)
         (
@@ -469,7 +476,11 @@ class Nube {
 
   /// Crea otra empresa, la hace administradora y entra en ella.
   static Future<void> crearEmpresa(String nombre, String tipo) async {
-    final e = await _db.from('empresas').insert({'nombre': nombre, 'tipo': tipo}).select('id').single();
+    final e = await _db
+        .from('empresas')
+        .insert({'nombre': nombre, 'tipo': tipo, if (industrial) 'marca': _marca})
+        .select('id')
+        .single();
     final id = e['id'] as String;
     await _db.from('miembros').insert({'usuario_id': _db.auth.currentUser!.id, 'empresa_id': id, 'rol': 'admin'});
     _recienCreada = id;
