@@ -108,6 +108,7 @@ class _TablaActivos extends StatelessWidget {
           if (ancho) const Col('División', flex: 2),
           if (medio) const Col('Componentes', ancho: 120, derecha: true),
           if (ancho) const Col('Horas', ancho: 100, derecha: true),
+          if (medio) const Col('Próximo mantenimiento', ancho: 175),
           if (medio) const Col('Estado', ancho: 190),
         ],
         filas: activos.length,
@@ -126,6 +127,7 @@ class _TablaActivos extends StatelessWidget {
             if (ancho) celdaTexto(a.division, suave: true),
             if (medio) celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
             if (ancho) celdaTexto(horas(a.horas), suave: true),
+            if (medio) celdaTexto(fecha(a.proximoMantenimiento), suave: true),
             if (medio)
               Align(
                 alignment: Alignment.centerLeft,
@@ -173,7 +175,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       activoId: a.id,
       plantilla: false,
       tipoMantenimiento: TipoMantenimiento.preventivo,
-      proximo: hoy(),
+      proximo: a.proximoMantenimiento ?? hoy(),
       periodicidad: Periodicidad.unica,
       criticidad: Criticidad.rutinaria,
     ),
@@ -268,7 +270,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             Pill(textoEstado(g), colorEstado(g), punto: true),
                             Text('${store.ramaDe(a.id).length - 1} componentes'),
                             Text('${ots.where(otPendiente).length} OT pendientes'),
-                            if (a.horas > 0) Text(horas(a.horas)),
+                            if (a.horas > 0) Text('Lectura: ${horas(a.horas)}'),
+                            if (a.proximoMantenimiento != null)
+                              Text('Próximo mantenimiento: ${fecha(a.proximoMantenimiento)}'),
+                            if (a.frecuencia == FrecuenciaActivo.horas && a.horasRestantes != null)
+                              Text('Restan ${a.horasRestantes!.toStringAsFixed(0)} h'),
                           ],
                         ),
                       ),
@@ -382,17 +388,209 @@ class _ActivoFormState extends State<ActivoForm> {
   late final modelo = TextEditingController(text: a.modelo);
   late final serie = TextEditingController(text: a.numeroSerie);
   late final division = TextEditingController(text: a.division);
-  late final horasC = TextEditingController(text: a.horas == 0 ? '' : '${a.horas}');
+  late final horasC = TextEditingController(text: a.horas == 0 ? '' : '${a.horas}')
+    ..addListener(() => setState(() => a.fechaLectura = hoy()));
+  late final cadaHoras = TextEditingController(text: a.cadaHoras?.toString() ?? '')..addListener(_actualizar);
+  late final cadaMeses = TextEditingController(text: a.cadaMeses?.toString() ?? '')..addListener(_actualizar);
+  late final ultimoContador = TextEditingController(text: '${a.horasUltimoMantenimiento}')..addListener(_actualizar);
+  late final ritmo = TextEditingController(text: a.horasUso == 0 ? '' : '${a.horasUso}')..addListener(_actualizar);
+  final _claveIdentificacion = GlobalKey(), _claveMantenimiento = GlobalKey();
   late final repuestos = TextEditingController(text: a.repuestos);
   late final notas = TextEditingController(text: a.notas);
   bool intentoGuardar = false;
 
   @override
   void dispose() {
-    for (final c in [tag, nombre, fabricante, modelo, serie, division, horasC, repuestos, notas]) {
+    for (final c in [
+      tag,
+      nombre,
+      fabricante,
+      modelo,
+      serie,
+      division,
+      horasC,
+      repuestos,
+      notas,
+      cadaHoras,
+      cadaMeses,
+      ultimoContador,
+      ritmo,
+    ]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  void _actualizar() => setState(() {});
+
+  double? _valor(TextEditingController c, {double? vacio}) {
+    var texto = c.text.trim().replaceAll(' ', '');
+    if (texto.isEmpty) return vacio;
+    if (RegExp(r'^\d{1,3}(\.\d{3})+(,\d+)?$').hasMatch(texto)) texto = texto.replaceAll('.', '');
+    final n = double.tryParse(texto.replaceAll(',', '.'));
+    return n != null && n.isFinite ? n : null;
+  }
+
+  Map<String, String> get _erroresMantenimiento {
+    final errores = <String, String>{};
+    final actual = _valor(horasC, vacio: 0), ultimo = _valor(ultimoContador, vacio: 0);
+    final uso = _valor(ritmo, vacio: 0);
+    if (actual == null || actual < 0) errores['actual'] = 'Escribe un contador válido, desde 0';
+    if (ultimo == null || ultimo < 0 || (actual != null && ultimo > actual)) {
+      errores['ultimo'] = 'No puede superar el contador actual';
+    }
+    if (uso == null || uso < 0 || uso > (a.usoSemanal ? 168 : 24)) {
+      errores['uso'] = a.usoSemanal ? 'Entre 0 y 168 horas semanales' : 'Entre 0 y 24 horas al día';
+    }
+    if (a.frecuencia == FrecuenciaActivo.horas && (_valor(cadaHoras) == null || _valor(cadaHoras)! < .1)) {
+      errores['intervalo'] = 'Indica un intervalo de al menos 0,1 horas';
+    }
+    if (a.frecuencia == FrecuenciaActivo.meses &&
+        (int.tryParse(cadaMeses.text) == null || int.parse(cadaMeses.text) < 1 || int.parse(cadaMeses.text) > 1200)) {
+      errores['intervalo'] = 'Indica de 1 a 1200 meses';
+    }
+    if (a.frecuencia == FrecuenciaActivo.fecha && a.fechaMantenimiento == null) {
+      errores['fecha'] = 'Elige la próxima fecha';
+    }
+    return errores;
+  }
+
+  void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final c = clave.currentContext;
+    if (c != null) Scrollable.ensureVisible(c, duration: const Duration(milliseconds: 300), alignment: .1);
+  });
+
+  Activo get _prevision => a.copia()
+    ..horas = _valor(horasC, vacio: 0) ?? 0
+    ..cadaHoras = _valor(cadaHoras)
+    ..cadaMeses = int.tryParse(cadaMeses.text)
+    ..horasUltimoMantenimiento = _valor(ultimoContador, vacio: 0) ?? 0
+    ..horasUso = _valor(ritmo, vacio: 0) ?? 0;
+
+  String get _estimacion {
+    if (_erroresMantenimiento.isNotEmpty) return 'Completa los datos del mantenimiento para calcular la previsión.';
+    final p = _prevision;
+    final siguiente = p.proximoMantenimiento;
+    if (p.frecuencia == FrecuenciaActivo.horas && (p.horasRestantes ?? 1) <= 0) {
+      return 'El mantenimiento ya está vencido según la lectura del contador.';
+    }
+    if (siguiente == null) return 'Indica un ritmo de uso válido para estimar la próxima fecha.';
+    final ahora = hoy();
+    final dias = DateTime.utc(
+      siguiente.year,
+      siguiente.month,
+      siguiente.day,
+    ).difference(DateTime.utc(ahora.year, ahora.month, ahora.day)).inDays;
+    final plazo = dias == 0
+        ? 'hoy'
+        : dias > 0
+        ? 'en $dias días'
+        : 'vencido hace ${-dias} días';
+    return '${p.frecuencia == FrecuenciaActivo.horas ? 'Fecha estimada' : 'Próximo mantenimiento'}: '
+        '${fecha(siguiente)} · $plazo.'
+        '${p.frecuencia == FrecuenciaActivo.horas ? ' Faltan ${p.horasRestantes!.toStringAsFixed(0)} horas según la lectura real.' : ''}';
+  }
+
+  Widget _mantenimiento() {
+    final errores = intentoGuardar ? _erroresMantenimiento : <String, String>{};
+    return KeyedSubtree(
+      key: _claveMantenimiento,
+      child: Bloque(
+        'Mantenimiento propio',
+        descripcion: 'Este activo o componente tiene su propio intervalo, independiente del resto.',
+        [
+          etiqueta('Programar por'),
+          conMargen(
+            BotonMenu<FrecuenciaActivo>(
+              tooltip: 'Cómo se programa el mantenimiento',
+              seleccionado: a.frecuencia,
+              opciones: [
+                for (final f in FrecuenciaActivo.values)
+                  (f, Text(const ['Sin definir', 'Horas de uso', 'Meses', 'Fecha concreta'][f.index])),
+              ],
+              onSelected: (f) => setState(() {
+                a.frecuencia = f;
+                if (f == FrecuenciaActivo.meses) a.ultimoMantenimiento ??= hoy();
+              }),
+              child: InputDecorator(
+                decoration: const InputDecoration(),
+                child: Text(const ['Sin definir', 'Horas de uso', 'Meses', 'Fecha concreta'][a.frecuencia.index]),
+              ),
+            ),
+          ),
+          if (a.frecuencia == FrecuenciaActivo.horas)
+            campo(
+              'Cada cuántas horas',
+              cadaHoras,
+              teclado: const TextInputType.numberWithOptions(decimal: true),
+              hint: '5000',
+              error: errores['intervalo'],
+              obligatorio: true,
+            ),
+          if (a.frecuencia == FrecuenciaActivo.meses) ...[
+            campo(
+              'Cada cuántos meses',
+              cadaMeses,
+              teclado: TextInputType.number,
+              hint: '3',
+              error: errores['intervalo'],
+              obligatorio: true,
+            ),
+            CampoFecha(
+              'Último mantenimiento',
+              a.ultimoMantenimiento,
+              (d) => setState(() => a.ultimoMantenimiento = d),
+              hasta: hoy(),
+            ),
+          ],
+          if (a.frecuencia == FrecuenciaActivo.fecha) ...[
+            CampoFecha('Próximo mantenimiento', a.fechaMantenimiento, (d) => setState(() => a.fechaMantenimiento = d)),
+            if (errores['fecha'] != null) Text(errores['fecha']!, style: const TextStyle(color: P.rojo)),
+          ],
+          dos(
+            campo(
+              'Contador actual (h)',
+              horasC,
+              teclado: const TextInputType.numberWithOptions(decimal: true),
+              hint: '1200',
+              error: errores['actual'],
+              obligatorio: true,
+            ),
+            campo(
+              'Contador en el último mantenimiento (h)',
+              ultimoContador,
+              teclado: const TextInputType.numberWithOptions(decimal: true),
+              error: errores['ultimo'],
+              obligatorio: true,
+            ),
+          ),
+          CampoFecha('Fecha de la lectura', a.fechaLectura, (d) => setState(() => a.fechaLectura = d), hasta: hoy()),
+          const SizedBox(height: 12),
+          etiqueta('Ritmo de uso'),
+          conMargen(
+            BotonMenu<bool>(
+              tooltip: 'Horas de uso diarias o semanales',
+              seleccionado: a.usoSemanal,
+              opciones: const [(false, Text('Media por día natural')), (true, Text('Total por semana'))],
+              onSelected: (v) => setState(() => a.usoSemanal = v),
+              child: InputDecorator(
+                decoration: const InputDecoration(),
+                child: Text(a.usoSemanal ? 'Total por semana' : 'Media por día natural'),
+              ),
+            ),
+          ),
+          campo(
+            a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
+            ritmo,
+            teclado: const TextInputType.numberWithOptions(decimal: true),
+            hint: a.usoSemanal ? '35' : '7',
+            error: errores['uso'],
+            obligatorio: true,
+          ),
+          if (a.frecuencia != FrecuenciaActivo.sinDefinir) Consejo(_estimacion),
+        ],
+      ),
+    );
   }
 
   bool get componente => a.padreId != null;
@@ -401,7 +599,8 @@ class _ActivoFormState extends State<ActivoForm> {
 
   void guardar() {
     setState(() => intentoGuardar = true);
-    if (error != null) return;
+    if (error != null) return _irA(_claveIdentificacion);
+    if (_erroresMantenimiento.isNotEmpty) return _irA(_claveMantenimiento);
     a
       ..tag = tag.text.trim()
       ..nombre = nombre.text.trim()
@@ -409,7 +608,11 @@ class _ActivoFormState extends State<ActivoForm> {
       ..modelo = modelo.text.trim()
       ..numeroSerie = serie.text.trim()
       ..division = division.text.trim()
-      ..horas = double.tryParse(horasC.text.trim().replaceAll(',', '.')) ?? 0
+      ..horas = _valor(horasC, vacio: 0) ?? 0
+      ..cadaHoras = a.frecuencia == FrecuenciaActivo.horas ? _valor(cadaHoras) : null
+      ..cadaMeses = a.frecuencia == FrecuenciaActivo.meses ? int.tryParse(cadaMeses.text) : null
+      ..horasUltimoMantenimiento = _valor(ultimoContador, vacio: 0) ?? 0
+      ..horasUso = _valor(ritmo, vacio: 0) ?? 0
       ..repuestos = repuestos.text.trim()
       ..notas = notas.text.trim();
     store.guardarActivo(a);
@@ -433,7 +636,11 @@ class _ActivoFormState extends State<ActivoForm> {
       titulo: existe ? 'Editar $que' : 'Nuevo $que',
       tituloDesplazado: [tag.text, nombre.text].where((x) => x.isNotEmpty).join(' · '),
       onGuardar: guardar,
-      avisos: [if (error != null) ('Te falta el tag o el nombre', () {})],
+      avisos: [
+        if (error != null) ('Te falta el tag o el nombre', () => _irA(_claveIdentificacion)),
+        if (intentoGuardar && _erroresMantenimiento.isNotEmpty)
+          (_erroresMantenimiento.values.first, () => _irA(_claveMantenimiento)),
+      ],
       onBorrar: !existe
           ? null
           : () async {
@@ -456,16 +663,20 @@ class _ActivoFormState extends State<ActivoForm> {
           descripcion: componente ? 'Qué pieza de la máquina es.' : 'Qué máquina es y cómo se identifica.',
           [
             dos(
-              campo('Tag', tag, hint: componente ? 'CAM-01-MOT' : 'CAM-01', error: error, obligatorio: true),
+              KeyedSubtree(
+                key: _claveIdentificacion,
+                child: campo('Tag', tag, hint: componente ? 'CAM-01-MOT' : 'CAM-01', error: error, obligatorio: true),
+              ),
               campo('Nombre', nombre, hint: componente ? 'Motor' : 'Camión cisterna', obligatorio: true),
             ),
           ],
         ),
         Bloque('Ficha técnica', descripcion: 'Los datos de la placa.', [
           dos(campo('Fabricante', fabricante), campo('Modelo', modelo)),
-          dos(campo('Número de serie', serie), campo('Horas de uso', horasC, hint: '0')),
+          campo('Número de serie', serie),
           if (!componente) campo('División o actividad', division, hint: 'Limpieza de tanques, transporte…'),
         ]),
+        _mantenimiento(),
         Bloque('Repuestos', descripcion: 'Piezas y consumibles que usa.', [campo('Repuestos', repuestos, lineas: 3)]),
         Bloque('Notas', [campo('Notas internas', notas, lineas: 3)]),
       ],

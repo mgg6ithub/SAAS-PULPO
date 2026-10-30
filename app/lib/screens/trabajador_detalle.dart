@@ -82,7 +82,7 @@ class TrabajadorDetalle extends StatelessWidget {
                   ],
                 ),
                 titulo: w.nombreCompleto,
-                subtitulo: w.competencias.isEmpty ? 'Sin competencias' : w.competencias.join(' · '),
+                subtitulo: w.competencias.isEmpty ? (industrial ? 'Sin especialidades indicadas' : 'Sin competencias') : w.competencias.join(' · '),
                 acciones: [
                   w.activo
                       ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)

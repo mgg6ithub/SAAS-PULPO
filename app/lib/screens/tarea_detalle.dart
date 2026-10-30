@@ -65,7 +65,9 @@ class _TareaDetalleState extends State<TareaDetalle> {
             subtitulo: [
               t.tipo,
               if (padre != null) 'Subtrabajo de ${padre.nombre}',
-              cliente?.nombre ?? (t.esPlantilla ? 'Plantilla' : m('Sin cliente')),
+              t.esPlantilla ? 'Plantilla' : industrial
+                  ? store.activo(t.activoId)?.titulo ?? 'Sin activo'
+                  : cliente?.nombre ?? m('Sin cliente'),
             ].join(' · '),
             // Resumen: añadir subtrabajo; Datos: editar; Histórico: nada; Automatizaciones: añadir regla.
             acciones: [

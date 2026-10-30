@@ -500,6 +500,7 @@ Widget campo(
   int lineas = 1,
   String? error,
   bool obligatorio = false,
+  TextInputType? teclado,
 }) => Padding(
   padding: EdgeInsets.only(bottom: obligatorio ? 0 : 16),
   child: Column(
@@ -508,6 +509,7 @@ Widget campo(
       etiqueta(label),
       TextField(
         controller: c,
+        keyboardType: teclado,
         maxLines: lineas,
         decoration: InputDecoration(hintText: hint, errorText: error, helperText: obligatorio ? ' ' : null),
       ),
@@ -1081,7 +1083,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
 
   String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
   String? get errorCompetencias =>
-      intentoGuardar && w.competencias.isEmpty ? (industrial ? 'Elige una categoría' : 'Elige una competencia') : null;
+      intentoGuardar && !industrial && w.competencias.isEmpty ? (industrial ? 'Elige una categoría' : 'Elige una competencia') : null;
 
   void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
     final contexto = clave.currentContext;
@@ -1169,9 +1171,9 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ], pie: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20)),
       Bloque(
-        industrial ? 'Categoría' : 'Competencias',
+        industrial ? 'Especialidades' : 'Competencias',
         descripcion: industrial
-            ? 'Qué es capaz de hacer. Solo recibe OT de sus categorías.'
+            ? 'Áreas de mantenimiento del técnico. No limita la asignación de OT.'
             : m('Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.'),
         [
         KeyedSubtree(
@@ -1179,7 +1181,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              etiqueta(industrial ? 'Categorías' : 'Competencias'),
+              etiqueta(industrial ? 'Especialidades industriales' : 'Competencias'),
               DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
@@ -1201,13 +1203,14 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
           ),
         ),
         const SizedBox(height: 12),
-        campo('Títulos y carnés', titulos, hint: 'Carné RITE, PRL 60 h…'),
+        campo(industrial ? 'Habilitaciones y formación' : 'Títulos y carnés', titulos,
+          hint: industrial ? 'Mantenimiento industrial, soldadura, carretillas…' : 'Carné RITE, PRL 60 h…'),
       ]),
-      Bloque('Punto de salida', descripcion: 'De dónde sale y adónde vuelve cada día. Vacío = el almacén.', [
+      if (!industrial) Bloque('Punto de salida', descripcion: 'De dónde sale y adónde vuelve cada día. Vacío = el almacén.', [
         campo('Dirección', salida, hint: 'Su casa o la oficina'),
       ]),
       Bloque('Notas', [
-        campo('Información básica', info, lineas: 2),
+        campo(industrial ? 'Turno, zona o equipo de mantenimiento' : 'Información básica', info, lineas: 2),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Activo'),
@@ -1462,8 +1465,8 @@ class _TareaFormState extends State<TareaForm> {
     t
       ..plantillaId = p.id
       ..tipo = p.tipo
-      ..periodicidad = p.periodicidad
-      ..competencias = [...p.competencias]
+      ..periodicidad = industrial && !t.esPlantilla ? Periodicidad.unica : p.periodicidad
+      ..competencias = industrial && !t.esPlantilla ? [] : [...p.competencias]
       ..iva = p.iva
       ..proximo = t.proximo ?? widget.fecha ?? hoy();
     precio.text = p.precio == 0 ? '' : p.precio.toStringAsFixed(2).replaceAll('.', ',').replaceAll(',00', '');
@@ -1502,6 +1505,10 @@ class _TareaFormState extends State<TareaForm> {
       ..ubicacion = ubicacion.text.trim()
       ..notas = notas.text.trim()
       ..precio = double.tryParse(precio.text.trim().replaceAll(',', '.')) ?? 0;
+    if (industrial && !t.esPlantilla) {
+      t.competencias = [];
+      t.periodicidad = Periodicidad.unica;
+    }
     store.guardarTarea(t);
     if (widget.incrustada) {
       ScaffoldMessenger.of(
@@ -1533,7 +1540,7 @@ class _TareaFormState extends State<TareaForm> {
       tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
           ? m('Sin cliente: sirve de plantilla para crear trabajos en tus clientes.')
-          : store.cliente(t.clienteId)?.nombre,
+          : industrial ? store.activo(t.activoId)?.titulo : store.cliente(t.clienteId)?.nombre,
       bajoBotones: _menuGravedad(),
       incrustada: widget.incrustada,
       sinCabecera: widget.incrustada,
@@ -1616,13 +1623,16 @@ class _TareaFormState extends State<TareaForm> {
           pie: t.esPlantilla ? null : SelectorColorTarea(t, () => setState(() {})),
         ),
         if (!t.esPlantilla)
-          Bloque(m('Cliente y equipo'), descripcion: 'Para quién es y quién la hace.', [
+          Bloque(industrial ? 'Activo y técnico' : m('Cliente y equipo'), descripcion: industrial ? 'Dónde se realiza la intervención y quién la hace.' : 'Para quién es y quién la hace.', [
             dos(
               conMargen(
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    etiqueta(m('Cliente')),
+                    etiqueta(industrial ? 'Activo o componente' : m('Cliente')),
+                    if (industrial)
+                      SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
+                    else
                     // Un subtrabajo comparte el cliente de su trabajo.
                     if (t.padreId != null)
                       conMargen(
@@ -1670,10 +1680,10 @@ class _TareaFormState extends State<TareaForm> {
               ),
             ),
           ]),
-        Bloque('Cuándo', descripcion: 'Fecha, hora y cada cuánto se repite.', [
-          SelectorCuando(t, () => setState(() {}), error: errorHorario, key: _claveCuando),
+        Bloque('Cuándo', descripcion: industrial ? 'Fecha y hora previstas para esta OT.' : 'Fecha, hora y cada cuánto se repite.', [
+          SelectorCuando(t, () => setState(() {}), error: errorHorario, key: _claveCuando, conPeriodicidad: !industrial || t.esPlantilla),
         ]),
-        Bloque('Cuánto', descripcion: m('Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.'), [
+        Bloque(industrial ? 'Duración prevista' : 'Cuánto', descripcion: industrial ? 'Tiempo estimado de la intervención.' : m('Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.'), [
           etiqueta('Duración'),
           conMargen(
             DropdownButtonFormField<int>(
@@ -1688,7 +1698,7 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ),
         ]),
-        Bloque('Precio', descripcion: 'Lo que se cobra cada vez que se hace, sin IVA. Solo lo ves tú.', [
+        if (!industrial) Bloque('Precio', descripcion: 'Lo que se cobra cada vez que se hace, sin IVA. Solo lo ves tú.', [
           dos(
             campo('Importe', precio, hint: 'Ej.: 120'),
             conMargen(
@@ -1710,16 +1720,14 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ),
         ]),
-        Bloque(
-          industrial ? 'Categoría de técnico' : 'Competencias',
-          descripcion: industrial
-              ? 'Qué categoría tiene que tener el técnico. Solo se le puede dar a quien la tiene.'
-              : m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'),
+        if (!industrial) Bloque(
+          'Competencias',
+          descripcion: m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'),
           [
           conMargen(chipsCompetencias(t.competencias, () => setState(() {}))),
         ]),
-        Bloque('Equipo y notas', descripcion: 'La máquina, dónde está y lo que haya que saber.', [
-          if (!t.esPlantilla)
+        Bloque(industrial ? 'Intervención' : 'Equipo y notas', descripcion: industrial ? 'Instrucciones, mediciones y repuestos necesarios.' : 'La máquina, dónde está y lo que haya que saber.', [
+          if (!industrial && !t.esPlantilla)
             dos(
               CampoFecha(
                 'Último mantenimiento',
@@ -1732,24 +1740,7 @@ class _TareaFormState extends State<TareaForm> {
               ),
               CampoFecha('Solicitado el', t.solicitud, (d) => setState(() => t.solicitud = d)),
             ),
-          if (industrial && store.activos.isNotEmpty)
-            conMargen(
-              DropdownButtonFormField<String?>(
-                isExpanded: true,
-                initialValue: store.activo(t.activoId)?.id,
-                decoration: const InputDecoration(labelText: 'Activo o componente'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Sin activo')),
-                  for (final (a, nivel) in arbolActivos())
-                    DropdownMenuItem(
-                      value: a.id,
-                      child: Padding(padding: EdgeInsets.only(left: 16.0 * nivel), child: Text(a.titulo)),
-                    ),
-                ],
-                onChanged: (id) => setState(() => t.activoId = id),
-              ),
-            ),
-          if (t.clienteId != null && store.equiposDe(t.clienteId!).isNotEmpty)
+          if (!industrial && t.clienteId != null && store.equiposDe(t.clienteId!).isNotEmpty)
             conMargen(
               DropdownButtonFormField<String?>(
                 isExpanded: true,
@@ -1762,16 +1753,16 @@ class _TareaFormState extends State<TareaForm> {
                 onChanged: (id) => setState(() => _ponerEquipo(id)),
               ),
             ),
-          campo('Ubicación', ubicacion, hint: 'Sala de máquinas, planta 2…'),
-          dos(campo('Marca', marca), campo('Modelo', modelo)),
-          dos(
+          if (!industrial) campo('Ubicación', ubicacion, hint: 'Sala de máquinas, planta 2…'),
+          if (!industrial) dos(campo('Marca', marca), campo('Modelo', modelo)),
+          if (!industrial) dos(
             campo('Número de serie', serie),
             CampoFecha('Fecha de instalación', t.instalacion, (d) => setState(() => t.instalacion = d)),
           ),
           campo('Notas / observaciones', notas, lineas: 3),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Activo'),
+            title: Text(industrial ? 'Orden habilitada' : 'Activo'),
             value: t.activa,
             onChanged: (v) => setState(() => t.activa = v),
           ),
@@ -2027,6 +2018,35 @@ class _CajaMenu extends StatelessWidget {
   );
 }
 
+/// Activos y componentes industriales; nunca consulta la lista de clientes residenciales.
+class SelectorActivo extends StatelessWidget {
+  final String? valor;
+  final ValueChanged<String?> onChanged;
+  final bool compacto;
+  const SelectorActivo(this.valor, this.onChanged, {super.key, this.compacto = false});
+
+  @override
+  Widget build(BuildContext context) => BotonMenu<String>(
+    tooltip: 'Asignar a un activo o componente', seleccionado: valor ?? '',
+    opciones: [('', const Text('Sin activo')),
+      for (final (a, nivel) in arbolActivos())
+        (a.id, Padding(padding: EdgeInsets.only(left: 12.0 * nivel.clamp(0, 4)),
+          child: Text(a.titulo, maxLines: 1, overflow: TextOverflow.ellipsis)))],
+    onSelected: (id) => onChanged(id.isEmpty ? null : id),
+    child: Container(
+      height: compacto ? 36 : 46,
+      padding: EdgeInsets.symmetric(horizontal: compacto ? 6 : 12),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(P.radioControl),
+        border: compacto ? null : Border.all(color: P.borde), color: compacto ? null : P.superficie),
+      child: Row(children: [
+        Expanded(child: Text(store.activo(valor)?.titulo ?? 'Elegir activo', maxLines: 1,
+          overflow: TextOverflow.ellipsis, style: TextStyle(color: valor == null ? P.textoSuave : P.texto))),
+        Icon(Icons.unfold_more_rounded, size: 16, color: P.textoSuave),
+      ]),
+    ),
+  );
+}
+
 /// Menú de clientes: todos los clientes y, abajo, "Crear nuevo cliente" (abre la misma ventana
 /// que en Clientes; el cliente creado queda elegido).
 class SelectorCliente extends StatelessWidget {
@@ -2271,7 +2291,8 @@ class SelectorCuando extends StatefulWidget {
   final Tarea t;
   final VoidCallback onCambio;
   final String? error;
-  const SelectorCuando(this.t, this.onCambio, {super.key, this.error});
+  final bool conPeriodicidad;
+  const SelectorCuando(this.t, this.onCambio, {super.key, this.error, this.conPeriodicidad = true});
 
   @override
   State<SelectorCuando> createState() => _SelectorCuandoState();
@@ -2389,8 +2410,8 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                   destacado: true,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              if (widget.conPeriodicidad) const SizedBox(width: 12),
+              if (widget.conPeriodicidad) Expanded(
                 flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

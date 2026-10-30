@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../industrial/activos.dart' show arbolActivos;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -122,6 +123,13 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
           ],
           child: const Text('Asignado a'),
         ),
+        if (industrial)
+          SubmenuButton(menuChildren: [
+            opcion('Sin activo', () => aplicar((t) => t.activoId = null)),
+            for (final (a, _) in arbolActivos())
+              opcion(a.titulo, () => aplicar((t) => t.activoId = a.id)),
+          ], child: const Text('Activo o componente'))
+        else
         SubmenuButton(
           menuChildren: [
             opcion(m('Sin cliente'), () => aplicar((t) => t.clienteId = null)),
@@ -215,7 +223,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
           ),
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
-            Col(m('Equipo / trabajo'), flex: 4),
+            Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4),
             if (medio && widget.conCliente) Col(m('Cliente'), flex: 3),
             if (ancho) const Col('Periodicidad', flex: 2),
             const Col('Fecha y hora', flex: 3),
@@ -261,7 +269,9 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               ),
               // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
               if (medio && widget.conCliente)
-                t.esPlantilla
+                industrial && !t.esPlantilla
+                    ? SelectorActivo(t.activoId, (id) { t.activoId = id; store.guardarTarea(t); }, compacto: true)
+                    : t.esPlantilla
                     ? Etiqueta('Plantilla', P.morado)
                     : t.padreId == null
                     ? SelectorCliente(t.clienteId, (id) {

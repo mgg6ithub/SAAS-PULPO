@@ -10,7 +10,7 @@ import 'industrial/plan.dart';
 import 'industrial/plantillas.dart';
 import 'models.dart';
 import 'nube.dart';
-import 'theme.dart' show TipoInfo, tipos, tiposBase, tiposParaMarca, competencias, competenciasBase;
+import 'theme.dart' show TipoInfo, tipos, tiposBase, tiposParaMarca, competencias, competenciasBase, competenciasParaMarca, competenciasResidenciales;
 import 'marca.dart';
 
 /// Datos del prototipo. Se guardan en el navegador; más adelante, Supabase.
@@ -287,7 +287,8 @@ class Store extends ChangeNotifier {
 
   void _deLaNube(DatosNube d) {
     clientes = d.clientes;
-    trabajadores = d.trabajadores;
+    trabajadores = !industrial ? d.trabajadores : [for (final w in d.trabajadores)
+      w.copia()..competencias.removeWhere(competenciasResidenciales.contains)];
     tareas = industrial ? adaptarPlantillasIndustriales(d.tareas) : d.tareas;
     subtareas = d.subtareas;
     etiquetas = d.etiquetas;
@@ -297,8 +298,7 @@ class Store extends ChangeNotifier {
     planes = d.planes;
     incidencias = d.incidencias;
     tipos = tiposParaMarca(d.tipos.isEmpty ? [...tiposBase] : d.tipos);
-    competencias = d.competencias.isEmpty ? [...competenciasBase] :
-      [...d.competencias, if (industrial) ...competenciasBase.where((c) => !d.competencias.contains(c))];
+    competencias = competenciasParaMarca(d.competencias.isEmpty ? [...competenciasBase] : d.competencias);
   }
 
   /// Lo que otra persona ha cambiado en la base (en vivo). No se vuelve a guardar: ya está allí.
@@ -387,6 +387,8 @@ class Store extends ChangeNotifier {
     if (industrial) {
       tareas = adaptarPlantillasIndustriales(tareas);
       tipos = tiposParaMarca(tipos);
+      competencias = competenciasParaMarca(competencias);
+      for (final w in trabajadores) { w.competencias.removeWhere(competenciasResidenciales.contains); }
     }
     notifyListeners();
   }

@@ -1105,6 +1105,15 @@ class Nube {
           'repuestos': a.repuestos,
           'notas': a.notas,
           'horas': a.horas,
+          'mantenimiento_modo': a.frecuencia.index,
+          'mantenimiento_cada_horas': a.cadaHoras,
+          'mantenimiento_cada_meses': a.cadaMeses,
+          'mantenimiento_fecha': a.fechaMantenimiento?.toIso8601String().substring(0, 10),
+          'mantenimiento_ultimo': a.ultimoMantenimiento?.toIso8601String().substring(0, 10),
+          'mantenimiento_ultimo_horas': a.horasUltimoMantenimiento,
+          'uso_horas': a.horasUso,
+          'uso_semanal': a.usoSemanal,
+          'lectura_fecha': a.fechaLectura.toIso8601String().substring(0, 10),
           'activo': a.activo,
         };
       }
@@ -1390,6 +1399,15 @@ Activo _activo(Map x) => Activo(
   notas: x['notas'],
   horas: (x['horas'] as num).toDouble(),
   activo: x['activo'],
+  frecuencia: FrecuenciaActivo.values[(x['mantenimiento_modo'] as num?)?.toInt() ?? 0],
+  cadaHoras: (x['mantenimiento_cada_horas'] as num?)?.toDouble(),
+  cadaMeses: (x['mantenimiento_cada_meses'] as num?)?.toInt(),
+  fechaMantenimiento: DateTime.tryParse(x['mantenimiento_fecha'] as String? ?? ''),
+  ultimoMantenimiento: DateTime.tryParse(x['mantenimiento_ultimo'] as String? ?? ''),
+  horasUltimoMantenimiento: (x['mantenimiento_ultimo_horas'] as num?)?.toDouble() ?? 0,
+  horasUso: (x['uso_horas'] as num?)?.toDouble() ?? 0,
+  usoSemanal: x['uso_semanal'] as bool? ?? false,
+  fechaLectura: DateTime.tryParse(x['lectura_fecha'] as String? ?? ''),
 );
 
 PlanMantenimiento _plan(Map x) => PlanMantenimiento(

@@ -238,8 +238,14 @@ const competenciasResidenciales = <String>[
 ];
 
 const competenciasBase = industrial
-    ? <String>['Mecánica', 'Hidráulica', 'Neumática', 'Electricidad', 'PRL']
+    ? <String>['Mecánica', 'Hidráulica', 'Neumática', 'Automatización', 'Soldadura']
     : competenciasResidenciales;
+
+/// Las especialidades industriales se presentan sin el catálogo residencial antiguo.
+List<String> competenciasParaMarca(List<String> lista) => !industrial ? lista : [
+  for (final c in lista) if (!competenciasResidenciales.contains(c)) c,
+  for (final c in competenciasBase) if (!lista.contains(c)) c,
+];
 
 /// Competencias de la empresa en curso (las carga y guarda el [Store]).
 List<String> competencias = [...competenciasBase];

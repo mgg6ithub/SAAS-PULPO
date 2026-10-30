@@ -89,10 +89,10 @@ void main() {
     await tester.tap(find.text('Ane'));
     await tester.pump();
     expect(ot.trabajadorIds, ['wA']);
-    // El alta del técnico pide su categoría.
+    // El alta muestra especialidades industriales, sin el catálogo residencial.
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: TrabajadorForm())));
     await tester.pumpAndSettle();
-    expect(find.text('Categorías'), findsOneWidget);
+    expect(find.text('Especialidades industriales'), findsOneWidget);
   });
 
   for (final ancho in [1440.0, 700.0, 420.0]) {
