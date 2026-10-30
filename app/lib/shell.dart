@@ -446,7 +446,9 @@ class _FilaCrearState extends State<_FilaCrear> {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final (i, (icono, texto, _)) in widget.opciones.indexed)
+        for (final (i, (icono, texto, _)) in widget.opciones.indexed) ...[
+          // Separador corto entre opciones, sin llegar a los bordes.
+          if (i > 0) Container(width: 1, height: 36, margin: const EdgeInsets.symmetric(horizontal: 6), color: P.borde),
           MouseRegion(
             onEnter: (_) => setState(() => elegida = i),
             cursor: SystemMouseCursors.click,
@@ -455,8 +457,9 @@ class _FilaCrearState extends State<_FilaCrear> {
               onTap: () => _abrir(i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
-                width: 84,
-                height: 68,
+                width: 96,
+                height: 76,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
                 // La sombra suave va solo en la elegida (ratón o flechas).
                 decoration: BoxDecoration(
                   color: i == elegida ? P.hover : Colors.transparent,
@@ -469,7 +472,10 @@ class _FilaCrearState extends State<_FilaCrear> {
                     const SizedBox(height: 6),
                     Text(
                       texto,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
                       style: TextStyle(
+                        height: 1.15,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: i == elegida ? P.morado : P.texto,
@@ -480,6 +486,7 @@ class _FilaCrearState extends State<_FilaCrear> {
               ),
             ),
           ),
+        ],
       ],
     ),
   );
