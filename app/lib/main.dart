@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'ajustes.dart';
+import 'marca.dart';
 import 'nube.dart';
 import 'screens/acceso.dart';
 import 'shell.dart';
@@ -84,7 +85,7 @@ class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Pulpo',
+    title: Marca.nombre,
     debugShowCheckedModeBanner: false,
     theme: temaPulpo(),
     locale: const Locale('es'),

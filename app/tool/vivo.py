@@ -6,6 +6,7 @@ hace hot reload (r) sin perder el estado; si cambian assets o pubspec, o Flutter
 el reload (cambios de estructura), hot restart (R).
 
 Uso (desde app/):  python3 tool/vivo.py     · Ctrl+C para parar.
+                   python3 tool/vivo.py --industrial  → iPultec (MARCA=industrial) en :8081.
 """
 
 import os
@@ -15,7 +16,8 @@ import threading
 import time
 
 APP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PUERTO = os.environ.get("PUERTO", "8080")
+INDUSTRIAL = "--industrial" in sys.argv
+PUERTO = os.environ.get("PUERTO", "8081" if INDUSTRIAL else "8080")
 
 
 def huella(rutas):
@@ -36,7 +38,8 @@ def huella(rutas):
 
 def main():
     flutter = subprocess.Popen(
-        ["flutter", "run", "-d", "web-server", "--web-port", PUERTO, "--web-hostname", "localhost"],
+        ["flutter", "run", "-d", "web-server", "--web-port", PUERTO, "--web-hostname", "localhost"]
+        + (["--dart-define=MARCA=industrial"] if INDUSTRIAL else []),
         cwd=APP,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -44,7 +47,7 @@ def main():
         text=True,
         bufsize=1,
     )
-    print(f"\n🐙 Pulpo en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)
+    print(f"\n🐙 {'iPultec' if INDUSTRIAL else 'Pulpo'} en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)
 
     def enviar(tecla):
         try:

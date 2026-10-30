@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'ajustes.dart';
+import 'marca.dart';
 
 /// Colores de Pulpo: los mismos de la landing (tinta, morado del logo, lavanda y verde azulado).
 /// Los neutros cambian con el modo oscuro; los de acento son fijos.
@@ -69,13 +70,13 @@ class LogoPulpo extends StatelessWidget {
     width: size,
     height: size,
     filterQuality: FilterQuality.medium,
-    semanticLabel: 'Pulpo',
+    semanticLabel: Marca.nombre,
   );
 }
 
-/// Colores de acento que se pueden elegir en Ajustes. El primero es el del logo.
+/// Colores de acento que se pueden elegir en Ajustes. El primero es el de la marca ([Marca.color]).
 const acentos = <({String nombre, Color color})>[
-  (nombre: 'Morado', color: Color(0xFF6A2FF6)),
+  (nombre: Marca.nombreColor, color: Marca.color),
   (nombre: 'Azul', color: Color(0xFF2563EB)),
   (nombre: 'Verde', color: Color(0xFF16A34A)),
   (nombre: 'Rojo', color: Color(0xFFDC2626)),
