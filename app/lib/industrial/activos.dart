@@ -712,7 +712,12 @@ class _ActivoFormState extends State<ActivoForm> {
                 spacing: 4,
                 runSpacing: 4,
                 children: [
-                  for (final (clave, nombre, icono) in iconosIndustriales)
+                  // Once de siempre, el elegido si es del catálogo amplio, y «+» para abrir el catálogo.
+                  for (final (clave, nombre, icono) in [
+                    ...iconosIndustriales.take(11),
+                    if (!iconosIndustriales.take(11).any((i) => i.$1 == a.icono))
+                      todosLosIconos.firstWhere((i) => i.$1 == a.icono, orElse: () => iconosIndustriales[11]),
+                  ])
                     IconButton(
                       tooltip: nombre,
                       isSelected: a.icono == clave,
@@ -725,6 +730,20 @@ class _ActivoFormState extends State<ActivoForm> {
                       onPressed: () => setState(() => a.icono = clave),
                       icon: Icon(icono, size: 22),
                     ),
+                  IconButton(
+                    tooltip: 'Más iconos',
+                    style: IconButton.styleFrom(
+                      fixedSize: const Size(40, 40),
+                      foregroundColor: P.textoSuave,
+                      side: BorderSide(color: P.borde),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                    ),
+                    onPressed: () async {
+                      final clave = await elegirIcono(context, a.icono);
+                      if (clave != null) setState(() => a.icono = clave);
+                    },
+                    icon: const Icon(Icons.add_rounded, size: 22),
+                  ),
                 ],
               ),
             ],
