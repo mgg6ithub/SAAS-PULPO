@@ -1087,6 +1087,7 @@ class Nube {
         'empresa_id': e,
         'cliente_id': clientes.contains(t.clienteId) ? _u(t.clienteId!) : null,
         'equipo_id': equipos.contains(t.equipoId) ? _u(t.equipoId!) : null,
+        'tipo_mantenimiento': t.tipoMantenimiento?.index,
         'plantilla': t.plantilla,
         'color': t.color,
         'plantilla_id': ids.contains(t.plantillaId) ? _u(t.plantillaId!) : null,
@@ -1239,6 +1240,9 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       id: x['id'],
       clienteId: x['cliente_id'],
       equipoId: x['equipo_id'],
+      tipoMantenimiento: x['tipo_mantenimiento'] == null
+          ? null
+          : TipoMantenimiento.values[x['tipo_mantenimiento'] as int],
       plantilla: x['plantilla'],
       color: (x['color'] as num?)?.toInt(),
       plantillaId: x['plantilla_id'],

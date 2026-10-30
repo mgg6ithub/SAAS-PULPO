@@ -46,6 +46,19 @@ extension EstadoMaquinaX on EstadoMaquina {
   Color get color => const [P.verde, P.ambar, P.rojo][index];
 }
 
+/// Tipo de mantenimiento de una OT industrial (iPultec), de menos a más grave. Pultec no lo usa (null).
+enum TipoMantenimiento { preventivo, correctivoNoCritico, correctivoCritico }
+
+extension TipoMantenimientoX on TipoMantenimiento {
+  String get etiqueta => const ['Preventivo', 'Correctivo no crítico', 'Correctivo crítico'][index];
+  String get descripcion => const [
+    'Mantenimiento planificado para que el activo siga funcionando.',
+    'El activo puede seguir funcionando pero no realizar el mantenimiento puede evolucionar en problemas más graves.',
+    'El activo no puede funcionar hasta realizar el mantenimiento.',
+  ][index];
+  Color get color => const [P.verde, P.ambar, P.rojo][index];
+}
+
 /// `unica` va al final para no cambiar los índices ya guardados.
 enum Periodicidad { semanal, mensual, trimestral, semestral, anual, unica }
 
@@ -307,6 +320,9 @@ class Tarea {
 
   /// Equipo del cliente sobre el que se hace (ascensor, caldera…); null = sin equipo.
   String? equipoId;
+
+  /// OT industrial (iPultec): su tipo de mantenimiento; null en Pultec.
+  TipoMantenimiento? tipoMantenimiento;
   DateTime? instalacion, ultimo, proximo;
 
   /// Cuándo pidió el cliente este mantenimiento.
@@ -349,6 +365,7 @@ class Tarea {
     required this.id,
     this.clienteId,
     this.equipoId,
+    this.tipoMantenimiento,
     bool? plantilla,
     this.color,
     this.plantillaId,
@@ -410,6 +427,7 @@ class Tarea {
     'id': id,
     'clienteId': clienteId,
     'equipoId': equipoId,
+    if (tipoMantenimiento != null) 'tipoMantenimiento': tipoMantenimiento!.index,
     'plantilla': plantilla,
     'color': color,
     'plantillaId': plantillaId,
@@ -447,6 +465,9 @@ class Tarea {
     id: _s(j, 'id'),
     clienteId: j['clienteId'] as String?,
     equipoId: j['equipoId'] as String?,
+    tipoMantenimiento: j['tipoMantenimiento'] == null
+        ? null
+        : TipoMantenimiento.values[j['tipoMantenimiento'] as int],
     plantilla: j['plantilla'] as bool?,
     color: j['color'] as int?,
     plantillaId: j['plantillaId'] as String?,
