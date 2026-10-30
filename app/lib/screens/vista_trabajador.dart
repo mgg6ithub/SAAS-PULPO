@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import '../forms.dart';
 import '../informes.dart';
 import '../marca.dart';
+import '../industrial/activos.dart' show colorEstado, gravedadDe;
+import '../industrial/iconos.dart';
 import '../industrial/incidencia_form.dart';
 import '../industrial/mantenimientos.dart';
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
@@ -597,7 +599,7 @@ class _FilaTrabajo extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       opacity: hecha ? .5 : 1,
       child: FilaLista(
-        lider: TipoIcono(t.tipo, size: 36),
+        lider: industrial ? _IconoActivo(t.activoId) : TipoIcono(t.tipo, size: 36),
         titulo: t.nombre,
         subtitulo: [
           if (industrial) dondeEs(t.activoId) else if (cliente != null) cliente.nombre,
@@ -606,6 +608,7 @@ class _FilaTrabajo extends StatelessWidget {
         derecha: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (industrial) ...[Pill(t.estado.etiqueta, t.estado.color, punto: true), const SizedBox(width: 12)],
             Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
             if (marcable && !industrial) ...[const SizedBox(width: 6), _MarcaHecho(t)],
           ],
@@ -687,25 +690,10 @@ class _MisTrabajos extends StatelessWidget {
           : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
       (grupos[clave] ??= []).add(t);
     }
-    if (industrial) {
-      final filas = <(String, Tarea?)>[
-        for (final g in grupos.entries) ...[(g.key, null), for (final t in g.value) (g.key, t)],
-      ];
-      return ListView.builder(
-        itemCount: filas.length,
-        itemBuilder: (context, i) {
-          final (grupo, tarea) = filas[i];
-          return tarea == null
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: huecoVista),
-                  child: Text(grupo, style: const TextStyle(fontWeight: FontWeight.w600)),
-                )
-              : _FilaTrabajo(tarea, abrir, mostrarDia: grupo == 'Atrasados');
-        },
-      );
-    }
     return ListView(
       children: [
+        // iPultec: arriba, el día del técnico en cifras, como el Inicio del administrador.
+        if (industrial) ...[_CifrasTecnico(w, pendientes), const SizedBox(height: 16)],
         for (final g in grupos.entries) ...[
           SeccionTarjeta(
             titulo: g.key,
@@ -714,6 +702,89 @@ class _MisTrabajos extends StatelessWidget {
           ),
           const SizedBox(height: huecoVista),
         ],
+      ],
+    );
+  }
+}
+
+/// Icono del activo de la OT en un círculo del color de su estado de mantenimiento.
+class _IconoActivo extends StatelessWidget {
+  final String? activoId;
+  const _IconoActivo(this.activoId);
+
+  @override
+  Widget build(BuildContext context) {
+    final a = store.activo(activoId);
+    final color = a == null ? P.textoSuave : colorEstado(gravedadDe(a.id));
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
+      child: Icon(a == null ? Icons.assignment_outlined : iconoIndustrial(a.icono), size: 19, color: color),
+    );
+  }
+}
+
+/// Saludo y tres cifras del técnico (hoy, atrasadas, esta semana), con el icono en su color.
+class _CifrasTecnico extends StatelessWidget {
+  final Trabajador w;
+  final List<Tarea> pendientes;
+  const _CifrasTecnico(this.w, this.pendientes);
+
+  @override
+  Widget build(BuildContext context) {
+    int cuenta(bool Function(int) f) => pendientes.where((t) => t.proximo != null && f(diasHasta(t.proximo!))).length;
+    final cifras = [
+      (Icons.today_rounded, 'Para hoy', cuenta((d) => d == 0), P.morado),
+      (Icons.warning_amber_rounded, 'Atrasadas', cuenta((d) => d < 0), P.rojo),
+      (Icons.date_range_rounded, 'Esta semana', cuenta((d) => d >= 0 && d <= 7), P.teal),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(_diaLargo(hoy()), style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(
+          'Hola, ${w.nombre}',
+          style: TextStyle(fontFamily: P.titulos, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -.6),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            for (final (i, (icono, texto, n, color)) in cifras.indexed) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(
+                child: Tarjeta(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
+                        child: Icon(icono, size: 18, color: color),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('$n', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, height: 1.1)),
+                            Text(
+                              texto,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13, color: P.textoSuave),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }
