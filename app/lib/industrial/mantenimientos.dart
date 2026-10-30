@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../informes.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -331,6 +332,14 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
             obligatorio: true,
           ),
         ]),
+        if (x.fotos.isNotEmpty)
+          Bloque('Fotos de la incidencia', [
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final f in x.fotos)
+                ClipRRect(borderRadius: BorderRadius.circular(P.radio),
+                  child: FotoGuardada(f, width: 160, height: 120)),
+            ]),
+          ]),
         Bloque('Estado', descripcion: 'Abierta hasta que tenga una OT; cerrada cuando esté arreglada.', [
           conMargen(
             Pestanas(
