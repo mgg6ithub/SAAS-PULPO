@@ -3,7 +3,7 @@
 SaaS de automatización de mantenimiento para empresas pequeñas de mantenimiento (ascensores, contra incendios…). Gestiona sus clientes (edificios, colegios, hospitales…), sus trabajadores, qué tareas puede hacer cada uno y cuándo toca cada mantenimiento. Objetivo: automatizar el mantenimiento y ganar inteligencia con los datos.
 
 - Nombre provisional "Pulpo" (logo: pulpo morado).
-- Documentación y plan: Cerebro, `~/Desktop/CEREBRO/Proyectos/Pulpo/` → empezar por `MOC - Pulpo.md` y `Producto/Plan general.md` (fuente: `Plan_PULPO_PULTEC.pdf`).
+- Documentación y plan: Cerebro, `~/Desktop/CEREBRO/Proyectos/Pulpo/` → empezar por `MOC - Pulpo.md` y `iPultec/Producto/Plan general - iPultec.md` (fuente: `Plan_PULPO_PULTEC.pdf`).
 - Para documentar usa la skill `documentar-pulpo`.
 - Stack: Flutter desde el prototipo (web primero; SDK en `C:\Users\mgg\flutter`), proyecto en `app/`; datos en local y Supabase después.
 - UI: minimalista pero muy funcional, visual y con color.
