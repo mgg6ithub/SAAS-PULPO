@@ -44,7 +44,14 @@ class TrabajadorDetalle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Text(m('Trabajos asignados'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          Flexible(
+            child: Text(
+              m('Trabajos asignados'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
           const SizedBox(width: 8),
           Pill('${tareas.length}', P.gris),
         ],
