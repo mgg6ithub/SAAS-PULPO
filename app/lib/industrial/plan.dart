@@ -45,6 +45,8 @@ class PlanMantenimiento {
     id: id,
     nombre: nombre,
     activoId: activoId,
+    // Sin cliente sería plantilla: una OT de un activo es un trabajo de verdad.
+    plantilla: false,
     tipoMantenimiento: tipo,
     proximo: proximo ?? hoy(),
     periodicidad: periodicidad,

@@ -358,6 +358,7 @@ class _Mantenimientos extends StatelessWidget {
           borrador: Tarea(
             id: store.nuevoId(),
             activoId: a.id,
+            plantilla: false,
             tipoMantenimiento: TipoMantenimiento.preventivo,
             proximo: hoy(),
             periodicidad: Periodicidad.unica,

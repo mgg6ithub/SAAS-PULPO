@@ -242,6 +242,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       id: store.nuevoId(),
       nombre: x.descripcion,
       activoId: x.activoId,
+      plantilla: false,
       tipoMantenimiento: x.gravedad.tipo,
       proximo: hoy(),
       periodicidad: Periodicidad.unica,

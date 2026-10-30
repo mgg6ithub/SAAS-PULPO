@@ -64,6 +64,7 @@ void main() {
     expect(p.cada, 'cada 30 días · cada 500 h');
     final ot = p.ot('ot9');
     expect(ot.activoId, 'a2');
+    expect(ot.esPlantilla, isFalse);
     expect(ot.tipoMantenimiento, TipoMantenimiento.correctivoNoCritico);
     expect(ot.competencias, ['Electricidad']);
     expect(ot.periodicidad, Periodicidad.mensual);
