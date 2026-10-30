@@ -185,7 +185,7 @@ class _PlanificacionState extends State<Planificacion> {
     );
     // Más sitio para el calendario y el mapa: márgenes estrechos y una sola barra compacta.
     final pagina = Padding(
-      padding: vista == 1 ? const EdgeInsets.fromLTRB(12, 12, 0, 0) : margenPagina,
+      padding: vista == 1 ? const EdgeInsets.fromLTRB(12, 12, 12, 0) : margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
