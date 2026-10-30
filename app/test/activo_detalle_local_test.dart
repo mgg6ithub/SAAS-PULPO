@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
+import 'package:pulpo/industrial/iconos.dart';
 import 'package:pulpo/industrial/activos.dart';
 import 'package:pulpo/industrial/plantillas.dart';
 import 'package:pulpo/marca.dart';
@@ -12,6 +13,11 @@ import 'package:pulpo/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('los activos anteriores y los iconos desconocidos tienen un icono por defecto', () {
+    expect(Activo.fromJson({'id': 'antiguo'}).icono, 'brazo');
+    expect(iconoIndustrial('desconocido'), iconoIndustrial('brazo'));
+    expect(iconosIndustriales.map((i) => i.$1).toSet().length, iconosIndustriales.length);
+  });
   test('el catálogo industrial adapta solo las plantillas de serie y conserva sus ids', () {
     final vieja = Tarea(id: 'uuid-existente', nombre: 'Revisión caldera de gas', tipo: 'Caldera', plantilla: true);
     final propia = Tarea(id: 'propia', nombre: 'Mi revisión', tipo: 'Robot', plantilla: true);
@@ -161,6 +167,22 @@ void main() {
       expect(tester.takeException(), isNull);
       a.horasUso = 0;
       expect(proximaFecha(a), 'Falta ritmo de uso');
+    });
+
+    testWidgets('elige un icono industrial y lo conserva en la ficha del activo', (tester) async {
+      await pintar(tester, 980);
+      await tester.tap(find.text('Datos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Editar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Camión'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar').last);
+      await tester.pumpAndSettle();
+      expect(store.activo('a1')!.icono, 'camion');
+      expect(store.activo('a1')!.copia().icono, 'camion');
+      expect(find.byIcon(iconoIndustrial('camion')), findsWidgets);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('lista compacta y componentes anidados como subtrabajos', (tester) async {

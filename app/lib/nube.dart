@@ -1115,6 +1115,7 @@ class Nube {
           'uso_semanal': a.usoSemanal,
           'lectura_fecha': a.fechaLectura.toIso8601String().substring(0, 10),
           'mantenimiento_tipo': a.tipo.index,
+          'icono': a.icono,
           'activo': a.activo,
         };
       }
@@ -1388,6 +1389,7 @@ Trabajador _trabajador(Map x) => Trabajador(
 );
 
 Activo _activo(Map x) => Activo(
+  icono: x['icono'] as String? ?? 'brazo',
   id: x['id'],
   padreId: x['padre_id'],
   tag: x['tag'],

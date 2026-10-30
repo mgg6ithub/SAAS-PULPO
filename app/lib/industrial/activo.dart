@@ -8,6 +8,7 @@ enum FrecuenciaActivo { sinDefinir, horas, meses, fecha }
 /// [padreId]) tiene componentes y cada componente puede tener subcomponentes.
 class Activo {
   String id;
+  String icono;
   String? padreId;
   String tag, nombre, fabricante, modelo, numeroSerie, division, repuestos, notas;
 
@@ -27,6 +28,7 @@ class Activo {
 
   Activo({
     required this.id,
+    this.icono = 'brazo',
     this.padreId,
     this.tag = '',
     this.nombre = '',
@@ -84,6 +86,7 @@ class Activo {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'icono': icono,
     'padreId': padreId,
     'tag': tag,
     'nombre': nombre,
@@ -109,6 +112,7 @@ class Activo {
 
   factory Activo.fromJson(Map<String, dynamic> j) => Activo(
     id: j['id'] as String,
+    icono: j['icono'] as String? ?? 'brazo',
     padreId: j['padreId'] as String?,
     tag: j['tag'] as String? ?? '',
     nombre: j['nombre'] as String? ?? '',
