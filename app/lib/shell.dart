@@ -423,75 +423,85 @@ class _FilaCrearState extends State<_FilaCrear> {
     widget.opciones[i].$3();
   }
 
-  KeyEventResult _tecla(FocusNode _, KeyEvent e) {
-    if (e is! KeyDownEvent) return KeyEventResult.ignored;
-    final n = widget.opciones.length;
-    final k = e.logicalKey;
-    if (k == LogicalKeyboardKey.arrowRight || k == LogicalKeyboardKey.arrowDown) {
-      setState(() => elegida = (elegida + 1) % n);
-    } else if (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.arrowUp) {
-      setState(() => elegida = (elegida - 1 + n) % n);
-    } else if (k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.numpadEnter || k == LogicalKeyboardKey.space) {
-      _abrir(elegida);
-    } else {
-      return KeyEventResult.ignored;
-    }
-    return KeyEventResult.handled;
+  // Teclado escuchado aquí directamente, sin depender del foco (el del menú también movía con las flechas
+  // y las dos cosas a la vez hacían parpadear). Una pulsación = una opción; sin dar la vuelta en los extremos.
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_tecla);
   }
 
   @override
-  Widget build(BuildContext context) => Focus(
-    autofocus: true,
-    onKeyEvent: _tecla,
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final (i, (icono, texto, _)) in widget.opciones.indexed) ...[
-          // Separador corto entre opciones, sin llegar a los bordes.
-          if (i > 0) Container(width: 1, height: 36, margin: const EdgeInsets.symmetric(horizontal: 6), color: P.borde),
-          MouseRegion(
-            // Solo al mover el ratón: con onEnter, el puntero quieto encima peleaba con las flechas y parpadeaba.
-            onHover: (_) {
-              if (elegida != i) setState(() => elegida = i);
-            },
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _abrir(i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                width: 96,
-                height: 76,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                // La sombra suave va solo en la elegida (ratón o flechas).
-                decoration: BoxDecoration(
-                  color: i == elegida ? P.hover : Colors.transparent,
-                  borderRadius: BorderRadius.circular(P.radioControl),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icono, size: 24, color: i == elegida ? P.morado : P.texto),
-                    const SizedBox(height: 6),
-                    Text(
-                      texto,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      style: TextStyle(
-                        height: 1.15,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        color: i == elegida ? P.morado : P.texto,
-                      ),
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_tecla);
+    super.dispose();
+  }
+
+  bool _tecla(KeyEvent e) {
+    final k = e.logicalKey;
+    final derecha = k == LogicalKeyboardKey.arrowRight || k == LogicalKeyboardKey.arrowDown;
+    final izquierda = k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.arrowUp;
+    final abrir = k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.numpadEnter || k == LogicalKeyboardKey.space;
+    if (!derecha && !izquierda && !abrir) return false;
+    if (e is KeyDownEvent) {
+      if (abrir) {
+        _abrir(elegida);
+      } else {
+        final nueva = (elegida + (derecha ? 1 : -1)).clamp(0, widget.opciones.length - 1);
+        if (nueva != elegida) setState(() => elegida = nueva);
+      }
+    }
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (final (i, (icono, texto, _)) in widget.opciones.indexed) ...[
+        // Separador corto entre opciones, sin llegar a los bordes.
+        if (i > 0) Container(width: 1, height: 36, margin: const EdgeInsets.symmetric(horizontal: 6), color: P.borde),
+        MouseRegion(
+          // Solo al mover el ratón: con onEnter, el puntero quieto encima peleaba con las flechas y parpadeaba.
+          onHover: (_) {
+            if (elegida != i) setState(() => elegida = i);
+          },
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _abrir(i),
+            child: Container(
+              width: 96,
+              height: 76,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              // La sombra suave va solo en la elegida (ratón o flechas).
+              decoration: BoxDecoration(
+                color: i == elegida ? P.hover : Colors.transparent,
+                borderRadius: BorderRadius.circular(P.radioControl),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icono, size: 24, color: i == elegida ? P.morado : P.texto),
+                  const SizedBox(height: 6),
+                  Text(
+                    texto,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    style: TextStyle(
+                      height: 1.15,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: i == elegida ? P.morado : P.texto,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ],
-    ),
+    ],
   );
 }
 
