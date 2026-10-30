@@ -70,16 +70,15 @@ class _ActivosState extends State<Activos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BarraVista(
-            izquierda: const [TituloVista('Activos')],
-            derecha: [
-              SizedBox(
-                width: 380,
-                child: Pestanas(
-                  opciones: _filtros,
-                  seleccion: filtroActivos.value,
-                  onChanged: (i) => filtroActivos.value = i,
-                ),
+            izquierda: [
+              const TituloVista('Activos'),
+              Pestanas(
+                opciones: _filtros,
+                seleccion: filtroActivos.value,
+                onChanged: (i) => filtroActivos.value = i,
               ),
+            ],
+            derecha: [
               Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
             ],
             principal: BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
@@ -129,7 +128,8 @@ List<(Activo, int)> arbolActivos() {
 class _TablaActivos extends StatelessWidget {
   final List<Activo> activos;
   final ValueChanged<String> onAbrir;
-  const _TablaActivos(this.activos, this.onAbrir);
+  final bool componentes;
+  const _TablaActivos(this.activos, this.onAbrir, {this.componentes = false});
 
   @override
   Widget build(BuildContext context) => SegunTamano(
@@ -138,42 +138,49 @@ class _TablaActivos extends StatelessWidget {
       final ancho = box.maxWidth > 980;
       // Móvil: el activo y el punto de su estado.
       final medio = box.maxWidth > 600;
-      return Tabla(
-        columnas: [
-          const Col('Activo', flex: 3),
-          if (ancho) const Col('Fabricante y modelo', flex: 2),
-          if (ancho) const Col('División', flex: 2),
-          if (medio) const Col('Componentes', ancho: 120, derecha: true),
-          if (ancho) const Col('Horas', ancho: 100, derecha: true),
-          if (medio) const Col('Próximo mantenimiento', ancho: 175),
-          if (medio) const Col('Estado', ancho: 190),
-        ],
-        filas: activos.length,
-        celdas: (i) {
-          final a = activos[i];
-          final g = gravedadDe(a.id);
-          return [
-            Row(
-              children: [
-                Tooltip(message: textoEstado(g), child: puntoTipo(colorEstado(g), tam: 10)),
-                const SizedBox(width: 10),
-                Expanded(child: celdaTexto(a.titulo, negrita: true)),
-              ],
-            ),
-            if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
-            if (ancho) celdaTexto(a.division, suave: true),
-            if (medio) celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
-            if (ancho) celdaTexto(horas(a.horas), suave: true),
-            if (medio) celdaTexto(fecha(a.proximoMantenimiento), suave: true),
-            if (medio)
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Tabla(
+          columnas: [
+            Col(componentes ? 'Componente' : 'Activo', flex: 3),
+            if (ancho) const Col('Fabricante y modelo', flex: 2),
+            if (ancho) const Col('División', flex: 2),
+            if (medio) const Col('Componentes', ancho: 120, derecha: true),
+            if (ancho) const Col('Horas', ancho: 100, derecha: true),
+            if (medio) const Col('Próximo mantenimiento', ancho: 175),
+            const Col('Tipo de mantenimiento', ancho: 160),
+          ],
+          filas: activos.length,
+          celdas: (i) {
+            final a = activos[i];
+            final g = gravedadDe(a.id);
+            return [
+              Row(
+                children: [
+                  Tooltip(message: textoEstado(g), child: puntoTipo(colorEstado(g), tam: 10)),
+                  const SizedBox(width: 10),
+                  Expanded(child: celdaTexto(a.titulo, negrita: true)),
+                ],
+              ),
+              if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
+              if (ancho) celdaTexto(a.division, suave: true),
+              if (medio) Padding(padding: const EdgeInsets.only(right: 12), child: celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true)),
+              if (ancho) celdaTexto(horas(a.horas), suave: true),
+              if (medio) celdaTexto(fecha(a.proximoMantenimiento), suave: true),
               Align(
                 alignment: Alignment.centerLeft,
                 child: g == null ? const Pill('Al día', P.verde, punto: true) : PillTipo(g),
               ),
-          ];
-        },
-        onTap: (i) => onAbrir(activos[i].id),
-        pie: pieTabla(activos.length, activos.length == 1 ? 'activo' : 'activos'),
+            ];
+          },
+          onTap: (i) => onAbrir(activos[i].id),
+          pie: pieTabla(
+            activos.length,
+            componentes
+                ? (activos.length == 1 ? 'componente' : 'componentes')
+                : (activos.length == 1 ? 'activo' : 'activos'),
+          ),
+        ),
       );
     },
   );
@@ -196,13 +203,22 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   int pestana = 0;
   bool editando = false;
   String? tareaId;
-  final plegados = <String>{};
 
   void _abrir(String id) => setState(() {
     elegido = id;
     pestana = 0;
     editando = false;
   });
+
+  Widget _cifra(String etiqueta, String valor, String nota) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(etiqueta, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+      const SizedBox(height: 4),
+      Text(valor, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -.8)),
+      Text(nota, style: TextStyle(fontSize: 12, color: P.textoSuave)),
+    ],
+  );
 
   void _nuevaOt(Activo a) => abrirTareaForm(
     context,
@@ -235,19 +251,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     elegido = a.id;
     final padre = store.activo(a.padreId);
     final ots = store.otsDe(a.id).where((t) => !t.esPlantilla && t.activa).toList();
-    final filas = <(Activo, int)>[];
-    void anadir(Activo x, int nivel) {
-      filas.add((x, nivel));
-      if (!plegados.contains(x.id)) {
-        for (final h in store.hijosDe(x.id)) {
-          anadir(h, nivel + 1);
-        }
-      }
-    }
-
-    for (final h in store.hijosDe(a.id)) {
-      anadir(h, 0);
-    }
+    final componentes = store.hijosDe(a.id);
     final g = gravedadDe(a.id);
     return Padding(
       padding: margenPagina,
@@ -267,7 +271,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               a.modelo,
             ].where((x) => x.isNotEmpty).join(' · '),
             acciones: [
-              if (pestana == 0 && filas.isNotEmpty)
+              if (pestana == 0)
                 BotonPrimario(
                   'Nuevo componente',
                   icono: Icons.add_rounded,
@@ -292,6 +296,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
+              layoutBuilder: (actual, anteriores) => Stack(fit: StackFit.expand, children: [...anteriores, ?actual]),
               child: KeyedSubtree(
                 key: ValueKey('$elegido-$pestana'),
                 child: switch (pestana) {
@@ -305,19 +310,30 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Pill(textoEstado(g), colorEstado(g), punto: true),
-                            Text('${store.ramaDe(a.id).length - 1} componentes'),
-                            Text('${ots.where(otPendiente).length} OT pendientes'),
-                            if (a.horas > 0) Text('Lectura: ${horas(a.horas)}'),
-                            if (a.proximoMantenimiento != null)
-                              Text('Próximo mantenimiento: ${fecha(a.proximoMantenimiento)}'),
-                            if (a.frecuencia == FrecuenciaActivo.horas && a.horasRestantes != null)
-                              Text('Restan ${a.horasRestantes!.toStringAsFixed(0)} h'),
+                            _cifra(
+                              'Próximo',
+                              a.proximoMantenimiento == null ? '—' : relativo(a.proximoMantenimiento!),
+                              fecha(a.proximoMantenimiento),
+                            ),
+                            _cifra(
+                              'Contador',
+                              horas(a.horas),
+                              a.frecuencia == FrecuenciaActivo.horas && a.horasRestantes != null
+                                  ? 'Restan ${a.horasRestantes!.toStringAsFixed(0)} h'
+                                  : 'Horas de uso',
+                            ),
+                            _cifra('Componentes', '${componentes.length}', 'Cada uno con su mantenimiento'),
+                            _cifra(
+                              'Órdenes pendientes',
+                              '${ots.where(otPendiente).length}',
+                              'Del activo y sus componentes',
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(height: huecoVista),
                       Expanded(
-                        child: filas.isEmpty
+                        child: componentes.isEmpty
                             ? Vacio(
                                 icono: Icons.account_tree_outlined,
                                 titulo: 'Sin componentes',
@@ -327,10 +343,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   child: const Text('Añadir componente'),
                                 ),
                               )
-                            : ListView.builder(
-                                itemCount: filas.length,
-                                itemBuilder: (_, i) => _nodo(filas[i].$1, filas[i].$2),
-                              ),
+                            : _TablaActivos(componentes, _abrir, componentes: true),
                       ),
                     ],
                   ),
@@ -361,36 +374,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _nodo(Activo x, int nivel) {
-    final g = gravedadDe(x.id);
-    final tieneHijos = store.hijosDe(x.id).isNotEmpty;
-    final plegado = plegados.contains(x.id);
-    return FilaLista(
-      lider: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(width: 16.0 * nivel.clamp(0, 4)),
-          if (tieneHijos)
-            IconButton(
-              padding: EdgeInsets.zero,
-              iconSize: 18,
-              tooltip: plegado ? 'Desplegar componentes' : 'Plegar componentes',
-              onPressed: () => setState(() => plegado ? plegados.remove(x.id) : plegados.add(x.id)),
-              icon: Icon(plegado ? Icons.chevron_right_rounded : Icons.expand_more_rounded),
-            ),
-          Tooltip(message: textoEstado(g), child: puntoTipo(colorEstado(g), tam: 10)),
-        ],
-      ),
-      titulo: x.titulo.isEmpty ? 'Sin nombre' : x.titulo,
-      subtitulo: [
-        x.fabricante,
-        x.modelo,
-        if (x.numeroSerie.isNotEmpty) 'Nº ${x.numeroSerie}',
-      ].where((s) => s.isNotEmpty).join(' · '),
-      onTap: () => _abrir(x.id),
     );
   }
 }

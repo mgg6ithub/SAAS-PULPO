@@ -230,7 +230,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (medio) const Col('Asignado a', ancho: 96),
             const Col('Estado', ancho: 140, derecha: true),
             // Solo si algún trabajo de la lista tiene subtrabajos; al final y abreviada.
-            if (medio && ts.any((t) => store.hijas(t.id).isNotEmpty)) const Col('Sub', ancho: 60, ayuda: 'Subtrabajos'),
+            if (!industrial && medio && ts.any((t) => store.hijas(t.id).isNotEmpty)) const Col('Sub', ancho: 60, ayuda: 'Subtrabajos'),
           ],
           filas: ts.length,
           onTap: (i) {
@@ -312,9 +312,9 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (medio)
                 t.esPlantilla
                     ? const SizedBox()
-                    : SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: true),
+                    : SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: !industrial),
               t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
-              if (medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
+              if (!industrial && medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
             ];
           },
         ),

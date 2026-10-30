@@ -2235,7 +2235,7 @@ class SelectorTrabajadores extends StatelessWidget {
               ),
             ),
           ),
-        if (ofrecerSubtrabajos && store.descendientes(t.id).isNotEmpty && t.trabajadorIds.isNotEmpty) ...[
+        if (!industrial && ofrecerSubtrabajos && store.descendientes(t.id).isNotEmpty && t.trabajadorIds.isNotEmpty) ...[
           const Divider(height: 8),
           MenuItemButton(
             leadingIcon: Icon(Icons.account_tree_outlined, size: 18, color: P.morado),

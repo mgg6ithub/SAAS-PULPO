@@ -6,6 +6,7 @@ import 'package:pulpo/industrial/plantillas.dart';
 import 'package:pulpo/marca.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/store.dart';
+import 'package:pulpo/screens/tarea_detalle.dart';
 import 'package:pulpo/theme.dart';
 import 'package:pulpo/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -102,6 +103,19 @@ void main() {
     }
 
     for (final ancho in [1440.0, 980.0, 700.0, 600.0, 420.0, 360.0]) {
+      testWidgets('tabla de activos compacta con pie y tipo a $ancho', (tester) async {
+        tester.view.physicalSize = Size(ancho, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        filtroActivos.value = 0;
+        await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
+        await tester.pumpAndSettle();
+        expect(find.text('Tipo de mantenimiento'), findsOneWidget);
+        expect(tester.getSize(find.byType(Tabla)).height, lessThan(400));
+        expect(find.textContaining('2 activos'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('componentes, datos, OT e histórico sin desbordar a $ancho', (tester) async {
         await pintar(tester, ancho);
         expect(find.text('Motor'), findsOneWidget);
@@ -116,6 +130,34 @@ void main() {
         expect(find.text('Todos los activos'), findsNothing);
       });
     }
+
+    testWidgets('lista compacta y componentes anidados como subtrabajos', (tester) async {
+      await pintar(tester, 1440);
+      expect(find.byType(Tabla), findsOneWidget);
+      store.activos.add(Activo(id: 'filtro', padreId: 'a2', nombre: 'Filtro de aceite'));
+      await tester.tap(find.text('Motor'));
+      await tester.pumpAndSettle();
+      expect(find.text('Filtro de aceite'), findsOneWidget);
+      await tester.tap(find.text('Filtro de aceite'));
+      await tester.pumpAndSettle();
+      expect(find.text('Componente de Motor'), findsOneWidget);
+      expect(find.text('Nuevo componente'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('las órdenes industriales no ofrecen subtrabajos', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TareaDetalle(tareaId: 'ot1', onVolver: () {}, onAbrir: (_) {}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Subtrabajo'), findsNothing);
+      expect(find.textContaining('dividir en subtrabajos'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('cada componente abre su ficha y los datos se guardan sin cerrar la página', (tester) async {
       await pintar(tester, 980);

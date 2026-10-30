@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
-import '../industrial/tipo_mantenimiento.dart';
 import '../marca.dart';
 import '../models.dart';
 import '../store.dart';
@@ -34,7 +33,8 @@ class TareaCard extends StatelessWidget {
       if (!realizada && !t.esPlantilla && t.proximo != null) relativo(t.proximo!),
       if (!realizada) ?t.horario,
       if (t.esPlantilla) t.periodicidad.etiqueta,
-      if (mostrarCliente && !t.esPlantilla) industrial ? store.activo(t.activoId)?.titulo ?? 'Sin activo' : cliente?.nombre ?? '—',
+      if (mostrarCliente && !t.esPlantilla)
+        industrial ? store.activo(t.activoId)?.titulo ?? 'Sin activo' : cliente?.nombre ?? '—',
       if (t.ubicacion.isNotEmpty) t.ubicacion,
       t.tipo,
     ];
@@ -61,7 +61,7 @@ class TareaCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 if (!t.esPlantilla)
-                  SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: true),
+                  SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: !industrial),
               ],
             ),
             const SizedBox(height: 6),
@@ -97,7 +97,6 @@ class TareaCard extends StatelessWidget {
                         pillEstado(t)
                       else
                         SelectorEstado(t),
-                      if (industrial && t.tipoMantenimiento != null) PillTipo(t.tipoMantenimiento!),
                       if (averiada) Pill(t.estadoMaquina.etiqueta, t.estadoMaquina.color),
                       if (t.esPlantilla)
                         for (final c in industrial ? const <String>[] : t.competencias) Etiqueta(c, P.morado),

@@ -684,11 +684,12 @@ class Buscador extends StatelessWidget {
       // Clic fuera del buscador = deja de escribir (en web con ratón no lo hace solo), así vuelven los atajos.
       onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       // Ocupa los 40 de alto, como los botones de al lado.
-      expands: true,
-      maxLines: null,
+      maxLines: 1,
       textAlignVertical: TextAlignVertical.center,
       style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
+        constraints: const BoxConstraints.tightFor(height: 40),
+        isDense: true,
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: TextStyle(color: P.textoSuave, fontSize: 14),

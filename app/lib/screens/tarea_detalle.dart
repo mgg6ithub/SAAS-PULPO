@@ -64,14 +64,16 @@ class _TareaDetalleState extends State<TareaDetalle> {
             titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
             subtitulo: [
               t.tipo,
-              if (padre != null) 'Subtrabajo de ${padre.nombre}',
-              t.esPlantilla ? 'Plantilla' : industrial
+              if (!industrial && padre != null) 'Subtrabajo de ${padre.nombre}',
+              t.esPlantilla
+                  ? 'Plantilla'
+                  : industrial
                   ? store.activo(t.activoId)?.titulo ?? 'Sin activo'
                   : cliente?.nombre ?? m('Sin cliente'),
             ].join(' · '),
             // Resumen: añadir subtrabajo; Datos: editar; Histórico: nada; Automatizaciones: añadir regla.
             acciones: [
-              if (pestana == 0)
+              if (pestana == 0 && !industrial)
                 BotonPrimario(
                   'Subtrabajo',
                   conIcono: true,
@@ -186,7 +188,7 @@ class _Resumen extends StatelessWidget {
             children: [
               Text('Asignado a', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
               const SizedBox(height: 6),
-              SelectorTrabajadores(t, () => store.guardarTarea(t), ofrecerSubtrabajos: true),
+              SelectorTrabajadores(t, () => store.guardarTarea(t), ofrecerSubtrabajos: !industrial),
             ],
           ),
         ),
@@ -196,14 +198,17 @@ class _Resumen extends StatelessWidget {
 
   /// Los subtrabajos, en la misma lista que los trabajos; se entra en cada uno para añadirle más.
   Widget _subtrabajos({bool fija = false}) {
+    if (industrial) return const SizedBox.shrink();
     final hijas = store.hijas(t.id)
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
     if (hijas.isEmpty) {
       return Align(
         alignment: Alignment.topLeft,
         child: Consejo(
-          m('Un trabajo grande se puede dividir en subtrabajos, cada uno con su fecha, color y equipo. '
-          'Pulsa «Subtrabajo» arriba para añadir el primero.'),
+          m(
+            'Un trabajo grande se puede dividir en subtrabajos, cada uno con su fecha, color y equipo. '
+            'Pulsa «Subtrabajo» arriba para añadir el primero.',
+          ),
         ),
       );
     }
