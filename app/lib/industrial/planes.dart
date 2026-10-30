@@ -29,11 +29,6 @@ double? horasRestantesPlan(PlanMantenimiento p) {
   return p.cadaHoras! - (a.horas - (p.ultimoHoras ?? 0));
 }
 
-/// La OT pendiente que salió de este mantenimiento (mismo activo y nombre), si la hay.
-Tarea? otDePlan(PlanMantenimiento p) => store.tareas
-    .where((t) => !t.esPlantilla && t.activa && t.activoId == p.activoId && t.nombre == p.nombre && otPendiente(t))
-    .firstOrNull;
-
 /// Lista de mantenimientos en tabla, como la de componentes: qué es (con su breve descripción), cada cuánto,
 /// horas que quedan, próximo y a quién se asigna. Asignar a un técnico crea su OT.
 class TablaPlanes extends StatefulWidget {
@@ -58,6 +53,15 @@ class _TablaPlanesState extends State<TablaPlanes> {
       final ancho = box.maxWidth > 980;
       final medio = box.maxWidth > 600;
       final ps = widget.planes;
+      // Una pasada por activos y OT para toda la tabla: por fila, cada búsqueda recorría las listas enteras
+      // y el scroll se notaba con muchos mantenimientos.
+      final nodos = {for (final a in store.activos) a.id: a};
+      final ids = {for (final p in ps) p.activoId};
+      final ots = <String, Tarea>{
+        for (final t in store.tareas)
+          if (!t.esPlantilla && t.activa && ids.contains(t.activoId) && otPendiente(t)) '${t.activoId}|${t.nombre}': t,
+      };
+      final proximos = {for (final p in ps) p.id: proximoPlan(p)};
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
@@ -74,10 +78,10 @@ class _TablaPlanesState extends State<TablaPlanes> {
           pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
           celdas: (i) {
             final p = ps[i];
-            final nodo = store.activo(p.activoId);
+            final nodo = nodos[p.activoId];
             final h = horasRestantesPlan(p);
-            final d = proximoPlan(p);
-            final ot = otDePlan(p) ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
+            final d = proximos[p.id];
+            final ot = ots['${p.activoId}|${p.nombre}'] ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
             return [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),

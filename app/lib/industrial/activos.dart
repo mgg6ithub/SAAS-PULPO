@@ -302,8 +302,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         ),
       );
     }
-    final lista = [...planes]
-      ..sort((x, y) => (proximoPlan(x) ?? DateTime(9999)).compareTo(proximoPlan(y) ?? DateTime(9999)));
+    final proximos = {for (final p in planes) p.id: proximoPlan(p) ?? DateTime(9999)};
+    final lista = [...planes]..sort((x, y) => proximos[x.id]!.compareTo(proximos[y.id]!));
     return TablaPlanes(lista, activoId: a.id);
   }
 
