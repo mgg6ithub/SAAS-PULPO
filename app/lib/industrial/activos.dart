@@ -276,81 +276,35 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   int vuelta = 0;
   String? tareaId;
 
-  /// Bloques plegables de Resumen y filtro de mantenimientos por código (null = todos).
-  bool verMantenimientos = true, verComponentes = true;
-  String? codigo;
+  /// Qué enseña Resumen: 0 = mantenimientos (por defecto), 1 = subcomponentes.
+  int vista = 0;
 
   void _abrir(String id) => setState(() {
     Tooltip.dismissAllToolTips();
     elegido = id;
     pestana = 0;
-    codigo = null;
+    vista = 0;
   });
 
-  /// Cabecera de un bloque plegable: chevron, título, cuántos y una acción a la derecha.
-  Widget _plegable(String titulo, int n, bool abierto, VoidCallback onTap, Widget accion) => Row(
-    children: [
-      Expanded(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(P.radioControl),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                AnimatedRotation(
-                  turns: abierto ? 0 : -.25,
-                  duration: const Duration(milliseconds: 150),
-                  child: Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  titulo,
-                  style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
-                ),
-                const SizedBox(width: 8),
-                Text('$n', style: TextStyle(fontSize: 13, color: P.textoSuave)),
-              ],
+  /// Mantenimientos del activo y de sus componentes; la columna Código dice de cuál es cada uno.
+  Widget _mantenimientos(Activo a, List<PlanMantenimiento> planes) {
+    if (planes.isEmpty) {
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Tarjeta(
+          child: SizedBox(
+            width: double.infinity,
+            child: Text(
+              'Aún no hay mantenimientos. Crea lo que hay que hacerle a este ${a.padreId == null ? 'activo' : 'componente'}: cada cuánto, quién y cómo.',
+              style: TextStyle(fontSize: 13.5, color: P.textoSuave),
             ),
           ),
         ),
-      ),
-      accion,
-    ],
-  );
-
-  /// Mantenimientos del activo y de sus componentes, con el filtro por código de cada nivel.
-  Widget _mantenimientos(Activo a, List<PlanMantenimiento> planes) {
-    final nodos = [
-      for (final id in [a.id, ...store.ramaDe(a.id).where((id) => id != a.id)])
-        if (planes.any((p) => p.activoId == id)) ?store.activo(id),
-    ];
-    if (codigo != null && !nodos.any((n) => n.id == codigo)) codigo = null;
-    final lista = planes.where((p) => codigo == null || p.activoId == codigo).toList()
-      ..sort((x, y) => (proximoPlan(x) ?? DateTime(9999)).compareTo(proximoPlan(y) ?? DateTime(9999)));
-    if (planes.isEmpty) {
-      return Tarjeta(
-        child: Text(
-          'Aún no hay mantenimientos. Crea lo que hay que hacerle a este ${a.padreId == null ? 'activo' : 'componente'}: cada cuánto, quién y cómo.',
-          style: TextStyle(fontSize: 13.5, color: P.textoSuave),
-        ),
       );
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (nodos.length > 1) ...[
-          Pestanas(
-            opciones: ['Todos', for (final n in nodos) n.tag.isEmpty ? n.nombre : n.tag],
-            seleccion: codigo == null ? 0 : nodos.indexWhere((n) => n.id == codigo) + 1,
-            onChanged: (i) => setState(() => codigo = i == 0 ? null : nodos[i - 1].id),
-          ),
-          const SizedBox(height: 10),
-        ],
-        Flexible(child: TablaPlanes(lista, activoId: a.id)),
-      ],
-    );
+    final lista = [...planes]
+      ..sort((x, y) => (proximoPlan(x) ?? DateTime(9999)).compareTo(proximoPlan(y) ?? DateTime(9999)));
+    return TablaPlanes(lista, activoId: a.id);
   }
 
   /// Dato corto de la línea de resumen: etiqueta gris y valor en negrita.
@@ -459,47 +413,42 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         ],
                       ),
                       const SizedBox(height: huecoVista),
-                      _plegable(
-                        'Mantenimientos',
-                        planes.length,
-                        verMantenimientos,
-                        () => setState(() => verMantenimientos = !verMantenimientos),
-                        BotonPrimario(
-                          'Nuevo mantenimiento',
-                          conIcono: true,
-                          icono: Icons.add_rounded,
-                          onPressed: () => abrirPlanForm(context, activoId: a.id),
-                        ),
-                      ),
-                      if (verMantenimientos) ...[
-                        const SizedBox(height: 8),
-                        Flexible(child: _mantenimientos(a, planes)),
-                      ],
-                      const SizedBox(height: huecoVista),
-                      _plegable(
-                        'Subcomponentes',
-                        componentes.length,
-                        verComponentes,
-                        () => setState(() => verComponentes = !verComponentes),
-                        BotonPrimario(
-                          'Nuevo componente',
-                          conIcono: true,
-                          icono: Icons.add_rounded,
-                          onPressed: () => abrirActivoForm(context, padreId: a.id),
-                        ),
-                      ),
-                      if (verComponentes) ...[
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: componentes.isEmpty
-                              ? Vacio(
-                                  icono: Icons.account_tree_outlined,
-                                  titulo: 'Sin componentes',
-                                  texto: 'Añade las piezas y los componentes de este ${a.padreId == null ? 'activo' : 'componente'}.',
+                      Row(
+                        children: [
+                          const Spacer(),
+                          Pestanas(
+                            opciones: ['Mantenimientos · ${planes.length}', 'Subcomponentes · ${componentes.length}'],
+                            seleccion: vista,
+                            onChanged: (i) => setState(() => vista = i),
+                          ),
+                          const SizedBox(width: 12),
+                          vista == 0
+                              ? BotonPrimario(
+                                  'Nuevo mantenimiento',
+                                  conIcono: true,
+                                  icono: Icons.add_rounded,
+                                  onPressed: () => abrirPlanForm(context, activoId: a.id),
                                 )
-                              : _TablaActivos(componentes, _abrir, componentes: true),
-                        ),
-                      ],
+                              : BotonPrimario(
+                                  'Nuevo componente',
+                                  conIcono: true,
+                                  icono: Icons.add_rounded,
+                                  onPressed: () => abrirActivoForm(context, padreId: a.id),
+                                ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: vista == 0
+                            ? _mantenimientos(a, planes)
+                            : componentes.isEmpty
+                            ? Vacio(
+                                icono: Icons.account_tree_outlined,
+                                titulo: 'Sin componentes',
+                                texto: 'Añade las piezas y los componentes de este ${a.padreId == null ? 'activo' : 'componente'}.',
+                              )
+                            : _TablaActivos(componentes, _abrir, componentes: true),
+                      ),
                     ],
                   ),
                   1 => ActivoForm(

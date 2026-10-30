@@ -63,6 +63,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
         child: Tabla(
           columnas: [
             const Col('Mantenimiento', flex: 4),
+            if (medio) const Col('Código', flex: 2),
             if (ancho) const Col('Cada cuánto', flex: 2),
             if (medio) const Col('Horas restantes', ancho: 130, derecha: true),
             const Col('Próximo', ancho: 140),
@@ -73,7 +74,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
           pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
           celdas: (i) {
             final p = ps[i];
-            final codigo = p.activoId == widget.activoId ? '' : store.activo(p.activoId)?.titulo ?? '';
+            final nodo = store.activo(p.activoId);
             final h = horasRestantesPlan(p);
             final d = proximoPlan(p);
             final ot = otDePlan(p) ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
@@ -93,9 +94,9 @@ class _TablaPlanesState extends State<TablaPlanes> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true),
-                          if (codigo.isNotEmpty || p.descripcion.isNotEmpty)
+                          if (p.descripcion.isNotEmpty)
                             Text(
-                              [codigo, p.descripcion].where((x) => x.isNotEmpty).join(' · '),
+                              p.descripcion,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 12, color: P.textoSuave, height: 1.35),
@@ -106,6 +107,11 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   ],
                 ),
               ),
+              if (medio)
+                Tooltip(
+                  message: nodo?.nombre ?? '',
+                  child: celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true),
+                ),
               if (ancho) celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true),
               if (medio)
                 Padding(
