@@ -160,7 +160,16 @@ class _TablaActivos extends StatelessWidget {
             if (ancho) const Col('Horas', ancho: 100, derecha: true),
             if (medio) const Col('Próximo mantenimiento', ancho: 175),
             const Col('Tipo de mantenimiento', ancho: 160),
-            if (medio) const Col('Comp.', ancho: 60, derecha: true, ayuda: 'Componentes'),
+            if (medio)
+              Col(
+                'Componentes',
+                ancho: 32,
+                derecha: true,
+                cabecera: Tooltip(
+                  message: 'Componentes',
+                  child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
+                ),
+              ),
           ],
           filas: activos.length,
           celdas: (i) {
