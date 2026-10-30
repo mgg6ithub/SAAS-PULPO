@@ -329,10 +329,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     final lista = planes.where((p) => codigo == null || p.activoId == codigo).toList()
       ..sort((x, y) => (proximoPlan(x) ?? DateTime(9999)).compareTo(proximoPlan(y) ?? DateTime(9999)));
     if (planes.isEmpty) {
-      return Vacio(
-        icono: Icons.build_outlined,
-        titulo: 'Sin mantenimientos',
-        texto: 'Crea lo que hay que hacerle a este ${a.padreId == null ? 'activo' : 'componente'}: cada cuánto, quién y cómo.',
+      return Tarjeta(
+        child: Text(
+          'Aún no hay mantenimientos. Crea lo que hay que hacerle a este ${a.padreId == null ? 'activo' : 'componente'}: cada cuánto, quién y cómo.',
+          style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+        ),
       );
     }
     return Column(
@@ -362,14 +363,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     );
   }
 
-  Widget _cifra(String etiqueta, String valor, String nota) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(etiqueta, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-      const SizedBox(height: 4),
-      Text(valor, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -.8)),
-      Text(nota, style: TextStyle(fontSize: 12, color: P.textoSuave)),
-    ],
+  /// Dato corto de la línea de resumen: etiqueta gris y valor en negrita.
+  Widget _dato(String etiqueta, String valor) => Text.rich(
+    TextSpan(
+      children: [
+        TextSpan(text: '$etiqueta  ', style: TextStyle(color: P.textoSuave)),
+        TextSpan(text: valor, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ],
+    ),
+    style: const TextStyle(fontSize: 13.5),
   );
 
   void _nuevaOt(Activo a) => abrirTareaForm(
@@ -455,23 +457,16 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   0 => Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Tarjeta(
-                        child: Wrap(
-                          spacing: 24,
-                          runSpacing: 10,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Pill(textoEstado(g), colorEstado(g), punto: true),
-                            _cifra('Próximo', proximo == null ? 'Sin estimar' : relativo(proximo), proximaFecha(a)),
-                            _cifra('Contador', horas(a.horas), 'Horas de uso'),
-                            _cifra('Mantenimientos', '${planes.length}', 'Del activo y sus componentes'),
-                            _cifra(
-                              'Órdenes pendientes',
-                              '${ots.where(otPendiente).length}',
-                              'Del activo y sus componentes',
-                            ),
-                          ],
-                        ),
+                      Wrap(
+                        spacing: 24,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Pill(textoEstado(g), colorEstado(g), punto: true),
+                          _dato('Próximo', proximo == null ? 'Sin estimar' : '${relativo(proximo)} · ${fecha(proximo)}'),
+                          _dato('Contador', horas(a.horas)),
+                          _dato('Órdenes pendientes', '${ots.where(otPendiente).length}'),
+                        ],
                       ),
                       const SizedBox(height: huecoVista),
                       _plegable(
