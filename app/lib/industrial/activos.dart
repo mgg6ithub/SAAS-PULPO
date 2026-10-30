@@ -81,17 +81,17 @@ class _ActivosState extends State<Activos> {
             ),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 14,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
+          BarraVista(
+            izquierda: [
+              const SizedBox.shrink(),
               Pestanas(
                 opciones: _filtros,
                 colores: [null, for (final t in TipoMantenimiento.values) t.color],
                 seleccion: filtroActivos.value,
                 onChanged: (i) => filtroActivos.value = i,
               ),
+            ],
+            derecha: [
               Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
             ],
           ),
