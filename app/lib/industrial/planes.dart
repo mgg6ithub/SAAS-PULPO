@@ -46,11 +46,75 @@ class _TablaPlanesState extends State<TablaPlanes> {
   /// Borradores de OT de los mantenimientos aún sin asignar, para el selector de técnicos.
   final _borradores = <String, Tarea>{};
 
+  /// Columnas opcionales, en su orden, y las que se ven (se recuerdan mientras dure la sesión).
+  static const _opcionales = [
+    'Código',
+    'Componente',
+    'Tipo',
+    'Cada cuánto',
+    'Horas restantes',
+    'Próximo',
+    'Último hecho',
+    'Categoría',
+    'Duración',
+    'Repuestos',
+    'Orden de trabajo',
+    'Asignado a',
+  ];
+  static final _visibles = {'Código', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Asignado a'};
+
+  static const _cols = {
+    'Código': Col('Código', flex: 2),
+    'Componente': Col('Componente', flex: 2),
+    'Tipo': Col('Tipo', ancho: 170),
+    'Cada cuánto': Col('Cada cuánto', flex: 2),
+    'Horas restantes': Col('Horas restantes', ancho: 130, derecha: true),
+    'Próximo': Col('Próximo', ancho: 140),
+    'Último hecho': Col('Último hecho', ancho: 120),
+    'Categoría': Col('Categoría', flex: 2),
+    'Duración': Col('Duración', ancho: 100),
+    'Repuestos': Col('Repuestos', flex: 3),
+    'Orden de trabajo': Col('Orden de trabajo', ancho: 140),
+    'Asignado a': Col('Asignado a', ancho: 96),
+  };
+
+  /// Botón de la última columna: menú con todas las columnas para marcar o desmarcar.
+  Widget _menuColumnas() => MenuAnchor(
+    alignmentOffset: const Offset(-200, 4),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      MenuItemButton(
+        onPressed: null,
+        child: Text('Columnas', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+      ),
+      for (final c in _opcionales)
+        MenuItemButton(
+          closeOnActivate: false,
+          leadingIcon: Icon(
+            _visibles.contains(c) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+            size: 20,
+            color: _visibles.contains(c) ? P.morado : P.textoSuave,
+          ),
+          onPressed: () => setState(() => _visibles.contains(c) ? _visibles.remove(c) : _visibles.add(c)),
+          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c)),
+        ),
+    ],
+    builder: (context, menu, _) => IconButton(
+      tooltip: 'Elegir columnas',
+      visualDensity: VisualDensity.compact,
+      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+      icon: Icon(Icons.view_column_outlined, size: 18, color: P.textoSuave),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => SegunTamano(
-    clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
+    clave: (box) => box.maxWidth > 600,
     builder: (context, box) {
-      final ancho = box.maxWidth > 980;
+      // Móvil: solo el mantenimiento y el próximo.
       final medio = box.maxWidth > 600;
       final ps = widget.planes;
       // Una pasada por activos y OT para toda la tabla: por fila, cada búsqueda recorría las listas enteras
@@ -62,16 +126,17 @@ class _TablaPlanesState extends State<TablaPlanes> {
           if (!t.esPlantilla && t.activa && ids.contains(t.activoId) && otPendiente(t)) '${t.activoId}|${t.nombre}': t,
       };
       final proximos = {for (final p in ps) p.id: proximoPlan(p)};
+      final vistas = [
+        for (final c in _opcionales)
+          if (medio ? _visibles.contains(c) : c == 'Próximo') c,
+      ];
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
           columnas: [
             const Col('Mantenimiento', flex: 4),
-            if (medio) const Col('Código', flex: 2),
-            if (ancho) const Col('Cada cuánto', flex: 2),
-            if (medio) const Col('Horas restantes', ancho: 130, derecha: true),
-            const Col('Próximo', ancho: 140),
-            if (medio) const Col('Asignado a', ancho: 96),
+            for (final c in vistas) _cols[c]!,
+            if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
           ],
           filas: ps.length,
           onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
@@ -79,9 +144,56 @@ class _TablaPlanesState extends State<TablaPlanes> {
           celdas: (i) {
             final p = ps[i];
             final nodo = nodos[p.activoId];
-            final h = horasRestantesPlan(p);
             final d = proximos[p.id];
-            final ot = ots['${p.activoId}|${p.nombre}'] ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
+            final otPendienteDe = ots['${p.activoId}|${p.nombre}'];
+            Widget celda(String c) {
+              switch (c) {
+                case 'Código':
+                  return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
+                case 'Componente':
+                  return celdaTexto(nodo?.nombre ?? '—', suave: true);
+                case 'Tipo':
+                  return PillTipo(p.tipo);
+                case 'Cada cuánto':
+                  return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);
+                case 'Horas restantes':
+                  final h = horasRestantesPlan(p);
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
+                  );
+                case 'Próximo':
+                  final vencido = d != null && d.isBefore(hoy());
+                  return Text(
+                    d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: vencido ? P.rojo : P.textoSuave,
+                      fontWeight: vencido ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  );
+                case 'Último hecho':
+                  return celdaTexto(p.ultimo == null ? '—' : fecha(p.ultimo!), suave: true);
+                case 'Categoría':
+                  return celdaTexto(p.categoria.isEmpty ? 'Cualquiera' : p.categoria, suave: true);
+                case 'Duración':
+                  return celdaTexto(duracion(p.duracionMin), suave: true);
+                case 'Repuestos':
+                  return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
+                case 'Orden de trabajo':
+                  return otPendienteDe == null
+                      ? celdaTexto('Sin crear', suave: true)
+                      : Pill(otPendienteDe.trabajadorIds.isEmpty ? 'Sin técnico' : 'Asignada', P.morado, punto: true);
+                default:
+                  final ot = otPendienteDe ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
+                  return SelectorTrabajadores(ot, () {
+                    // La primera asignación crea la OT; luego se edita la misma.
+                    store.guardarTarea(ot);
+                    setState(() => _borradores.remove(p.id));
+                  }, compacto: true);
+              }
+            }
+
             return [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -111,24 +223,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   ],
                 ),
               ),
-              if (medio)
-                Tooltip(
-                  message: nodo?.nombre ?? '',
-                  child: celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true),
-                ),
-              if (ancho) celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true),
-              if (medio)
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
-                ),
-              celdaTexto(d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}', suave: true),
-              if (medio)
-                SelectorTrabajadores(ot, () {
-                  // La primera asignación crea la OT; luego se edita la misma.
-                  store.guardarTarea(ot);
-                  setState(() => _borradores.remove(p.id));
-                }, compacto: true),
+              for (final c in vistas) celda(c),
+              if (medio) const SizedBox(),
             ];
           },
         ),
