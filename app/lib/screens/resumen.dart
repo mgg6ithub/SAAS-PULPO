@@ -15,6 +15,8 @@ import 'estadisticas.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
 import '../marca.dart';
+import '../industrial/activos.dart' show abrirActivoForm;
+import '../industrial/vistazo.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
 /// como las tarjetas de la landing. Sin gráficas de relleno: solo lo que se mira cada mañana.
@@ -42,7 +44,7 @@ class Resumen extends StatelessWidget {
       (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
     );
     final pasos = [
-      store.clientes.isNotEmpty,
+      industrial ? store.activos.isNotEmpty : store.clientes.isNotEmpty,
       hayTarea,
       hayTarea && ajustes.guiaItinerario,
       hayTrabajador && hayTarea && ajustes.guiaOrganizar && hayTrabajoAsignado,
@@ -84,6 +86,11 @@ class Resumen extends StatelessWidget {
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pulpo.
+                  // iPultec: lo primero, todas las máquinas con el color de su estado.
+                  if (industrial && store.activos.isNotEmpty) ...[
+                    VistazoActivos(onAbrir: onCliente ?? (_) {}, columnas: dosCol ? 3 : 1),
+                    const SizedBox(height: 32),
+                  ],
                   if (!hayTarea) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
                     _Kpis(
@@ -100,8 +107,11 @@ class Resumen extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
                     _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
-                    const SizedBox(height: 32),
-                    Estadisticas(dosCol: dosCol, onCliente: onCliente ?? (_) {}),
+                    // Las estadísticas son de clientes y equipos: en iPultec su lugar lo ocupa el vistazo.
+                    if (!industrial) ...[
+                      const SizedBox(height: 32),
+                      Estadisticas(dosCol: dosCol, onCliente: onCliente ?? (_) {}),
+                    ],
                   ],
                 ],
               ),
@@ -137,15 +147,33 @@ class _ComoFunciona extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final etapas = [
-      (P.azul, m('Tus clientes'), 'Cada edificio, local o instalación que mantienes, con su dirección en el mapa.'),
-      (P.teal, m('Sus trabajos'), m('Qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca y avisa de lo que vence.')),
-      (
-        P.ambar,
-        m('Pulpo organiza'),
-        m('Reparte los trabajos entre tu equipo según lo que sabe hacer y traza la ruta del día.'),
-      ),
-    ];
+    final etapas = industrial
+        ? [
+            (P.azul, 'Tus activos', 'Cada máquina (camión, compresor, prensa…) con sus componentes y subcomponentes.'),
+            (
+              P.teal,
+              'Sus órdenes de trabajo',
+              'Qué mantenimiento lleva cada componente, cada cuánto y de qué tipo. iPultec calcula cuándo toca y avisa de lo que vence.',
+            ),
+            (P.ambar, 'iPultec organiza', 'Reparte las órdenes de trabajo entre tus técnicos según su categoría.'),
+          ]
+        : [
+            (
+              P.azul,
+              m('Tus clientes'),
+              'Cada edificio, local o instalación que mantienes, con su dirección en el mapa.',
+            ),
+            (
+              P.teal,
+              m('Sus trabajos'),
+              m('Qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca y avisa de lo que vence.'),
+            ),
+            (
+              P.ambar,
+              m('Pulpo organiza'),
+              m('Reparte los trabajos entre tu equipo según lo que sabe hacer y traza la ruta del día.'),
+            ),
+          ];
     final tarjetas = [
       for (final (i, (color, titulo, texto)) in etapas.indexed)
         Tarjeta(
@@ -230,6 +258,18 @@ class _ComoFunciona extends StatelessWidget {
         else
           for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(height: 12), t],
         const SizedBox(height: 24),
+        // iPultec: el color de cada máquina, que verá en Inicio en cuanto dé de alta sus activos.
+        if (industrial) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Text(
+              'El color de cada máquina',
+              style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
+            ),
+          ),
+          Tarjeta(child: LeyendaEstados(columnas: columnas)),
+          const SizedBox(height: 24),
+        ],
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
@@ -283,22 +323,38 @@ class _PrimerosPasos extends StatelessWidget {
     // que lleva a su sección y abre el formulario, para que se aprenda dónde está. Ver el itinerario: su botón.
     final hayTrabajador = store.trabajadores.any((w) => w.activo);
     final pasos = [
-      (
-        m('Crea tu primer cliente'),
-        'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación…',
-        (Marca.iconoCliente, m('Clientes'), m('Nuevo cliente'), Seccion.clientes, abrirClienteForm),
-        null,
-      ),
+      industrial
+          ? (
+              'Da de alta tu primera máquina',
+              'Un activo: un camión, un compresor, una prensa… Dentro, sus componentes con su tag, fabricante y modelo.',
+              (Marca.iconoCliente, 'Activos', 'Nuevo activo', Seccion.clientes, (c) => abrirActivoForm(c)),
+              null,
+            )
+          : (
+              m('Crea tu primer cliente'),
+              'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación…',
+              (Marca.iconoCliente, m('Clientes'), m('Nuevo cliente'), Seccion.clientes, abrirClienteForm),
+              null,
+            ),
       (
         m('Crea un trabajo'),
-        m('Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
-            'También puedes crearlo desde la ficha del cliente.'),
+        industrial
+            ? 'Un mantenimiento de una máquina o de uno de sus componentes: qué hay que hacer, cada cuánto y de qué '
+                  'tipo (preventivo, correctivo no crítico o crítico). iPultec calcula cuándo toca.'
+            : m(
+                'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
+                'También puedes crearlo desde la ficha del cliente.',
+              ),
         (Marca.iconoTrabajo, m('Trabajos'), m('Nuevo trabajo'), Seccion.tareas, (c) => abrirTareaForm(c, null)),
         null,
       ),
       (
         m('Mira tu trabajo en el itinerario'),
-        m('El itinerario es tu semana: cada trabajo en su día y a su hora, y en el mapa.'),
+        m(
+          Marca.mapa
+              ? 'El itinerario es tu semana: cada trabajo en su día y a su hora, y en el mapa.'
+              : 'El itinerario es tu semana: cada trabajo en su día y a su hora.',
+        ),
         null,
         BotonPrimario('Ir al itinerario', icono: Icons.calendar_month_outlined, onPressed: _verItinerario),
       ),
@@ -306,7 +362,11 @@ class _PrimerosPasos extends StatelessWidget {
         !hayTrabajador ? m('Añade un trabajador') : m('Deja que Pulpo organice tu primer trabajo'),
         !hayTrabajador
             ? m('Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.')
-            : m('Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico y trazará la ruta.'),
+            : m(
+                Marca.mapa
+                    ? 'Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico y trazará la ruta.'
+                    : 'Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico según su categoría.',
+              ),
         !hayTrabajador
             // Con las competencias de los trabajos ya creados, Organizar podrá asignar el primero.
             ? (
@@ -480,7 +540,10 @@ class _Ruta extends StatelessWidget {
               Text(seccion, style: estilo),
               Icon(Icons.chevron_right_rounded, size: 16, color: P.textoSuave),
               if (mas) ...[Icon(Icons.add_rounded, size: 16, color: P.texto), const SizedBox(width: 3)],
-              Text(accion, style: estilo),
+              // En móvil, «Nueva orden de trabajo» puede no caber: se corta antes que desbordar.
+              Flexible(
+                child: Text(accion, maxLines: 1, overflow: TextOverflow.ellipsis, style: estilo),
+              ),
             ],
           ),
         ),
@@ -577,8 +640,9 @@ class _Pendientes extends StatelessWidget {
       if (clientesOlvidados(store) case final olvidados when olvidados.isNotEmpty)
         FilaLista(
           lider: _punto(P.azul),
-          titulo:
-              m('${olvidados.length} ${olvidados.length == 1 ? 'cliente' : 'clientes'} sin revisión desde hace más de un año'),
+          titulo: m(
+            '${olvidados.length} ${olvidados.length == 1 ? 'cliente' : 'clientes'} sin revisión desde hace más de un año',
+          ),
           subtitulo: olvidados.take(3).map((c) => c.nombre).join(' · '),
           derecha: _cat(m('Clientes')),
           onTap: () => onIr(Seccion.clientes),

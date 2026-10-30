@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
+import 'package:pulpo/industrial/historicos.dart';
 import 'package:pulpo/industrial/incidencia.dart';
 import 'package:pulpo/industrial/mantenimientos.dart';
 import 'package:pulpo/industrial/plan.dart';
 import 'package:pulpo/industrial/planes.dart';
+import 'package:pulpo/industrial/vistazo.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -184,6 +186,71 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Nuevo componente'), findsWidgets);
       }
+    });
+  }
+
+  for (final columnas in [3, 1]) {
+    testWidgets('Inicio: vistazo de máquinas con leyenda en $columnas columnas, la más grave primero', (tester) async {
+      tester.view.physicalSize = Size(columnas == 3 ? 1280 : 420, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      store.guardarActivo(Activo(id: 'b1', tag: 'PRE-01', nombre: 'Prensa'));
+      store.tareas.add(Tarea(id: 'ot1', activoId: 'a3', tipoMantenimiento: TipoMantenimiento.correctivoCritico));
+      String? abierto;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: VistazoActivos(columnas: columnas, onAbrir: (id) => abierto = id),
+            ),
+          ),
+        ),
+      );
+      expect(find.textContaining('El activo no puede funcionar'), findsOneWidget);
+      final camion = tester.getTopLeft(find.text('CAM-01 · Camión'));
+      final prensa = tester.getTopLeft(find.text('PRE-01 · Prensa'));
+      expect(camion.dy < prensa.dy || camion.dx < prensa.dx, isTrue);
+      expect(find.text('Correctivo crítico · 1 pendiente'), findsOneWidget);
+      await tester.tap(find.text('PRE-01 · Prensa'));
+      expect(abierto, 'b1');
+    });
+  }
+
+  for (final ancho in [1440.0, 700.0, 420.0]) {
+    testWidgets('Históricos: OT realizadas con filtros a ${ancho.round()} px', (tester) async {
+      tester.view.physicalSize = Size(ancho, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      store.guardarTrabajador(Trabajador(id: 'w-ot', nombre: 'Técnico OT'));
+      store.tareas.addAll([
+        Tarea(
+          id: 'ot1',
+          nombre: 'Cambio de aceite',
+          activoId: 'a2',
+          tipoMantenimiento: TipoMantenimiento.preventivo,
+          trabajadorIds: ['w-ot'],
+          historial: [hoy(), masDias(hoy(), -40)],
+        ),
+        Tarea(
+          id: 'ot2',
+          nombre: 'Fuga en bomba',
+          activoId: 'a3',
+          tipoMantenimiento: TipoMantenimiento.correctivoCritico,
+          historial: [masDias(hoy(), -2)],
+        ),
+        Tarea(id: 'ot3', nombre: 'Pendiente', activoId: 'a2', tipoMantenimiento: TipoMantenimiento.preventivo),
+      ]);
+      expect(otsRealizadas().length, 3);
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Historicos())));
+      await tester.pumpAndSettle();
+      expect(find.text('Cambio de aceite'), findsNWidgets(2));
+      expect(find.text('Fuga en bomba'), findsOneWidget);
+      expect(find.text('Pendiente'), findsNothing);
+      // Filtro de tipo: solo las críticas.
+      await tester.tap(find.text('Correctivo crítico').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Cambio de aceite'), findsNothing);
+      expect(find.text('Fuga en bomba'), findsOneWidget);
     });
   }
 }
