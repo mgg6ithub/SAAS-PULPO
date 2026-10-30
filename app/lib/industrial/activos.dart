@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -499,12 +500,9 @@ class _ActivoFormState extends State<ActivoForm> {
 
   Map<String, String> get _erroresMantenimiento {
     final errores = <String, String>{};
-    final actual = _valor(horasC, vacio: 0), ultimo = _valor(ultimoContador, vacio: 0);
+    final actual = _valor(horasC, vacio: 0);
     final uso = _valor(ritmo, vacio: 0);
     if (actual == null || actual < 0) errores['actual'] = 'Escribe un contador válido, desde 0';
-    if (ultimo == null || ultimo < 0 || (actual != null && ultimo > actual)) {
-      errores['ultimo'] = 'No puede superar el contador actual';
-    }
     if (uso == null || uso < 0 || uso > (a.usoSemanal ? 168 : 24)) {
       errores['uso'] = a.usoSemanal ? 'Entre 0 y 168 horas semanales' : 'Entre 0 y 24 horas al día';
     }
@@ -530,7 +528,7 @@ class _ActivoFormState extends State<ActivoForm> {
     ..horas = _valor(horasC, vacio: 0) ?? 0
     ..cadaHoras = _valor(cadaHoras)
     ..cadaMeses = int.tryParse(cadaMeses.text)
-    ..horasUltimoMantenimiento = _valor(ultimoContador, vacio: 0) ?? 0
+    ..horasUltimoMantenimiento = math.min(_valor(ultimoContador, vacio: 0) ?? 0, _valor(horasC, vacio: 0) ?? 0)
     ..horasUso = _valor(ritmo, vacio: 0) ?? 0;
 
   String get _estimacion {
@@ -557,6 +555,37 @@ class _ActivoFormState extends State<ActivoForm> {
         '${p.frecuencia == FrecuenciaActivo.horas ? ' ${horasRestantes(p)} hasta el mantenimiento, según la última lectura.' : ''}';
   }
 
+  static const _frecuencias = ['Sin definir', 'Horas de uso', 'Meses', 'Fecha concreta'];
+
+  /// Desplegable con aspecto de campo (etiqueta encima y chevron), alineado con los campos de texto.
+  Widget _menu<T>(
+    String label, {
+    required String tooltip,
+    required T valor,
+    required Map<T, String> opciones,
+    required ValueChanged<T> onSelected,
+  }) => conMargen(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        etiqueta(label),
+        BotonMenu<T>(
+          relleno: EdgeInsets.zero,
+          tooltip: tooltip,
+          seleccionado: valor,
+          opciones: [for (final e in opciones.entries) (e.key, Text(e.value))],
+          onSelected: onSelected,
+          child: InputDecorator(
+            decoration: InputDecoration(
+              suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+            ),
+            child: Text(opciones[valor]!),
+          ),
+        ),
+      ],
+    ),
+  );
+
   Widget _mantenimiento() {
     final errores = intentoGuardar ? _erroresMantenimiento : <String, String>{};
     return KeyedSubtree(
@@ -565,94 +594,86 @@ class _ActivoFormState extends State<ActivoForm> {
         'Mantenimiento propio',
         descripcion: 'Este activo o componente tiene su propio intervalo, independiente del resto.',
         [
-          etiqueta('Programar por'),
-          conMargen(
-            BotonMenu<FrecuenciaActivo>(
-              relleno: EdgeInsets.zero,
+          // Tres filas de dos: cómo se programa y cada cuánto; lectura del contador; ritmo de uso.
+          dos(
+            _menu<FrecuenciaActivo>(
+              'Programar por',
               tooltip: 'Cómo se programa el mantenimiento',
-              seleccionado: a.frecuencia,
-              opciones: [
-                for (final f in FrecuenciaActivo.values)
-                  (f, Text(const ['Sin definir', 'Horas de uso', 'Meses', 'Fecha concreta'][f.index])),
-              ],
+              valor: a.frecuencia,
+              opciones: {for (final f in FrecuenciaActivo.values) f: _frecuencias[f.index]},
               onSelected: (f) => setState(() {
                 a.frecuencia = f;
                 if (f == FrecuenciaActivo.meses) a.ultimoMantenimiento ??= hoy();
               }),
-              child: InputDecorator(
-                decoration: const InputDecoration(),
-                child: Text(const ['Sin definir', 'Horas de uso', 'Meses', 'Fecha concreta'][a.frecuencia.index]),
+            ),
+            switch (a.frecuencia) {
+              FrecuenciaActivo.horas => campo(
+                'Cada cuántas horas',
+                cadaHoras,
+                teclado: const TextInputType.numberWithOptions(decimal: true),
+                hint: '5000',
+                error: errores['intervalo'],
+                obligatorio: true,
               ),
-            ),
+              FrecuenciaActivo.meses => campo(
+                'Cada cuántos meses',
+                cadaMeses,
+                teclado: TextInputType.number,
+                hint: '3',
+                error: errores['intervalo'],
+                obligatorio: true,
+              ),
+              FrecuenciaActivo.fecha => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CampoFecha(
+                    'Próximo mantenimiento',
+                    a.fechaMantenimiento,
+                    (d) => setState(() => a.fechaMantenimiento = d),
+                  ),
+                  if (errores['fecha'] != null) Text(errores['fecha']!, style: const TextStyle(color: P.rojo)),
+                ],
+              ),
+              FrecuenciaActivo.sinDefinir => const SizedBox(),
+            },
           ),
-          if (a.frecuencia == FrecuenciaActivo.horas)
-            campo(
-              'Cada cuántas horas',
-              cadaHoras,
-              teclado: const TextInputType.numberWithOptions(decimal: true),
-              hint: '5000',
-              error: errores['intervalo'],
-              obligatorio: true,
+          if (a.frecuencia == FrecuenciaActivo.meses)
+            dos(
+              CampoFecha(
+                'Último mantenimiento',
+                a.ultimoMantenimiento,
+                (d) => setState(() => a.ultimoMantenimiento = d),
+                hasta: hoy(),
+              ),
+              const SizedBox(),
             ),
-          if (a.frecuencia == FrecuenciaActivo.meses) ...[
-            campo(
-              'Cada cuántos meses',
-              cadaMeses,
-              teclado: TextInputType.number,
-              hint: '3',
-              error: errores['intervalo'],
-              obligatorio: true,
-            ),
-            CampoFecha(
-              'Último mantenimiento',
-              a.ultimoMantenimiento,
-              (d) => setState(() => a.ultimoMantenimiento = d),
-              hasta: hoy(),
-            ),
-          ],
-          if (a.frecuencia == FrecuenciaActivo.fecha) ...[
-            CampoFecha('Próximo mantenimiento', a.fechaMantenimiento, (d) => setState(() => a.fechaMantenimiento = d)),
-            if (errores['fecha'] != null) Text(errores['fecha']!, style: const TextStyle(color: P.rojo)),
-          ],
           dos(
+            CampoFecha('Fecha de la lectura', a.fechaLectura, (d) => setState(() => a.fechaLectura = d), hasta: hoy()),
             campo(
               'Contador actual (h)',
               horasC,
               teclado: const TextInputType.numberWithOptions(decimal: true),
-              hint: '1200',
+              hint: '0',
               error: errores['actual'],
               obligatorio: true,
             ),
+          ),
+          dos(
+            _menu<bool>(
+              'Ritmo de uso',
+              tooltip: 'Horas de uso diarias o semanales',
+              valor: a.usoSemanal,
+              opciones: const {false: 'Media por día natural', true: 'Total por semana'},
+              onSelected: (v) => setState(() => a.usoSemanal = v),
+            ),
             campo(
-              'Contador al último mantenimiento (h)',
-              ultimoContador,
+              a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
+              ritmo,
               teclado: const TextInputType.numberWithOptions(decimal: true),
-              error: errores['ultimo'],
+              hint: a.usoSemanal ? '35' : '7',
+              error: errores['uso'],
               obligatorio: true,
             ),
-          ),
-          CampoFecha('Fecha de la lectura', a.fechaLectura, (d) => setState(() => a.fechaLectura = d), hasta: hoy()),
-          etiqueta('Ritmo de uso'),
-          conMargen(
-            BotonMenu<bool>(
-              relleno: EdgeInsets.zero,
-              tooltip: 'Horas de uso diarias o semanales',
-              seleccionado: a.usoSemanal,
-              opciones: const [(false, Text('Media por día natural')), (true, Text('Total por semana'))],
-              onSelected: (v) => setState(() => a.usoSemanal = v),
-              child: InputDecorator(
-                decoration: const InputDecoration(),
-                child: Text(a.usoSemanal ? 'Total por semana' : 'Media por día natural'),
-              ),
-            ),
-          ),
-          campo(
-            a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
-            ritmo,
-            teclado: const TextInputType.numberWithOptions(decimal: true),
-            hint: a.usoSemanal ? '35' : '7',
-            error: errores['uso'],
-            obligatorio: true,
           ),
           if (a.frecuencia != FrecuenciaActivo.sinDefinir) Consejo(_estimacion),
         ],
@@ -678,7 +699,7 @@ class _ActivoFormState extends State<ActivoForm> {
       ..horas = _valor(horasC, vacio: 0) ?? 0
       ..cadaHoras = a.frecuencia == FrecuenciaActivo.horas ? _valor(cadaHoras) : null
       ..cadaMeses = a.frecuencia == FrecuenciaActivo.meses ? int.tryParse(cadaMeses.text) : null
-      ..horasUltimoMantenimiento = _valor(ultimoContador, vacio: 0) ?? 0
+      ..horasUltimoMantenimiento = math.min(_valor(ultimoContador, vacio: 0) ?? 0, _valor(horasC, vacio: 0) ?? 0)
       ..horasUso = _valor(ritmo, vacio: 0) ?? 0
       ..repuestos = repuestos.text.trim()
       ..notas = notas.text.trim();
