@@ -74,14 +74,24 @@ class _ActivosState extends State<Activos> {
               const TituloVista('Activos'),
               Pestanas(
                 opciones: _filtros,
+                colores: [null, for (final t in TipoMantenimiento.values) t.color],
                 seleccion: filtroActivos.value,
                 onChanged: (i) => filtroActivos.value = i,
               ),
             ],
             derecha: [
-              Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
+              if (esMovil(context)) Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
             ],
-            principal: BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
+            principal: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!esMovil(context)) ...[
+                  Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
+                  const SizedBox(width: 8),
+                ],
+                BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
+              ],
+            ),
           ),
           const SizedBox(height: huecoVista),
           Expanded(

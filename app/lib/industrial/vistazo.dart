@@ -49,7 +49,7 @@ class LeyendaEstados extends StatelessWidget {
           )
         : Column(
             children: [
-              for (final (i, x) in items.indexed) ...[if (i > 0) const SizedBox(height: 8), x],
+              for (final (i, x) in items.indexed) ...[if (i > 0) const SizedBox(height: 6), x],
             ],
           );
   }
@@ -145,7 +145,7 @@ class _Columna extends StatelessWidget {
       else
         for (final a in activos.take(VistazoActivos._maximo)) ...[
           HoverCard(
-            padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+            padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
             onTap: () => onAbrir(a.id),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +156,7 @@ class _Columna extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -.2),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   [_pendientes(a.id), if (a.division.isNotEmpty) a.division].where((x) => x.isNotEmpty).join(' · '),
                   maxLines: 1,
@@ -166,7 +166,7 @@ class _Columna extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
         ],
       if (activos.length > VistazoActivos._maximo)
         Align(

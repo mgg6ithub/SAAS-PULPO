@@ -693,7 +693,7 @@ class Buscador extends StatelessWidget {
         hintText: hint,
         hintMaxLines: 1,
         hintStyle: TextStyle(color: P.textoSuave, fontSize: 14),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         prefixIcon: Icon(Icons.search_rounded, size: 18, color: P.textoSuave),
         prefixIconConstraints: const BoxConstraints(minWidth: 34),
       ),
@@ -916,9 +916,21 @@ class TituloVista extends StatelessWidget {
 /// hasta la elegida. Siempre 40 de alto, como el resto de controles.
 class Pestanas extends StatelessWidget {
   final List<String> opciones;
+  final List<Color?>? colores;
   final int seleccion;
   final ValueChanged<int> onChanged;
-  const Pestanas({super.key, required this.opciones, required this.seleccion, required this.onChanged});
+  const Pestanas({super.key, required this.opciones, required this.seleccion, required this.onChanged, this.colores});
+
+  Widget _opcion(int i, Widget texto) => colores == null ? texto : Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (colores != null && colores![i] != null) ...[
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: colores![i], shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+      ],
+      texto,
+    ],
+  );
 
   /// Móvil: un desplegable con la opción elegida (las pestañas no caben y quedarían cortadas).
   Widget _desplegable(TextStyle estilo) => PopupMenuButton<int>(
@@ -929,7 +941,7 @@ class Pestanas extends StatelessWidget {
       for (final (i, o) in opciones.indexed)
         PopupMenuItem(
           value: i,
-          child: Text(o, style: estilo.copyWith(color: i == seleccion ? P.morado : P.texto)),
+          child: _opcion(i, Text(o, style: estilo.copyWith(color: i == seleccion ? P.morado : P.texto))),
         ),
     ],
     child: Container(
@@ -939,7 +951,7 @@ class Pestanas extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(seleccion >= 0 && seleccion < opciones.length ? opciones[seleccion] : '', style: estilo),
+          if (seleccion >= 0 && seleccion < opciones.length) _opcion(seleccion, Text(opciones[seleccion], style: estilo)),
           const SizedBox(width: 4),
           Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
         ],
@@ -963,7 +975,7 @@ class Pestanas extends StatelessWidget {
       )..layout();
       mayor = max(mayor, tp.width);
     }
-    final w = mayor.ceilToDouble() + 28;
+    final w = mayor.ceilToDouble() + 28 + (colores == null ? 0 : 14);
     final valida = seleccion >= 0 && seleccion < opciones.length;
     return Container(
       height: 40,
@@ -1005,7 +1017,7 @@ class Pestanas extends StatelessWidget {
                           child: AnimatedDefaultTextStyle(
                             duration: const Duration(milliseconds: 200),
                             style: estilo.copyWith(color: i == seleccion ? P.texto : P.textoSuave),
-                            child: Text(o, maxLines: 1),
+                            child: _opcion(i, Text(o, maxLines: 1)),
                           ),
                         ),
                       ),

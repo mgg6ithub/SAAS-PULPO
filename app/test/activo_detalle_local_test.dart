@@ -44,6 +44,7 @@ void main() {
     );
     final campo = tester.widget<TextField>(find.byType(TextField));
     expect(campo.maxLines, 1);
+    expect(tester.getSize(find.byType(InputDecorator)).height, 40);
     expect(campo.decoration!.hintMaxLines, 1);
     await tester.enterText(find.byType(TextField), 'Un texto largo que debe seguir en una línea');
     expect(tester.takeException(), isNull);
@@ -111,6 +112,12 @@ void main() {
         await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
         await tester.pumpAndSettle();
         expect(find.text('Tipo de mantenimiento'), findsOneWidget);
+        if (ancho >= 700) {
+          expect(tester.getCenter(find.byType(Buscador)).dy,
+              tester.getCenter(find.byType(BotonPrimario)).dy);
+        }
+        final filtro = tester.widget<Pestanas>(find.byType(Pestanas));
+        expect(filtro.colores, [null, for (final t in TipoMantenimiento.values) t.color]);
         expect(tester.getSize(find.byType(Tabla)).height, lessThan(400));
         expect(find.textContaining('2 activos'), findsOneWidget);
         expect(tester.takeException(), isNull);
