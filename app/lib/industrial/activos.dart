@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'gravedad.dart';
+import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
 /// Color del estado de un activo: el de su mantenimiento pendiente más grave (él y sus componentes).
@@ -281,7 +282,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   }
 }
 
-/// Mantenimientos del nodo elegido (y sus componentes): pendientes, del más grave al más leve, y futuros.
+/// Mantenimientos del nodo elegido: su plan periódico y las OT (de él y sus componentes), pendientes, del
+/// más grave al más leve, y futuras.
 class _Mantenimientos extends StatelessWidget {
   final Activo a;
   const _Mantenimientos(this.a);
@@ -307,6 +309,7 @@ class _Mantenimientos extends StatelessWidget {
       ].where((x) => x.isNotEmpty).join(' · '),
       onTap: () => abrirTareaForm(context, t),
     );
+    final planes = store.planesDe(a.id);
     return SeccionTarjeta(
       alto: double.infinity,
       titulo: 'Mantenimientos',
@@ -327,10 +330,19 @@ class _Mantenimientos extends StatelessWidget {
         ),
       ),
       children: [
+        _titulo('Plan de mantenimiento'),
+        for (final p in planes) filaPlan(context, p),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Enlace('Nuevo mantenimiento', onTap: () => abrirPlanForm(context, activoId: a.id)),
+          ),
+        ),
         if (ots.isEmpty)
           Padding(
             padding: const EdgeInsets.all(18),
-            child: Text('Sin mantenimientos pendientes.', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+            child: Text('Sin OT pendientes.', style: TextStyle(fontSize: 13, color: P.textoSuave)),
           ),
         if (pendientes.isNotEmpty) _titulo('Pendientes'),
         for (final t in pendientes) fila(t),
@@ -383,9 +395,8 @@ class _ActivoFormState extends State<ActivoForm> {
   bool intentoGuardar = false;
 
   bool get componente => a.padreId != null;
-  String? get error => intentoGuardar && tag.text.trim().isEmpty && nombre.text.trim().isEmpty
-      ? 'Ponle un tag o un nombre'
-      : null;
+  String? get error =>
+      intentoGuardar && tag.text.trim().isEmpty && nombre.text.trim().isEmpty ? 'Ponle un tag o un nombre' : null;
 
   void guardar() {
     setState(() => intentoGuardar = true);

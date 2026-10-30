@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'en_vivo.dart';
 import 'industrial/activo.dart';
+import 'industrial/plan.dart';
 import 'informes.dart';
 import 'marca.dart';
 import 'models.dart';
@@ -616,6 +617,7 @@ class Nube {
       _db.from('trabajo_precios').select('trabajo_id, precio, iva').eq('empresa_id', empresaId),
       // iPultec: en Pultec no se piden (no hay activos).
       if (industrial) _todo('activos'),
+      if (industrial) _todo('planes_mantenimiento'),
     ]);
     final precioDe = {for (final x in r[11]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
@@ -693,6 +695,7 @@ class Nube {
           ),
       ],
       activos: [if (industrial) for (final x in r[12]) _activo(x)],
+      planes: [if (industrial) for (final x in r[13]) _plan(x)],
     );
   }
 
@@ -759,6 +762,7 @@ class Nube {
     'equipos',
     'vencimientos',
     if (industrial) 'activos',
+    if (industrial) 'planes_mantenimiento',
     'trabajos',
     'trabajo_precios',
     'trabajo_trabajadores',
@@ -976,6 +980,7 @@ class Nube {
     'equipos': 'id',
     'vencimientos': 'id',
     'activos': 'id',
+    'planes_mantenimiento': 'id',
     'trabajos': 'id',
     'trabajo_precios': 'trabajo_id',
     'trabajo_trabajadores': 'trabajo_id,trabajador_id',
@@ -1042,6 +1047,25 @@ class Nube {
           'notas': a.notas,
           'horas': a.horas,
           'activo': a.activo,
+        };
+      }
+      for (final p in s.planes.where((p) => activos.contains(p.activoId))) {
+        r['planes_mantenimiento']![_u(p.id)] = {
+          'id': _u(p.id),
+          'empresa_id': e,
+          'activo_id': _u(p.activoId),
+          'nombre': p.nombre,
+          'tipo_mantenimiento': p.tipo.index,
+          'cada_dias': p.cadaDias,
+          'cada_horas': p.cadaHoras,
+          'categoria': p.categoria,
+          'repuestos': p.repuestos,
+          'procedimiento': p.procedimiento,
+          'duracion_min': p.duracionMin,
+          'ultimo': _dia(p.ultimo),
+          'ultimo_horas': p.ultimoHoras,
+          'proximo': _dia(p.proximo),
+          'activa': p.activa,
         };
       }
     }
@@ -1218,6 +1242,7 @@ class DatosNube {
   final List<Equipo> equipos;
   final List<Vencimiento> vencimientos;
   final List<Activo> activos;
+  final List<PlanMantenimiento> planes;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
@@ -1229,6 +1254,7 @@ class DatosNube {
     this.equipos = const [],
     this.vencimientos = const [],
     this.activos = const [],
+    this.planes = const [],
   });
 }
 
@@ -1291,6 +1317,23 @@ Activo _activo(Map x) => Activo(
   notas: x['notas'],
   horas: (x['horas'] as num).toDouble(),
   activo: x['activo'],
+);
+
+PlanMantenimiento _plan(Map x) => PlanMantenimiento(
+  id: x['id'],
+  activoId: x['activo_id'],
+  nombre: x['nombre'],
+  tipo: TipoMantenimiento.values[x['tipo_mantenimiento'] as int],
+  cadaDias: x['cada_dias'],
+  cadaHoras: x['cada_horas'],
+  categoria: x['categoria'],
+  repuestos: x['repuestos'],
+  procedimiento: x['procedimiento'],
+  duracionMin: x['duracion_min'],
+  ultimo: _fecha(x['ultimo']),
+  ultimoHoras: (x['ultimo_horas'] as num?)?.toDouble(),
+  proximo: _fecha(x['proximo']),
+  activa: x['activa'],
 );
 
 Automatizacion _automatizacion(Map x) => Automatizacion(
