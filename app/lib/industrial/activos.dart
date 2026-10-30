@@ -8,6 +8,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
+import 'iconos.dart';
 import 'gravedad.dart';
 import 'tipo_mantenimiento.dart';
 import 'historicos.dart';
@@ -179,7 +180,7 @@ class _TablaActivos extends StatelessWidget {
             return [
               Row(
                 children: [
-                  Tooltip(message: textoEstado(g), child: puntoTipo(colorEstado(g), tam: 10)),
+                  Tooltip(message: textoEstado(g), child: Icon(iconoIndustrial(a.icono), color: colorEstado(g), size: 22)),
                   const SizedBox(width: 10),
                   Expanded(child: celdaTexto(a.titulo, negrita: true)),
                 ],
@@ -300,10 +301,17 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Cabecera(
-            lider: IconButton(
-              tooltip: padre == null ? 'Volver a Activos' : 'Volver a ${padre.titulo}',
-              onPressed: padre == null ? widget.onVolver : () => _abrir(padre.id),
-              icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
+            lider: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: padre == null ? 'Volver a Activos' : 'Volver a ${padre.titulo}',
+                  onPressed: padre == null ? widget.onVolver : () => _abrir(padre.id),
+                  icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
+                ),
+                const SizedBox(width: 4),
+                Icon(iconoIndustrial(a.icono), size: 28, color: colorEstado(g)),
+              ],
             ),
             titulo: a.titulo.isEmpty ? 'Activo' : a.titulo,
             subtitulo: [
@@ -316,7 +324,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                 BotonPrimario(
                   'Nuevo componente',
                   conIcono: true,
-                  icono: Icons.add_rounded,
+                  icono: Icons.account_tree_outlined,
                   onPressed: () => abrirActivoForm(context, padreId: a.id),
                 ),
               if (pestana == 1 && !editando)
@@ -721,6 +729,31 @@ class _ActivoFormState extends State<ActivoForm> {
           componente ? 'Componente' : 'Activo',
           primero: true,
           descripcion: componente ? 'Qué pieza de la máquina es.' : 'Qué máquina es y cómo se identifica.',
+          pie: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              etiqueta('Icono'),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  for (final (clave, nombre, icono) in iconosIndustriales)
+                    IconButton(
+                      tooltip: nombre,
+                      isSelected: a.icono == clave,
+                      style: IconButton.styleFrom(
+                        fixedSize: const Size(40, 40),
+                        backgroundColor: a.icono == clave ? P.morado.withValues(alpha: .1) : Colors.transparent,
+                        foregroundColor: a.icono == clave ? P.morado : P.textoSuave,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                      ),
+                      onPressed: () => setState(() => a.icono = clave),
+                      icon: Icon(icono, size: 22),
+                    ),
+                ],
+              ),
+            ],
+          ),
           [
             dos(
               KeyedSubtree(
