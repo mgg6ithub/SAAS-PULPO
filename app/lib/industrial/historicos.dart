@@ -167,7 +167,10 @@ class _TablaRealizadas extends StatelessWidget {
             if (medio) celdaTexto(_activo(t.activoId), suave: true),
             if (medio)
               celdaTexto(
-                t.trabajadorIds.isEmpty
+                // Quien la cerró (lo guarda la base); en las antiguas, los asignados.
+                t.ejecutadoPor != null
+                    ? store.trabajador(t.ejecutadoPor!)?.nombre ?? '—'
+                    : t.trabajadorIds.isEmpty
                     ? '—'
                     : [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombre].join(', '),
                 suave: true,

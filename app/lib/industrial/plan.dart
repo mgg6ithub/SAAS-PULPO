@@ -13,6 +13,12 @@ class PlanMantenimiento {
   double? ultimoHoras;
   bool activa;
 
+  /// Alerta previa: cuántos días antes avisar (null = sin aviso), a qué correos (vacío = administradores) y qué
+  /// preparar. Subcontratado: lo hace [empresaExterna], no los técnicos de la casa.
+  int? avisoDias;
+  String avisoCorreos, preparar, empresaExterna;
+  bool subcontratado;
+
   PlanMantenimiento({
     required this.id,
     required this.activoId,
@@ -29,6 +35,11 @@ class PlanMantenimiento {
     this.ultimoHoras,
     this.proximo,
     this.activa = true,
+    this.avisoDias,
+    this.avisoCorreos = '',
+    this.preparar = '',
+    this.subcontratado = false,
+    this.empresaExterna = '',
   });
 
   /// "Cada 90 días · cada 500 h", o lo que haya.
@@ -46,6 +57,7 @@ class PlanMantenimiento {
     id: id,
     nombre: nombre,
     activoId: activoId,
+    planId: this.id,
     // Sin cliente sería plantilla: una OT de un activo es un trabajo de verdad.
     plantilla: false,
     tipoMantenimiento: tipo,
@@ -73,6 +85,11 @@ class PlanMantenimiento {
     'ultimoHoras': ultimoHoras,
     'proximo': proximo?.toIso8601String(),
     'activa': activa,
+    'avisoDias': avisoDias,
+    'avisoCorreos': avisoCorreos,
+    'preparar': preparar,
+    'subcontratado': subcontratado,
+    'empresaExterna': empresaExterna,
   };
 
   factory PlanMantenimiento.fromJson(Map<String, dynamic> j) => PlanMantenimiento(
@@ -91,6 +108,11 @@ class PlanMantenimiento {
     ultimoHoras: (j['ultimoHoras'] as num?)?.toDouble(),
     proximo: j['proximo'] == null ? null : DateTime.parse(j['proximo'] as String),
     activa: j['activa'] as bool? ?? true,
+    avisoDias: j['avisoDias'] as int?,
+    avisoCorreos: j['avisoCorreos'] as String? ?? '',
+    preparar: j['preparar'] as String? ?? '',
+    subcontratado: j['subcontratado'] as bool? ?? false,
+    empresaExterna: j['empresaExterna'] as String? ?? '',
   );
 
   PlanMantenimiento copia() => PlanMantenimiento.fromJson(toJson());

@@ -133,9 +133,11 @@ class _TablaPlanesState extends State<TablaPlanes> {
       // y el scroll se notaba con muchos mantenimientos.
       final nodos = {for (final a in store.activos) a.id: a};
       final ids = {for (final p in ps) p.activoId};
+      // OT pendiente de cada mantenimiento: por su enlace; las antiguas, sin enlace, por activo y nombre.
       final ots = <String, Tarea>{
         for (final t in store.tareas)
-          if (!t.esPlantilla && t.activa && ids.contains(t.activoId) && otPendiente(t)) '${t.activoId}|${t.nombre}': t,
+          if (!t.esPlantilla && t.activa && ids.contains(t.activoId) && otPendiente(t))
+            t.planId ?? '${t.activoId}|${t.nombre}': t,
       };
       final proximos = {for (final p in ps) p.id: proximoPlan(p)};
       final vistas = [
@@ -165,7 +167,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                 final p = ps[i];
                 final nodo = nodos[p.activoId];
                 final d = proximos[p.id];
-                final otPendienteDe = ots['${p.activoId}|${p.nombre}'];
+                final otPendienteDe = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
                 Widget celda(String c) {
                   switch (c) {
                     case 'Código':
@@ -282,6 +284,10 @@ class _PlanFormState extends State<PlanForm> {
   late final descripcion = TextEditingController(text: p.descripcion);
   late final repuestos = TextEditingController(text: p.repuestos);
   late final procedimiento = TextEditingController(text: p.procedimiento);
+  late final avisoDias = TextEditingController(text: p.avisoDias?.toString() ?? '');
+  late final avisoCorreos = TextEditingController(text: p.avisoCorreos);
+  late final preparar = TextEditingController(text: p.preparar);
+  late final empresaExterna = TextEditingController(text: p.empresaExterna);
   bool intentoGuardar = false;
 
   /// Cómo se programa: 0 = cada N días, 1 = cada N horas de uso, 2 = una fecha concreta.
@@ -324,7 +330,11 @@ class _PlanFormState extends State<PlanForm> {
       ..cadaHoras = modo == 1 ? _entero(horasC) : null
       ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.'))
       ..repuestos = repuestos.text.trim()
-      ..procedimiento = procedimiento.text.trim();
+      ..procedimiento = procedimiento.text.trim()
+      ..avisoDias = _entero(avisoDias)
+      ..avisoCorreos = avisoCorreos.text.trim()
+      ..preparar = preparar.text.trim()
+      ..empresaExterna = p.subcontratado ? empresaExterna.text.trim() : '';
     store.guardarPlan(p);
     Navigator.pop(context);
   }
@@ -452,6 +462,28 @@ class _PlanFormState extends State<PlanForm> {
         Bloque('Procedimiento', descripcion: 'Los pasos, para que cualquier técnico lo haga igual.', [
           campo('Procedimiento', procedimiento, lineas: 5),
         ]),
+        Bloque(
+          'Preparación',
+          descripcion: 'Aviso previo para tener a tiempo grúas, repuestos complejos o personal cualificado o externo.',
+          [
+            dos(
+              campo('Avisar con antelación (días)', avisoDias, hint: 'Sin aviso', teclado: TextInputType.number),
+              campo('A quién avisar', avisoCorreos, hint: 'Correos separados por comas · vacío = administradores'),
+            ),
+            campo('Qué preparar', preparar, hint: 'Grúa de 20 t, kit de válvula, técnico de alta tensión…', lineas: 2),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: p.subcontratado,
+              onChanged: (v) => setState(() => p.subcontratado = v),
+              title: const Text('Lo hace una empresa externa'),
+              subtitle: Text(
+                'Su OT no se asigna a los técnicos de la casa.',
+                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+              ),
+            ),
+            if (p.subcontratado) campo('Empresa externa y contacto', empresaExterna, hint: 'Grúas Norte · 600 000 000'),
+          ],
+        ),
       ],
     );
   }

@@ -821,6 +821,15 @@ class Store extends ChangeNotifier {
     // Una tarea única, al hacerse, ya no tiene próxima.
     t.proximo = repite ? masDias(hoy(), t.periodicidad.dias) : null;
     if (t.estadoMaquina == EstadoMaquina.revision) t.estadoMaquina = EstadoMaquina.operativa;
+    // OT de un mantenimiento: este vuelve a cero (la base hace lo mismo al recibir el cierre).
+    final p = planes.where((p) => p.id == t.planId).firstOrNull;
+    final a = activo(p?.activoId);
+    if (p != null && a != null) {
+      p
+        ..ultimo = hoy()
+        ..ultimoHoras = a.horas + a.usoDiario * max(0, hoy().difference(a.fechaLectura).inDays)
+        ..proximo = p.cadaDias == null ? null : masDias(hoy(), p.cadaDias!);
+    }
   }
 
   /// Tareas de un día. Pasado: lo que se hizo ese día. Hoy: lo hecho hoy, lo que toca

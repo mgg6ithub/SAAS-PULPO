@@ -337,6 +337,9 @@ class Tarea {
 
   /// OT industrial: activo o componente sobre el que se hace (null = sin activo, siempre en Pultec).
   String? activoId;
+
+  /// OT industrial: mantenimiento del que sale y técnico que la cerró (lo pone la base al cerrarla).
+  String? planId, ejecutadoPor;
   DateTime? instalacion, ultimo, proximo;
 
   /// Cuándo pidió el cliente este mantenimiento.
@@ -381,6 +384,8 @@ class Tarea {
     this.equipoId,
     this.tipoMantenimiento,
     this.activoId,
+    this.planId,
+    this.ejecutadoPor,
     bool? plantilla,
     this.color,
     this.plantillaId,
@@ -444,6 +449,8 @@ class Tarea {
     'equipoId': equipoId,
     if (tipoMantenimiento != null) 'tipoMantenimiento': tipoMantenimiento!.index,
     if (activoId != null) 'activoId': activoId,
+    if (planId != null) 'planId': planId,
+    if (ejecutadoPor != null) 'ejecutadoPor': ejecutadoPor,
     'plantilla': plantilla,
     'color': color,
     'plantillaId': plantillaId,
@@ -485,6 +492,8 @@ class Tarea {
         ? null
         : TipoMantenimiento.values[j['tipoMantenimiento'] as int],
     activoId: j['activoId'] as String?,
+    planId: j['planId'] as String?,
+    ejecutadoPor: j['ejecutadoPor'] as String?,
     plantilla: j['plantilla'] as bool?,
     color: j['color'] as int?,
     plantillaId: j['plantillaId'] as String?,

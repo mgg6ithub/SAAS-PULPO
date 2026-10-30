@@ -97,6 +97,7 @@ class Resumen extends StatelessWidget {
                     ),
                     // iPultec: bajo las cifras, las máquinas por tipo de mantenimiento pendiente.
                     if (industrial && store.activos.isNotEmpty) ...[
+                      AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
                       VistazoActivos(
                         onAbrir: onCliente ?? (_) {},

@@ -8,6 +8,7 @@ import 'activo.dart';
 import 'iconos.dart';
 import 'activos.dart';
 import 'gravedad.dart';
+import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
 /// Leyenda de los tres colores de estado, con los textos del planteamiento de iPultec.
@@ -189,5 +190,42 @@ class _Columna extends StatelessWidget {
   String _pendientes(String id) {
     final n = store.otsDe(id).where(otPendiente).length;
     return '$n ${n == 1 ? 'orden pendiente' : 'órdenes pendientes'}';
+  }
+}
+
+/// Inicio de iPultec: mantenimientos con alerta previa cuya antelación ya ha llegado, para preparar a tiempo
+/// grúas, repuestos o personal externo. Sin ninguno, no se ve.
+class AvisosPreparacion extends StatelessWidget {
+  final ValueChanged<String> onAbrir;
+  const AvisosPreparacion({super.key, required this.onAbrir});
+
+  @override
+  Widget build(BuildContext context) {
+    final avisos = [
+      for (final p in store.planes)
+        if (p.activa && p.avisoDias != null)
+          if (proximoPlan(p) case final d? when diasHasta(d) <= p.avisoDias!) (p, d),
+    ]..sort((a, b) => a.$2.compareTo(b.$2));
+    if (avisos.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: SeccionTarjeta(
+        titulo: 'Preparar',
+        subtitulo: 'Mantenimientos con aviso previo que ya toca preparar',
+        children: [
+          for (final (p, d) in avisos)
+            FilaLista(
+              lider: puntoTipo(p.tipo.color),
+              titulo: '${p.nombre} · ${store.activo(p.activoId)?.titulo ?? ''}',
+              subtitulo: [
+                'Previsto ${fecha(d)}',
+                if (p.preparar.isNotEmpty) p.preparar,
+                if (p.subcontratado) 'Externo: ${p.empresaExterna.isEmpty ? 'sin indicar' : p.empresaExterna}',
+              ].join(' · '),
+              onTap: () => onAbrir(p.activoId),
+            ),
+        ],
+      ),
+    );
   }
 }
