@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'nube.dart';
 import 'theme.dart' show TipoInfo, tipos, tiposBase, competencias, competenciasBase;
+import 'marca.dart';
 
 /// Datos del prototipo. Se guardan en el navegador; más adelante, Supabase.
 class Store extends ChangeNotifier {
@@ -859,7 +860,7 @@ class Store extends ChangeNotifier {
       for (final (i, (n, dir, lat, lng, _, _, _, _)) in sitios.indexed)
         Cliente(
           id: 'c${20 + i}',
-          nombre: 'Cliente $n',
+          nombre: m('Cliente $n'),
           direccion: dir,
           ciudad: n,
           provincia: 'Bizkaia',
@@ -898,7 +899,7 @@ class Store extends ChangeNotifier {
     trabajadores = [
       for (final (i, (n, a, comp, est)) in [
         ('Lucía', 'Martín', ['Calderas (RITE)', 'Fontanería', 'PRL'], EstadoHoy.disponible),
-        ('Javier', 'Ortega', ['Ascensores', 'Electricidad', 'Trabajo en altura'], EstadoHoy.ocupado),
+        ('Javier', 'Ortega', ['Ascensores', 'Electricidad', m('Trabajo en altura')], EstadoHoy.ocupado),
         ('Marta', 'Ruiz', ['Jardinería', 'Piscinas'], EstadoHoy.disponible),
         ('Iker', 'Etxeberria', ['Contra incendios', 'Electricidad', 'PRL'], EstadoHoy.disponible),
         ('Ana', 'Gómez', ['Limpieza'], EstadoHoy.ausente),

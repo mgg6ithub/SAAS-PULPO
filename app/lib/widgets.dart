@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
+import 'marca.dart';
 
 class Avatar extends StatelessWidget {
   final String texto;
@@ -1633,7 +1634,7 @@ class AvataresTrabajadores extends StatelessWidget {
     final ws = ids.map(store.trabajador).whereType<Trabajador>().take(3).toList();
     if (ws.isEmpty) {
       return Tooltip(
-        message: 'Sin trabajador asignado',
+        message: m('Sin trabajador asignado'),
         child: Container(
           width: size,
           height: size,

@@ -59,21 +59,21 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
               child: Text(
-                'Ver Pulpo como…',
+                m('Ver Pulpo como…'),
                 style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w700),
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
               child: Text(
-                'Así lo verá cada trabajador en su móvil.',
+                m('Así lo verá cada trabajador en su móvil.'),
                 style: TextStyle(fontSize: 12.5, color: P.textoSuave),
               ),
             ),
             if (activos.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-                child: Text('Aún no hay trabajadores.', style: TextStyle(color: P.textoSuave)),
+                child: Text(m('Aún no hay trabajadores.'), style: TextStyle(color: P.textoSuave)),
               )
             else
               Flexible(
@@ -88,7 +88,7 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
                           size: 34,
                         ),
                         titulo: w.nombreCompleto,
-                        subtitulo: '${_misTrabajos(w).length} trabajos asignados',
+                        subtitulo: m('${_misTrabajos(w).length} trabajos asignados'),
                         onTap: () {
                           Navigator.pop(c);
                           rolTrabajador.value = w.id;
@@ -150,10 +150,10 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
             ? _BarraInferior(pestana, (i) => setState(() => pestana = i))
             : null,
         body: w == null
-            ? const Vacio(
+            ? Vacio(
                 icono: Icons.person_outline_rounded,
-                titulo: 'Sin trabajadores',
-                texto: 'Crea un trabajador desde la vista de administrador.',
+                titulo: m('Sin trabajadores'),
+                texto: m('Crea un trabajador desde la vista de administrador.'),
               )
             : Align(
                 alignment: Alignment.topCenter,
@@ -367,7 +367,7 @@ class _Hoy extends StatelessWidget {
         if (siguiente == null)
           Tarjeta(
             child: Text(
-              deHoy.isEmpty ? 'Hoy no tienes trabajos.' : 'Has terminado todo por hoy.',
+              deHoy.isEmpty ? m('Hoy no tienes trabajos.') : 'Has terminado todo por hoy.',
               style: TextStyle(color: P.textoSuave, fontSize: 15),
             ),
           )
@@ -543,7 +543,7 @@ class _MisTrabajos extends StatelessWidget {
         return c != 0 ? c : _porHora(a, b);
       });
     if (pendientes.isEmpty) {
-      return const Vacio(icono: Icons.task_alt_rounded, titulo: 'Todo al día', texto: 'No tienes trabajos pendientes.');
+      return Vacio(icono: Icons.task_alt_rounded, titulo: 'Todo al día', texto: m('No tienes trabajos pendientes.'));
     }
     // Atrasados primero; luego un bloque por día.
     final grupos = <String, List<Tarea>>{};
@@ -697,7 +697,7 @@ class _DetalleTrabajo extends StatelessWidget {
         SeccionTarjeta(
           titulo: 'Información',
           children: [
-            _dato('Cliente', cliente?.nombre ?? '—'),
+            _dato(m('Cliente'), cliente?.nombre ?? '—'),
             _dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '—')),
             _dato('Cuándo', [if (t.proximo != null) relativo(t.proximo!), t.horario ?? 'Sin hora'].join(' · ')),
             if (maquina.isNotEmpty) _dato('Máquina', maquina),
@@ -724,7 +724,7 @@ class _DetalleTrabajo extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(18),
                 child: Text(
-                  'Aún no has enviado ningún informe de este trabajo.',
+                  m('Aún no has enviado ningún informe de este trabajo.'),
                   style: TextStyle(color: P.textoSuave),
                 ),
               )
@@ -877,7 +877,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
       if (intentado && _minutos == -1) ('El tiempo va en minutos', () {}),
     ],
     campos: [
-      Bloque('Resultado', primero: true, descripcion: 'Cómo ha ido el trabajo.', [
+      Bloque('Resultado', primero: true, descripcion: m('Cómo ha ido el trabajo.'), [
         Pestanas(opciones: resultadosInforme, seleccion: resultado, onChanged: (i) => setState(() => resultado = i)),
         const SizedBox(height: 6),
         Align(
@@ -903,7 +903,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
           error: intentado && _minutos == -1 ? 'Escribe solo los minutos, con números' : null,
         ),
       ]),
-      Bloque('Fotos', descripcion: 'Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.', [
+      Bloque('Fotos', descripcion: m('Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.'), [
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -913,7 +913,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
           ],
         ),
       ]),
-      Bloque('Firma del cliente', descripcion: 'Que firme con el dedo en el recuadro. Si no está, déjalo en blanco.', [
+      Bloque(m('Firma del cliente'), descripcion: 'Que firme con el dedo en el recuadro. Si no está, déjalo en blanco.', [
         PanelFirma(firma),
         campo('Nombre de quien firma', firmante, hint: 'Ej.: Ana López, presidenta'),
       ]),

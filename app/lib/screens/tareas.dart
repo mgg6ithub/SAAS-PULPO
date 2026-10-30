@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'tabla_trabajos.dart';
 import 'tarea_card.dart';
+import '../marca.dart';
 
 /// Todas las tareas: las de cada cliente y las plantillas (sin cliente).
 class TareasPagina extends StatefulWidget {
@@ -52,7 +53,7 @@ class _TareasPaginaState extends State<TareasPagina> {
               // Una sola barra (como el Itinerario): título y filtros a la izquierda; buscador y acciones a la derecha.
               BarraVista(
                 izquierda: [
-                  const TituloVista('Trabajos'),
+                  TituloVista(m('Trabajos')),
                   Pestanas(
                     opciones: ['Todos · $nTrabajos', 'Plantillas · ${store.plantillas.length}'],
                     seleccion: pestana,
@@ -61,14 +62,14 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ],
                 derecha: [
                   Buscador(
-                    hint: 'Buscar trabajo, equipo o cliente…',
+                    hint: m('Buscar trabajo, equipo o cliente…'),
                     width: 280,
                     onChanged: (v) => setState(() => q = v),
                   ),
                   SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
                 ],
                 principal: BotonPrimario(
-                  pestana == 1 ? 'Nueva plantilla' : 'Nuevo trabajo',
+                  pestana == 1 ? 'Nueva plantilla' : m('Nuevo trabajo'),
                   tecla: 'N',
                   onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                 ),
@@ -97,20 +98,20 @@ class _TareasPaginaState extends State<TareasPagina> {
               ),
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
-                const Consejo(
-                  'Las plantillas son trabajos que dejas pre-creados con ciertos campos ya rellenos. '
-                  'Al crear un trabajo, eliges una plantilla y se rellena casi todo.',
+                Consejo(
+                  m('Las plantillas son trabajos que dejas pre-creados con ciertos campos ya rellenos. '
+                  'Al crear un trabajo, eliges una plantilla y se rellena casi todo.'),
                 ),
               ],
               const SizedBox(height: huecoVista),
               Expanded(
                 child: filtradas.isEmpty
                     ? Vacio(
-                        icono: Icons.handyman_outlined,
-                        titulo: store.tareas.isEmpty ? 'Aún no hay trabajos' : null,
+                        icono: Marca.iconoTrabajo,
+                        titulo: store.tareas.isEmpty ? m('Aún no hay trabajos') : null,
                         texto: pestana == 0 && nTrabajos == 0
-                            ? 'Crea tu primer trabajo, desde cero o a partir de una plantilla.'
-                            : 'No hay trabajos con estos filtros',
+                            ? m('Crea tu primer trabajo, desde cero o a partir de una plantilla.')
+                            : m('No hay trabajos con estos filtros'),
                         // Sin búsqueda ni filtro de tipo: botón para crear (el primero, si aún no hay).
                         accion: q.isEmpty && tipo == null
                             ? FilledButton(
@@ -119,8 +120,8 @@ class _TareasPaginaState extends State<TareasPagina> {
                                   pestana == 1
                                       ? 'Nueva plantilla'
                                       : nTrabajos == 0
-                                      ? 'Añadir el primer trabajo'
-                                      : 'Nuevo trabajo',
+                                      ? m('Añadir el primer trabajo')
+                                      : m('Nuevo trabajo'),
                                 ),
                               )
                             : null,

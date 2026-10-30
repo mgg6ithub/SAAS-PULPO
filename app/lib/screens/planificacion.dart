@@ -15,6 +15,7 @@ import 'rutas_mapa.dart';
 import 'tarea_card.dart';
 import 'vista_dias.dart';
 import 'vista_pulpo.dart';
+import '../marca.dart';
 
 /// Agenda (antes Planificación), inspirada en el Schedule de Jobber:
 /// Día (una fila por técnico), Semana (por horas), Mes y Tablero, con un mapa lateral opcional
@@ -260,9 +261,9 @@ class _PlanificacionState extends State<Planificacion> {
                   ],
                   if (vista == 1)
                     BotonAccion(
-                      'Nuevo trabajo',
+                      m('Nuevo trabajo'),
                       icono: Icons.add_rounded,
-                      tooltip: 'Crear un trabajo (N)',
+                      tooltip: m('Crear un trabajo (N)'),
                       onPressed: () async {
                         final f = dia;
                         // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
@@ -394,7 +395,7 @@ class _PlanificacionState extends State<Planificacion> {
                     : Positioned.fill(
                         child: IgnorePointer(
                           child: Semantics(
-                            label: 'Pulsa Organizar para que Pulpo asigne el trabajo al técnico.',
+                            label: m('Pulsa Organizar para que Pulpo asigne el trabajo al técnico.'),
                             liveRegion: true,
                             child: CustomPaint(painter: _GuiaOrganizarPainter(rect)),
                           ),
@@ -429,9 +430,9 @@ class _GuiaOrganizarPainter extends CustomPainter {
         ..strokeWidth = 3,
     );
 
-    const texto = 'Pulsa Organizar para que Pulpo asigne el trabajo al técnico.';
+    final texto = m('Pulsa Organizar para que Pulpo asigne el trabajo al técnico.');
     final letras = TextPainter(
-      text: const TextSpan(
+      text: TextSpan(
         text: texto,
         style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600, height: 1.3),
       ),
@@ -557,8 +558,8 @@ class _PulpoMagico extends StatelessWidget {
     final pendientes = tareas.where((t) => t.trabajadorIds.isEmpty).length;
     return Tooltip(
       message: pendientes == 0
-          ? 'Todo lo actual ya tiene trabajador'
-          : 'Asignar el trabajador más adecuado a $pendientes ${pendientes == 1 ? 'trabajo' : 'trabajos'}',
+          ? m('Todo lo actual ya tiene trabajador')
+          : m('Asignar el trabajador más adecuado a $pendientes ${pendientes == 1 ? 'trabajo' : 'trabajos'}'),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
@@ -571,9 +572,9 @@ class _PulpoMagico extends StatelessWidget {
               content: Text(
                 n == 0
                     ? (pendientes == 0
-                          ? 'Todo lo actual ya tiene trabajador.'
-                          : 'No hay trabajadores aptos para lo que falta.')
-                    : 'Pulpo ha asignado $n ${n == 1 ? 'trabajo' : 'trabajos'}.',
+                          ? m('Todo lo actual ya tiene trabajador.')
+                          : m('No hay trabajadores aptos para lo que falta.'))
+                    : m('Pulpo ha asignado $n ${n == 1 ? 'trabajo' : 'trabajos'}.'),
               ),
             ),
           );

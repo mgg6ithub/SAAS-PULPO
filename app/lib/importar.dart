@@ -1,13 +1,14 @@
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart' show tipos, competencias, paleta;
+import 'marca.dart';
 
 /// Importar clientes, trabajadores y trabajos desde CSV (de Excel: «Guardar como → CSV») y exportarlos.
 /// Las columnas de la exportación son las mismas que las de la importación: lo exportado se vuelve a importar.
 enum QueImportar { clientes, trabajadores, trabajos }
 
 extension QueImportarX on QueImportar {
-  String get etiqueta => const ['Clientes', 'Trabajadores', 'Trabajos'][index];
+  String get etiqueta => [m('Clientes'), m('Trabajadores'), m('Trabajos')][index];
 
   List<String> get columnas => const [
     [

@@ -6,6 +6,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'equipos.dart';
+import '../marca.dart';
 
 /// Ficha de un cliente con pestañas (como la ficha de contacto de Holded):
 /// Resumen (cifras y próximos), Mantenimientos (tabla), Equipos, Historial y Datos.
@@ -42,7 +43,7 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  tooltip: 'Volver a Clientes',
+                  tooltip: m('Volver a Clientes'),
                   onPressed: widget.onVolver,
                   icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                 ),
@@ -59,12 +60,12 @@ class _ClienteDetalleState extends State<ClienteDetalle> {
               c.activa ? const Pill('Activo', P.verde, punto: true) : const Pill('Inactivo', P.gris, punto: true),
               const SizedBox(width: 4),
               OutlinedButton(onPressed: () => abrirClienteForm(context, c), child: const Text('Editar')),
-              BotonPrimario('Nuevo trabajo', onPressed: () => abrirTareaForm(context, null, clienteId: c.id)),
+              BotonPrimario(m('Nuevo trabajo'), onPressed: () => abrirTareaForm(context, null, clienteId: c.id)),
             ],
           ),
           const SizedBox(height: 18),
           PestanasOscuras(
-            opciones: const ['Resumen', 'Trabajos', 'Equipos', 'Historial', 'Datos'],
+            opciones: ['Resumen', m('Trabajos'), 'Equipos', 'Historial', 'Datos'],
             contadores: [null, tareas.length, store.equiposDe(c.id).length, null, null],
             seleccion: pestana,
             onChanged: (i) => setState(() => pestana = i),
@@ -124,7 +125,7 @@ class _Resumen extends StatelessWidget {
                 spacing: 48,
                 runSpacing: 16,
                 children: [
-                  Cifra('Trabajos', tareas.length, nota: '${{for (final t in tareas) t.tipo}.length} tipos'),
+                  Cifra(m('Trabajos'), tareas.length, nota: '${{for (final t in tareas) t.tipo}.length} tipos'),
                   Cifra(
                     'Vencidos',
                     vencidas,
@@ -160,11 +161,11 @@ class _Resumen extends StatelessWidget {
                       SizedBox(
                         height: 220,
                         child: Vacio(
-                          icono: Icons.handyman_outlined,
-                          texto: 'Este cliente aún no tiene mantenimientos.\nCréalos desde cero o a partir de una plantilla.',
+                          icono: Marca.iconoTrabajo,
+                          texto: m('Este cliente aún no tiene mantenimientos.\nCréalos desde cero o a partir de una plantilla.'),
                           accion: FilledButton(
                             onPressed: () => abrirTareaForm(context, null, clienteId: c.id),
-                            child: const Text('Nuevo trabajo'),
+                            child: Text(m('Nuevo trabajo')),
                           ),
                         ),
                       ),
@@ -260,20 +261,20 @@ class _Mantenimientos extends StatelessWidget {
   Widget build(BuildContext context) {
     if (tareas.isEmpty) {
       return Vacio(
-        icono: Icons.handyman_outlined,
+        icono: Marca.iconoTrabajo,
         titulo: 'Sin mantenimientos',
         texto: 'Crea el primero desde cero o a partir de una plantilla.',
         accion: FilledButton(
           onPressed: () => abrirTareaForm(context, null, clienteId: c.id),
-          child: const Text('Nuevo trabajo'),
+          child: Text(m('Nuevo trabajo')),
         ),
       );
     }
     return Align(
       alignment: Alignment.topCenter,
       child: Tabla(
-        columnas: const [
-          Col('Equipo / trabajo', flex: 4),
+        columnas: [
+          Col(m('Equipo / trabajo'), flex: 4),
           Col('Periodicidad', flex: 2),
           Col('Último', flex: 2),
           Col('Fecha', flex: 2),
@@ -345,7 +346,7 @@ class _Datos extends StatelessWidget {
       ),
     );
     return SeccionTarjeta(
-      titulo: 'Datos del cliente',
+      titulo: m('Datos del cliente'),
       accion: Enlace('Editar', onTap: () => abrirClienteForm(context, c)),
       children: [
         dato('Persona de contacto', c.contacto),
@@ -361,7 +362,7 @@ class _Datos extends StatelessWidget {
             c.provincia,
           ].where((x) => x.isNotEmpty).join(', '),
         ),
-        dato('Cliente desde', fecha(c.fechaAlta)),
+        dato(m('Cliente desde'), fecha(c.fechaAlta)),
         if (c.notas.isNotEmpty) dato('Notas', c.notas),
       ],
     );

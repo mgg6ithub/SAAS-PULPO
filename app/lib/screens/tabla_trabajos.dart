@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// La lista de trabajos (columnas que se redimensionan y se intercambian, selección múltiple, hover).
 /// La usan la página de Trabajos y la ficha de un trabajo para sus subtrabajos: se ven igual.
@@ -44,7 +45,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    final nombre = '$n ${n == 1 ? widget.nombre : '${widget.nombre}s'}';
+    final nombre = m('$n ${n == 1 ? widget.nombre : '${widget.nombre}s'}');
     if (!await confirmar(context, preguntaBorrarTrabajos(seleccion, nombre: nombre))) return;
     for (final id in seleccion) {
       store.borrarTarea(id);
@@ -72,7 +73,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         width: 320,
-        content: Text('Cambiado en ${sel.length} ${sel.length == 1 ? widget.nombre : '${widget.nombre}s'}'),
+        content: Text(m('Cambiado en ${sel.length} ${sel.length == 1 ? widget.nombre : '${widget.nombre}s'}')),
       ),
     );
     void aplicar(void Function(Tarea t) cambio) {
@@ -122,7 +123,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
         ),
         SubmenuButton(
           menuChildren: [
-            opcion('Sin cliente', () => aplicar((t) => t.clienteId = null)),
+            opcion(m('Sin cliente'), () => aplicar((t) => t.clienteId = null)),
             for (final c in [...store.clientes]..sort((a, b) => a.nombre.compareTo(b.nombre)))
               opcion(
                 c.nombre,
@@ -130,7 +131,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                 icono: Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
               ),
           ],
-          child: const Text('Cliente'),
+          child: Text(m('Cliente')),
         ),
         opcion('Fecha…', () async {
           final d = await showDatePicker(
@@ -181,7 +182,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                 acciones: [_cambiar()],
                 seleccionados: seleccion.length,
                 total: ts.length,
-                nombre: '${widget.nombre}s',
+                nombre: m('${widget.nombre}s'),
                 onTodos: () => setState(() {
                   if (ts.every((t) => seleccion.contains(t.id))) {
                     seleccion.removeAll(ts.map((t) => t.id));
@@ -213,8 +214,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
           ),
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
-            const Col('Equipo / trabajo', flex: 4),
-            if (medio && widget.conCliente) const Col('Cliente', flex: 3),
+            Col(m('Equipo / trabajo'), flex: 4),
+            if (medio && widget.conCliente) Col(m('Cliente'), flex: 3),
             if (ancho) const Col('Periodicidad', flex: 2),
             const Col('Fecha y hora', flex: 3),
             if (medio) const Col('Asignado a', ancho: 96),
@@ -267,7 +268,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         store.guardarTarea(t);
                       }, compacto: true)
                     : c == null
-                    ? celdaTexto('Sin cliente', suave: true)
+                    ? celdaTexto(m('Sin cliente'), suave: true)
                     : Row(
                         children: [
                           Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),

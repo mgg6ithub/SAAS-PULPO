@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 class Trabajadores extends StatefulWidget {
   final ValueChanged<String> onAbrir;
@@ -31,7 +32,7 @@ class _TrabajadoresState extends State<Trabajadores> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    if (!await confirmar(context, '¿Eliminar $n ${n == 1 ? 'trabajador' : 'trabajadores'}?')) return;
+    if (!await confirmar(context, m('¿Eliminar $n ${n == 1 ? 'trabajador' : 'trabajadores'}?'))) return;
     for (final id in seleccion) {
       store.borrarTrabajador(id);
     }
@@ -61,7 +62,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                     // Una sola barra: título y filtros a la izquierda; buscador y acciones a la derecha.
                     BarraVista(
                       izquierda: [
-                        const TituloVista('Trabajadores'),
+                        TituloVista(m('Trabajadores')),
                         Pestanas(
                           opciones: const ['Todos', 'Disponibles', 'Ocupados', 'Ausentes'],
                           seleccion: estado,
@@ -70,11 +71,11 @@ class _TrabajadoresState extends State<Trabajadores> {
                         _FiltroCompetencia(competencia, (v) => setState(() => competencia = v)),
                       ],
                       derecha: [
-                        Buscador(hint: 'Buscar trabajador…', onChanged: (v) => setState(() => q = v)),
+                        Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
                         SelectorVista(lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
                       ],
                       principal: BotonPrimario(
-                        'Nuevo trabajador',
+                        m('Nuevo trabajador'),
                         tecla: 'N',
                         onPressed: () => abrirTrabajadorForm(context),
                       ),
@@ -86,15 +87,15 @@ class _TrabajadoresState extends State<Trabajadores> {
               Expanded(
                 child: lista.isEmpty
                     ? Vacio(
-                        icono: Icons.badge_outlined,
-                        titulo: store.trabajadores.isEmpty ? 'Aún no hay trabajadores' : null,
+                        icono: Marca.iconoTrabajador,
+                        titulo: store.trabajadores.isEmpty ? m('Aún no hay trabajadores') : null,
                         texto: store.trabajadores.isEmpty
-                            ? 'Añade a tu equipo con sus competencias para que Pulpo sepa a quién asignar cada trabajo.'
-                            : 'No hay trabajadores con estos filtros',
+                            ? m('Añade a tu equipo con sus competencias para que Pulpo sepa a quién asignar cada trabajo.')
+                            : m('No hay trabajadores con estos filtros'),
                         accion: store.trabajadores.isEmpty
                             ? FilledButton(
                                 onPressed: () => abrirTrabajadorForm(context),
-                                child: const Text('Añadir el primer trabajador'),
+                                child: Text(m('Añadir el primer trabajador')),
                               )
                             : null,
                       )
@@ -114,7 +115,7 @@ class _TrabajadoresState extends State<Trabajadores> {
               child: BarraSeleccion(
                 seleccionados: seleccion.length,
                 total: lista.length,
-                nombre: 'trabajadores',
+                nombre: m('trabajadores'),
                 onTodos: () => setState(() {
                   if (seleccion.length == lista.length) {
                     seleccion.clear();
@@ -153,12 +154,12 @@ class _TrabajadoresState extends State<Trabajadores> {
             const Col('Nombre', flex: 3),
             if (medio) const Col('Competencias', flex: 4),
             if (ancho) const Col('Teléfono', flex: 2),
-            if (medio) const Col('Trabajos', flex: 1),
+            if (medio) Col(m('Trabajos'), flex: 1),
             const Col('Hoy', ancho: 90, derecha: true),
           ],
           filas: ws.length,
           onTap: (i) => _tocar(ws[i]),
-          pie: pieTabla(ws.length, ws.length == 1 ? 'trabajador' : 'trabajadores'),
+          pie: pieTabla(ws.length, m(ws.length == 1 ? 'trabajador' : 'trabajadores')),
           celdas: (i) {
             final w = ws[i];
             final asignadas = store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(w.id)).length;
@@ -259,7 +260,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)
                       : const Pill('Inactivo', P.gris, punto: true),
                   const SizedBox(width: 6),
-                  Pill('$asignadas trabajos', P.gris),
+                  Pill(m('$asignadas trabajos'), P.gris),
                 ],
               ),
               const SizedBox(height: 14),

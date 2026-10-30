@@ -15,6 +15,7 @@ import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'marca.dart';
 
 // ── Ventana de formulario ──
 // Por defecto sale en el centro desde abajo (como una hoja de iOS) y se puede
@@ -795,7 +796,7 @@ class _ZonaFotoState extends State<_ZonaFoto> {
           style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
-        Text('Una foto, el logotipo del cliente o lo que quieras.', style: TextStyle(color: P.textoSuave)),
+        Text(m('Una foto, el logotipo del cliente o lo que quieras.'), style: TextStyle(color: P.textoSuave)),
         const SizedBox(height: 16),
         DropTarget(
           onEnter: (_) => setState(() => encima = true),
@@ -990,8 +991,8 @@ class _ClienteFormState extends State<ClienteForm> {
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
-    etiqueta: 'Clientes',
-    titulo: widget.original == null ? 'Nuevo cliente' : 'Editar cliente',
+    etiqueta: m('Clientes'),
+    titulo: widget.original == null ? m('Nuevo cliente') : m('Editar cliente'),
     tituloDesplazado: nombre.text,
     lider: FotoFormulario(foto: c.foto, cuadrado: true, onCambio: (f) => setState(() => c.foto = f)),
     onGuardar: guardar,
@@ -1000,13 +1001,13 @@ class _ClienteFormState extends State<ClienteForm> {
         ? null
         : () async {
             final nav = Navigator.of(context);
-            if (await confirmar(context, '¿Eliminar ${c.nombre} y todos sus trabajos?')) {
+            if (await confirmar(context, m('¿Eliminar ${c.nombre} y todos sus trabajos?'))) {
               store.borrarCliente(c.id);
               nav.pop();
             }
           },
     campos: [
-      Bloque('Datos del cliente', primero: true, descripcion: 'Cómo se llama y cómo contactar con él.', [
+      Bloque(m('Datos del cliente'), primero: true, descripcion: 'Cómo se llama y cómo contactar con él.', [
         KeyedSubtree(
           key: _claveNombre,
           child: campo('Nombre', nombre, hint: 'Colegio San José', error: error, obligatorio: true),
@@ -1022,14 +1023,14 @@ class _ClienteFormState extends State<ClienteForm> {
         campo('Provincia', provincia),
       ]),
       Bloque('Datos fiscales', descripcion: 'Para facturar más adelante.', [
-        dos(campo('CIF/NIF', cif), CampoFecha('Cliente desde', c.fechaAlta, (d) => setState(() => c.fechaAlta = d))),
+        dos(campo('CIF/NIF', cif), CampoFecha(m('Cliente desde'), c.fechaAlta, (d) => setState(() => c.fechaAlta = d))),
       ]),
       Bloque('Notas', [
         campo('Notas internas', notas, lineas: 3),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Activo'),
-          subtitle: const Text('Un cliente inactivo no aparece en la planificación.'),
+          subtitle: Text(m('Un cliente inactivo no aparece en la planificación.')),
           value: c.activa,
           onChanged: (v) => setState(() => c.activa = v),
         ),
@@ -1133,8 +1134,8 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
-    etiqueta: 'Trabajadores',
-    titulo: widget.original == null ? 'Nuevo trabajador' : (widget.incrustada ? 'Ficha' : 'Editar trabajador'),
+    etiqueta: m('Trabajadores'),
+    titulo: widget.original == null ? m('Nuevo trabajador') : (widget.incrustada ? 'Ficha' : m('Editar trabajador')),
     tituloDesplazado: '${nombre.text} ${apellidos.text}',
     lider: FotoFormulario(foto: w.foto, onCambio: (f) => setState(() => w.foto = f)),
     bajoBotones: _MenuEstadoHoy(w.estadoHoy, (e) => setState(() => w.estadoHoy = e)),
@@ -1164,7 +1165,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         ),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ], pie: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20)),
-      Bloque('Competencias', descripcion: 'Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.', [
+      Bloque('Competencias', descripcion: m('Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.'), [
         KeyedSubtree(
           key: _claveCompetencias,
           child: Column(
@@ -1508,13 +1509,13 @@ class _TareaFormState extends State<TareaForm> {
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
-      etiqueta: t.esPlantilla ? 'Plantillas' : (t.padreId != null ? 'Subtrabajos' : 'Trabajos'),
+      etiqueta: t.esPlantilla ? 'Plantillas' : (t.padreId != null ? 'Subtrabajos' : m('Trabajos')),
       titulo: nueva
-          ? (t.esPlantilla ? 'Nueva plantilla' : (t.padreId != null ? 'Nuevo subtrabajo' : 'Nuevo trabajo'))
+          ? (t.esPlantilla ? 'Nueva plantilla' : (t.padreId != null ? 'Nuevo subtrabajo' : m('Nuevo trabajo')))
           : nombre.text,
       tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
-          ? 'Sin cliente: sirve de plantilla para crear trabajos en tus clientes.'
+          ? m('Sin cliente: sirve de plantilla para crear trabajos en tus clientes.')
           : store.cliente(t.clienteId)?.nombre,
       bajoBotones: _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c)),
       incrustada: widget.incrustada,
@@ -1548,7 +1549,7 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ),
         Bloque(
-          t.esPlantilla ? 'Plantilla' : 'Trabajo',
+          t.esPlantilla ? 'Plantilla' : m('Trabajo'),
           primero: true,
           descripcion: t.esPlantilla ? 'Cómo se llama y de qué tipo es.' : 'Qué hay que hacer y de qué tipo es.',
           [
@@ -1598,18 +1599,18 @@ class _TareaFormState extends State<TareaForm> {
           pie: t.esPlantilla ? null : SelectorColorTarea(t, () => setState(() {})),
         ),
         if (!t.esPlantilla)
-          Bloque('Cliente y equipo', descripcion: 'Para quién es y quién la hace.', [
+          Bloque(m('Cliente y equipo'), descripcion: 'Para quién es y quién la hace.', [
             dos(
               conMargen(
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    etiqueta('Cliente'),
+                    etiqueta(m('Cliente')),
                     // Un subtrabajo comparte el cliente de su trabajo.
                     if (t.padreId != null)
                       conMargen(
                         Text(
-                          store.cliente(t.clienteId)?.nombre ?? 'Sin cliente',
+                          store.cliente(t.clienteId)?.nombre ?? m('Sin cliente'),
                           style: TextStyle(color: P.textoSuave),
                         ),
                       )
@@ -1630,7 +1631,7 @@ class _TareaFormState extends State<TareaForm> {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: etiqueta('Trabajadores')),
+                        Expanded(child: etiqueta(m('Trabajadores'))),
                         if (aptos > 0)
                           Flexible(
                             child: Padding(
@@ -1655,7 +1656,7 @@ class _TareaFormState extends State<TareaForm> {
         Bloque('Cuándo', descripcion: 'Fecha, hora y cada cuánto se repite.', [
           SelectorCuando(t, () => setState(() {}), error: errorHorario, key: _claveCuando),
         ]),
-        Bloque('Cuánto', descripcion: 'Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.', [
+        Bloque('Cuánto', descripcion: m('Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.'), [
           etiqueta('Duración'),
           conMargen(
             DropdownButtonFormField<int>(
@@ -1692,7 +1693,7 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ),
         ]),
-        Bloque('Competencias', descripcion: 'Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.', [
+        Bloque('Competencias', descripcion: m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'), [
           conMargen(chipsCompetencias(t.competencias, () => setState(() {}))),
         ]),
         Bloque('Equipo y notas', descripcion: 'La máquina, dónde está y lo que haya que saber.', [
@@ -1714,7 +1715,7 @@ class _TareaFormState extends State<TareaForm> {
               DropdownButtonFormField<String?>(
                 isExpanded: true,
                 initialValue: store.equipo(t.equipoId)?.id,
-                decoration: const InputDecoration(labelText: 'Equipo del cliente'),
+                decoration: InputDecoration(labelText: m('Equipo del cliente')),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('Sin equipo')),
                   for (final e in store.equiposDe(t.clienteId!)) DropdownMenuItem(value: e.id, child: Text(e.nombre)),
@@ -2010,7 +2011,7 @@ class SelectorCliente extends StatelessWidget {
       ),
       menuChildren: [
         if (clientes.isEmpty)
-          const MenuItemButton(child: Text('Aún no tienes clientes'))
+          MenuItemButton(child: Text(m('Aún no tienes clientes')))
         else
           for (final x in clientes)
             MenuItemButton(
@@ -2029,7 +2030,7 @@ class SelectorCliente extends StatelessWidget {
             if (nuevo != null) onChanged(nuevo.id);
           },
           child: Text(
-            'Crear nuevo cliente',
+            m('Crear nuevo cliente'),
             style: TextStyle(color: P.morado, fontWeight: FontWeight.w700),
           ),
         ),
@@ -2040,7 +2041,7 @@ class SelectorCliente extends StatelessWidget {
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
         child: c == null
             ? Text(
-                'Elegir cliente',
+                m('Elegir cliente'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: P.textoSuave),
@@ -2152,7 +2153,7 @@ class SelectorTrabajadores extends StatelessWidget {
         shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
       ),
       menuChildren: [
-        if (ws.isEmpty) const MenuItemButton(child: Text('Aún no tienes trabajadores')),
+        if (ws.isEmpty) MenuItemButton(child: Text(m('Aún no tienes trabajadores'))),
         for (final w in ws)
           MenuItemButton(
             closeOnActivate: false,
@@ -2458,7 +2459,7 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                 SizedBox(
                   height: 46,
                   child: Tooltip(
-                    message: 'El pulpo no cambia su hora ni su técnico al organizar',
+                    message: m('El pulpo no cambia su hora ni su técnico al organizar'),
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         padding: esMovil(context) ? EdgeInsets.zero : null,
@@ -2648,7 +2649,7 @@ class _MenuCriticidad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => BotonMenu<Criticidad>(
-    tooltip: '¿Cómo de importante es este trabajo?',
+    tooltip: m('¿Cómo de importante es este trabajo?'),
     seleccionado: valor,
     onSelected: onChanged,
     opciones: [
@@ -2688,7 +2689,7 @@ class _MenuEstadoHoy extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => BotonMenu<EstadoHoy>(
-    tooltip: 'Disponibilidad del trabajador',
+    tooltip: m('Disponibilidad del trabajador'),
     seleccionado: valor,
     onSelected: onChanged,
     opciones: [

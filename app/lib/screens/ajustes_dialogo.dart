@@ -9,6 +9,7 @@ import '../widgets.dart';
 import 'cuenta.dart';
 import 'importar_exportar.dart';
 import 'tipos_competencias.dart';
+import '../marca.dart';
 
 /// Ajustes de la app, agrupados en tarjetas como los ajustes de iOS: apariencia, letra, agenda,
 /// barra lateral y datos.
@@ -140,7 +141,7 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                   titulo: 'Vista al abrir',
                   subtitulo: 'Con la que se abre el itinerario',
                   child: Pestanas(
-                    opciones: const ['Pulpo', 'Calendario'],
+                    opciones: [m('Pulpo'), 'Calendario'],
                     seleccion: ajustes.vistaInicio,
                     onChanged: ajustes.ponerVistaInicio,
                   ),
@@ -159,13 +160,13 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
               ]),
               _Grupo('Empresa', [
                 _Fila(
-                  titulo: 'Tipos de trabajo',
+                  titulo: m('Tipos de trabajo'),
                   subtitulo: '${tipos.length} tipos, con su icono, color y competencia',
                   child: Enlace('Editar', onTap: () => abrirTipos(context)),
                 ),
                 _Fila(
                   titulo: 'Competencias',
-                  subtitulo: '${competencias.length} competencias para trabajadores y trabajos',
+                  subtitulo: m('${competencias.length} competencias para trabajadores y trabajos'),
                   child: Enlace('Editar', onTap: () => abrirCompetencias(context)),
                 ),
               ]),
@@ -173,13 +174,13 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                 _Grupo('Datos', [
                   _Fila(
                     titulo: 'Importar y exportar',
-                    subtitulo: 'Clientes, trabajadores y trabajos en CSV (Excel)',
+                    subtitulo: m('Clientes, trabajadores y trabajos en CSV (Excel)'),
                     child: Enlace('Abrir', onTap: () => abrirImportarExportar(context)),
                   ),
                   if (store.nube == null)
                     _Fila(
                       titulo: 'En este navegador',
-                      subtitulo: 'Tus clientes, trabajadores y trabajos',
+                      subtitulo: m('Tus clientes, trabajadores y trabajos'),
                       child: TextButton(
                         style: TextButton.styleFrom(foregroundColor: P.rojo),
                         onPressed: () async {

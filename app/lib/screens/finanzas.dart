@@ -6,6 +6,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// Finanzas básicas: facturas proforma y presupuestos (sin valor fiscal), resumen del mes y exportar.
 class VistaFinanzas extends StatefulWidget {
@@ -30,13 +31,13 @@ class _VistaFinanzasState extends State<VistaFinanzas> {
   /// Crea las proformas de los trabajos con precio hechos en el mes que aún no se han cobrado.
   Future<void> _facturarLoHecho() async {
     final nuevas = finanzas.porFacturar(mes);
-    if (nuevas.isEmpty) return _aviso('No hay trabajos con precio hechos en ${mesYAno(mes)} sin facturar.');
+    if (nuevas.isEmpty) return _aviso(m('No hay trabajos con precio hechos en ${mesYAno(mes)} sin facturar.'));
     final total = nuevas.fold(0.0, (s, d) => s + d.total);
     final una = nuevas.length == 1;
     final ok = await confirmar(
       context,
-      'Se ${una ? 'creará 1 factura proforma' : 'crearán ${nuevas.length} facturas proforma'} con los trabajos '
-      'hechos en ${mesYAno(mes)} (total ${euros(total)}).',
+      m('Se ${una ? 'creará 1 factura proforma' : 'crearán ${nuevas.length} facturas proforma'} con los trabajos '
+      'hechos en ${mesYAno(mes)} (total ${euros(total)}).'),
       accion: una ? 'Crear 1 factura' : 'Crear ${nuevas.length} facturas',
       icono: Icons.receipt_long_outlined,
       destructivo: false,
@@ -82,7 +83,7 @@ class _VistaFinanzasState extends State<VistaFinanzas> {
                   BotonAccion(
                     'Facturar lo hecho',
                     icono: Icons.playlist_add_check_rounded,
-                    tooltip: 'Crea las proformas de los trabajos con precio hechos en el mes',
+                    tooltip: m('Crea las proformas de los trabajos con precio hechos en el mes'),
                     onPressed: _facturarLoHecho,
                   ),
                 BotonAccion(
@@ -111,8 +112,8 @@ class _VistaFinanzasState extends State<VistaFinanzas> {
                       icono: Icons.receipt_long_outlined,
                       titulo: pestana == 0 ? 'Sin facturas en ${mesYAno(mes)}' : 'Aún no hay presupuestos',
                       texto: pestana == 0
-                          ? 'Crea una a mano o con «Facturar lo hecho» a partir de los trabajos con precio.'
-                          : 'Prepara un presupuesto para un cliente y pásalo a factura cuando lo acepte.',
+                          ? m('Crea una a mano o con «Facturar lo hecho» a partir de los trabajos con precio.')
+                          : m('Prepara un presupuesto para un cliente y pásalo a factura cuando lo acepte.'),
                       accion: FilledButton(
                         onPressed: () =>
                             abrirDocumento(context, Documento(tipo: _tipo, vence: _vencePorDefecto(_tipo))),
@@ -244,7 +245,7 @@ class _TablaDocumentos extends StatelessWidget {
         child: Tabla(
           columnas: [
             if (medio) const Col('Número', ancho: 120),
-            const Col('Cliente', flex: 4),
+            Col(m('Cliente'), flex: 4),
             if (medio) const Col('Fecha', flex: 2),
             const Col('Total', flex: 2, derecha: true),
             const Col('Estado', ancho: 104, derecha: true),
@@ -256,7 +257,7 @@ class _TablaDocumentos extends StatelessWidget {
             final d = docs[i];
             return [
               if (medio) celdaTexto(d.codigo, negrita: true),
-              celdaTexto(store.cliente(d.clienteId)?.nombre ?? 'Sin cliente', negrita: !medio),
+              celdaTexto(store.cliente(d.clienteId)?.nombre ?? m('Sin cliente'), negrita: !medio),
               if (medio) celdaTexto(fecha(d.fecha), suave: true),
               Align(alignment: Alignment.centerRight, child: celdaTexto(euros(d.total))),
               Align(alignment: Alignment.centerRight, child: Pill(d.estado.etiqueta, d.estado.color, punto: true)),
@@ -475,13 +476,13 @@ class _DocumentoFormState extends State<DocumentoForm> {
       onGuardar: _guardar,
       onBorrar: d.id == null ? null : _borrar,
       avisos: [
-        if (intentado && _sinCliente) ('Elige el cliente', () {}),
+        if (intentado && _sinCliente) (m('Elige el cliente'), () {}),
         if (intentado && _sinLineas) ('Añade al menos una línea', () {}),
       ],
       campos: [
-        Bloque('Cliente', primero: true, descripcion: 'A quién va.', [
+        Bloque(m('Cliente'), primero: true, descripcion: 'A quién va.', [
           conMargen(SelectorCliente(d.clienteId, (id) => setState(() => d.clienteId = id))),
-          if (intentado && _sinCliente) Text('Elige el cliente', style: TextStyle(color: P.rojo, fontSize: 12.5)),
+          if (intentado && _sinCliente) Text(m('Elige el cliente'), style: TextStyle(color: P.rojo, fontSize: 12.5)),
         ]),
         Bloque(
           'Fechas',

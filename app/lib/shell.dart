@@ -341,9 +341,9 @@ class _BotonCrearState extends State<_BotonCrear> {
         _FilaCrear(
           cerrar: widget.menu.close,
           opciones: [
-            (Icons.apartment_outlined, 'Cliente', () => abrirClienteForm(context)),
-            (Icons.handyman_outlined, 'Trabajo', () => abrirTareaForm(context, null)),
-            (Icons.badge_outlined, 'Trabajador', () => abrirTrabajadorForm(context)),
+            (Marca.iconoCliente, m('Cliente'), () => abrirClienteForm(context)),
+            (Marca.iconoTrabajo, m('Trabajo'), () => abrirTareaForm(context, null)),
+            (Marca.iconoTrabajador, m('Trabajador'), () => abrirTrabajadorForm(context)),
           ],
         ),
       ],
@@ -621,7 +621,7 @@ class _BarraState extends State<_Barra> {
                 const SizedBox(height: 8),
                 Builder(
                   builder: (context) =>
-                      _fila(Icons.badge_outlined, 'Vista de trabajador', () => abrirVistaTrabajador(context)),
+                      _fila(Marca.iconoTrabajador, m('Vista de trabajador'), () => abrirVistaTrabajador(context)),
                 ),
                 BotonUsuario(compacto: iconos, escala: escala),
               ],
@@ -718,9 +718,9 @@ class _BarraState extends State<_Barra> {
     final items = [
       (Icons.home_outlined, 'Inicio', Seccion.inicio, 0),
       (Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, vencidas),
-      (Icons.apartment_outlined, 'Clientes', Seccion.clientes, 0),
-      (Icons.handyman_outlined, 'Trabajos', Seccion.tareas, 0),
-      (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
+      (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
+      (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
+      (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
       (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
@@ -841,9 +841,9 @@ class _BarraInferior extends StatelessWidget {
     final items = [
       (Icons.home_outlined, 'Inicio', Seccion.inicio, 0),
       (Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, vencidas),
-      (Icons.apartment_outlined, 'Clientes', Seccion.clientes, 0),
-      (Icons.handyman_outlined, 'Trabajos', Seccion.tareas, 0),
-      (Icons.badge_outlined, 'Trabajadores', Seccion.trabajadores, 0),
+      (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
+      (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
+      (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
       (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     return Container(
@@ -911,9 +911,9 @@ class _BarraInferior extends StatelessWidget {
                   _ => abrirMenuUsuario(context),
                 },
                 opciones: [
-                  for (final (i, (icono, texto)) in const [
+                  for (final (i, (icono, texto)) in [
                     (Icons.science_outlined, 'Simulaciones'),
-                    (Icons.badge_outlined, 'Vista de trabajador'),
+                    (Marca.iconoTrabajador, m('Vista de trabajador')),
                     (Icons.unfold_more_rounded, 'Empresas'),
                     (Icons.person_outline_rounded, 'Tu cuenta y ajustes'),
                   ].indexed)

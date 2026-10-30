@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// Tipos de trabajo de la empresa: nombre, icono, color y la competencia que piden. «Otro» va siempre
 /// el último y no se quita.
 Future<void> abrirTipos(BuildContext context) => _dialogo(
   context,
-  'Tipos de trabajo',
-  'Los que eliges al crear un trabajo. Cambiar el nombre cambia también sus trabajos.',
+  m('Tipos de trabajo'),
+  m('Los que eliges al crear un trabajo. Cambiar el nombre cambia también sus trabajos.'),
   (context) => [
     for (final t in tipos) _FilaTipo(t, key: ValueKey(t.id)),
     const SizedBox(height: 8),
@@ -30,7 +31,7 @@ Future<void> abrirTipos(BuildContext context) => _dialogo(
 Future<void> abrirCompetencias(BuildContext context) => _dialogo(
   context,
   'Competencias',
-  'Pulpo solo asigna un trabajo a quien tiene sus competencias. Cambiar el nombre lo cambia en todas partes.',
+  m('Pulpo solo asigna un trabajo a quien tiene sus competencias. Cambiar el nombre lo cambia en todas partes.'),
   (context) => [
     for (final c in competencias) _FilaCompetencia(c, key: ValueKey(c)),
     const SizedBox(height: 8),
@@ -220,11 +221,11 @@ class _FilaTipo extends StatelessWidget {
             child: otro
                 ? null
                 : IconButton(
-                    tooltip: 'Quitar (sus trabajos pasan a «${tipos.last.nombre}»)',
+                    tooltip: m('Quitar (sus trabajos pasan a «${tipos.last.nombre}»)'),
                     onPressed: () async {
                       if (await confirmar(
                         context,
-                        '¿Quitar «${t.nombre}»? Sus trabajos pasan a «${tipos.last.nombre}».',
+                        m('¿Quitar «${t.nombre}»? Sus trabajos pasan a «${tipos.last.nombre}».'),
                         accion: 'Quitar',
                       )) {
                         store.borrarTipo(t.id);
@@ -256,7 +257,7 @@ class _FilaCompetencia extends StatelessWidget {
             onPressed: () async {
               if (await confirmar(
                 context,
-                '¿Quitar «$c»? Se quita también de trabajadores y trabajos.',
+                m('¿Quitar «$c»? Se quita también de trabajadores y trabajos.'),
                 accion: 'Quitar',
               )) {
                 store.borrarCompetencia(c);

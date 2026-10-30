@@ -8,6 +8,7 @@ import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.d
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// Pestaña «Equipos» de la ficha de cliente: sus ascensores, calderas, extintores… con su estado y el
 /// vencimiento legal más cercano.
@@ -175,7 +176,7 @@ class _EquipoFormState extends State<EquipoForm> {
           ? null
           : () async {
               final nav = Navigator.of(context);
-              if (await confirmar(context, '¿Eliminar ${e.nombre}? Sus trabajos se quedan, sin equipo.')) {
+              if (await confirmar(context, m('¿Eliminar ${e.nombre}? Sus trabajos se quedan, sin equipo.'))) {
                 for (final d in e.documentos) {
                   store.nube?.borrarDocumentoEquipo(d).catchError((_) {});
                 }
@@ -223,7 +224,7 @@ class _EquipoFormState extends State<EquipoForm> {
         ]),
         Bloque(
           'Vencimientos legales',
-          descripcion: 'Inspecciones y revisiones obligatorias. Pulpo avisa en Inicio antes de que caduquen.',
+          descripcion: m('Inspecciones y revisiones obligatorias. Pulpo avisa en Inicio antes de que caduquen.'),
           [
             for (final (v, c) in vencimientos)
               Row(
@@ -327,7 +328,7 @@ class _EquipoFormState extends State<EquipoForm> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Aún no hay trabajos hechos. Enlaza un trabajo a este equipo desde el trabajo.',
+                  m('Aún no hay trabajos hechos. Enlaza un trabajo a este equipo desde el trabajo.'),
                   style: TextStyle(fontSize: 13, color: P.textoSuave),
                 ),
               ),

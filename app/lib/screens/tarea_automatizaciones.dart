@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// Pestaña «Automatizaciones» de un trabajo: reglas que mandan emails cuando pasa algo de ese trabajo.
 /// Las reglas se guardan en la base y el servidor manda los emails; «Vista previa» enseña cómo quedarían.
@@ -23,7 +24,7 @@ class TareaAutomatizaciones extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(18),
             child: Text(
-              'Aún no hay ninguna. Crea una para avisar por email, por ejemplo, a los trabajadores un día antes.',
+              m('Aún no hay ninguna. Crea una para avisar por email, por ejemplo, a los trabajadores un día antes.'),
               style: TextStyle(color: P.textoSuave, fontSize: 13),
             ),
           )
@@ -176,8 +177,8 @@ class _AutomatizacionFormState extends State<_AutomatizacionForm> {
   late final Automatizacion a = widget.original == null
       ? Automatizacion(
           id: store.nuevoId(),
-          asunto: 'Mantenimiento: {trabajo}',
-          cuerpo: 'Hola, recordatorio del trabajo «{trabajo}» ({cliente}) previsto para el {fecha}.',
+          asunto: m('Mantenimiento: {trabajo}'),
+          cuerpo: m('Hola, recordatorio del trabajo «{trabajo}» ({cliente}) previsto para el {fecha}.'),
         )
       : Automatizacion.fromJson(widget.original!.toJson());
   late final nombre = TextEditingController(text: a.nombre);
@@ -235,7 +236,7 @@ class _AutomatizacionFormState extends State<_AutomatizacionForm> {
         campo(
           'Nombre',
           nombre,
-          hint: 'Aviso a los trabajadores',
+          hint: m('Aviso a los trabajadores'),
           obligatorio: true,
           error: intento && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null,
         ),
@@ -284,12 +285,12 @@ class _AutomatizacionFormState extends State<_AutomatizacionForm> {
         ],
       ]),
       Bloque('Para quién', descripcion: 'Pueden ser varios. Los que no tengan email no recibirán nada.', [
-        _check('Trabajadores asignados', a.aTrabajadores, (v) => a.aTrabajadores = v),
-        _check('El cliente', a.aCliente, (v) => a.aCliente = v),
+        _check(m('Trabajadores asignados'), a.aTrabajadores, (v) => a.aTrabajadores = v),
+        _check(m('El cliente'), a.aCliente, (v) => a.aCliente = v),
         const SizedBox(height: 8),
         campo('Otros emails', extras, hint: 'oficina@empresa.com, jefe@empresa.com'),
       ]),
-      Bloque('Mensaje', descripcion: 'Puedes usar {trabajo}, {cliente}, {fecha} y {trabajadores}.', [
+      Bloque('Mensaje', descripcion: m('Puedes usar {trabajo}, {cliente}, {fecha} y {trabajadores}.'), [
         campo('Asunto', asunto),
         campo('Texto', cuerpo, lineas: 6),
       ]),

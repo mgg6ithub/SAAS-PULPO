@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'ajustes_dialogo.dart';
 import 'cuenta.dart';
+import '../marca.dart';
 
 String? _correo() => Supabase.instance.client.auth.currentUser?.email;
 
@@ -17,7 +18,7 @@ String inicialesCuenta() => store.nube == null ? 'YO' : inicialesDe((_correo() ?
 /// «Empresa · Rol» de la sesión.
 String _empresaYRol() {
   final nube = store.nube!;
-  return '${nube.nombre} · ${nube.esAdmin ? 'Administrador' : 'Trabajador'}';
+  return '${nube.nombre} · ${nube.esAdmin ? 'Administrador' : m('Trabajador')}';
 }
 
 /// Posición de un menú junto al widget de [context] (encima o debajo, según quepa).

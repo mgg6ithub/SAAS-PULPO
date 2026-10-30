@@ -9,6 +9,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart';
 
 /// Punto del color del resultado: sustituye al icono en las filas de informes.
 Widget puntoResultado(int resultado) => Container(
@@ -166,7 +167,7 @@ class _InformeState extends State<_Informe> {
           ],
           if (i.firma != null) ...[
             const SizedBox(height: 16),
-            Text('Conforme, el cliente', style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
+            Text(m('Conforme, el cliente'), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
             const SizedBox(height: 4),
             FotoGuardada(i.firma!, width: 220, height: 88, fit: BoxFit.contain),
             if (i.firmante.isNotEmpty) Text(i.firmante, style: const TextStyle(fontSize: 13.5)),
