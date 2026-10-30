@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme.dart';
 import '../widgets.dart';
@@ -22,44 +23,47 @@ const iconosIndustriales = <(String, String, IconData)>[
 /// Catálogo amplio para el botón «+» del formulario, por grupos. Claves estables, como arriba.
 const gruposIconos = <(String, List<(String, String, IconData)>)>[
   // Dominion: departamento de petroquímicas y maquinaria industrial pesada. Primero, para tenerlo a mano.
-  ('Dominion · Petroquímica y maquinaria pesada', [
-    ('dom_refineria', 'Refinería', Icons.factory_rounded),
-    ('dom_planta', 'Planta química', Icons.science_rounded),
-    ('dom_barril', 'Barril de crudo', Icons.oil_barrel_rounded),
-    ('dom_tanque', 'Tanque de almacenamiento', Icons.propane_tank_rounded),
-    ('dom_cisterna', 'Camión cisterna', Icons.local_shipping_rounded),
-    ('dom_bomba_crudo', 'Bomba de trasiego', Icons.local_gas_station_rounded),
-    ('dom_tuberia', 'Línea de proceso', Icons.plumbing_rounded),
-    ('dom_intercambiador', 'Intercambiador de calor', Icons.heat_pump_rounded),
-    ('dom_horno', 'Horno de proceso', Icons.local_fire_department_rounded),
-    ('dom_antorcha', 'Antorcha', Icons.whatshot_rounded),
-    ('dom_reactor', 'Reactor', Icons.blur_circular_rounded),
-    ('dom_columna', 'Columna de destilación', Icons.view_agenda_outlined),
-    ('dom_separador', 'Separador', Icons.filter_list_rounded),
-    ('dom_secador', 'Secador térmico', Icons.dry_rounded),
-    ('dom_vapor', 'Línea de vapor', Icons.cloud_queue_rounded),
-    ('dom_gas', 'Gas', Icons.gas_meter_outlined),
-    ('dom_quimico', 'Producto químico', Icons.biotech_rounded),
-    ('dom_peligro', 'Material peligroso', Icons.dangerous_outlined),
-    ('dom_atex', 'Zona ATEX', Icons.warning_rounded),
-    ('dom_derrame', 'Derrame', Icons.water_damage_rounded),
-    ('dom_hidrolimpieza', 'Hidrolimpieza', Icons.shower_rounded),
-    ('dom_aspiracion', 'Camión de aspiración', Icons.cyclone_rounded),
-    ('dom_soplante', 'Soplante', Icons.wind_power_rounded),
-    ('dom_compresor', 'Compresor de proceso', Icons.compress_rounded),
-    ('dom_turbina', 'Turbina', Icons.toys_rounded),
-    ('dom_grua', 'Grúa pesada', Icons.construction_rounded),
-    ('dom_excavadora', 'Maquinaria de obra', Icons.front_loader),
-    ('dom_carretilla', 'Carretilla elevadora', Icons.forklift),
-    ('dom_andamio', 'Andamio', Icons.grid_on_rounded),
-    ('dom_soldadura', 'Soldadura', Icons.flash_on_rounded),
-    ('dom_inspeccion', 'Inspección', Icons.manage_search_rounded),
-    ('dom_epi', 'EPI / seguridad', Icons.health_and_safety_outlined),
-    ('dom_casco', 'Técnico de campo', Icons.engineering_rounded),
-    ('dom_contenedor', 'Contenedor de residuos', Icons.delete_sweep_outlined),
-    ('dom_puerto', 'Terminal marítima', Icons.anchor_rounded),
-    ('dom_generador', 'Grupo electrógeno', Icons.electric_bolt_rounded),
-  ]),
+  (
+    'Dominion · Petroquímica y maquinaria pesada',
+    [
+      ('dom_refineria', 'Refinería', Icons.factory_rounded),
+      ('dom_planta', 'Planta química', Icons.science_rounded),
+      ('dom_barril', 'Barril de crudo', Icons.oil_barrel_rounded),
+      ('dom_tanque', 'Tanque de almacenamiento', Icons.propane_tank_rounded),
+      ('dom_cisterna', 'Camión cisterna', Icons.local_shipping_rounded),
+      ('dom_bomba_crudo', 'Bomba de trasiego', Icons.local_gas_station_rounded),
+      ('dom_tuberia', 'Línea de proceso', Icons.plumbing_rounded),
+      ('dom_intercambiador', 'Intercambiador de calor', Icons.heat_pump_rounded),
+      ('dom_horno', 'Horno de proceso', Icons.local_fire_department_rounded),
+      ('dom_antorcha', 'Antorcha', Icons.whatshot_rounded),
+      ('dom_reactor', 'Reactor', Icons.blur_circular_rounded),
+      ('dom_columna', 'Columna de destilación', Icons.view_agenda_outlined),
+      ('dom_separador', 'Separador', Icons.filter_list_rounded),
+      ('dom_secador', 'Secador térmico', Icons.dry_rounded),
+      ('dom_vapor', 'Línea de vapor', Icons.cloud_queue_rounded),
+      ('dom_gas', 'Gas', Icons.gas_meter_outlined),
+      ('dom_quimico', 'Producto químico', Icons.biotech_rounded),
+      ('dom_peligro', 'Material peligroso', Icons.dangerous_outlined),
+      ('dom_atex', 'Zona ATEX', Icons.warning_rounded),
+      ('dom_derrame', 'Derrame', Icons.water_damage_rounded),
+      ('dom_hidrolimpieza', 'Hidrolimpieza', Icons.shower_rounded),
+      ('dom_aspiracion', 'Camión de aspiración', Icons.cyclone_rounded),
+      ('dom_soplante', 'Soplante', Icons.wind_power_rounded),
+      ('dom_compresor', 'Compresor de proceso', Icons.compress_rounded),
+      ('dom_turbina', 'Turbina', Icons.toys_rounded),
+      ('dom_grua', 'Grúa pesada', Icons.construction_rounded),
+      ('dom_excavadora', 'Maquinaria de obra', Icons.front_loader),
+      ('dom_carretilla', 'Carretilla elevadora', Icons.forklift),
+      ('dom_andamio', 'Andamio', Icons.grid_on_rounded),
+      ('dom_soldadura', 'Soldadura', Icons.flash_on_rounded),
+      ('dom_inspeccion', 'Inspección', Icons.manage_search_rounded),
+      ('dom_epi', 'EPI / seguridad', Icons.health_and_safety_outlined),
+      ('dom_casco', 'Técnico de campo', Icons.engineering_rounded),
+      ('dom_contenedor', 'Contenedor de residuos', Icons.delete_sweep_outlined),
+      ('dom_puerto', 'Terminal marítima', Icons.anchor_rounded),
+      ('dom_generador', 'Grupo electrógeno', Icons.electric_bolt_rounded),
+    ],
+  ),
   (
     'Maquinaria',
     [
@@ -248,11 +252,78 @@ const gruposIconos = <(String, List<(String, String, IconData)>)>[
   ),
 ];
 
-/// Todos los iconos que se pueden elegir: los de siempre y los del catálogo amplio.
-final todosLosIconos = [...iconosIndustriales, for (final g in gruposIconos) ...g.$2];
+/// Equipos de proceso dibujados a mano (no existen en Material): SVG de 24 px y trazo 2, como los Material,
+/// en `assets/iconos/<nombre>.svg`. La clave lleva delante `pq_`.
+const iconosDibujados = <(String, String)>[
+  ('pq_bomba_centrifuga', 'Bomba centrífuga'),
+  ('pq_bomba_engranajes', 'Bomba de engranajes'),
+  ('pq_bomba_embolo', 'Bomba de émbolo'),
+  ('pq_bomba_diafragma', 'Bomba de diafragma'),
+  ('pq_intercambiador_tubos', 'Intercambiador de tubos'),
+  ('pq_intercambiador_placas', 'Intercambiador de placas'),
+  ('pq_agitador', 'Agitador'),
+  ('pq_tanque_homogeneizacion', 'Tanque de homogeneización'),
+  ('pq_isotanque', 'Isotanque'),
+  ('pq_contenedor', 'Contenedor'),
+  ('pq_cisterna', 'Cisterna'),
+  ('pq_deposito_horizontal', 'Depósito horizontal'),
+  ('pq_esfera_glp', 'Esfera de GLP'),
+  ('pq_silo', 'Silo'),
+  ('pq_columna_destilacion', 'Columna de destilación'),
+  ('pq_reactor', 'Reactor encamisado'),
+  ('pq_ciclon', 'Ciclón separador'),
+  ('pq_manometro', 'Manómetro'),
+  ('pq_transmisor_presion', 'Transmisor de presión'),
+  ('pq_caudalimetro', 'Caudalímetro'),
+  ('pq_instrumento', 'Instrumento'),
+  ('pq_valvula_seguridad', 'Válvula de seguridad'),
+  ('pq_valvula_compuerta', 'Válvula de compuerta'),
+  ('pq_valvula_bola', 'Válvula de bola'),
+  ('pq_valvula_retencion', 'Válvula de retención'),
+  ('pq_compresor', 'Compresor'),
+  ('pq_soplante', 'Soplante'),
+  ('pq_secador', 'Secador'),
+  ('pq_filtro_cesta', 'Filtro de cesta'),
+  ('pq_horno_proceso', 'Horno de proceso'),
+  ('pq_antorcha', 'Antorcha'),
+  ('pq_brida', 'Bridas'),
+  ('pq_motor_electrico', 'Motor eléctrico'),
+];
 
-IconData iconoIndustrial(String clave) =>
-    todosLosIconos.firstWhere((i) => i.$1 == clave, orElse: () => iconosIndustriales.first).$3;
+/// Todos los iconos que se pueden elegir, como (clave, nombre).
+final todosLosIconos = <(String, String)>[
+  for (final i in iconosIndustriales) (i.$1, i.$2),
+  ...iconosDibujados,
+  for (final g in gruposIconos)
+    for (final i in g.$2) (i.$1, i.$2),
+];
+
+IconData iconoIndustrial(String clave) => [
+  ...iconosIndustriales,
+  for (final g in gruposIconos) ...g.$2,
+].firstWhere((i) => i.$1 == clave, orElse: () => iconosIndustriales.first).$3;
+
+/// Icono de un activo: de Material o dibujado (SVG). Sin color, el del tema de iconos (como [Icon]).
+class IconoActivo extends StatelessWidget {
+  final String clave;
+  final double? size;
+  final Color? color;
+  const IconoActivo(this.clave, {super.key, this.size, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!clave.startsWith('pq_')) return Icon(iconoIndustrial(clave), size: size, color: color);
+    final tema = IconTheme.of(context);
+    final lado = size ?? tema.size ?? 24;
+    // Los Material dejan ~2 px de aire en 24; los dibujados también, así que miden lo mismo.
+    return SvgPicture.asset(
+      'assets/iconos/${clave.substring(3)}.svg',
+      width: lado,
+      height: lado,
+      colorFilter: ColorFilter.mode(color ?? tema.color ?? P.texto, BlendMode.srcIn),
+    );
+  }
+}
 
 /// Ventana con el catálogo amplio: buscador y los iconos por grupos. Devuelve la clave elegida.
 Future<String?> elegirIcono(BuildContext context, String actual) => showDialog<String>(
@@ -276,8 +347,8 @@ class _CatalogoIconos extends StatefulWidget {
 class _CatalogoIconosState extends State<_CatalogoIconos> {
   String q = '';
 
-  Widget _boton((String, String, IconData) i) {
-    final (clave, nombre, icono) = i;
+  Widget _boton((String, String) i) {
+    final (clave, nombre) = i;
     final elegido = clave == widget.actual;
     return IconButton(
       tooltip: nombre,
@@ -289,25 +360,30 @@ class _CatalogoIconosState extends State<_CatalogoIconos> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
       ),
       onPressed: () => Navigator.pop(context, clave),
-      icon: Icon(icono, size: 24),
+      icon: IconoActivo(clave, size: 24),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final t = q.trim().toLowerCase();
-    final grupos = [('Básicos', iconosIndustriales), ...gruposIconos]
-        .map(
-          (g) => (
-            g.$1,
-            [
-              for (final i in g.$2)
-                if (t.isEmpty || i.$2.toLowerCase().contains(t) || g.$1.toLowerCase().contains(t)) i,
-            ],
-          ),
-        )
-        .where((g) => g.$2.isNotEmpty)
-        .toList();
+    final grupos =
+        <(String, List<(String, String)>)>[
+              ('Equipos de proceso', iconosDibujados),
+              ('Básicos', [for (final i in iconosIndustriales) (i.$1, i.$2)]),
+              for (final g in gruposIconos) (g.$1, [for (final i in g.$2) (i.$1, i.$2)]),
+            ]
+            .map(
+              (g) => (
+                g.$1,
+                [
+                  for (final i in g.$2)
+                    if (t.isEmpty || i.$2.toLowerCase().contains(t) || g.$1.toLowerCase().contains(t)) i,
+                ],
+              ),
+            )
+            .where((g) => g.$2.isNotEmpty)
+            .toList();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(

@@ -739,7 +739,7 @@ class _IconoActivo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
-      child: Icon(a == null ? Icons.assignment_outlined : iconoIndustrial(a.icono), size: size * .53, color: color),
+      child: a == null ? Icon(Icons.assignment_outlined, size: size * .53, color: color) : IconoActivo(a.icono, size: size * .53, color: color),
     );
   }
 }

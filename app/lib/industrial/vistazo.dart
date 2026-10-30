@@ -154,7 +154,7 @@ class _Columna extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(iconoIndustrial(a.icono), size: 20, color: tipo.color),
+                    IconoActivo(a.icono, size: 20, color: tipo.color),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

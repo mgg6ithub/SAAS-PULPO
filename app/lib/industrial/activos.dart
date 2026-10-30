@@ -198,7 +198,7 @@ class _TablaActivos extends StatelessWidget {
             return [
               Row(
                 children: [
-                  Tooltip(message: textoEstado(g), child: Icon(iconoIndustrial(a.icono), color: colorEstado(g), size: 22)),
+                  Tooltip(message: textoEstado(g), child: IconoActivo(a.icono, color: colorEstado(g), size: 22)),
                   const SizedBox(width: 10),
                   Expanded(child: celdaTexto(a.titulo, negrita: true)),
                 ],
@@ -368,7 +368,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                 ),
                 const SizedBox(width: 4),
-                Icon(iconoIndustrial(a.icono), size: 28, color: colorEstado(g)),
+                IconoActivo(a.icono, size: 28, color: colorEstado(g)),
               ],
             ),
             titulo: a.titulo.isEmpty ? 'Activo' : a.titulo,
@@ -713,10 +713,10 @@ class _ActivoFormState extends State<ActivoForm> {
                 runSpacing: 4,
                 children: [
                   // Once de siempre, el elegido si es del catálogo amplio, y «+» para abrir el catálogo.
-                  for (final (clave, nombre, icono) in [
-                    ...iconosIndustriales.take(11),
-                    if (!iconosIndustriales.take(11).any((i) => i.$1 == a.icono))
-                      todosLosIconos.firstWhere((i) => i.$1 == a.icono, orElse: () => iconosIndustriales[11]),
+                  for (final (clave, nombre) in [
+                    ...todosLosIconos.take(11),
+                    if (!todosLosIconos.take(11).any((i) => i.$1 == a.icono))
+                      todosLosIconos.firstWhere((i) => i.$1 == a.icono, orElse: () => todosLosIconos[11]),
                   ])
                     IconButton(
                       tooltip: nombre,
@@ -728,7 +728,7 @@ class _ActivoFormState extends State<ActivoForm> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
                       ),
                       onPressed: () => setState(() => a.icono = clave),
-                      icon: Icon(icono, size: 22),
+                      icon: IconoActivo(clave, size: 22),
                     ),
                   IconButton(
                     tooltip: 'Más iconos',
