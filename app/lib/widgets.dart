@@ -1174,7 +1174,7 @@ class _TablaState extends State<Tabla> {
   /// Anchos elegidos arrastrando, por título de columna (las columnas pueden aparecer o no según el ancho).
   final anchos = <String, double>{};
   final _claves = <String, GlobalKey>{};
-  final _lienzo = GlobalKey();
+  final _lienzo = GlobalKey(), _pie = GlobalKey();
   int? _columnaArrastrando;
   final _orden = <String>[];
 
@@ -1224,6 +1224,7 @@ class _TablaState extends State<Tabla> {
             : _GuiasColumna(
                 columna: _claves[columnas[_columnaArrastrando!].titulo]!,
                 lienzo: _lienzo,
+                pie: _pie,
                 primera: _columnaArrastrando == 0,
                 color: P.morado,
               ),
@@ -1344,7 +1345,7 @@ class _TablaState extends State<Tabla> {
               ),
             ),
             if (widget.pie != null) ...[
-              Divider(height: 1, color: P.borde),
+              Divider(key: _pie, height: 1, color: P.borde),
               Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: widget.pie),
             ],
           ],
@@ -1435,10 +1436,16 @@ class _TituloColumnaState extends State<_TituloColumna> {
 
 /// Guías superpuestas: no interceptan el ratón ni crean widgets por cada tramo.
 class _GuiasColumna extends CustomPainter {
-  final GlobalKey columna, lienzo;
+  final GlobalKey columna, lienzo, pie;
   final bool primera;
   final Color color;
-  _GuiasColumna({required this.columna, required this.lienzo, required this.primera, required this.color});
+  _GuiasColumna({
+    required this.columna,
+    required this.lienzo,
+    required this.pie,
+    required this.primera,
+    required this.color,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1452,6 +1459,9 @@ class _GuiasColumna extends CustomPainter {
     // Las guías coinciden con el centro del asa de cada límite.
     final izquierda = primera ? 1.0 : origen.dx - 7;
     final derecha = origen.dx + celda.size.width - 7;
+    // El pie (el recuento) no es de ninguna columna: las guías paran en la última fila.
+    final cajaPie = pie.currentContext?.findRenderObject() as RenderBox?;
+    if (cajaPie != null && cajaPie.hasSize) size = Size(size.width, cajaPie.localToGlobal(Offset.zero, ancestor: tabla).dy);
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawRect(Rect.fromLTRB(izquierda, 0, derecha, size.height), Paint()..color = color.withValues(alpha: .07));
