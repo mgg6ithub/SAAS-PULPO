@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../forms.dart';
 import '../informes.dart';
+import '../marca.dart';
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 import '../models.dart';
 import '../nube.dart';
@@ -83,7 +84,7 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
                       FilaLista(
                         lider: Avatar(
                           inicialesDe(w.nombreCompleto),
-                          Color(w.color == 0 ? 0xFF6A2FF6 : w.color),
+                          w.color == 0 ? Marca.color : Color(w.color),
                           size: 34,
                         ),
                         titulo: w.nombreCompleto,

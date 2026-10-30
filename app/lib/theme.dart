@@ -9,33 +9,36 @@ import 'marca.dart';
 class P {
   static bool get _o => ajustes.oscuro;
 
+  /// Neutro según la variante: con tinte lavanda en Pultec, gris azulado en iPultec.
+  static Color _n(int pultec, int ipultec) => Color(industrial ? ipultec : pultec);
+
   /// Color de acento (por defecto el morado del logo; se cambia en Ajustes).
   static Color get morado => acentos[ajustes.acento.clamp(0, acentos.length - 1)].color;
   static Color get moradoOscuro => Color.lerp(morado, _o ? Colors.white : Colors.black, _o ? .5 : .22)!;
   static Color get moradoSuave => Color.lerp(_o ? superficie : Colors.white, morado, _o ? .22 : .09)!;
 
   /// Fondo del contenido: lavanda muy leve (el "tint" de la landing); las tarjetas, blancas encima.
-  static Color get fondo => _o ? const Color(0xFF0F0E16) : const Color(0xFFF7F6FB);
-  static Color get superficie => _o ? const Color(0xFF18171F) : Colors.white;
+  static Color get fondo => _o ? _n(0xFF0F0E16, 0xFF0D1015) : _n(0xFFF7F6FB, 0xFFF5F7FA);
+  static Color get superficie => _o ? _n(0xFF18171F, 0xFF161A20) : Colors.white;
 
   /// Barra lateral: blanca con su borde, como la navegación de la landing.
-  static Color get barra => _o ? const Color(0xFF14131B) : Colors.white;
-  static Color get columna => _o ? const Color(0xFF15141C) : const Color(0xFFF7F6FB);
+  static Color get barra => _o ? _n(0xFF14131B, 0xFF13161C) : Colors.white;
+  static Color get columna => _o ? _n(0xFF15141C, 0xFF14171D) : _n(0xFFF7F6FB, 0xFFF5F7FA);
 
   /// Fila de lista bajo el ratón: un velo morado muy suave (como el borde morado de las tarjetas).
   static Color get hoverFila => morado.withValues(alpha: _o ? .12 : .06);
 
   /// Fondo al pasar el ratón o elemento activo de la barra.
-  static Color get hover => _o ? const Color(0xFF24232D) : const Color(0xFFEFECF7);
+  static Color get hover => _o ? _n(0xFF24232D, 0xFF222833) : _n(0xFFEFECF7, 0xFFEBEFF5);
 
   /// Cabecera de tabla.
-  static Color get cabeceraTabla => _o ? const Color(0xFF1C1B24) : const Color(0xFFFBFAFD);
-  static Color get borde => _o ? const Color(0xFF2B2A35) : const Color(0xFFE7E4F0);
-  static Color get texto => _o ? const Color(0xFFEDEDF2) : const Color(0xFF14121F);
-  static Color get textoSuave => _o ? const Color(0xFF9D9BAD) : const Color(0xFF5D5A6E);
+  static Color get cabeceraTabla => _o ? _n(0xFF1C1B24, 0xFF1A1E25) : _n(0xFFFBFAFD, 0xFFFAFBFC);
+  static Color get borde => _o ? _n(0xFF2B2A35, 0xFF2A303A) : _n(0xFFE7E4F0, 0xFFE3E7EE);
+  static Color get texto => _o ? _n(0xFFEDEDF2, 0xFFECEFF3) : _n(0xFF14121F, 0xFF121821);
+  static Color get textoSuave => _o ? _n(0xFF9D9BAD, 0xFF98A1AE) : _n(0xFF5D5A6E, 0xFF5A6474);
 
   /// Tinta de la landing: botones oscuros, banners y tooltips.
-  static const tinta = Color(0xFF14121F);
+  static const tinta = Color(industrial ? 0xFF121821 : 0xFF14121F);
 
   /// Segundo color de marca (rutas y equipo en la landing).
   static const teal = Color(0xFF0F9F8F);
@@ -69,6 +72,9 @@ class LogoPulpo extends StatelessWidget {
     'assets/pulpo.png',
     width: size,
     height: size,
+    // En iPultec, el mismo pulpo con el tono de la marca.
+    color: industrial ? Marca.color : null,
+    colorBlendMode: industrial ? BlendMode.hue : null,
     filterQuality: FilterQuality.medium,
     semanticLabel: Marca.nombre,
   );
@@ -86,9 +92,9 @@ const acentos = <({String nombre, Color color})>[
   (nombre: 'Gris', color: Color(0xFF52525B)),
 ];
 
-/// Colores para avatares de clientes y trabajadores.
+/// Colores para avatares de clientes y trabajadores. El primero, el de la marca.
 const paleta = <Color>[
-  Color(0xFF6A2FF6),
+  Marca.color,
   Color(0xFF0F9F8F),
   Color(0xFF2563EB),
   Color(0xFF16A34A),
