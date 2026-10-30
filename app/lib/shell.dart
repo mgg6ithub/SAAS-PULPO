@@ -450,7 +450,10 @@ class _FilaCrearState extends State<_FilaCrear> {
           // Separador corto entre opciones, sin llegar a los bordes.
           if (i > 0) Container(width: 1, height: 36, margin: const EdgeInsets.symmetric(horizontal: 6), color: P.borde),
           MouseRegion(
-            onEnter: (_) => setState(() => elegida = i),
+            // Solo al mover el ratón: con onEnter, el puntero quieto encima peleaba con las flechas y parpadeaba.
+            onHover: (_) {
+              if (elegida != i) setState(() => elegida = i);
+            },
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
