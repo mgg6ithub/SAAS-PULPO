@@ -100,6 +100,19 @@ class _PuertaNubeState extends State<PuertaNube> {
           if (mounted) cambiarClave(context, recuperando: true);
         });
       }
+    } on CuentaDeOtraMarca {
+      if (mounted) {
+        setState(() => _fase = _Fase.acceso);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(
+              industrial
+                  ? 'Esa cuenta es de Pultec residencial. Entra en iPultec con una cuenta industrial.'
+                  : 'Esa cuenta es de iPultec industrial. Entra en Pultec con una cuenta residencial.',
+            ),
+          ),
+        );
+      }
     } on InvitacionNoValida {
       if (mounted) setState(() => _fase = _Fase.invitacionMala);
     } catch (e) {

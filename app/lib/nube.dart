@@ -25,6 +25,11 @@ class InvitacionNoValida implements Exception {
   const InvitacionNoValida();
 }
 
+/// La cuenta es de la otra marca (residencial o industrial): no puede entrar en esta app.
+class CuentaDeOtraMarca implements Exception {
+  const CuentaDeOtraMarca();
+}
+
 /// La empresa se quedaría sin administrador (quitar o degradar al último, o borrar su cuenta).
 class UltimoAdministrador implements Exception {
   const UltimoAdministrador();
@@ -136,6 +141,10 @@ class Nube {
       if (e.code == 'P0001') {
         await _olvidarInvitacion();
         throw const InvitacionNoValida();
+      }
+      if (e.code == 'P0002') {
+        await _db.auth.signOut(scope: SignOutScope.local);
+        throw const CuentaDeOtraMarca();
       }
       rethrow;
     }
