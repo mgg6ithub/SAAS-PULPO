@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
+import 'package:pulpo/industrial/historicos.dart';
 import 'package:pulpo/industrial/vistazo.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/store.dart';
@@ -81,6 +82,44 @@ void main() {
       expect(find.text('Correctivo crítico · 1 pendiente'), findsOneWidget);
       await tester.tap(find.text('PRE-01 · Prensa'));
       expect(abierto, 'b1');
+    });
+  }
+
+  for (final ancho in [1440.0, 700.0, 420.0]) {
+    testWidgets('Históricos: OT realizadas con filtros a ${ancho.round()} px', (tester) async {
+      tester.view.physicalSize = Size(ancho, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      store.guardarTrabajador(Trabajador(id: 'w-ot', nombre: 'Técnico OT'));
+      store.tareas.addAll([
+        Tarea(
+          id: 'ot1',
+          nombre: 'Cambio de aceite',
+          activoId: 'a2',
+          tipoMantenimiento: TipoMantenimiento.preventivo,
+          trabajadorIds: ['w-ot'],
+          historial: [hoy(), masDias(hoy(), -40)],
+        ),
+        Tarea(
+          id: 'ot2',
+          nombre: 'Fuga en bomba',
+          activoId: 'a3',
+          tipoMantenimiento: TipoMantenimiento.correctivoCritico,
+          historial: [masDias(hoy(), -2)],
+        ),
+        Tarea(id: 'ot3', nombre: 'Pendiente', activoId: 'a2', tipoMantenimiento: TipoMantenimiento.preventivo),
+      ]);
+      expect(otsRealizadas().length, 3);
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Historicos())));
+      await tester.pumpAndSettle();
+      expect(find.text('Cambio de aceite'), findsNWidgets(2));
+      expect(find.text('Fuga en bomba'), findsOneWidget);
+      expect(find.text('Pendiente'), findsNothing);
+      // Filtro de tipo: solo las críticas.
+      await tester.tap(find.text('Correctivo crítico').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Cambio de aceite'), findsNothing);
+      expect(find.text('Fuga en bomba'), findsOneWidget);
     });
   }
 }

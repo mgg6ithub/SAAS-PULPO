@@ -7,6 +7,7 @@ import 'forms.dart';
 import 'marca.dart';
 import 'models.dart';
 import 'industrial/activos.dart';
+import 'industrial/historicos.dart';
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
 import 'screens/clientes.dart';
@@ -24,7 +25,7 @@ import 'theme.dart';
 import 'widgets.dart';
 
 /// Secciones de la barra lateral, en orden.
-enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, finanzas }
+enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, finanzas, historicos }
 
 /// Barra lateral + página activa.
 class Shell extends StatefulWidget {
@@ -35,9 +36,12 @@ class Shell extends StatefulWidget {
 }
 
 class _ShellState extends State<Shell> {
-  // ?s=1 abre directamente una sección (útil para enlaces y capturas).
+  // ?s=1 abre directamente una sección (útil para enlaces y capturas). Históricos, la última, solo en iPultec.
   Seccion seccion =
-      Seccion.values[(int.tryParse(Uri.base.queryParameters['s'] ?? '') ?? 0).clamp(0, Seccion.values.length - 1)];
+      Seccion.values[(int.tryParse(Uri.base.queryParameters['s'] ?? '') ?? 0).clamp(
+        0,
+        Seccion.values.length - (industrial ? 1 : 2),
+      )];
   String? clienteId = Uri.base.queryParameters['c'];
   String? trabajadorId = Uri.base.queryParameters['t'];
   String? tareaId;
@@ -233,6 +237,8 @@ class _ShellState extends State<Shell> {
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
     Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
     Seccion.finanzas => const VistaFinanzas(),
+    // Solo iPultec: registro de las OT realizadas.
+    Seccion.historicos => const Historicos(),
   };
 }
 
@@ -728,6 +734,7 @@ class _BarraState extends State<_Barra> {
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
+      if (industrial) (Icons.history_rounded, 'Históricos', Seccion.historicos, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
     return Stack(
@@ -851,6 +858,7 @@ class _BarraInferior extends StatelessWidget {
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
+      if (industrial) (Icons.history_rounded, 'Históricos', Seccion.historicos, 0),
     ];
     return Container(
       decoration: BoxDecoration(
