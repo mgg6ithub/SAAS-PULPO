@@ -26,6 +26,15 @@ String textoEstado(TipoMantenimiento? g) => g?.etiqueta ?? 'Al día';
 /// Filtro de la lista de Activos por estado: 0 = todos; 1.. = tipo de mantenimiento.
 /// Fuera del estado para que «Ver más» de Inicio pueda dejarlo puesto antes de ir.
 final filtroActivos = ValueNotifier(0);
+
+/// Avisa a Activos de que vuelva a la lista (aunque el filtro no cambie), al llegar desde Inicio.
+final _aLaLista = ValueNotifier(0);
+
+/// Desde Inicio: Activos en la lista (nunca dentro de un activo abierto antes) con este filtro.
+void abrirListaActivos(int filtro) {
+  filtroActivos.value = filtro;
+  _aLaLista.value++;
+}
 const _filtros = ['Todos', 'Preventivo', 'No crítico', 'Crítico'];
 
 bool _pasaFiltro(TipoMantenimiento? g) => switch (filtroActivos.value) {
@@ -49,11 +58,13 @@ class _ActivosState extends State<Activos> {
   void initState() {
     super.initState();
     filtroActivos.addListener(_cambio);
+    _aLaLista.addListener(_cambio);
   }
 
   @override
   void dispose() {
     filtroActivos.removeListener(_cambio);
+    _aLaLista.removeListener(_cambio);
     super.dispose();
   }
 

@@ -105,6 +105,8 @@ class VistazoActivos extends StatelessWidget {
   }
 }
 
+const _iconos = [Icons.event_available_rounded, Icons.warning_amber_rounded, Icons.error_outline_rounded];
+
 class _Columna extends StatelessWidget {
   final TipoMantenimiento tipo;
   final List<Activo> activos;
@@ -128,8 +130,14 @@ class _Columna extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  puntoTipo(tipo.color),
-                  const SizedBox(width: 8),
+                  // Icono en su círculo de color, como el de las cifras de arriba.
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(color: tipo.color.withValues(alpha: .1), shape: BoxShape.circle),
+                    child: Icon(_iconos[tipo.index], size: 16, color: tipo.color),
+                  ),
+                  const SizedBox(width: 10),
                   Text(tipo.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(width: 6),
                   Text('${activos.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
