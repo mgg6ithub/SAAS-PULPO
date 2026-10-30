@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
@@ -7,6 +9,8 @@ import 'package:flutter/material.dart';
 import '../forms.dart';
 import '../informes.dart';
 import '../marca.dart';
+import '../industrial/incidencia_form.dart';
+import '../industrial/mantenimientos.dart';
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 import '../models.dart';
 import '../nube.dart';
@@ -104,8 +108,19 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
   );
 }
 
-List<Tarea> _misTrabajos(Trabajador w) =>
-    store.tareas.where((t) => !t.esPlantilla && t.activa && t.trabajadorIds.contains(w.id)).toList();
+List<Tarea> _misTrabajos(Trabajador w) => store.tareas
+    .where(
+      (t) =>
+          !t.esPlantilla &&
+          t.activa &&
+          (t.trabajadorIds.contains(w.id) ||
+              (industrial &&
+                  t.tipoMantenimiento != null &&
+                  t.trabajadorIds.isEmpty &&
+                  t.competencias.every(w.competencias.contains) &&
+                  (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso))),
+    )
+    .toList();
 
 int _porHora(Tarea a, Tarea b) => (a.inicioMin ?? 1 << 20).compareTo(b.inicioMin ?? 1 << 20);
 
@@ -146,7 +161,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
       final tarea = tareaId == null ? null : store.tareas.where((t) => t.id == tareaId).firstOrNull;
       return Scaffold(
         backgroundColor: P.fondo,
-        bottomNavigationBar: movil && w != null && tarea == null
+        bottomNavigationBar: !industrial && movil && w != null && tarea == null
             ? _BarraInferior(pestana, (i) => setState(() => pestana = i))
             : null,
         body: w == null
@@ -168,7 +183,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                           izquierda: tarea == null
                               ? [
                                   const LogoPulpo(size: 30),
-                                  if (!movil)
+                                  if (!movil && !industrial)
                                     Pestanas(
                                       opciones: _pestanas,
                                       seleccion: pestana,
@@ -182,6 +197,13 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                                     onPressed: () => setState(() => tareaId = null),
                                   ),
                                 ],
+                          principal: industrial && tarea == null
+                              ? BotonPrimario(
+                                  'Nueva incidencia',
+                                  icono: Icons.add_rounded,
+                                  onPressed: () => abrirPanel(context, const AvisoIncidenciaForm()),
+                                )
+                              : null,
                           derecha: [
                             if (store.nube?.esTrabajador ?? false)
                               BotonAccion(
@@ -207,6 +229,8 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                               key: ValueKey(tarea?.id ?? pestana),
                               child: tarea != null
                                   ? _DetalleTrabajo(tarea, w)
+                                  : industrial
+                                  ? _MisTrabajos(w, _abrir)
                                   : switch (pestana) {
                                       0 => _Hoy(w, _abrir),
                                       1 => _Semana(w, semana, _abrir, (d) => setState(() => semana = d)),
@@ -299,6 +323,7 @@ class _AccionesTrabajo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (industrial) return _AccionesOt(t, w);
     final cliente = store.cliente(t.clienteId);
     final tel = _telefono(cliente);
     final ruta = _ruta(t, cliente);
@@ -336,6 +361,109 @@ class _AccionesTrabajo extends StatelessWidget {
             color: P.morado,
             onPressed: () => store.marcarHecha(t),
           ),
+      ],
+    );
+  }
+}
+
+/// La duración se conserva al cerrar la ficha o recargar el navegador.
+class _AccionesOt extends StatefulWidget {
+  final Tarea t;
+  final Trabajador w;
+  const _AccionesOt(this.t, this.w);
+  @override
+  State<_AccionesOt> createState() => _AccionesOtState();
+}
+
+class _AccionesOtState extends State<_AccionesOt> {
+  DateTime? inicio;
+  bool ocupada = false;
+  String get clave => 'ot_inicio_${store.nube?.empresaId ?? 'demo'}_${widget.t.id}';
+
+  @override
+  void initState() {
+    super.initState();
+    _leer();
+  }
+
+  Future<void> _leer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final valor = prefs.getString(clave);
+    if (mounted) setState(() => inicio = valor == null ? null : DateTime.tryParse(valor));
+  }
+
+  Future<void> _empezar() async {
+    if (ocupada) return;
+    setState(() => ocupada = true);
+    try {
+      final nube = store.nube;
+      if (nube != null) {
+        await nube.empezarOt(widget.t.id);
+      } else {
+        widget.t.trabajadorIds = [widget.w.id];
+        store.cambiarEstado([widget.t], EstadoTrabajo.enCurso);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      final ahora = DateTime.now();
+      await prefs.setString(clave, ahora.toIso8601String());
+      if (mounted) setState(() => inicio = ahora);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo empezar. Comprueba la conexión y que la OT siga disponible.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => ocupada = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.t;
+    if (t.estado == EstadoTrabajo.realizado || t.hechaEl(hoy())) return const SizedBox.shrink();
+    final enCurso = t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.contains(widget.w.id);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (!enCurso)
+          BotonAccion(
+            ocupada ? 'Empezando…' : 'Empezar OT',
+            icono: Icons.play_arrow_rounded,
+            color: P.morado,
+            onPressed: _empezar,
+          )
+        else ...[
+          if (inicio != null)
+            StreamBuilder<int>(
+              stream: Stream.periodic(const Duration(seconds: 1), (n) => n),
+              builder: (context, _) {
+                final segundos = DateTime.now().difference(inicio!).inSeconds.clamp(0, 604800);
+                return Text(
+                  '${segundos ~/ 60}:${(segundos % 60).toString().padLeft(2, '0')}',
+                  semanticsLabel: '${segundos ~/ 60} minutos en esta OT',
+                );
+              },
+            ),
+          BotonAccion(
+            'Cerrar OT',
+            icono: Icons.check_rounded,
+            color: P.morado,
+            onPressed: () => abrirPanel(
+              context,
+              FormularioInforme(
+                t,
+                widget.w,
+                cerrarOt: true,
+                minutosIniciales: inicio == null
+                    ? null
+                    : (DateTime.now().difference(inicio!).inSeconds / 60).ceil().clamp(1, 10080),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -472,14 +600,14 @@ class _FilaTrabajo extends StatelessWidget {
         lider: TipoIcono(t.tipo, size: 36),
         titulo: t.nombre,
         subtitulo: [
-          if (cliente != null) cliente.nombre,
+          if (industrial) dondeEs(t.activoId) else if (cliente != null) cliente.nombre,
           if (mostrarDia && t.proximo != null) relativo(t.proximo!),
         ].join(' · '),
         derecha: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
-            if (marcable) ...[const SizedBox(width: 6), _MarcaHecho(t)],
+            if (marcable && !industrial) ...[const SizedBox(width: 6), _MarcaHecho(t)],
           ],
         ),
         onTap: () => abrir(t),
@@ -537,20 +665,44 @@ class _MisTrabajos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pendientes = _misTrabajos(w).where((t) => t.proximo != null && !t.hechaEl(hoy())).toList()
-      ..sort((a, b) {
-        final c = a.proximo!.compareTo(b.proximo!);
-        return c != 0 ? c : _porHora(a, b);
-      });
+    final pendientes =
+        _misTrabajos(w)
+            .where((t) => (industrial || t.proximo != null) && t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy()))
+            .toList()
+          ..sort((a, b) {
+            final c = (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100));
+            return c != 0 ? c : _porHora(a, b);
+          });
     if (pendientes.isEmpty) {
       return Vacio(icono: Icons.task_alt_rounded, titulo: 'Todo al día', texto: m('No tienes trabajos pendientes.'));
     }
     // Atrasados primero; luego un bloque por día.
     final grupos = <String, List<Tarea>>{};
     for (final t in pendientes) {
-      final n = diasHasta(t.proximo!);
-      final clave = n < 0 ? 'Atrasados' : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
+      final n = t.proximo == null ? null : diasHasta(t.proximo!);
+      final clave = n == null
+          ? 'Sin fecha'
+          : n < 0
+          ? 'Atrasados'
+          : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
       (grupos[clave] ??= []).add(t);
+    }
+    if (industrial) {
+      final filas = <(String, Tarea?)>[
+        for (final g in grupos.entries) ...[(g.key, null), for (final t in g.value) (g.key, t)],
+      ];
+      return ListView.builder(
+        itemCount: filas.length,
+        itemBuilder: (context, i) {
+          final (grupo, tarea) = filas[i];
+          return tarea == null
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: huecoVista),
+                  child: Text(grupo, style: const TextStyle(fontWeight: FontWeight.w600)),
+                )
+              : _FilaTrabajo(tarea, abrir, mostrarDia: grupo == 'Atrasados');
+        },
+      );
     }
     return ListView(
       children: [
@@ -697,7 +849,7 @@ class _DetalleTrabajo extends StatelessWidget {
         SeccionTarjeta(
           titulo: 'Información',
           children: [
-            _dato(m('Cliente'), cliente?.nombre ?? '—'),
+            _dato(m('Cliente'), industrial ? dondeEs(t.activoId) : cliente?.nombre ?? '—'),
             _dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '—')),
             _dato('Cuándo', [if (t.proximo != null) relativo(t.proximo!), t.horario ?? 'Sin hora'].join(' · ')),
             if (maquina.isNotEmpty) _dato('Máquina', maquina),
@@ -741,7 +893,9 @@ class _DetalleTrabajo extends StatelessWidget {
 class FormularioInforme extends StatefulWidget {
   final Tarea t;
   final Trabajador w;
-  const FormularioInforme(this.t, this.w, {super.key});
+  final bool cerrarOt;
+  final int? minutosIniciales;
+  const FormularioInforme(this.t, this.w, {super.key, this.cerrarOt = false, this.minutosIniciales});
 
   @override
   State<FormularioInforme> createState() => _FormularioInformeState();
@@ -754,6 +908,12 @@ class _FormularioInformeState extends State<FormularioInforme> {
   final firma = Firma();
   int resultado = 0;
   bool intentado = false, guardando = false, leyendoFotos = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.minutosIniciales != null) minutos.text = '${widget.minutosIniciales}';
+  }
 
   @override
   void dispose() {
@@ -817,6 +977,11 @@ class _FormularioInformeState extends State<FormularioInforme> {
       if (mounted) setState(() => guardando = false);
       aviso('No se pudo guardar el informe. Inténtalo de nuevo.');
       return;
+    }
+    if (widget.cerrarOt && resultado != 2) {
+      store.marcarHecha(widget.t);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('ot_inicio_${store.nube?.empresaId ?? 'demo'}_${widget.t.id}');
     }
     if (mounted) Navigator.pop(context);
     aviso(subido ? 'Informe guardado' : 'Sin conexión: el informe se ha guardado aquí y se subirá al volver');
@@ -887,7 +1052,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
       ]),
       Bloque('Qué has hecho', descripcion: 'Lo que ha pasado, lo que has cambiado y lo que queda pendiente.', [
         campo(
-          'Notas',
+          industrial ? 'Trabajo realizado y mediciones' : 'Notas',
           notas,
           lineas: 6,
           hint: 'Ej.: revisado el motor, cambiada la correa. Falta pedir una pieza.',
@@ -895,7 +1060,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
         ),
       ]),
       Bloque('Material y tiempo', descripcion: 'Lo que has usado y cuánto has tardado.', [
-        campo('Material', material, lineas: 2, hint: 'Ej.: 1 correa, 2 l de aceite'),
+        campo(industrial ? 'Repuestos' : 'Material', material, lineas: 2, hint: 'Ej.: 1 correa, 2 l de aceite'),
         campo(
           'Minutos',
           minutos,

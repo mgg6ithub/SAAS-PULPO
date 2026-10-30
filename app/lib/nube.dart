@@ -213,6 +213,51 @@ class Nube {
       .order('created_at', ascending: false)
       .limit(30);
 
+  /// Asigna la OT libre al técnico y la inicia bajo bloqueo en el servidor.
+  Future<void> empezarOt(String trabajoId) async {
+    await _cola;
+    await _db.rpc('tomar_ot', params: {'p_trabajo': _u(trabajoId)});
+    await _recargar();
+  }
+
+  /// Las fotos se suben primero; el servidor crea incidencia, OT y avisos juntos.
+  Future<void> crearIncidencia(Incidencia i, String categoria, List<Uint8List> fotos) async {
+    await _cola;
+    final rutas = <String>[];
+    try {
+      for (var n = 0; n < fotos.length; n++) {
+        final ruta = '$empresaId/incidencias/${i.id}/$n.jpg';
+        await _db.storage
+            .from(_bucket)
+            .uploadBinary(ruta, fotos[n], fileOptions: const FileOptions(contentType: 'image/jpeg'));
+        rutas.add(ruta);
+      }
+      await _db.rpc(
+        'crear_incidencia',
+        params: {
+          'p_id': i.id,
+          'p_activo': _u(i.activoId),
+          'p_descripcion': i.descripcion,
+          'p_gravedad': i.gravedad.index,
+          'p_categoria': categoria,
+          'p_fotos': rutas,
+        },
+      );
+    } catch (_) {
+      // Una caída de red puede llegar después del commit: conservar las fotos en ese caso.
+      if (rutas.isNotEmpty) {
+        try {
+          final creada = await _db.from('incidencias').select('id').eq('id', i.id).maybeSingle();
+          if (creada == null) await _db.storage.from(_bucket).remove(rutas);
+        } catch (_) {
+          /* Se conservan para no borrar fotos de una incidencia ya creada. */
+        }
+      }
+      rethrow;
+    }
+    await _recargar();
+  }
+
   // ── Informes y fotos ──
 
   static const _bucket = 'fotos';
