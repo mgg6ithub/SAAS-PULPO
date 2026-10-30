@@ -8,6 +8,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../forms.dart';
+import '../marca.dart';
 import 'agenda_herramientas.dart';
 import 'agenda_vistas.dart';
 import 'calendario_trabajos.dart';
@@ -15,7 +16,6 @@ import 'rutas_mapa.dart';
 import 'tarea_card.dart';
 import 'vista_dias.dart';
 import 'vista_pulpo.dart';
-import '../marca.dart';
 
 /// Agenda (antes Planificación), inspirada en el Schedule de Jobber:
 /// Día (una fila por técnico), Semana (por horas), Mes y Tablero, con un mapa lateral opcional
@@ -279,8 +279,9 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                   if (vista == 1) const SizedBox(width: 8),
                   // El pulpo: organiza el día que estás viendo.
-                  BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = true)),
-                  if (vista == 1) ...[const SizedBox(width: 8), _BotonMapa(mapa, () => setState(() => mapa = !mapa))],
+                  BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
+                  // iPultec, sin rutas: sin mapa ni su botón.
+                  if (Marca.mapa && vista == 1) ...[const SizedBox(width: 8), _BotonMapa(mapa, () => setState(() => mapa = !mapa))],
                 ],
               );
               // Con menos de 900 los botones van solo con icono: así caben junto a la fecha sin solaparse.
