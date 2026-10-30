@@ -206,7 +206,10 @@ class _ShellState extends State<Shell> {
   }
 
   Widget _detalle() => clienteId != null
-      ? ClienteDetalle(clienteId: clienteId!, onVolver: () => setState(() => clienteId = null))
+      // iPultec: desde Inicio se abre la ficha del activo.
+      ? industrial
+            ? ActivoDetalle(activoId: clienteId!, onVolver: () => setState(() => clienteId = null))
+            : ClienteDetalle(clienteId: clienteId!, onVolver: () => setState(() => clienteId = null))
       : tareaId != null
       ? TareaDetalle(
           tareaId: tareaId!,

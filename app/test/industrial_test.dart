@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
+import 'package:pulpo/industrial/vistazo.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -53,6 +54,33 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Nuevo componente'), findsWidgets);
       }
+    });
+  }
+
+  for (final columnas in [3, 1]) {
+    testWidgets('Inicio: vistazo de máquinas con leyenda en $columnas columnas, la más grave primero', (tester) async {
+      tester.view.physicalSize = Size(columnas == 3 ? 1280 : 420, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      store.guardarActivo(Activo(id: 'b1', tag: 'PRE-01', nombre: 'Prensa'));
+      store.tareas.add(Tarea(id: 'ot1', activoId: 'a3', tipoMantenimiento: TipoMantenimiento.correctivoCritico));
+      String? abierto;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: VistazoActivos(columnas: columnas, onAbrir: (id) => abierto = id),
+            ),
+          ),
+        ),
+      );
+      expect(find.textContaining('El activo no puede funcionar'), findsOneWidget);
+      final camion = tester.getTopLeft(find.text('CAM-01 · Camión'));
+      final prensa = tester.getTopLeft(find.text('PRE-01 · Prensa'));
+      expect(camion.dy < prensa.dy || camion.dx < prensa.dx, isTrue);
+      expect(find.text('Correctivo crítico · 1 pendiente'), findsOneWidget);
+      await tester.tap(find.text('PRE-01 · Prensa'));
+      expect(abierto, 'b1');
     });
   }
 }
