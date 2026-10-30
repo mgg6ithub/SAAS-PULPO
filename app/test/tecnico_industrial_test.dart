@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/incidencia.dart';
 import 'package:pulpo/models.dart';
+import 'package:pulpo/nube.dart';
 import 'package:pulpo/informes.dart';
 import 'package:pulpo/marca.dart';
 import 'package:pulpo/widgets.dart';
@@ -69,6 +70,36 @@ void main() {
       });
     }
 
+    for (final admin in [true, false]) {
+      testWidgets('inicia OT con sesión ${admin ? 'administrador en vista previa' : 'técnico'}', (tester) async {
+        final t = store.tareas.first;
+        t.trabajadorIds = ['w1', 'w2'];
+        store.tareas = [t];
+        store.activos.first
+          ..icono = 'camion'
+          ..tipo = TipoMantenimiento.correctivoNoCritico;
+        final nube = _NubePrueba(admin);
+        store.nube = nube;
+        addTearDown(() => store.nube = null);
+        await pintar(tester, 980);
+        expect(tester.widget<Icon>(find.byIcon(Icons.local_shipping_outlined)).color,
+            TipoMantenimiento.correctivoNoCritico.color);
+        await tester.tap(find.text('Cambiar aceite'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Icon>(find.byIcon(Icons.local_shipping_outlined)).color,
+            TipoMantenimiento.correctivoNoCritico.color);
+        await tester.tap(find.byWidgetPredicate((w) => w is BotonAccion && w.texto == 'Empezar OT'));
+        await tester.pumpAndSettle();
+        expect(t.estado, EstadoTrabajo.enCurso);
+        expect(t.trabajadorIds, ['w1', 'w2']);
+        expect(nube.llamadasEmpezar, admin ? 0 : 1);
+        expect(find.textContaining('No se pudo empezar'), findsNothing);
+        expect(find.byWidgetPredicate((w) => w is BotonAccion && w.texto == 'Cerrar OT'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+
     testWidgets('empezar y cerrar con informe e histórico', (tester) async {
       await pintar(tester, 420);
       await tester.tap(find.text('Cambiar aceite'));
@@ -111,4 +142,32 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }, skip: !industrial);
+}
+
+/// La función del técnico rechaza a administradores, como la función real tomar_ot.
+class _NubePrueba implements Nube {
+  @override
+  final bool esAdmin;
+  _NubePrueba(this.esAdmin);
+  int llamadasEmpezar = 0;
+  @override
+  bool get esTrabajador => !esAdmin;
+  @override
+  String get empresaId => 'empresa-prueba';
+  @override
+  String get nombre => 'Empresa de prueba';
+  @override
+  void sincronizar() {}
+  @override
+  Future<void> get guardado => Future.value();
+  @override
+  Future<List<Informe>> informes(String trabajoId) async => [];
+  @override
+  Future<void> empezarOt(String trabajoId) async {
+    llamadasEmpezar++;
+    if (esAdmin) throw StateError('Solo un técnico puede tomar una OT');
+    store.cambiarEstado([store.tarea(trabajoId)!], EstadoTrabajo.enCurso);
+  }
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

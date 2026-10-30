@@ -399,11 +399,19 @@ class _AccionesOtState extends State<_AccionesOt> {
     setState(() => ocupada = true);
     try {
       final nube = store.nube;
-      if (nube != null) {
+      if (nube != null && !nube.esAdmin) {
         await nube.empezarOt(widget.t.id);
       } else {
-        widget.t.trabajadorIds = [widget.w.id];
-        store.cambiarEstado([widget.t], EstadoTrabajo.enCurso);
+        // La vista de prueba conserva la sesión del administrador; no puede tomar la OT como técnico.
+        final t = store.tarea(widget.t.id);
+        if (t == null || !t.activa || t.esPlantilla ||
+            (t.estado != EstadoTrabajo.pendiente && t.estado != EstadoTrabajo.enCurso) ||
+            (t.trabajadorIds.isNotEmpty && !t.trabajadorIds.contains(widget.w.id))) {
+          throw StateError('La OT ya no está disponible para este técnico');
+        }
+        if (t.trabajadorIds.isEmpty) t.trabajadorIds = [widget.w.id];
+        store.cambiarEstado([t], EstadoTrabajo.enCurso);
+        if (nube != null) await nube.guardado;
       }
       final prefs = await SharedPreferences.getInstance();
       final ahora = DateTime.now();
@@ -605,7 +613,17 @@ class _FilaTrabajo extends StatelessWidget {
           if (industrial) dondeEs(t.activoId) else if (cliente != null) cliente.nombre,
           if (mostrarDia && t.proximo != null) relativo(t.proximo!),
         ].join(' · '),
-        derecha: Row(
+        derecha: industrial && esMovil(context)
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Pill(t.estado.etiqueta, t.estado.color, punto: true),
+                  const SizedBox(height: 4),
+                  Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+                ],
+              )
+            : Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (industrial) ...[Pill(t.estado.etiqueta, t.estado.color, punto: true), const SizedBox(width: 12)],
@@ -710,17 +728,18 @@ class _MisTrabajos extends StatelessWidget {
 /// Icono del activo de la OT en un círculo del color de su estado de mantenimiento.
 class _IconoActivo extends StatelessWidget {
   final String? activoId;
-  const _IconoActivo(this.activoId);
+  final double size;
+  const _IconoActivo(this.activoId, {this.size = 36});
 
   @override
   Widget build(BuildContext context) {
     final a = store.activo(activoId);
     final color = a == null ? P.textoSuave : colorEstado(gravedadDe(a.id));
     return Container(
-      width: 36,
-      height: 36,
+      width: size,
+      height: size,
       decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
-      child: Icon(a == null ? Icons.assignment_outlined : iconoIndustrial(a.icono), size: 19, color: color),
+      child: Icon(a == null ? Icons.assignment_outlined : iconoIndustrial(a.icono), size: size * .53, color: color),
     );
   }
 }
@@ -886,7 +905,7 @@ class _DetalleTrabajo extends StatelessWidget {
       children: [
         Row(
           children: [
-            TipoIcono(t.tipo, size: 44),
+            industrial ? _IconoActivo(t.activoId, size: 44) : TipoIcono(t.tipo, size: 44),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
