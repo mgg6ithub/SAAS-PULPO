@@ -128,7 +128,11 @@ class _ActivosState extends State<Activos> {
                           )
                         : null,
                   )
-                : _TablaActivos(activos, (id) => setState(() => abierto = id)),
+                : _TablaActivos(activos, (id) {
+                    // Al cambiar de vista con el ratón encima de un tipo, su aviso se quedaba pegado.
+                    Tooltip.dismissAllToolTips();
+                    setState(() => abierto = id);
+                  }),
           ),
         ],
       ),
@@ -276,6 +280,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   String? codigo;
 
   void _abrir(String id) => setState(() {
+    Tooltip.dismissAllToolTips();
     elegido = id;
     pestana = 0;
     editando = false;
@@ -427,13 +432,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               a.modelo,
             ].where((x) => x.isNotEmpty).join(' · '),
             acciones: [
-              if (pestana == 0)
-                BotonPrimario(
-                  'Nuevo mantenimiento',
-                  conIcono: true,
-                  icono: Icons.add_rounded,
-                  onPressed: () => abrirPlanForm(context, activoId: a.id),
-                ),
               if (pestana == 1 && !editando)
                 BotonPrimario('Editar', icono: Icons.edit_outlined, onPressed: () => setState(() => editando = true)),
               if (pestana == 2)
@@ -484,7 +482,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         planes.length,
                         verMantenimientos,
                         () => setState(() => verMantenimientos = !verMantenimientos),
-                        Enlace('Nuevo mantenimiento', onTap: () => abrirPlanForm(context, activoId: a.id)),
+                        BotonPrimario(
+                          'Nuevo mantenimiento',
+                          conIcono: true,
+                          icono: Icons.add_rounded,
+                          onPressed: () => abrirPlanForm(context, activoId: a.id),
+                        ),
                       ),
                       if (verMantenimientos) ...[
                         const SizedBox(height: 8),
@@ -496,7 +499,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         componentes.length,
                         verComponentes,
                         () => setState(() => verComponentes = !verComponentes),
-                        Enlace('Nuevo componente', onTap: () => abrirActivoForm(context, padreId: a.id)),
+                        BotonPrimario(
+                          'Nuevo componente',
+                          conIcono: true,
+                          icono: Icons.add_rounded,
+                          onPressed: () => abrirActivoForm(context, padreId: a.id),
+                        ),
                       ),
                       if (verComponentes) ...[
                         const SizedBox(height: 8),
