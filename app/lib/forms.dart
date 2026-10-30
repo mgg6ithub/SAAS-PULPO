@@ -18,7 +18,6 @@ import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'widgets.dart';
-import 'marca.dart';
 
 // ── Ventana de formulario ──
 // Por defecto sale en el centro desde abajo (como una hoja de iOS) y se puede
