@@ -158,7 +158,8 @@ class _TablaActivos extends StatelessWidget {
             if (ancho) const Col('Fabricante y modelo', flex: 2),
             if (ancho) const Col('División', flex: 2),
             if (ancho) const Col('Horas', ancho: 100, derecha: true),
-            if (medio) const Col('Próximo mantenimiento', ancho: 175),
+            if (medio) const Col('Horas restantes', ancho: 120),
+            if (medio) const Col('Próximo mantenimiento', ancho: 160),
             const Col('Tipo de mantenimiento', ancho: 160),
             if (medio)
               Col(
@@ -186,7 +187,14 @@ class _TablaActivos extends StatelessWidget {
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
               if (ancho) celdaTexto(a.division, suave: true),
               if (ancho) celdaTexto(horas(a.horas), suave: true),
-              if (medio) celdaTexto(fecha(a.proximoMantenimiento), suave: true),
+              if (medio) celdaTexto(horasRestantes(a), suave: true),
+              if (medio)
+                Tooltip(
+                  message: a.frecuencia == FrecuenciaActivo.horas
+                      ? 'Fecha estimada según la lectura del contador y las horas de uso diarias o semanales.'
+                      : 'Fecha del próximo mantenimiento.',
+                  child: celdaTexto(proximaFecha(a), suave: true),
+                ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: g == null ? const Pill('Al día', P.verde, punto: true) : PillTipo(g),
@@ -205,6 +213,18 @@ class _TablaActivos extends StatelessWidget {
       );
     },
   );
+}
+
+String horasRestantes(Activo a) {
+  final h = a.horasRestantes;
+  if (a.frecuencia != FrecuenciaActivo.horas || h == null) return '—';
+  return '≈ ${h <= 0 ? '0' : h.toStringAsFixed(0)} h';
+}
+
+String proximaFecha(Activo a) {
+  final d = a.proximoMantenimiento;
+  if (d == null) return a.frecuencia == FrecuenciaActivo.horas ? 'Falta ritmo de uso' : '—';
+  return '${a.frecuencia == FrecuenciaActivo.horas ? '≈ ' : ''}${fecha(d)}';
 }
 
 String horas(double h) => h == 0 ? '—' : '${h % 1 == 0 ? h.toInt() : h} h';
@@ -334,14 +354,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             Pill(textoEstado(g), colorEstado(g), punto: true),
                             _cifra(
                               'Próximo',
-                              a.proximoMantenimiento == null ? '—' : relativo(a.proximoMantenimiento!),
-                              fecha(a.proximoMantenimiento),
+                              a.proximoMantenimiento == null ? 'Sin estimar' : '${a.frecuencia == FrecuenciaActivo.horas ? '≈ ' : ''}${relativo(a.proximoMantenimiento!)}',
+                              proximaFecha(a),
                             ),
                             _cifra(
                               'Contador',
                               horas(a.horas),
                               a.frecuencia == FrecuenciaActivo.horas && a.horasRestantes != null
-                                  ? 'Restan ${a.horasRestantes!.toStringAsFixed(0)} h'
+                                  ? horasRestantes(a)
                                   : 'Horas de uso',
                             ),
                             _cifra('Componentes', '${componentes.length}', 'Cada uno con su mantenimiento'),
@@ -512,7 +532,7 @@ class _ActivoFormState extends State<ActivoForm> {
     if (p.frecuencia == FrecuenciaActivo.horas && (p.horasRestantes ?? 1) <= 0) {
       return 'El mantenimiento ya está vencido según la lectura del contador.';
     }
-    if (siguiente == null) return 'Indica un ritmo de uso válido para estimar la próxima fecha.';
+    if (siguiente == null) return 'Escribe las horas de uso por día o semana para calcular la fecha estimada.';
     final ahora = hoy();
     final dias = DateTime.utc(
       siguiente.year,
@@ -525,8 +545,8 @@ class _ActivoFormState extends State<ActivoForm> {
         ? 'en $dias días'
         : 'vencido hace ${-dias} días';
     return '${p.frecuencia == FrecuenciaActivo.horas ? 'Fecha estimada' : 'Próximo mantenimiento'}: '
-        '${fecha(siguiente)} · $plazo.'
-        '${p.frecuencia == FrecuenciaActivo.horas ? ' Faltan ${p.horasRestantes!.toStringAsFixed(0)} horas según la lectura real.' : ''}';
+        '${p.frecuencia == FrecuenciaActivo.horas ? '≈ ' : ''}${fecha(siguiente)} · $plazo.'
+        '${p.frecuencia == FrecuenciaActivo.horas ? ' ${horasRestantes(p)} hasta el mantenimiento, según la última lectura.' : ''}';
   }
 
   Widget _mantenimiento() {

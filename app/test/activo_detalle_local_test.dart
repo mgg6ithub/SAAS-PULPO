@@ -134,6 +134,33 @@ void main() {
       });
     }
 
+    testWidgets('muestra horas restantes y fecha estimada en la lista y ficha', (tester) async {
+      final a = store.activo('a1')!
+        ..frecuencia = FrecuenciaActivo.horas
+        ..cadaHoras = 5000
+        ..horas = 2400
+        ..horasUso = 7
+        ..fechaLectura = DateTime(2026, 10, 30);
+      expect(horasRestantes(a), '≈ 2600 h');
+      expect(proximaFecha(a), '≈ 06/11/2027');
+      tester.view.physicalSize = const Size(980, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      filtroActivos.value = 0;
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
+      await tester.pumpAndSettle();
+      expect(find.text('Horas restantes'), findsOneWidget);
+      expect(find.text('≈ 2600 h'), findsOneWidget);
+      expect(find.text('≈ 06/11/2027'), findsOneWidget);
+      await tester.tap(find.text('CAM-01 · Camión'));
+      await tester.pumpAndSettle();
+      expect(find.text('≈ 2600 h'), findsOneWidget);
+      expect(find.text('≈ 06/11/2027'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      a.horasUso = 0;
+      expect(proximaFecha(a), 'Falta ritmo de uso');
+    });
+
     testWidgets('lista compacta y componentes anidados como subtrabajos', (tester) async {
       await pintar(tester, 1440);
       expect(find.byType(Tabla), findsOneWidget);
