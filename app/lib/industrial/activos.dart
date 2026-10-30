@@ -274,6 +274,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               if (pestana == 0)
                 BotonPrimario(
                   'Nuevo componente',
+                  conIcono: true,
                   icono: Icons.add_rounded,
                   onPressed: () => abrirActivoForm(context, padreId: a.id),
                 ),
@@ -338,10 +339,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 icono: Icons.account_tree_outlined,
                                 titulo: 'Sin componentes',
                                 texto: 'Añade las piezas y los componentes de este activo.',
-                                accion: FilledButton(
-                                  onPressed: () => abrirActivoForm(context, padreId: a.id),
-                                  child: const Text('Añadir componente'),
-                                ),
                               )
                             : _TablaActivos(componentes, _abrir, componentes: true),
                       ),
