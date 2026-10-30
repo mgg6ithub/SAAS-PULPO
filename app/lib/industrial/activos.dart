@@ -13,6 +13,8 @@ import 'iconos.dart';
 import 'gravedad.dart';
 import 'tipo_mantenimiento.dart';
 import 'historicos.dart';
+import 'plan.dart';
+import 'planes.dart';
 import '../screens/tabla_trabajos.dart';
 import '../screens/tarea_detalle.dart';
 
@@ -171,7 +173,7 @@ class _TablaActivos extends StatelessWidget {
             if (ancho) const Col('Fabricante y modelo', flex: 2),
             if (ancho) const Col('División', flex: 2),
             if (ancho) const Col('Horas totales', ancho: 120, derecha: true),
-            if (medio) const Col('Horas restantes', ancho: 120),
+            if (medio) const Col('Mantenimientos', ancho: 130, derecha: true),
             if (medio) const Col('Próximo mantenimiento', ancho: 160),
             const Col('Tipo de mantenimiento', ancho: 160),
             if (medio)
@@ -200,12 +202,14 @@ class _TablaActivos extends StatelessWidget {
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
               if (ancho) celdaTexto(a.division, suave: true),
               if (ancho) Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(a.horas), suave: true)),
-              if (medio) Padding(padding: const EdgeInsets.only(left: 12), child: celdaTexto(horasRestantes(a), suave: true)),
+              if (medio)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: celdaTexto('${planesRama(a.id).length}', suave: true),
+                ),
               if (medio)
                 Tooltip(
-                  message: a.frecuencia == FrecuenciaActivo.horas
-                      ? 'Fecha estimada según la lectura del contador y las horas de uso diarias o semanales.'
-                      : 'Fecha del próximo mantenimiento.',
+                  message: 'El más cercano de sus mantenimientos y los de sus componentes.',
                   child: celdaTexto(proximaFecha(a), suave: true),
                 ),
               Align(
@@ -228,16 +232,25 @@ class _TablaActivos extends StatelessWidget {
   );
 }
 
-String horasRestantes(Activo a) {
-  final h = a.horasRestantes;
-  if (a.frecuencia != FrecuenciaActivo.horas || h == null) return '—';
-  return '≈ ${h <= 0 ? '0' : h.toStringAsFixed(0)} h';
+/// Mantenimientos del activo y de todos sus componentes.
+List<PlanMantenimiento> planesRama(String id) {
+  final rama = store.ramaDe(id);
+  return store.planes.where((p) => rama.contains(p.activoId)).toList();
+}
+
+/// El mantenimiento activo que antes toca en el activo o sus componentes.
+DateTime? proximoDe(String id) {
+  DateTime? r;
+  for (final p in planesRama(id).where((p) => p.activa)) {
+    final d = proximoPlan(p);
+    if (d != null && (r == null || d.isBefore(r))) r = d;
+  }
+  return r;
 }
 
 String proximaFecha(Activo a) {
-  final d = a.proximoMantenimiento;
-  if (d == null) return a.frecuencia == FrecuenciaActivo.horas ? 'Falta ritmo de uso' : '—';
-  return '${a.frecuencia == FrecuenciaActivo.horas ? '≈ ' : ''}${fecha(d)}';
+  final d = proximoDe(a.id);
+  return d == null ? '—' : fecha(d);
 }
 
 String horas(double h) => h == 0 ? '—' : '${h % 1 == 0 ? h.toInt() : h} h';
@@ -258,11 +271,91 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   bool editando = false;
   String? tareaId;
 
+  /// Bloques plegables de Resumen y filtro de mantenimientos por código (null = todos).
+  bool verMantenimientos = true, verComponentes = true;
+  String? codigo;
+
   void _abrir(String id) => setState(() {
     elegido = id;
     pestana = 0;
     editando = false;
+    codigo = null;
   });
+
+  /// Cabecera de un bloque plegable: chevron, título, cuántos y una acción a la derecha.
+  Widget _plegable(String titulo, int n, bool abierto, VoidCallback onTap, Widget accion) => Row(
+    children: [
+      Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(P.radioControl),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                AnimatedRotation(
+                  turns: abierto ? 0 : -.25,
+                  duration: const Duration(milliseconds: 150),
+                  child: Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  titulo,
+                  style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
+                ),
+                const SizedBox(width: 8),
+                Text('$n', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      accion,
+    ],
+  );
+
+  /// Mantenimientos del activo y de sus componentes, con el filtro por código de cada nivel.
+  Widget _mantenimientos(Activo a, List<PlanMantenimiento> planes) {
+    final nodos = [
+      for (final id in [a.id, ...store.ramaDe(a.id).where((id) => id != a.id)])
+        if (planes.any((p) => p.activoId == id)) ?store.activo(id),
+    ];
+    if (codigo != null && !nodos.any((n) => n.id == codigo)) codigo = null;
+    final lista = planes.where((p) => codigo == null || p.activoId == codigo).toList()
+      ..sort((x, y) => (proximoPlan(x) ?? DateTime(9999)).compareTo(proximoPlan(y) ?? DateTime(9999)));
+    if (planes.isEmpty) {
+      return Vacio(
+        icono: Icons.build_outlined,
+        titulo: 'Sin mantenimientos',
+        texto: 'Crea lo que hay que hacerle a este ${a.padreId == null ? 'activo' : 'componente'}: cada cuánto, quién y cómo.',
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (nodos.length > 1) ...[
+          Pestanas(
+            opciones: ['Todos', for (final n in nodos) n.tag.isEmpty ? n.nombre : n.tag],
+            seleccion: codigo == null ? 0 : nodos.indexWhere((n) => n.id == codigo) + 1,
+            onChanged: (i) => setState(() => codigo = i == 0 ? null : nodos[i - 1].id),
+          ),
+          const SizedBox(height: 10),
+        ],
+        Flexible(
+          child: Tarjeta(
+            padding: EdgeInsets.zero,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: lista.length,
+              separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
+              itemBuilder: (context, i) => filaPlan(context, lista[i], conCodigo: lista[i].activoId != a.id),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _cifra(String etiqueta, String valor, String nota) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +375,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       activoId: a.id,
       plantilla: false,
       tipoMantenimiento: TipoMantenimiento.preventivo,
-      proximo: a.proximoMantenimiento ?? hoy(),
+      proximo: proximoDe(a.id) ?? hoy(),
       periodicidad: Periodicidad.unica,
       criticidad: Criticidad.rutinaria,
     ),
@@ -306,6 +399,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     final padre = store.activo(a.padreId);
     final ots = store.otsDe(a.id).where((t) => !t.esPlantilla && t.activa).toList();
     final componentes = store.hijosDe(a.id);
+    final planes = planesRama(a.id);
+    final proximo = proximoDe(a.id);
     final g = gravedadDe(a.id);
     return Padding(
       padding: margenPagina,
@@ -334,10 +429,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             acciones: [
               if (pestana == 0)
                 BotonPrimario(
-                  'Nuevo componente',
+                  'Nuevo mantenimiento',
                   conIcono: true,
-                  icono: Icons.account_tree_outlined,
-                  onPressed: () => abrirActivoForm(context, padreId: a.id),
+                  icono: Icons.add_rounded,
+                  onPressed: () => abrirPlanForm(context, activoId: a.id),
                 ),
               if (pestana == 1 && !editando)
                 BotonPrimario('Editar', icono: Icons.edit_outlined, onPressed: () => setState(() => editando = true)),
@@ -372,19 +467,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Pill(textoEstado(g), colorEstado(g), punto: true),
-                            _cifra(
-                              'Próximo',
-                              a.proximoMantenimiento == null ? 'Sin estimar' : '${a.frecuencia == FrecuenciaActivo.horas ? '≈ ' : ''}${relativo(a.proximoMantenimiento!)}',
-                              proximaFecha(a),
-                            ),
-                            _cifra(
-                              'Contador',
-                              horas(a.horas),
-                              a.frecuencia == FrecuenciaActivo.horas && a.horasRestantes != null
-                                  ? horasRestantes(a)
-                                  : 'Horas de uso',
-                            ),
-                            _cifra('Componentes', '${componentes.length}', 'Cada uno con su mantenimiento'),
+                            _cifra('Próximo', proximo == null ? 'Sin estimar' : relativo(proximo), proximaFecha(a)),
+                            _cifra('Contador', horas(a.horas), 'Horas de uso'),
+                            _cifra('Mantenimientos', '${planes.length}', 'Del activo y sus componentes'),
                             _cifra(
                               'Órdenes pendientes',
                               '${ots.where(otPendiente).length}',
@@ -394,15 +479,37 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         ),
                       ),
                       const SizedBox(height: huecoVista),
-                      Expanded(
-                        child: componentes.isEmpty
-                            ? Vacio(
-                                icono: Icons.account_tree_outlined,
-                                titulo: 'Sin componentes',
-                                texto: 'Añade las piezas y los componentes de este activo.',
-                              )
-                            : _TablaActivos(componentes, _abrir, componentes: true),
+                      _plegable(
+                        'Mantenimientos',
+                        planes.length,
+                        verMantenimientos,
+                        () => setState(() => verMantenimientos = !verMantenimientos),
+                        Enlace('Nuevo mantenimiento', onTap: () => abrirPlanForm(context, activoId: a.id)),
                       ),
+                      if (verMantenimientos) ...[
+                        const SizedBox(height: 8),
+                        Flexible(child: _mantenimientos(a, planes)),
+                      ],
+                      const SizedBox(height: huecoVista),
+                      _plegable(
+                        'Subcomponentes',
+                        componentes.length,
+                        verComponentes,
+                        () => setState(() => verComponentes = !verComponentes),
+                        Enlace('Nuevo componente', onTap: () => abrirActivoForm(context, padreId: a.id)),
+                      ),
+                      if (verComponentes) ...[
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: componentes.isEmpty
+                              ? Vacio(
+                                  icono: Icons.account_tree_outlined,
+                                  titulo: 'Sin componentes',
+                                  texto: 'Añade las piezas y los componentes de este ${a.padreId == null ? 'activo' : 'componente'}.',
+                                )
+                              : _TablaActivos(componentes, _abrir, componentes: true),
+                        ),
+                      ],
                     ],
                   ),
                   1 => ActivoForm(
@@ -468,8 +575,6 @@ class _ActivoFormState extends State<ActivoForm> {
   late final division = TextEditingController(text: a.division);
   late final horasC = TextEditingController(text: a.horas == 0 ? '' : '${a.horas}')
     ..addListener(() => setState(() => a.fechaLectura = hoy()));
-  late final cadaHoras = TextEditingController(text: a.cadaHoras?.toString() ?? '')..addListener(_actualizar);
-  late final cadaMeses = TextEditingController(text: a.cadaMeses?.toString() ?? '')..addListener(_actualizar);
   late final ultimoContador = TextEditingController(text: '${a.horasUltimoMantenimiento}')..addListener(_actualizar);
   late final ritmo = TextEditingController(text: a.horasUso == 0 ? '' : '${a.horasUso}')..addListener(_actualizar);
   final _claveIdentificacion = GlobalKey(), _claveMantenimiento = GlobalKey();
@@ -489,8 +594,6 @@ class _ActivoFormState extends State<ActivoForm> {
       horasC,
       repuestos,
       notas,
-      cadaHoras,
-      cadaMeses,
       ultimoContador,
       ritmo,
     ]) {
@@ -516,18 +619,6 @@ class _ActivoFormState extends State<ActivoForm> {
     if (actual == null || actual < 0) errores['actual'] = 'Escribe un contador válido, desde 0';
     if (uso == null || uso < 0 || uso > (a.usoSemanal ? 168 : 24)) {
       errores['uso'] = a.usoSemanal ? 'Entre 0 y 168 horas semanales' : 'Entre 0 y 24 horas al día';
-    } else if (a.frecuencia == FrecuenciaActivo.horas && uso == 0) {
-      errores['uso'] = a.usoSemanal ? 'Indica las horas de uso por semana' : 'Indica las horas de uso por día';
-    }
-    if (a.frecuencia == FrecuenciaActivo.horas && (_valor(cadaHoras) == null || _valor(cadaHoras)! < .1)) {
-      errores['intervalo'] = 'Indica un intervalo de al menos 0,1 horas';
-    }
-    if (a.frecuencia == FrecuenciaActivo.meses &&
-        (int.tryParse(cadaMeses.text) == null || int.parse(cadaMeses.text) < 1 || int.parse(cadaMeses.text) > 1200)) {
-      errores['intervalo'] = 'Indica de 1 a 1200 meses';
-    }
-    if (a.frecuencia == FrecuenciaActivo.fecha && a.fechaMantenimiento == null) {
-      errores['fecha'] = 'Elige la próxima fecha';
     }
     return errores;
   }
@@ -536,39 +627,6 @@ class _ActivoFormState extends State<ActivoForm> {
     final c = clave.currentContext;
     if (c != null) Scrollable.ensureVisible(c, duration: const Duration(milliseconds: 300), alignment: .1);
   });
-
-  Activo get _prevision => a.copia()
-    ..horas = _valor(horasC, vacio: 0) ?? 0
-    ..cadaHoras = _valor(cadaHoras)
-    ..cadaMeses = int.tryParse(cadaMeses.text)
-    ..horasUltimoMantenimiento = math.min(_valor(ultimoContador, vacio: 0) ?? 0, _valor(horasC, vacio: 0) ?? 0)
-    ..horasUso = _valor(ritmo, vacio: 0) ?? 0;
-
-  String get _estimacion {
-    if (_erroresMantenimiento.isNotEmpty) return _erroresMantenimiento.values.first;
-    final p = _prevision;
-    final siguiente = p.proximoMantenimiento;
-    if (p.frecuencia == FrecuenciaActivo.horas && (p.horasRestantes ?? 1) <= 0) {
-      return 'El mantenimiento ya está vencido según la lectura del contador.';
-    }
-    if (siguiente == null) return 'Escribe las horas de uso por día o semana para calcular la fecha estimada.';
-    final ahora = hoy();
-    final dias = DateTime.utc(
-      siguiente.year,
-      siguiente.month,
-      siguiente.day,
-    ).difference(DateTime.utc(ahora.year, ahora.month, ahora.day)).inDays;
-    final plazo = dias == 0
-        ? 'hoy'
-        : dias > 0
-        ? 'en $dias días'
-        : 'vencido hace ${-dias} días';
-    return '${p.frecuencia == FrecuenciaActivo.horas ? 'Fecha estimada' : 'Próximo mantenimiento'}: '
-        '${p.frecuencia == FrecuenciaActivo.horas ? '≈ ' : ''}${fecha(siguiente)} · $plazo.'
-        '${p.frecuencia == FrecuenciaActivo.horas ? ' ${horasRestantes(p)} hasta el mantenimiento, según la última lectura.' : ''}';
-  }
-
-  static const _frecuencias = ['Sin definir', 'Horas de uso', 'Meses', 'Fecha concreta'];
 
   /// Desplegable con aspecto de campo (etiqueta encima y chevron), alineado con los campos de texto.
   Widget _menu<T>(
@@ -599,67 +657,16 @@ class _ActivoFormState extends State<ActivoForm> {
     ),
   );
 
+  /// Lectura del contador y ritmo de uso: datos del activo con los que se estiman sus mantenimientos por horas.
+  /// Los mantenimientos van aparte (Resumen → Mantenimientos).
   Widget _mantenimiento() {
     final errores = intentoGuardar ? _erroresMantenimiento : <String, String>{};
     return KeyedSubtree(
       key: _claveMantenimiento,
       child: Bloque(
-        'Mantenimiento propio',
-        descripcion: 'Este activo o componente tiene su propio intervalo, independiente del resto.',
+        'Contador y uso',
+        descripcion: 'Con ellos se estiman los mantenimientos por horas de este activo o componente.',
         [
-          // Tres filas de dos: cómo se programa y cada cuánto; lectura del contador; ritmo de uso.
-          dos(
-            _menu<FrecuenciaActivo>(
-              'Programar por',
-              tooltip: 'Cómo se programa el mantenimiento',
-              valor: a.frecuencia,
-              opciones: {for (final f in FrecuenciaActivo.values) f: _frecuencias[f.index]},
-              onSelected: (f) => setState(() {
-                a.frecuencia = f;
-                if (f == FrecuenciaActivo.meses) a.ultimoMantenimiento ??= hoy();
-              }),
-            ),
-            switch (a.frecuencia) {
-              FrecuenciaActivo.horas => campo(
-                'Cada cuántas horas',
-                cadaHoras,
-                teclado: const TextInputType.numberWithOptions(decimal: true),
-                hint: '5000',
-                error: errores['intervalo'],
-                obligatorio: true,
-              ),
-              FrecuenciaActivo.meses => campo(
-                'Cada cuántos meses',
-                cadaMeses,
-                teclado: TextInputType.number,
-                hint: '3',
-                error: errores['intervalo'],
-                obligatorio: true,
-              ),
-              FrecuenciaActivo.fecha => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CampoFecha(
-                    'Próximo mantenimiento',
-                    a.fechaMantenimiento,
-                    (d) => setState(() => a.fechaMantenimiento = d),
-                  ),
-                  if (errores['fecha'] != null) Text(errores['fecha']!, style: const TextStyle(color: P.rojo)),
-                ],
-              ),
-              FrecuenciaActivo.sinDefinir => const SizedBox(),
-            },
-          ),
-          if (a.frecuencia == FrecuenciaActivo.meses)
-            dos(
-              CampoFecha(
-                'Último mantenimiento',
-                a.ultimoMantenimiento,
-                (d) => setState(() => a.ultimoMantenimiento = d),
-                hasta: hoy(),
-              ),
-              const SizedBox(),
-            ),
           dos(
             CampoFecha('Fecha de la lectura', a.fechaLectura, (d) => setState(() => a.fechaLectura = d), hasta: hoy()),
             campo(
@@ -668,7 +675,6 @@ class _ActivoFormState extends State<ActivoForm> {
               teclado: const TextInputType.numberWithOptions(decimal: true),
               hint: '0',
               error: errores['actual'],
-              obligatorio: true,
             ),
           ),
           dos(
@@ -685,10 +691,8 @@ class _ActivoFormState extends State<ActivoForm> {
               teclado: const TextInputType.numberWithOptions(decimal: true),
               hint: 'Sin indicar',
               error: errores['uso'],
-              obligatorio: a.frecuencia == FrecuenciaActivo.horas,
             ),
           ),
-          if (a.frecuencia != FrecuenciaActivo.sinDefinir) Consejo(_estimacion),
         ],
       ),
     );
@@ -710,8 +714,6 @@ class _ActivoFormState extends State<ActivoForm> {
       ..numeroSerie = serie.text.trim()
       ..division = division.text.trim()
       ..horas = _valor(horasC, vacio: 0) ?? 0
-      ..cadaHoras = a.frecuencia == FrecuenciaActivo.horas ? _valor(cadaHoras) : null
-      ..cadaMeses = a.frecuencia == FrecuenciaActivo.meses ? int.tryParse(cadaMeses.text) : null
       ..horasUltimoMantenimiento = math.min(_valor(ultimoContador, vacio: 0) ?? 0, _valor(horasC, vacio: 0) ?? 0)
       ..horasUso = _valor(ritmo, vacio: 0) ?? 0
       ..repuestos = repuestos.text.trim()

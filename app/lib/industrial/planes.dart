@@ -8,16 +8,31 @@ import '../widgets.dart';
 import 'plan.dart';
 import 'tipo_mantenimiento.dart';
 
-/// Fila de un mantenimiento periódico en la ficha del activo; «Crear OT» abre la OT ya rellena para revisarla.
-Widget filaPlan(BuildContext context, PlanMantenimiento p) => FilaLista(
+/// Próximo de un mantenimiento: el puesto a mano o, si va por horas, estimado con el contador y el ritmo de uso
+/// de su activo o componente.
+DateTime? proximoPlan(PlanMantenimiento p) {
+  if (p.proximo != null || p.cadaHoras == null) return p.proximo;
+  final a = store.activo(p.activoId);
+  if (a == null || a.usoDiario <= 0) return null;
+  final quedan = p.cadaHoras! - (a.horas - (p.ultimoHoras ?? 0));
+  if (quedan <= 0) return a.fechaLectura;
+  final dias = (quedan / a.usoDiario).ceil();
+  if (dias > 3652500) return null;
+  return masDias(a.fechaLectura, dias);
+}
+
+/// Fila de un mantenimiento: lo que hay que hacer. «Asignar a técnico» crea su OT ya rellena para revisarla.
+/// Con [conCodigo], el tag del activo o componente al que pertenece.
+Widget filaPlan(BuildContext context, PlanMantenimiento p, {bool conCodigo = false}) => FilaLista(
   lider: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
   titulo: p.nombre.isEmpty ? 'Sin nombre' : p.nombre,
   subtitulo: [
+    if (conCodigo) store.activo(p.activoId)?.titulo ?? '',
     p.cada,
     p.categoria,
-    if (p.proximo != null) 'Próximo ${fecha(p.proximo!)}',
+    if (proximoPlan(p) != null) 'Próximo ${p.proximo == null ? '≈ ' : ''}${fecha(proximoPlan(p)!)}',
   ].where((x) => x.isNotEmpty).join(' · '),
-  derecha: Enlace('Crear OT', onTap: () => abrirTareaForm(context, null, borrador: p.ot(store.nuevoId()))),
+  derecha: Enlace('Asignar a técnico', onTap: () => abrirTareaForm(context, null, borrador: p.ot(store.nuevoId()))),
   onTap: () => abrirPlanForm(context, activoId: p.activoId, original: p),
 );
 
@@ -40,6 +55,7 @@ class _PlanFormState extends State<PlanForm> {
   late final nombre = TextEditingController(text: p.nombre)..addListener(() => setState(() {}));
   late final dias = TextEditingController(text: p.cadaDias?.toString() ?? '')..addListener(_alCambiarDias);
   late final horasC = TextEditingController(text: p.cadaHoras?.toString() ?? '')..addListener(() => setState(() {}));
+  late final contador = TextEditingController(text: p.ultimoHoras == null ? '' : '${p.ultimoHoras}');
   late final repuestos = TextEditingController(text: p.repuestos);
   late final procedimiento = TextEditingController(text: p.procedimiento);
   bool intentoGuardar = false;
@@ -66,6 +82,7 @@ class _PlanFormState extends State<PlanForm> {
       ..nombre = nombre.text.trim()
       ..cadaDias = _entero(dias)
       ..cadaHoras = _entero(horasC)
+      ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.'))
       ..repuestos = repuestos.text.trim()
       ..procedimiento = procedimiento.text.trim();
     store.guardarPlan(p);
@@ -98,7 +115,7 @@ class _PlanFormState extends State<PlanForm> {
         Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
         ]),
-        Bloque('Cada cuánto', descripcion: 'Por días, por horas de uso o por lo que llegue antes.', [
+        Bloque('Cada cuánto', descripcion: 'Por días, por horas de uso o por lo que llegue antes. Sin próximo, se estima con el contador.', [
           dos(
             campo('Cada (días)', dias, hint: '90', error: errorCada, obligatorio: true),
             campo('Cada (horas de uso)', horasC, hint: '500', obligatorio: true),
@@ -110,6 +127,15 @@ class _PlanFormState extends State<PlanForm> {
               _alCambiarDias();
             }, hasta: hoy()),
             CampoFecha('Próximo', p.proximo, (d) => setState(() => p.proximo = d)),
+          ),
+          dos(
+            campo(
+              'Contador en el último (h)',
+              contador,
+              teclado: const TextInputType.numberWithOptions(decimal: true),
+              hint: '0',
+            ),
+            const SizedBox(),
           ),
         ]),
         Bloque('Quién y cuánto', descripcion: 'Solo los técnicos de esta categoría pueden recibir la OT.', [

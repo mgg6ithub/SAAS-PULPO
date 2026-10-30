@@ -141,14 +141,13 @@ class _TablaRealizadas extends StatelessWidget {
   Widget build(BuildContext context) => SegunTamano(
     clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
     builder: (context, box) {
-      final ancho = box.maxWidth > 980;
       final medio = box.maxWidth > 600;
       return Tabla(
         columnas: [
           const Col('Fecha', ancho: 120),
           const Col('Orden de trabajo', flex: 3),
           if (medio) const Col('Activo', flex: 3),
-          if (ancho) const Col('Técnico', flex: 2),
+          if (medio) const Col('Ejecutado por', flex: 2),
           if (medio) const Col('Tipo', ancho: 190),
         ],
         filas: lista.length,
@@ -166,7 +165,7 @@ class _TablaRealizadas extends StatelessWidget {
               ],
             ),
             if (medio) celdaTexto(_activo(t.activoId), suave: true),
-            if (ancho)
+            if (medio)
               celdaTexto(
                 t.trabajadorIds.isEmpty
                     ? '—'
