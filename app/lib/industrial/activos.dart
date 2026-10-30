@@ -415,13 +415,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       const SizedBox(height: huecoVista),
                       Row(
                         children: [
-                          const Spacer(),
                           Pestanas(
                             opciones: ['Mantenimientos · ${planes.length}', 'Subcomponentes · ${componentes.length}'],
                             seleccion: vista,
                             onChanged: (i) => setState(() => vista = i),
                           ),
-                          const SizedBox(width: 12),
+                          const Spacer(),
                           vista == 0
                               ? BotonPrimario(
                                   'Nuevo mantenimiento',
