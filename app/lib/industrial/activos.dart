@@ -174,6 +174,7 @@ class _TablaActivos extends StatelessWidget {
         child: Tabla(
           columnas: [
             Col(componentes ? 'Componente' : 'Activo', flex: 3),
+            if (componentes) const Col('Tag', flex: 2),
             if (ancho) const Col('Fabricante y modelo', flex: 2),
             if (ancho) const Col('División', flex: 2),
             if (ancho) const Col('Horas totales', ancho: 120, derecha: true),
@@ -201,14 +202,12 @@ class _TablaActivos extends StatelessWidget {
                   Tooltip(message: textoEstado(g), child: IconoActivo(a.icono, color: colorEstado(g), size: 22)),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: celdaTexto(
-                      // Subcomponentes: primero el nombre y el tag entre paréntesis.
-                      componentes && a.nombre.isNotEmpty && a.tag.isNotEmpty ? '${a.nombre} (${a.tag})' : a.titulo,
-                      negrita: true,
-                    ),
+                    // Subcomponentes: el nombre aquí y el tag en su propia columna.
+                    child: celdaTexto(componentes && a.nombre.isNotEmpty ? a.nombre : a.titulo, negrita: true),
                   ),
                 ],
               ),
+              if (componentes) celdaTexto(a.tag.isEmpty ? '—' : a.tag, suave: true),
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
               if (ancho) celdaTexto(a.division, suave: true),
               if (ancho) Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(a.horas), suave: true)),
