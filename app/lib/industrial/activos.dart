@@ -70,28 +70,30 @@ class _ActivosState extends State<Activos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BarraVista(
-            izquierda: [
-              const TituloVista('Activos'),
+            izquierda: const [TituloVista('Activos')],
+            derecha: const [],
+            principal: BotonPrimario(
+              'Nuevo activo',
+              conIcono: true,
+              icono: Icons.add_rounded,
+              tecla: 'N',
+              onPressed: () => abrirActivoForm(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 14,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
               Pestanas(
                 opciones: _filtros,
                 colores: [null, for (final t in TipoMantenimiento.values) t.color],
                 seleccion: filtroActivos.value,
                 onChanged: (i) => filtroActivos.value = i,
               ),
+              Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
             ],
-            derecha: [
-              if (esMovil(context)) Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
-            ],
-            principal: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!esMovil(context)) ...[
-                  Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
-                  const SizedBox(width: 8),
-                ],
-                BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
-              ],
-            ),
           ),
           const SizedBox(height: huecoVista),
           Expanded(
