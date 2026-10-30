@@ -7,9 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'industrial/activo.dart';
 import 'industrial/incidencia.dart';
 import 'industrial/plan.dart';
+import 'industrial/plantillas.dart';
 import 'models.dart';
 import 'nube.dart';
-import 'theme.dart' show TipoInfo, tipos, tiposBase, competencias, competenciasBase;
+import 'theme.dart' show TipoInfo, tipos, tiposBase, tiposParaMarca, competencias, competenciasBase;
 import 'marca.dart';
 
 /// Datos del prototipo. Se guardan en el navegador; más adelante, Supabase.
@@ -287,7 +288,7 @@ class Store extends ChangeNotifier {
   void _deLaNube(DatosNube d) {
     clientes = d.clientes;
     trabajadores = d.trabajadores;
-    tareas = d.tareas;
+    tareas = industrial ? adaptarPlantillasIndustriales(d.tareas) : d.tareas;
     subtareas = d.subtareas;
     etiquetas = d.etiquetas;
     equipos = d.equipos;
@@ -295,8 +296,9 @@ class Store extends ChangeNotifier {
     activos = d.activos;
     planes = d.planes;
     incidencias = d.incidencias;
-    tipos = d.tipos.isEmpty ? [...tiposBase] : d.tipos;
-    competencias = d.competencias.isEmpty ? [...competenciasBase] : d.competencias;
+    tipos = tiposParaMarca(d.tipos.isEmpty ? [...tiposBase] : d.tipos);
+    competencias = d.competencias.isEmpty ? [...competenciasBase] :
+      [...d.competencias, if (industrial) ...competenciasBase.where((c) => !d.competencias.contains(c))];
   }
 
   /// Lo que otra persona ha cambiado en la base (en vivo). No se vuelve a guardar: ya está allí.
@@ -381,6 +383,10 @@ class Store extends ChangeNotifier {
             ..lng = g.$2;
         }
       }
+    }
+    if (industrial) {
+      tareas = adaptarPlantillasIndustriales(tareas);
+      tipos = tiposParaMarca(tipos);
     }
     notifyListeners();
   }
@@ -1219,7 +1225,7 @@ class Store extends ChangeNotifier {
     activos = [];
     planes = [];
     incidencias = [];
-    tareas = [
+    tareas = industrial ? plantillasIndustriales() : [
       Tarea(
         id: 'p1',
         nombre: 'Revisión caldera de gas',

@@ -135,29 +135,17 @@ void main() {
           ),
         )
         ..add(Tarea(id: 'ot2', nombre: 'Engrasar', activoId: 'b1', tipoMantenimiento: TipoMantenimiento.preventivo));
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Mantenimientos(incidencias: false))));
       await tester.pumpAndSettle();
-      // Móvil: las pestañas son un desplegable.
-      Future<void> pestana(String t, int cual) async {
-        if (find.text(t).evaluate().isEmpty) {
-          await tester.tap(find.byType(PopupMenuButton<int>).at(cual));
-          await tester.pumpAndSettle();
-        }
-        await tester.tap(find.text(t).last);
-        await tester.pumpAndSettle();
-      }
-
-      await pestana('Mantenimientos', 0);
       expect(tester.takeException(), isNull);
       expect(find.text('Cambiar junta'), findsOneWidget);
       expect(find.text('Engrasar'), findsOneWidget);
-      await pestana('Incidencias', 1);
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Mantenimientos(incidencias: true))));
+      await tester.pumpAndSettle();
       expect(find.text('Fuga de aceite'), findsOneWidget);
       expect(find.text('Ruido raro'), findsOneWidget);
-      // Solo las de la prensa.
-      await tester.tap(find.byType(FiltroActivo));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('PRE-01 · Prensa').last);
+      // Solo las de la prensa, sin depender de la navegación global retirada.
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Mantenimientos(incidencias: true, activoId: 'b1'))));
       await tester.pumpAndSettle();
       expect(find.text('Fuga de aceite'), findsNothing);
       expect(find.text('Ruido raro'), findsOneWidget);
@@ -181,7 +169,9 @@ void main() {
       await tester.tap(find.text('CAM-01 · Camión'));
       await tester.pumpAndSettle();
       expect(find.text('CAM-01-MOT-B · Bomba'), findsOneWidget);
-      expect(find.text('Nuevo mantenimiento'), findsOneWidget);
+      expect(find.text('Nuevo mantenimiento'), findsNothing);
+      expect(find.text('Resumen'), findsOneWidget);
+      expect(find.text('Datos'), findsOneWidget);
       if (ancho > 600) {
         await tester.tap(find.text('Nuevo componente'));
         await tester.pumpAndSettle();

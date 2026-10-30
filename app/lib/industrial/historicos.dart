@@ -30,7 +30,9 @@ const _periodos = <(String, int?)>[
 /// Sección «Históricos» de iPultec: registro de las OT realizadas, filtrable por activo, técnico, tipo
 /// y fecha. Arriba, cuántas hay de cada tipo (pulsar una filtra por ese tipo).
 class Historicos extends StatefulWidget {
-  const Historicos({super.key});
+  final String? activoId;
+  final bool incrustada;
+  const Historicos({super.key, this.activoId, this.incrustada = false});
 
   @override
   State<Historicos> createState() => _HistoricosState();
@@ -43,7 +45,8 @@ class _HistoricosState extends State<Historicos> {
 
   /// Lo que pasa los filtros de activo, técnico y fecha (el de tipo va aparte para contar por tipo).
   List<Realizada> _filtradas() {
-    final rama = activoId == null ? null : store.ramaDe(activoId!);
+    final id = widget.activoId ?? activoId;
+    final rama = id == null ? null : store.ramaDe(id);
     final dias = _periodos[periodo].$2;
     return otsRealizadas().where((r) {
       final (d, t) = r;
@@ -60,14 +63,14 @@ class _HistoricosState extends State<Historicos> {
     final activos = store.hijosDe(null);
     final tecnicos = store.trabajadores.where((w) => w.activo).toList();
     return Padding(
-      padding: margenPagina,
+      padding: widget.incrustada ? EdgeInsets.zero : margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BarraVista(
-            izquierda: const [TituloVista('Históricos')],
+            izquierda: [TituloVista(widget.incrustada ? 'Histórico' : 'Históricos')],
             derecha: [
-              _Filtro<String>(
+              if (widget.activoId == null) _Filtro<String>(
                 todos: 'Todos los activos',
                 valor: activoId,
                 opciones: [for (final a in activos) (a.id, a.titulo)],
@@ -209,7 +212,8 @@ class _ChipCuenta extends StatelessWidget {
         children: [
           puntoTipo(tipo.color),
           const SizedBox(width: 8),
-          Text(tipo.etiqueta, style: TextStyle(fontSize: 13, color: sel ? tipo.color : P.texto)),
+          Flexible(child: Text(tipo.etiqueta, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13, color: sel ? tipo.color : P.texto))),
           const SizedBox(width: 8),
           Text(
             '$n',

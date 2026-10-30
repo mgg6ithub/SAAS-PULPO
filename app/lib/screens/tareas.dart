@@ -62,7 +62,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ],
                 derecha: [
                   Buscador(
-                    hint: m('Buscar trabajo, equipo o cliente…'),
+                    hint: industrial ? 'Buscar orden de trabajo…' : 'Buscar trabajo…',
                     width: 280,
                     onChanged: (v) => setState(() => q = v),
                   ),

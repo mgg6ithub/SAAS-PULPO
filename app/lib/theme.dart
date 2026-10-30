@@ -107,6 +107,9 @@ Color colorPaleta(int i) => paleta[i % paleta.length];
 /// Iconos que se pueden elegir para un tipo de trabajo. El tipo guarda la clave (texto), no el icono:
 /// así se guarda en la base y los iconos siguen siendo constantes.
 const iconosTipo = <String, IconData>{
+  'camion': Icons.local_shipping_outlined,
+  'prensa': Icons.precision_manufacturing_outlined,
+  'compresor': Icons.compress_rounded,
   'caldera': Icons.local_fire_department_rounded,
   'ascensor': Icons.elevator_rounded,
   'jardin': Icons.yard_rounded,
@@ -172,7 +175,7 @@ class TipoInfo {
 }
 
 /// Los de una empresa nueva. «Otro» va siempre el último: es el de lo que no encaja.
-const tiposBase = <TipoInfo>[
+const tiposResidenciales = <TipoInfo>[
   TipoInfo('tipo-caldera', 'Caldera', 'caldera', Color(0xFFEA580C), 'Calderas (RITE)', 20),
   TipoInfo('tipo-ascensor', 'Ascensor', 'ascensor', Color(0xFF2563EB), 'Ascensores', 25),
   TipoInfo('tipo-jardineria', 'Jardinería', 'jardin', Color(0xFF16A34A), 'Jardinería', 15),
@@ -185,12 +188,42 @@ const tiposBase = <TipoInfo>[
   TipoInfo('tipo-otro', 'Otro', 'otro', Color(0xFF71717A), null),
 ];
 
+const tiposIndustriales = <TipoInfo>[
+  TipoInfo('tipo-camion', 'Camión', 'camion', Color(0xFF4F77A6), 'Mecánica'),
+  TipoInfo('tipo-prensa', 'Prensa', 'prensa', Color(0xFF7C6AA6), 'Hidráulica'),
+  TipoInfo('tipo-agua-presion', 'Agua a presión', 'agua', Color(0xFF0891B2), 'Mecánica'),
+  TipoInfo('tipo-compresor', 'Compresor', 'compresor', Color(0xFF0D9488), 'Neumática'),
+  TipoInfo('tipo-otro', 'Otro', 'otro', Color(0xFF71717A), null),
+];
+const tiposBase = industrial ? tiposIndustriales : tiposResidenciales;
+
+/// Presentación industrial de los tipos de serie, sin renombrar tipos personalizados.
+List<TipoInfo> tiposParaMarca(List<TipoInfo> lista) {
+  if (!industrial) return lista;
+  const anteriores = ['Caldera', 'Ascensor', 'Jardinería', 'Limpieza'];
+  final resultado = <TipoInfo>[];
+  for (final t in lista) {
+    final i = anteriores.indexOf(t.nombre);
+    if (i >= 0) {
+      final n = tiposIndustriales[i];
+      resultado.add(TipoInfo(t.id, n.nombre, n.clave, n.color, n.competencia, n.retrasoMin));
+    } else if (!tiposResidenciales.any((x) => x.nombre == t.nombre) || t.nombre == 'Otro') {
+      resultado.add(t);
+    }
+  }
+  for (final t in tiposIndustriales) {
+    if (!resultado.any((x) => x.nombre == t.nombre)) resultado.add(t);
+  }
+  resultado.sort((a, b) => a.nombre == 'Otro' ? (b.nombre == 'Otro' ? 0 : 1) : b.nombre == 'Otro' ? -1 : 0);
+  return resultado;
+}
+
 /// Tipos de la empresa en curso. Los carga y guarda el [Store]; aquí para que [tipoDe] los vea en todas partes.
 List<TipoInfo> tipos = [...tiposBase];
 
 TipoInfo tipoDe(String nombre) => tipos.firstWhere((t) => t.nombre == nombre, orElse: () => tipos.last);
 
-const competenciasBase = <String>[
+const competenciasResidenciales = <String>[
   'Calderas (RITE)',
   'Ascensores',
   'Fontanería',
@@ -203,6 +236,10 @@ const competenciasBase = <String>[
   'Trabajo en altura',
   'PRL',
 ];
+
+const competenciasBase = industrial
+    ? <String>['Mecánica', 'Hidráulica', 'Neumática', 'Electricidad', 'PRL']
+    : competenciasResidenciales;
 
 /// Competencias de la empresa en curso (las carga y guarda el [Store]).
 List<String> competencias = [...competenciasBase];

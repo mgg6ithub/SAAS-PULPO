@@ -1576,8 +1576,8 @@ class _TareaFormState extends State<TareaForm> {
                 'Nombre',
                 nombre,
                 hint: t.esPlantilla
-                    ? 'Revisión de ascensor, corte de césped…'
-                    : 'Ascensor portal A, centralita de incendios…',
+                    ? (industrial ? 'Camión, prensa hidráulica…' : 'Revisión de ascensor, corte de césped…')
+                    : (industrial ? 'Revisión del motor, cambio de filtro…' : 'Ascensor portal A, centralita de incendios…'),
                 error: error,
                 obligatorio: true,
               ),

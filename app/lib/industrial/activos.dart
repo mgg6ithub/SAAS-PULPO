@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
@@ -7,9 +9,10 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'gravedad.dart';
-import 'mantenimientos.dart';
-import 'planes.dart';
 import 'tipo_mantenimiento.dart';
+import 'historicos.dart';
+import '../screens/tabla_trabajos.dart';
+import '../screens/tarea_detalle.dart';
 
 /// Color del estado de un activo: el de su mantenimiento pendiente más grave (él y sus componentes).
 /// Sin nada pendiente, verde: puede funcionar.
@@ -29,11 +32,6 @@ class _ActivosState extends State<Activos> {
   String q = '';
   String? abierto;
 
-  /// Pestaña: 0 los activos, 1 sus mantenimientos (con el filtro [incidencias] y el activo [filtro]).
-  int pestana = 0;
-  bool incidencias = false;
-  String? filtro;
-
   @override
   Widget build(BuildContext context) {
     if (abierto != null) return ActivoDetalle(activoId: abierto!, onVolver: () => setState(() => abierto = null));
@@ -47,43 +45,13 @@ class _ActivosState extends State<Activos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BarraVista(
-            izquierda: [
-              const TituloVista('Activos'),
-              Pestanas(
-                opciones: const ['Activos', 'Mantenimientos'],
-                seleccion: pestana,
-                onChanged: (i) => setState(() => pestana = i),
-              ),
-              if (pestana == 1) ...[
-                Pestanas(
-                  opciones: const ['Pendientes', 'Incidencias'],
-                  seleccion: incidencias ? 1 : 0,
-                  onChanged: (i) => setState(() => incidencias = i == 1),
-                ),
-                FiltroActivo(filtro, (v) => setState(() => filtro = v)),
-              ],
-            ],
-            derecha: [
-              Buscador(
-                hint: pestana == 0 ? 'Buscar activo…' : 'Buscar…',
-                onChanged: (v) => setState(() => q = v),
-              ),
-            ],
-            principal: pestana == 0
-                ? BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context))
-                : BotonPrimario(
-                    'Nueva incidencia',
-                    // Sin activos aún, primero hay que dar de alta alguno.
-                    onPressed: () => store.activos.isEmpty
-                        ? abrirActivoForm(context)
-                        : abrirIncidenciaForm(context, activoId: filtro),
-                  ),
+            izquierda: const [TituloVista('Activos')],
+            derecha: [Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v))],
+            principal: BotonPrimario('Nuevo activo', tecla: 'N', onPressed: () => abrirActivoForm(context)),
           ),
           const SizedBox(height: huecoVista),
           Expanded(
-            child: pestana == 1
-                ? Mantenimientos(incidencias: incidencias, activoId: store.activo(filtro)?.id, q: q)
-                : activos.isEmpty
+            child: activos.isEmpty
                 ? Vacio(
                     icono: Icons.precision_manufacturing_outlined,
                     titulo: q.isEmpty ? 'Aún no tienes activos' : null,
@@ -91,7 +59,10 @@ class _ActivosState extends State<Activos> {
                         ? 'Da de alta tus máquinas (camiones, compresores, prensas…) y sus componentes.'
                         : 'Ningún activo coincide con la búsqueda',
                     accion: q.isEmpty
-                        ? FilledButton(onPressed: () => abrirActivoForm(context), child: const Text('Añadir el primero'))
+                        ? FilledButton(
+                            onPressed: () => abrirActivoForm(context),
+                            child: const Text('Añadir el primero'),
+                          )
                         : null,
                   )
                 : _TablaActivos(activos, (id) => setState(() => abierto = id)),
@@ -171,8 +142,7 @@ class _TablaActivos extends StatelessWidget {
 
 String horas(double h) => h == 0 ? '—' : '${h % 1 == 0 ? h.toInt() : h} h';
 
-/// Ficha de un activo: su árbol de componentes con el color de cada nodo y, al lado, los mantenimientos
-/// pendientes y futuros del nodo elegido.
+/// Ficha del activo y de cada componente: resumen, datos editables, OT e histórico propio.
 class ActivoDetalle extends StatefulWidget {
   final String activoId;
   final VoidCallback onVolver;
@@ -184,28 +154,62 @@ class ActivoDetalle extends StatefulWidget {
 
 class _ActivoDetalleState extends State<ActivoDetalle> {
   late String elegido = widget.activoId;
+  int pestana = 0;
+  bool editando = false;
+  String? tareaId;
   final plegados = <String>{};
+
+  void _abrir(String id) => setState(() {
+    elegido = id;
+    pestana = 0;
+    editando = false;
+  });
+
+  void _nuevaOt(Activo a) => abrirTareaForm(
+    context,
+    null,
+    borrador: Tarea(
+      id: store.nuevoId(),
+      activoId: a.id,
+      plantilla: false,
+      tipoMantenimiento: TipoMantenimiento.preventivo,
+      proximo: hoy(),
+      periodicidad: Periodicidad.unica,
+      criticidad: Criticidad.rutinaria,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final a = store.activo(widget.activoId);
+    final a = store.activo(elegido) ?? store.activo(widget.activoId);
     if (a == null) {
-      // Se acaba de borrar: volvemos a la lista.
       WidgetsBinding.instance.addPostFrameCallback((_) => widget.onVolver());
       return const SizedBox();
     }
-    if (store.activo(elegido) == null) elegido = a.id;
-    final g = gravedadDe(a.id);
+    if (tareaId != null) {
+      return TareaDetalle(
+        tareaId: tareaId!,
+        onVolver: () => setState(() => tareaId = null),
+        onAbrir: (id) => setState(() => tareaId = id),
+      );
+    }
+    elegido = a.id;
+    final padre = store.activo(a.padreId);
+    final ots = store.otsDe(a.id).where((t) => !t.esPlantilla && t.activa).toList();
     final filas = <(Activo, int)>[];
     void anadir(Activo x, int nivel) {
       filas.add((x, nivel));
-      if (plegados.contains(x.id)) return;
-      for (final h in store.hijosDe(x.id)) {
-        anadir(h, nivel + 1);
+      if (!plegados.contains(x.id)) {
+        for (final h in store.hijosDe(x.id)) {
+          anadir(h, nivel + 1);
+        }
       }
     }
 
-    anadir(a, 0);
+    for (final h in store.hijosDe(a.id)) {
+      anadir(h, 0);
+    }
+    final g = gravedadDe(a.id);
     return Padding(
       padding: margenPagina,
       child: Column(
@@ -213,48 +217,103 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         children: [
           Cabecera(
             lider: IconButton(
-              tooltip: 'Volver a Activos',
-              onPressed: widget.onVolver,
+              tooltip: padre == null ? 'Volver a Activos' : 'Volver a ${padre.titulo}',
+              onPressed: padre == null ? widget.onVolver : () => _abrir(padre.id),
               icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
             ),
             titulo: a.titulo.isEmpty ? 'Activo' : a.titulo,
             subtitulo: [
-              [a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '),
-              if (a.horas > 0) horas(a.horas),
-              a.division,
+              if (padre != null) 'Componente de ${padre.titulo}',
+              a.fabricante,
+              a.modelo,
             ].where((x) => x.isNotEmpty).join(' · '),
             acciones: [
-              Pill(textoEstado(g), colorEstado(g), punto: true),
-              const SizedBox(width: 4),
-              OutlinedButton(onPressed: () => abrirActivoForm(context, original: a), child: const Text('Editar')),
-              BotonPrimario('Nuevo componente', onPressed: () => abrirActivoForm(context, padreId: a.id)),
+              if (pestana == 0 && filas.isNotEmpty)
+                BotonPrimario(
+                  'Nuevo componente',
+                  icono: Icons.add_rounded,
+                  onPressed: () => abrirActivoForm(context, padreId: a.id),
+                ),
+              if (pestana == 1 && !editando)
+                BotonPrimario('Editar', icono: Icons.edit_outlined, onPressed: () => setState(() => editando = true)),
+              if (pestana == 2)
+                BotonPrimario('Nueva orden de trabajo', icono: Icons.add_rounded, onPressed: () => _nuevaOt(a)),
             ],
           ),
-          const SizedBox(height: huecoVista),
+          const SizedBox(height: 18),
+          PestanasOscuras(
+            opciones: const ['Resumen', 'Datos', 'Órdenes de trabajo', 'Histórico'],
+            seleccion: pestana,
+            onChanged: (i) => setState(() {
+              pestana = i;
+              editando = false;
+            }),
+          ),
+          const SizedBox(height: 16),
           Expanded(
-            // Ancho: árbol y mantenimientos uno al lado del otro; estrecho, uno encima del otro.
-            child: SegunTamano(
-              clave: (box) => box.maxWidth > 760,
-              builder: (context, box) {
-                final ancho = box.maxWidth > 760;
-                return Flex(
-                  direction: ancho ? Axis.horizontal : Axis.vertical,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: SeccionTarjeta(
-                        alto: double.infinity,
-                        titulo: 'Componentes',
-                        subtitulo: '${filas.length - 1} ${filas.length == 2 ? 'componente' : 'componentes'}',
-                        children: [for (final (x, nivel) in filas) _nodo(x, nivel)],
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: KeyedSubtree(
+                key: ValueKey('$elegido-$pestana'),
+                child: switch (pestana) {
+                  0 => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Tarjeta(
+                        child: Wrap(
+                          spacing: 24,
+                          runSpacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Pill(textoEstado(g), colorEstado(g), punto: true),
+                            Text('${store.ramaDe(a.id).length - 1} componentes'),
+                            Text('${ots.where(otPendiente).length} OT pendientes'),
+                            if (a.horas > 0) Text(horas(a.horas)),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: huecoVista, height: huecoVista),
-                    Expanded(flex: 2, child: _Mantenimientos(store.activo(elegido)!)),
-                  ],
-                );
-              },
+                      const SizedBox(height: huecoVista),
+                      Expanded(
+                        child: filas.isEmpty
+                            ? Vacio(
+                                icono: Icons.account_tree_outlined,
+                                titulo: 'Sin componentes',
+                                texto: 'Añade las piezas y los componentes de este activo.',
+                                accion: FilledButton(
+                                  onPressed: () => abrirActivoForm(context, padreId: a.id),
+                                  child: const Text('Añadir componente'),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: filas.length,
+                                itemBuilder: (_, i) => _nodo(filas[i].$1, filas[i].$2),
+                              ),
+                      ),
+                    ],
+                  ),
+                  1 => ActivoForm(
+                    key: ValueKey(editando ? '${a.id}-editar' : '${a.id}-${jsonEncode(a.toJson())}'),
+                    original: a,
+                    incrustada: true,
+                    soloLectura: !editando,
+                    onTerminar: () => setState(() => editando = false),
+                  ),
+                  2 =>
+                    ots.isEmpty
+                        ? const Vacio(
+                            icono: Icons.assignment_outlined,
+                            titulo: 'Sin órdenes de trabajo',
+                            texto: 'Las órdenes de este activo y sus componentes aparecerán aquí.',
+                          )
+                        : TablaTrabajos(
+                            ots,
+                            conCliente: false,
+                            nombre: 'orden de trabajo',
+                            onAbrir: (id) => setState(() => tareaId = id),
+                          ),
+                  _ => Historicos(activoId: a.id, incrustada: true),
+                },
+              ),
             ),
           ),
         ],
@@ -266,143 +325,31 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     final g = gravedadDe(x.id);
     final tieneHijos = store.hijosDe(x.id).isNotEmpty;
     final plegado = plegados.contains(x.id);
-    return Container(
-      color: x.id == elegido ? P.hoverFila : null,
-      child: FilaLista(
-        lider: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(width: 20.0 * nivel),
-            SizedBox(
-              width: 24,
-              child: tieneHijos
-                  ? IconButton(
-                      padding: EdgeInsets.zero,
-                      iconSize: 18,
-                      tooltip: plegado ? 'Desplegar' : 'Plegar',
-                      onPressed: () => setState(() => plegado ? plegados.remove(x.id) : plegados.add(x.id)),
-                      icon: Icon(
-                        plegado ? Icons.chevron_right_rounded : Icons.expand_more_rounded,
-                        color: P.textoSuave,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 6),
-            Tooltip(message: textoEstado(g), child: puntoTipo(colorEstado(g), tam: 10)),
-          ],
-        ),
-        titulo: x.titulo.isEmpty ? 'Sin nombre' : x.titulo,
-        subtitulo: [
-          [x.fabricante, x.modelo].where((y) => y.isNotEmpty).join(' '),
-          if (x.numeroSerie.isNotEmpty) 'Nº ${x.numeroSerie}',
-        ].where((y) => y.isNotEmpty).join(' · '),
-        derecha: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return FilaLista(
+      lider: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(width: 16.0 * nivel.clamp(0, 4)),
+          if (tieneHijos)
             IconButton(
-              tooltip: 'Nuevo componente dentro',
-              onPressed: () => abrirActivoForm(context, padreId: x.id),
-              icon: Icon(Icons.add_rounded, size: 18, color: P.textoSuave),
+              padding: EdgeInsets.zero,
+              iconSize: 18,
+              tooltip: plegado ? 'Desplegar componentes' : 'Plegar componentes',
+              onPressed: () => setState(() => plegado ? plegados.remove(x.id) : plegados.add(x.id)),
+              icon: Icon(plegado ? Icons.chevron_right_rounded : Icons.expand_more_rounded),
             ),
-            IconButton(
-              tooltip: 'Editar',
-              onPressed: () => abrirActivoForm(context, original: x),
-              icon: Icon(Icons.edit_outlined, size: 18, color: P.textoSuave),
-            ),
-          ],
-        ),
-        onTap: () => setState(() => elegido = x.id),
-      ),
-    );
-  }
-}
-
-/// Mantenimientos del nodo elegido: su plan periódico y las OT (de él y sus componentes), pendientes, del
-/// más grave al más leve, y futuras.
-class _Mantenimientos extends StatelessWidget {
-  final Activo a;
-  const _Mantenimientos(this.a);
-
-  @override
-  Widget build(BuildContext context) {
-    final ots = store.otsDe(a.id).where((t) => t.activa).toList()
-      ..sort((x, y) {
-        final g = (y.tipoMantenimiento?.index ?? -1).compareTo(x.tipoMantenimiento?.index ?? -1);
-        return g != 0 ? g : (x.proximo ?? DateTime(2100)).compareTo(y.proximo ?? DateTime(2100));
-      });
-    final hoyMismo = hoy();
-    final pendientes = ots
-        .where((t) => otPendiente(t) && (t.proximo == null || !t.proximo!.isAfter(hoyMismo)))
-        .toList();
-    final futuros = ots.where((t) => !pendientes.contains(t) && otPendiente(t)).toList();
-    Widget fila(Tarea t) => FilaLista(
-      lider: puntoTipo(t.tipoMantenimiento?.color ?? P.gris),
-      titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
-      subtitulo: [
-        store.activo(t.activoId)?.titulo ?? '',
-        if (t.proximo != null) '${fecha(t.proximo!)} · ${relativo(t.proximo!)}',
-      ].where((x) => x.isNotEmpty).join(' · '),
-      onTap: () => abrirTareaForm(context, t),
-    );
-    final planes = store.planesDe(a.id);
-    return SeccionTarjeta(
-      alto: double.infinity,
-      titulo: 'Mantenimientos',
-      subtitulo: a.titulo,
-      accion: Enlace(
-        'Nueva OT',
-        onTap: () => abrirTareaForm(
-          context,
-          null,
-          borrador: Tarea(
-            id: store.nuevoId(),
-            activoId: a.id,
-            plantilla: false,
-            tipoMantenimiento: TipoMantenimiento.preventivo,
-            proximo: hoy(),
-            periodicidad: Periodicidad.unica,
-            criticidad: Criticidad.rutinaria,
-          ),
-        ),
-      ),
-      children: [
-        _titulo('Plan de mantenimiento'),
-        for (final p in planes) filaPlan(context, p),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Enlace('Nuevo mantenimiento', onTap: () => abrirPlanForm(context, activoId: a.id)),
-          ),
-        ),
-        if (ots.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Text('Sin OT pendientes.', style: TextStyle(fontSize: 13, color: P.textoSuave)),
-          ),
-        if (pendientes.isNotEmpty) _titulo('Pendientes'),
-        for (final t in pendientes) fila(t),
-        if (futuros.isNotEmpty) _titulo('Próximos'),
-        for (final t in futuros) fila(t),
-        if (a.repuestos.isNotEmpty) ...[
-          _titulo('Repuestos'),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-            child: Text(a.repuestos, style: const TextStyle(fontSize: 13.5)),
-          ),
+          Tooltip(message: textoEstado(g), child: puntoTipo(colorEstado(g), tam: 10)),
         ],
-      ],
+      ),
+      titulo: x.titulo.isEmpty ? 'Sin nombre' : x.titulo,
+      subtitulo: [
+        x.fabricante,
+        x.modelo,
+        if (x.numeroSerie.isNotEmpty) 'Nº ${x.numeroSerie}',
+      ].where((s) => s.isNotEmpty).join(' · '),
+      onTap: () => _abrir(x.id),
     );
   }
-
-  Widget _titulo(String t) => Padding(
-    padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
-    child: Text(
-      t.toUpperCase(),
-      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, letterSpacing: .6, color: P.textoSuave),
-    ),
-  );
 }
 
 Future<void> abrirActivoForm(BuildContext context, {Activo? original, String? padreId}) =>
@@ -412,7 +359,16 @@ Future<void> abrirActivoForm(BuildContext context, {Activo? original, String? pa
 class ActivoForm extends StatefulWidget {
   final Activo? original;
   final String? padreId;
-  const ActivoForm({super.key, this.original, this.padreId});
+  final bool incrustada, soloLectura;
+  final VoidCallback? onTerminar;
+  const ActivoForm({
+    super.key,
+    this.original,
+    this.padreId,
+    this.incrustada = false,
+    this.soloLectura = false,
+    this.onTerminar,
+  });
 
   @override
   State<ActivoForm> createState() => _ActivoFormState();
@@ -430,6 +386,14 @@ class _ActivoFormState extends State<ActivoForm> {
   late final repuestos = TextEditingController(text: a.repuestos);
   late final notas = TextEditingController(text: a.notas);
   bool intentoGuardar = false;
+
+  @override
+  void dispose() {
+    for (final c in [tag, nombre, fabricante, modelo, serie, division, horasC, repuestos, notas]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   bool get componente => a.padreId != null;
   String? get error =>
@@ -449,7 +413,11 @@ class _ActivoFormState extends State<ActivoForm> {
       ..repuestos = repuestos.text.trim()
       ..notas = notas.text.trim();
     store.guardarActivo(a);
-    Navigator.pop(context);
+    if (widget.incrustada) {
+      widget.onTerminar?.call();
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -458,6 +426,9 @@ class _ActivoFormState extends State<ActivoForm> {
     final padre = store.activo(a.padreId);
     final que = componente ? 'componente' : 'activo';
     return VentanaFormulario(
+      incrustada: widget.incrustada,
+      soloLectura: widget.soloLectura,
+      onCancelar: widget.incrustada ? widget.onTerminar : null,
       etiqueta: padre?.titulo ?? 'Activos',
       titulo: existe ? 'Editar $que' : 'Nuevo $que',
       tituloDesplazado: [tag.text, nombre.text].where((x) => x.isNotEmpty).join(' · '),
@@ -471,7 +442,11 @@ class _ActivoFormState extends State<ActivoForm> {
               final con = n == 0 ? '' : ' y sus $n ${n == 1 ? 'componente' : 'componentes'}';
               if (await confirmar(context, '¿Eliminar ${a.titulo}$con? Sus OT se quedan, sin activo.')) {
                 store.borrarActivo(a.id);
-                nav.pop();
+                if (widget.incrustada) {
+                  widget.onTerminar?.call();
+                } else {
+                  nav.pop();
+                }
               }
             },
       campos: [

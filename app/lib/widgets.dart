@@ -679,17 +679,16 @@ class Buscador extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     width: width,
     height: 40,
-    // expands: el campo llena los 40 de alto, igual que botones y pestañas.
     child: TextField(
       onChanged: onChanged,
       // Clic fuera del buscador = deja de escribir (en web con ratón no lo hace solo), así vuelven los atajos.
       onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-      expands: true,
-      maxLines: null,
+      maxLines: 1,
       textAlignVertical: TextAlignVertical.center,
       style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
+        hintMaxLines: 1,
         hintStyle: TextStyle(color: P.textoSuave, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10),
         prefixIcon: Icon(Icons.search_rounded, size: 18, color: P.textoSuave),
