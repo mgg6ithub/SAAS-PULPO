@@ -200,7 +200,13 @@ class _TablaActivos extends StatelessWidget {
                 children: [
                   Tooltip(message: textoEstado(g), child: IconoActivo(a.icono, color: colorEstado(g), size: 22)),
                   const SizedBox(width: 10),
-                  Expanded(child: celdaTexto(a.titulo, negrita: true)),
+                  Expanded(
+                    child: celdaTexto(
+                      // Subcomponentes: primero el nombre y el tag entre paréntesis.
+                      componentes && a.nombre.isNotEmpty && a.tag.isNotEmpty ? '${a.nombre} (${a.tag})' : a.titulo,
+                      negrita: true,
+                    ),
+                  ),
                 ],
               ),
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
