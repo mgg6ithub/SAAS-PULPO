@@ -1080,8 +1080,9 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
   final _claveNombre = GlobalKey(), _claveCompetencias = GlobalKey();
 
   String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
-  String? get errorCompetencias =>
-      intentoGuardar && !industrial && w.competencias.isEmpty ? (industrial ? 'Elige una categoría' : 'Elige una competencia') : null;
+  String? get errorCompetencias => intentoGuardar && !industrial && w.competencias.isEmpty
+      ? (industrial ? 'Elige una categoría' : 'Elige una competencia')
+      : null;
 
   void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
     final contexto = clave.currentContext;
@@ -1173,39 +1174,44 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
             ? 'Áreas de mantenimiento del técnico. No limita la asignación de OT.'
             : m('Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.'),
         [
-        KeyedSubtree(
-          key: _claveCompetencias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              etiqueta(industrial ? 'Especialidades industriales' : 'Competencias'),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: errorCompetencias == null ? Colors.transparent : P.rojo),
+          KeyedSubtree(
+            key: _claveCompetencias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                etiqueta(industrial ? 'Especialidades industriales' : 'Competencias'),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: errorCompetencias == null ? Colors.transparent : P.rojo),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: chipsCompetencias(w.competencias, () => setState(() {})),
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: chipsCompetencias(w.competencias, () => setState(() {})),
+                SizedBox(
+                  height: 20,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(errorCompetencias ?? ' ', style: const TextStyle(color: P.rojo, fontSize: 12)),
+                  ),
                 ),
-              ),
-              SizedBox(
-                height: 20,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(errorCompetencias ?? ' ', style: const TextStyle(color: P.rojo, fontSize: 12)),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        campo(industrial ? 'Habilitaciones y formación' : 'Títulos y carnés', titulos,
-          hint: industrial ? 'Mantenimiento industrial, soldadura, carretillas…' : 'Carné RITE, PRL 60 h…'),
-      ]),
-      if (!industrial) Bloque('Punto de salida', descripcion: 'De dónde sale y adónde vuelve cada día. Vacío = el almacén.', [
-        campo('Dirección', salida, hint: 'Su casa o la oficina'),
-      ]),
+          const SizedBox(height: 12),
+          campo(
+            industrial ? 'Habilitaciones y formación' : 'Títulos y carnés',
+            titulos,
+            hint: industrial ? 'Mantenimiento industrial, soldadura, carretillas…' : 'Carné RITE, PRL 60 h…',
+          ),
+        ],
+      ),
+      if (!industrial)
+        Bloque('Punto de salida', descripcion: 'De dónde sale y adónde vuelve cada día. Vacío = el almacén.', [
+          campo('Dirección', salida, hint: 'Su casa o la oficina'),
+        ]),
       Bloque('Notas', [
         campo(industrial ? 'Turno, zona o equipo de mantenimiento' : 'Información básica', info, lineas: 2),
         SwitchListTile(
@@ -1532,7 +1538,9 @@ class _TareaFormState extends State<TareaForm> {
       tituloDesplazado: nombre.text,
       subtitulo: t.esPlantilla
           ? m('Sin cliente: sirve de plantilla para crear trabajos en tus clientes.')
-          : industrial ? store.activo(t.activoId)?.titulo : store.cliente(t.clienteId)?.nombre,
+          : industrial
+          ? store.activo(t.activoId)?.titulo
+          : store.cliente(t.clienteId)?.nombre,
       bajoBotones: _menuGravedad(),
       incrustada: widget.incrustada,
       sinCabecera: widget.incrustada,
@@ -1559,10 +1567,7 @@ class _TareaFormState extends State<TareaForm> {
         if (widget.incrustada && !industrial)
           Align(
             alignment: Alignment.centerRight,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: _menuGravedad()!,
-            ),
+            child: Padding(padding: const EdgeInsets.only(top: 12), child: _menuGravedad()!),
           ),
         Bloque(
           t.esPlantilla ? 'Plantilla' : m('Trabajo'),
@@ -1576,7 +1581,9 @@ class _TareaFormState extends State<TareaForm> {
                 nombre,
                 hint: t.esPlantilla
                     ? (industrial ? 'Camión, prensa hidráulica…' : 'Revisión de ascensor, corte de césped…')
-                    : (industrial ? 'Revisión del motor, cambio de filtro…' : 'Ascensor portal A, centralita de incendios…'),
+                    : (industrial
+                          ? 'Revisión del motor, cambio de filtro…'
+                          : 'Ascensor portal A, centralita de incendios…'),
                 error: error,
                 obligatorio: true,
               ),
@@ -1594,8 +1601,8 @@ class _TareaFormState extends State<TareaForm> {
                   }),
                 ),
               ),
-              // Plantillas también al editar: se pueden aplicar a un trabajo ya creado.
-            ] else ...[
+              // Plantillas también al editar: se pueden aplicar a un trabajo ya creado. En Pultec, de momento no hay.
+            ] else if (!industrial) ...[
               etiqueta('A partir de una plantilla'),
               conMargen(
                 Wrap(
@@ -1615,150 +1622,178 @@ class _TareaFormState extends State<TareaForm> {
           pie: t.esPlantilla || industrial ? null : SelectorColorTarea(t, () => setState(() {})),
         ),
         if (!t.esPlantilla)
-          Bloque(industrial ? 'Activo y técnico' : m('Cliente y equipo'), descripcion: industrial ? 'Dónde se realiza la intervención y quién la hace.' : 'Para quién es y quién la hace.', [
-            dos(
-              conMargen(
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    etiqueta(industrial ? 'Activo o componente' : m('Cliente')),
-                    if (industrial)
-                      SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
-                    else
-                    // Un subtrabajo comparte el cliente de su trabajo.
-                    if (t.padreId != null)
-                      conMargen(
-                        Text(
-                          store.cliente(t.clienteId)?.nombre ?? m('Sin cliente'),
-                          style: TextStyle(color: P.textoSuave),
+          Bloque(
+            industrial ? 'Activo y técnico' : m('Cliente y equipo'),
+            descripcion: industrial
+                ? 'Dónde se realiza la intervención y quién la hace.'
+                : 'Para quién es y quién la hace.',
+            [
+              dos(
+                conMargen(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      etiqueta(industrial ? 'Activo o componente' : m('Cliente')),
+                      if (industrial)
+                        SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
+                      else
+                      // Un subtrabajo comparte el cliente de su trabajo.
+                      if (t.padreId != null)
+                        conMargen(
+                          Text(
+                            store.cliente(t.clienteId)?.nombre ?? m('Sin cliente'),
+                            style: TextStyle(color: P.textoSuave),
+                          ),
+                        )
+                      else
+                        SelectorCliente(
+                          t.clienteId,
+                          (id) => setState(() {
+                            if (id != t.clienteId) t.equipoId = null;
+                            t.clienteId = id;
+                          }),
                         ),
-                      )
-                    else
-                      SelectorCliente(
-                        t.clienteId,
-                        (id) => setState(() {
-                          if (id != t.clienteId) t.equipoId = null;
-                          t.clienteId = id;
-                        }),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              conMargen(
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: etiqueta(m('Trabajadores'))),
-                        if (aptos > 0)
-                          Flexible(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Enlace(
-                                'El más adecuado',
-                                onTap: () => setState(() {
-                                  final m = store.mejorPara(t);
-                                  if (m != null) t.trabajadorIds = [m.id];
-                                }),
+                conMargen(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: etiqueta(m('Trabajadores'))),
+                          if (aptos > 0)
+                            Flexible(
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Enlace(
+                                  'El más adecuado',
+                                  onTap: () => setState(() {
+                                    final m = store.mejorPara(t);
+                                    if (m != null) t.trabajadorIds = [m.id];
+                                  }),
+                                ),
                               ),
                             ),
-                          ),
+                        ],
+                      ),
+                      SelectorTrabajadores(t, () => setState(() {})),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        Bloque(
+          'Cuándo',
+          descripcion: industrial ? 'Fecha y hora previstas para esta OT.' : 'Fecha, hora y cada cuánto se repite.',
+          [
+            SelectorCuando(
+              t,
+              () => setState(() {}),
+              error: errorHorario,
+              key: _claveCuando,
+              conPeriodicidad: !industrial || t.esPlantilla,
+            ),
+          ],
+        ),
+        Bloque(
+          industrial ? 'Duración prevista' : 'Cuánto',
+          descripcion: industrial
+              ? 'Tiempo estimado de la intervención.'
+              : m('Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.'),
+          [
+            etiqueta('Duración'),
+            conMargen(
+              DropdownButtonFormField<int>(
+                isExpanded: true,
+                initialValue: t.duracionMin,
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.timer_outlined, size: 18)),
+                items: [
+                  for (final m in {...duraciones, t.duracionMin}.toList()..sort())
+                    DropdownMenuItem(value: m, child: Text(duracion(m))),
+                ],
+                onChanged: (m) => setState(() => t.duracionMin = m!),
+              ),
+            ),
+          ],
+        ),
+        if (!industrial)
+          Bloque('Precio', descripcion: 'Lo que se cobra cada vez que se hace, sin IVA. Solo lo ves tú.', [
+            dos(
+              campo('Importe', precio, hint: 'Ej.: 120'),
+              conMargen(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    etiqueta('IVA'),
+                    DropdownButtonFormField<double>(
+                      isExpanded: true,
+                      initialValue: t.iva,
+                      items: [
+                        for (final v in {21.0, 10.0, 4.0, 0.0, t.iva})
+                          DropdownMenuItem(value: v, child: Text('${v.toStringAsFixed(0)} %')),
                       ],
+                      onChanged: (v) => setState(() => t.iva = v!),
                     ),
-                    SelectorTrabajadores(t, () => setState(() {})),
                   ],
                 ),
               ),
             ),
           ]),
-        Bloque('Cuándo', descripcion: industrial ? 'Fecha y hora previstas para esta OT.' : 'Fecha, hora y cada cuánto se repite.', [
-          SelectorCuando(t, () => setState(() {}), error: errorHorario, key: _claveCuando, conPeriodicidad: !industrial || t.esPlantilla),
-        ]),
-        Bloque(industrial ? 'Duración prevista' : 'Cuánto', descripcion: industrial ? 'Tiempo estimado de la intervención.' : m('Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.'), [
-          etiqueta('Duración'),
-          conMargen(
-            DropdownButtonFormField<int>(
-              isExpanded: true,
-              initialValue: t.duracionMin,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.timer_outlined, size: 18)),
-              items: [
-                for (final m in {...duraciones, t.duracionMin}.toList()..sort())
-                  DropdownMenuItem(value: m, child: Text(duracion(m))),
-              ],
-              onChanged: (m) => setState(() => t.duracionMin = m!),
-            ),
-          ),
-        ]),
-        if (!industrial) Bloque('Precio', descripcion: 'Lo que se cobra cada vez que se hace, sin IVA. Solo lo ves tú.', [
-          dos(
-            campo('Importe', precio, hint: 'Ej.: 120'),
-            conMargen(
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  etiqueta('IVA'),
-                  DropdownButtonFormField<double>(
-                    isExpanded: true,
-                    initialValue: t.iva,
-                    items: [
-                      for (final v in {21.0, 10.0, 4.0, 0.0, t.iva})
-                        DropdownMenuItem(value: v, child: Text('${v.toStringAsFixed(0)} %')),
-                    ],
-                    onChanged: (v) => setState(() => t.iva = v!),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ]),
-        if (!industrial) Bloque(
-          'Competencias',
-          descripcion: m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'),
+        if (!industrial)
+          Bloque('Competencias', descripcion: m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'), [
+            conMargen(chipsCompetencias(t.competencias, () => setState(() {}))),
+          ]),
+        Bloque(
+          industrial ? 'Intervención' : 'Equipo y notas',
+          descripcion: industrial
+              ? 'Instrucciones, mediciones y repuestos necesarios.'
+              : 'La máquina, dónde está y lo que haya que saber.',
           [
-          conMargen(chipsCompetencias(t.competencias, () => setState(() {}))),
-        ]),
-        Bloque(industrial ? 'Intervención' : 'Equipo y notas', descripcion: industrial ? 'Instrucciones, mediciones y repuestos necesarios.' : 'La máquina, dónde está y lo que haya que saber.', [
-          if (!industrial && !t.esPlantilla)
-            dos(
-              CampoFecha(
-                'Último mantenimiento',
-                t.ultimo,
-                (d) => setState(() {
-                  t.ultimo = d;
-                  if (t.periodicidad.repite) t.proximo = masDias(d, t.periodicidad.dias);
-                }),
-                hasta: hoy(), // lo que ya se hizo no puede ser futuro
+            if (!industrial && !t.esPlantilla)
+              dos(
+                CampoFecha(
+                  'Último mantenimiento',
+                  t.ultimo,
+                  (d) => setState(() {
+                    t.ultimo = d;
+                    if (t.periodicidad.repite) t.proximo = masDias(d, t.periodicidad.dias);
+                  }),
+                  hasta: hoy(), // lo que ya se hizo no puede ser futuro
+                ),
+                CampoFecha('Solicitado el', t.solicitud, (d) => setState(() => t.solicitud = d)),
               ),
-              CampoFecha('Solicitado el', t.solicitud, (d) => setState(() => t.solicitud = d)),
-            ),
-          if (!industrial && t.clienteId != null && store.equiposDe(t.clienteId!).isNotEmpty)
-            conMargen(
-              DropdownButtonFormField<String?>(
-                isExpanded: true,
-                initialValue: store.equipo(t.equipoId)?.id,
-                decoration: InputDecoration(labelText: m('Equipo del cliente')),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Sin equipo')),
-                  for (final e in store.equiposDe(t.clienteId!)) DropdownMenuItem(value: e.id, child: Text(e.nombre)),
-                ],
-                onChanged: (id) => setState(() => _ponerEquipo(id)),
+            if (!industrial && t.clienteId != null && store.equiposDe(t.clienteId!).isNotEmpty)
+              conMargen(
+                DropdownButtonFormField<String?>(
+                  isExpanded: true,
+                  initialValue: store.equipo(t.equipoId)?.id,
+                  decoration: InputDecoration(labelText: m('Equipo del cliente')),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Sin equipo')),
+                    for (final e in store.equiposDe(t.clienteId!)) DropdownMenuItem(value: e.id, child: Text(e.nombre)),
+                  ],
+                  onChanged: (id) => setState(() => _ponerEquipo(id)),
+                ),
               ),
+            if (!industrial) campo('Ubicación', ubicacion, hint: 'Sala de máquinas, planta 2…'),
+            if (!industrial) dos(campo('Marca', marca), campo('Modelo', modelo)),
+            if (!industrial)
+              dos(
+                campo('Número de serie', serie),
+                CampoFecha('Fecha de instalación', t.instalacion, (d) => setState(() => t.instalacion = d)),
+              ),
+            campo('Notas / observaciones', notas, lineas: 3),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(industrial ? 'Orden habilitada' : 'Activo'),
+              value: t.activa,
+              onChanged: (v) => setState(() => t.activa = v),
             ),
-          if (!industrial) campo('Ubicación', ubicacion, hint: 'Sala de máquinas, planta 2…'),
-          if (!industrial) dos(campo('Marca', marca), campo('Modelo', modelo)),
-          if (!industrial) dos(
-            campo('Número de serie', serie),
-            CampoFecha('Fecha de instalación', t.instalacion, (d) => setState(() => t.instalacion = d)),
-          ),
-          campo('Notas / observaciones', notas, lineas: 3),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(industrial ? 'Orden habilitada' : 'Activo'),
-            value: t.activa,
-            onChanged: (v) => setState(() => t.activa = v),
-          ),
-        ]),
+          ],
+        ),
       ],
     );
   }
@@ -2019,22 +2054,41 @@ class SelectorActivo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => BotonMenu<String>(
-    tooltip: 'Asignar a un activo o componente', seleccionado: valor ?? '',
-    opciones: [('', const Text('Sin activo')),
+    tooltip: 'Asignar a un activo o componente',
+    seleccionado: valor ?? '',
+    opciones: [
+      ('', const Text('Sin activo')),
       for (final (a, nivel) in arbolActivos())
-        (a.id, Padding(padding: EdgeInsets.only(left: 12.0 * nivel.clamp(0, 4)),
-          child: Text(a.titulo, maxLines: 1, overflow: TextOverflow.ellipsis)))],
+        (
+          a.id,
+          Padding(
+            padding: EdgeInsets.only(left: 12.0 * nivel.clamp(0, 4)),
+            child: Text(a.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+    ],
     onSelected: (id) => onChanged(id.isEmpty ? null : id),
     child: Container(
       height: compacto ? 36 : 46,
       padding: EdgeInsets.symmetric(horizontal: compacto ? 6 : 12),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(P.radioControl),
-        border: compacto ? null : Border.all(color: P.borde), color: compacto ? null : P.superficie),
-      child: Row(children: [
-        Expanded(child: Text(store.activo(valor)?.titulo ?? 'Elegir activo', maxLines: 1,
-          overflow: TextOverflow.ellipsis, style: TextStyle(color: valor == null ? P.textoSuave : P.texto))),
-        Icon(Icons.unfold_more_rounded, size: 16, color: P.textoSuave),
-      ]),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(P.radioControl),
+        border: compacto ? null : Border.all(color: P.borde),
+        color: compacto ? null : P.superficie,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              store.activo(valor)?.titulo ?? 'Elegir activo',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: valor == null ? P.textoSuave : P.texto),
+            ),
+          ),
+          Icon(Icons.unfold_more_rounded, size: 16, color: P.textoSuave),
+        ],
+      ),
     ),
   );
 }
@@ -2154,13 +2208,22 @@ class SelectorEstado extends StatelessWidget {
       for (final e in estadosTrabajo)
         MenuItemButton(
           leadingIcon: industrial
-              ? Icon(e == EstadoTrabajo.realizado ? Icons.check_circle_outline_rounded : Icons.radio_button_unchecked_rounded, size: 18, color: P.textoSuave)
+              ? Icon(
+                  e == EstadoTrabajo.realizado
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 18,
+                  color: P.textoSuave,
+                )
               : Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
-          ),
-          trailingIcon: e == t.estado || (industrial && e == EstadoTrabajo.pendiente && t.estado != EstadoTrabajo.realizado) ? Icon(Icons.check_rounded, size: 18, color: P.textoSuave) : null,
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
+                ),
+          trailingIcon:
+              e == t.estado || (industrial && e == EstadoTrabajo.pendiente && t.estado != EstadoTrabajo.realizado)
+              ? Icon(Icons.check_rounded, size: 18, color: P.textoSuave)
+              : null,
           onPressed: () => _elegir(context, e),
           child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 110), child: Text(e.etiqueta)),
         ),
@@ -2169,7 +2232,12 @@ class SelectorEstado extends StatelessWidget {
       abierto: menu.isOpen,
       compacta: true,
       onTap: () => menu.isOpen ? menu.close() : menu.open(),
-      child: Tooltip(message: 'Cambiar el estado', child: industrial ? Text(t.estado.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)) : Pill(t.estado.etiqueta, t.estado.color, punto: true)),
+      child: Tooltip(
+        message: 'Cambiar el estado',
+        child: industrial
+            ? Text(t.estado.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))
+            : Pill(t.estado.etiqueta, t.estado.color, punto: true),
+      ),
     ),
   );
 }
@@ -2235,7 +2303,10 @@ class SelectorTrabajadores extends StatelessWidget {
               ),
             ),
           ),
-        if (!industrial && ofrecerSubtrabajos && store.descendientes(t.id).isNotEmpty && t.trabajadorIds.isNotEmpty) ...[
+        if (!industrial &&
+            ofrecerSubtrabajos &&
+            store.descendientes(t.id).isNotEmpty &&
+            t.trabajadorIds.isNotEmpty) ...[
           const Divider(height: 8),
           MenuItemButton(
             leadingIcon: Icon(Icons.account_tree_outlined, size: 18, color: P.morado),
@@ -2405,24 +2476,25 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                 ),
               ),
               if (widget.conPeriodicidad) const SizedBox(width: 12),
-              if (widget.conPeriodicidad) Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    etiqueta('Se repite'),
-                    DropdownButtonFormField<Periodicidad>(
-                      isExpanded: true,
-                      initialValue: t.periodicidad,
-                      items: [
-                        for (final p in Periodicidad.values.where(opciones.contains))
-                          DropdownMenuItem(value: p, child: Text(p.etiqueta)),
-                      ],
-                      onChanged: (v) => cambiar(() => t.periodicidad = v!),
-                    ),
-                  ],
+              if (widget.conPeriodicidad)
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      etiqueta('Se repite'),
+                      DropdownButtonFormField<Periodicidad>(
+                        isExpanded: true,
+                        initialValue: t.periodicidad,
+                        items: [
+                          for (final p in Periodicidad.values.where(opciones.contains))
+                            DropdownMenuItem(value: p, child: Text(p.etiqueta)),
+                        ],
+                        onChanged: (v) => cambiar(() => t.periodicidad = v!),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 14),

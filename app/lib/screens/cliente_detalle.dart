@@ -162,7 +162,11 @@ class _Resumen extends StatelessWidget {
                         height: 220,
                         child: Vacio(
                           icono: Marca.iconoTrabajo,
-                          texto: m('Este cliente aún no tiene mantenimientos.\nCréalos desde cero o a partir de una plantilla.'),
+                          texto: industrial
+                              ? 'Este activo aún no tiene órdenes de trabajo.'
+                              : m(
+                                  'Este cliente aún no tiene mantenimientos.\nCréalos desde cero o a partir de una plantilla.',
+                                ),
                           accion: FilledButton(
                             onPressed: () => abrirTareaForm(context, null, clienteId: c.id),
                             child: Text(m('Nuevo trabajo')),
@@ -263,7 +267,7 @@ class _Mantenimientos extends StatelessWidget {
       return Vacio(
         icono: Marca.iconoTrabajo,
         titulo: 'Sin mantenimientos',
-        texto: 'Crea el primero desde cero o a partir de una plantilla.',
+        texto: industrial ? 'Crea el primero.' : 'Crea el primero desde cero o a partir de una plantilla.',
         accion: FilledButton(
           onPressed: () => abrirTareaForm(context, null, clienteId: c.id),
           child: Text(m('Nuevo trabajo')),

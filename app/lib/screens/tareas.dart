@@ -87,11 +87,13 @@ class _TareasPaginaState extends State<TareasPagina> {
               BarraVista(
                 izquierda: [
                   TituloVista(m('Trabajos')),
-                  Pestanas(
-                    opciones: ['Todos · $nTrabajos', 'Plantillas · ${store.plantillas.length}'],
-                    seleccion: pestana,
-                    onChanged: (i) => setState(() => pestana = i),
-                  ),
+                  // Pultec, de momento sin plantillas: solo la lista de órdenes de trabajo.
+                  if (!industrial)
+                    Pestanas(
+                      opciones: ['Todos · $nTrabajos', 'Plantillas · ${store.plantillas.length}'],
+                      seleccion: pestana,
+                      onChanged: (i) => setState(() => pestana = i),
+                    ),
                 ],
                 derecha: [
                   Buscador(
@@ -151,7 +153,9 @@ class _TareasPaginaState extends State<TareasPagina> {
                         icono: Marca.iconoTrabajo,
                         titulo: store.tareas.isEmpty ? m('Aún no hay trabajos') : null,
                         texto: pestana == 0 && nTrabajos == 0
-                            ? m('Crea tu primer trabajo, desde cero o a partir de una plantilla.')
+                            ? (industrial
+                                  ? 'Crea tu primera orden de trabajo.'
+                                  : m('Crea tu primer trabajo, desde cero o a partir de una plantilla.'))
                             : m('No hay trabajos con estos filtros'),
                         // Sin búsqueda ni filtro de tipo: botón para crear (el primero, si aún no hay).
                         accion: q.isEmpty && tipo == null && fecha == 0
