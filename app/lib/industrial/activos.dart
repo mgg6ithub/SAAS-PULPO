@@ -11,7 +11,6 @@ import '../widgets.dart';
 import 'activo.dart';
 import 'iconos.dart';
 import 'gravedad.dart';
-import 'tipo_mantenimiento.dart';
 import 'historicos.dart';
 import 'plan.dart';
 import 'planes.dart';
@@ -26,25 +25,14 @@ TipoMantenimiento? gravedadDe(String activoId) => masGrave(store.otsDe(activoId)
 Color colorEstado(TipoMantenimiento? g) => g?.color ?? P.verde;
 String textoEstado(TipoMantenimiento? g) => g?.etiqueta ?? 'Al día';
 
-/// Filtro de la lista de Activos por estado: 0 = todos; 1.. = tipo de mantenimiento.
-/// Fuera del estado para que «Ver más» de Inicio pueda dejarlo puesto antes de ir.
-final filtroActivos = ValueNotifier(0);
-
 /// Avisa a Activos de que vuelva a la lista (aunque el filtro no cambie), al llegar desde Inicio.
 final _aLaLista = ValueNotifier(0);
 
-/// Desde Inicio: Activos en la lista (nunca dentro de un activo abierto antes) con este filtro.
-void abrirListaActivos(int filtro) {
-  filtroActivos.value = filtro;
-  _aLaLista.value++;
-}
+/// Desde Inicio: Activos en la lista (nunca dentro de un activo abierto antes).
+void abrirListaActivos() => _aLaLista.value++;
 
-const _filtros = ['Todos', 'Preventivo', 'No crítico', 'Crítico'];
-
-bool _pasaFiltro(TipoMantenimiento? g) => switch (filtroActivos.value) {
-  0 => true,
-  final f => g?.index == f - 1,
-};
+/// Filtro de criticidad de la pestaña Mantenimientos de un activo: 0 = todos; 1.. = tipo.
+const _filtrosCriticidad = ['Todos', 'Preventivo', 'No crítico', 'Crítico'];
 
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
@@ -61,13 +49,11 @@ class _ActivosState extends State<Activos> {
   @override
   void initState() {
     super.initState();
-    filtroActivos.addListener(_cambio);
     _aLaLista.addListener(_cambio);
   }
 
   @override
   void dispose() {
-    filtroActivos.removeListener(_cambio);
     _aLaLista.removeListener(_cambio);
     super.dispose();
   }
@@ -79,7 +65,7 @@ class _ActivosState extends State<Activos> {
     if (abierto != null) return ActivoDetalle(activoId: abierto!, onVolver: () => setState(() => abierto = null));
     final activos = store.hijosDe(null).where((a) {
       final t = '${a.tag} ${a.nombre} ${a.fabricante} ${a.modelo} ${a.division}'.toLowerCase();
-      return t.contains(q.toLowerCase()) && _pasaFiltro(gravedadDe(a.id));
+      return t.contains(q.toLowerCase());
     }).toList();
     return Padding(
       padding: margenPagina,
@@ -99,15 +85,8 @@ class _ActivosState extends State<Activos> {
           ),
           const SizedBox(height: 8),
           BarraVista(
-            izquierda: [
-              const SizedBox.shrink(),
-              Pestanas(
-                opciones: _filtros,
-                colores: [null, for (final t in TipoMantenimiento.values) t.color],
-                seleccion: filtroActivos.value,
-                onChanged: (i) => filtroActivos.value = i,
-              ),
-            ],
+            // Sin filtro de criticidad: un activo no es crítico; lo son sus mantenimientos (dentro del activo).
+            izquierda: const [SizedBox.shrink()],
             derecha: [Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v))],
           ),
           const SizedBox(height: huecoVista),
@@ -115,13 +94,11 @@ class _ActivosState extends State<Activos> {
             child: activos.isEmpty
                 ? Vacio(
                     icono: Icons.precision_manufacturing_outlined,
-                    titulo: q.isEmpty && filtroActivos.value == 0 ? 'Aún no tienes activos' : null,
-                    texto: q.isEmpty && filtroActivos.value != 0
-                        ? 'Ninguna máquina con este estado'
-                        : q.isEmpty
+                    titulo: q.isEmpty ? 'Aún no tienes activos' : null,
+                    texto: q.isEmpty
                         ? 'Da de alta tus máquinas (camiones, compresores, prensas…) y sus componentes.'
                         : 'Ningún activo coincide con la búsqueda',
-                    accion: q.isEmpty && filtroActivos.value == 0
+                    accion: q.isEmpty
                         ? FilledButton(
                             onPressed: () => abrirActivoForm(context),
                             child: const Text('Añadir el primero'),
@@ -180,7 +157,6 @@ class _TablaActivos extends StatelessWidget {
             if (ancho) const Col('Horas totales', ancho: 120, derecha: true),
             if (medio) const Col('Mantenimientos', ancho: 130, derecha: true),
             if (medio) const Col('Próximo mantenimiento', ancho: 160),
-            const Col('Criticidad', ancho: 160),
             if (medio)
               Col(
                 'Componentes',
@@ -225,10 +201,6 @@ class _TablaActivos extends StatelessWidget {
                   message: 'El más cercano de sus mantenimientos y los de sus componentes.',
                   child: celdaTexto(proximaFecha(a), suave: true),
                 ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: g == null ? const Pill('Al día', P.verde, punto: true) : PillTipo(g),
-              ),
               if (medio) celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
             ];
           },
@@ -288,6 +260,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
 
   /// Qué enseña Resumen: 0 = mantenimientos (por defecto), 1 = subcomponentes.
   int vista = 0;
+  int criticidad = 0;
 
   void _abrir(String id) => setState(() {
     Tooltip.dismissAllToolTips();
@@ -311,6 +284,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           ),
         ),
       );
+    }
+    if (criticidad != 0) planes = planes.where((p) => p.tipo.index == criticidad - 1).toList();
+    if (planes.isEmpty) {
+      return Vacio(icono: Icons.filter_alt_off_outlined, texto: 'Ningún mantenimiento con esta criticidad');
     }
     final proximos = {for (final p in planes) p.id: proximoPlan(p) ?? DateTime(9999)};
     final lista = [...planes]..sort((x, y) => proximos[x.id]!.compareTo(proximos[y.id]!));
@@ -427,7 +404,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         runSpacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Pill(textoEstado(g), colorEstado(g), punto: true),
                           _dato(
                             'Próximo',
                             proximo == null ? 'Sin estimar' : '${relativo(proximo)} · ${fecha(proximo)}',
@@ -444,6 +420,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             seleccion: vista,
                             onChanged: (i) => setState(() => vista = i),
                           ),
+                          if (vista == 0) ...[
+                            const SizedBox(width: 12),
+                            Pestanas(
+                              opciones: _filtrosCriticidad,
+                              colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                              seleccion: criticidad,
+                              onChanged: (i) => setState(() => criticidad = i),
+                            ),
+                          ],
                           const Spacer(),
                           vista == 0
                               ? BotonPrimario(

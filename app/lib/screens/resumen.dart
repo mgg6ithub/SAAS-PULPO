@@ -14,9 +14,9 @@ import '../widgets.dart';
 import 'estadisticas.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
-import 'tareas.dart' show filtroFechaTrabajos;
+import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos;
 import '../marca.dart';
-import '../industrial/activos.dart' show abrirActivoForm, abrirListaActivos;
+import '../industrial/activos.dart' show abrirActivoForm;
 import '../industrial/vistazo.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
@@ -135,8 +135,9 @@ class Resumen extends StatelessWidget {
                       VistazoActivos(
                         onAbrir: onCliente ?? (_) {},
                         onVerMas: (f) {
-                          abrirListaActivos(f);
-                          onIr(Seccion.clientes);
+                          filtroFechaTrabajos.value = 0;
+                          filtroCriticidadTrabajos.value = f;
+                          onIr(Seccion.tareas);
                         },
                         columnas: dosCol ? 3 : 1,
                       ),

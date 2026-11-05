@@ -11,6 +11,9 @@ import '../marca.dart';
 
 /// Filtro por fecha que llega desde las cifras de Inicio: 0 ninguno, 1 hoy, 2 semana, 3 vencidos, 4 hechos.
 final filtroFechaTrabajos = ValueNotifier<int>(0);
+
+/// Pultec: filtro por criticidad (0 = todas; 1.. = tipo de mantenimiento), también desde Inicio.
+final filtroCriticidadTrabajos = ValueNotifier<int>(0);
 final _filtrosFecha = [('Para hoy', P.morado), ('Esta semana', P.teal), ('Vencidos', P.rojo), ('Hechos', P.verde)];
 
 bool _pasaFecha(Tarea t, int f) {
@@ -47,11 +50,13 @@ class _TareasPaginaState extends State<TareasPagina> {
   void initState() {
     super.initState();
     filtroFechaTrabajos.addListener(_alCambiarFecha);
+    filtroCriticidadTrabajos.addListener(_alCambiarFecha);
   }
 
   @override
   void dispose() {
     filtroFechaTrabajos.removeListener(_alCambiarFecha);
+    filtroCriticidadTrabajos.removeListener(_alCambiarFecha);
     super.dispose();
   }
 
@@ -61,12 +66,14 @@ class _TareasPaginaState extends State<TareasPagina> {
   Widget build(BuildContext context) {
     final nTrabajos = store.tareas.length - store.plantillas.length;
     final fecha = filtroFechaTrabajos.value;
+    final criticidad = filtroCriticidadTrabajos.value;
     final filtradas =
         store.tareas.where((t) {
           if (pestana == 0 && t.esPlantilla) return false;
           if (pestana == 1 && !t.esPlantilla) return false;
           if (tipo != null && t.tipo != tipo) return false;
           if (!_pasaFecha(t, fecha)) return false;
+          if (criticidad != 0 && t.tipoMantenimiento?.index != criticidad - 1) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
               .toLowerCase();
           return texto.contains(q.toLowerCase());
@@ -126,6 +133,18 @@ class _TareasPaginaState extends State<TareasPagina> {
                       const SizedBox(width: 6),
                     ],
                     Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
+                    if (industrial) ...[
+                      for (final x in TipoMantenimiento.values) ...[
+                        _ChipTipo(
+                          criticidad == x.index + 1 ? '${x.etiqueta}  ×' : x.etiqueta,
+                          x.color,
+                          criticidad == x.index + 1,
+                          () => filtroCriticidadTrabajos.value = criticidad == x.index + 1 ? 0 : x.index + 1,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
+                    ],
                     for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
                       _ChipTipo(
                         x.nombre,
@@ -164,7 +183,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                                   : m('Crea tu primer trabajo, desde cero o a partir de una plantilla.'))
                             : m('No hay trabajos con estos filtros'),
                         // Sin búsqueda ni filtro de tipo: botón para crear (el primero, si aún no hay).
-                        accion: q.isEmpty && tipo == null && fecha == 0
+                        accion: q.isEmpty && tipo == null && fecha == 0 && criticidad == 0
                             ? FilledButton(
                                 onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                                 child: Text(

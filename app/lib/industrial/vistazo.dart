@@ -6,7 +6,6 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'iconos.dart';
-import 'activos.dart';
 import 'gravedad.dart';
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
@@ -57,12 +56,13 @@ class LeyendaEstados extends StatelessWidget {
   }
 }
 
-/// Inicio de Pultec: una columna por estado de mantenimiento con sus 3 primeros activos.
-/// «Ver más» lleva a Activos filtrado por ese tipo; al pulsar una máquina se abre su ficha.
+/// Inicio de Pultec: una columna por criticidad con sus primeras órdenes de trabajo pendientes.
+/// Cada tarjeta: arriba el activo principal y debajo el mantenimiento. La criticidad es del mantenimiento,
+/// no del activo. «Ver todas» lleva a Órdenes de trabajo con esa criticidad.
 class VistazoActivos extends StatelessWidget {
   final ValueChanged<String> onAbrir;
 
-  /// Abre Activos con el filtro ya puesto (0 = todos; 1.. = tipo de mantenimiento).
+  /// Abre Órdenes de trabajo con la criticidad ya puesta (0 = todas; 1.. = tipo de mantenimiento).
   final ValueChanged<int> onVerMas;
   final int columnas;
   const VistazoActivos({super.key, required this.onAbrir, required this.onVerMas, required this.columnas});
@@ -71,7 +71,8 @@ class VistazoActivos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activos = [for (final a in store.hijosDe(null).where((a) => a.activo)) (a, gravedadDe(a.id))];
+    final ots = [...store.tareas, ...store.subtareas].where((t) => otPendiente(t) && !t.esPlantilla).toList()
+      ..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -79,11 +80,11 @@ class VistazoActivos extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Estado de los activos',
+                'Mantenimientos por criticidad',
                 style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
               ),
             ),
-            Enlace('Ver todos', onTap: () => onVerMas(0)),
+            Enlace('Ver todas', onTap: () => onVerMas(0)),
           ],
         ),
         const SizedBox(height: 14),
@@ -93,9 +94,9 @@ class VistazoActivos extends StatelessWidget {
             for (final t in TipoMantenimiento.values)
               _Columna(
                 tipo: t,
-                activos: [
-                  for (final (a, g) in activos)
-                    if (g == t) a,
+                ots: [
+                  for (final o in ots)
+                    if (o.tipoMantenimiento == t) o,
                 ],
                 onAbrir: onAbrir,
                 onVerMas: () => onVerMas(t.index + 1),
@@ -107,18 +108,29 @@ class VistazoActivos extends StatelessWidget {
   }
 }
 
+/// El activo principal (sin padre) del que cuelga este activo o componente.
+Activo? _raiz(String? id) {
+  var a = id == null ? null : store.activo(id);
+  while (a?.padreId != null) {
+    final p = store.activo(a!.padreId!);
+    if (p == null) break;
+    a = p;
+  }
+  return a;
+}
+
 class _Columna extends StatelessWidget {
   final TipoMantenimiento tipo;
-  final List<Activo> activos;
+  final List<Tarea> ots;
   final ValueChanged<String> onAbrir;
   final VoidCallback onVerMas;
-  const _Columna({required this.tipo, required this.activos, required this.onAbrir, required this.onVerMas});
+  const _Columna({required this.tipo, required this.ots, required this.onAbrir, required this.onVerMas});
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      // Qué significa cada tipo, al pasar el ratón; al pulsar, Activos con ese filtro.
+      // Qué significa cada tipo, al pasar el ratón; al pulsar, Órdenes de trabajo con esa criticidad.
       Align(
         alignment: Alignment.centerLeft,
         child: Tooltip(
@@ -134,7 +146,7 @@ class _Columna extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(tipo.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(width: 6),
-                  Text('${activos.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
+                  Text('${ots.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
                 ],
               ),
             ),
@@ -142,54 +154,64 @@ class _Columna extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 10),
-      if (activos.isEmpty)
-        Text('Ningún activo', style: TextStyle(color: P.textoSuave, fontSize: 13))
+      if (ots.isEmpty)
+        Text('Ningún mantenimiento pendiente', style: TextStyle(color: P.textoSuave, fontSize: 13))
       else
-        for (final a in activos.take(VistazoActivos._maximo)) ...[
-          HoverCard(
-            padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
-            onTap: () => onAbrir(a.id),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        for (final o in ots.take(VistazoActivos._maximo)) ...[
+          Builder(
+            builder: (context) {
+              final a = _raiz(o.activoId);
+              return HoverCard(
+                padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+                onTap: a == null ? null : () => onAbrir(a.id),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconoActivo(a.icono, size: 20, color: tipo.color),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        a.titulo,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -.2),
-                      ),
+                    Row(
+                      children: [
+                        if (a != null) IconoActivo(a.icono, size: 20, color: P.textoSuave),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            a?.titulo ?? 'Sin activo',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: P.textoSuave, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        puntoTipo(tipo.color),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            o.nombre,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -.2),
+                          ),
+                        ),
+                        if (o.proximo != null)
+                          Text(relativo(o.proximo!), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  [_pendientes(a.id), if (a.division.isNotEmpty) a.division].where((x) => x.isNotEmpty).join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: P.textoSuave, fontSize: 13),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 6),
         ],
-      if (activos.length > VistazoActivos._maximo)
+      if (ots.length > VistazoActivos._maximo)
         Align(
           alignment: Alignment.centerLeft,
-          child: Enlace('Ver todos (${activos.length})', onTap: onVerMas),
+          child: Enlace('Ver todas (${ots.length})', onTap: onVerMas),
         ),
     ],
   );
-
-  String _pendientes(String id) {
-    final n = store.otsDe(id).where(otPendiente).length;
-    return '$n ${n == 1 ? 'orden pendiente' : 'órdenes pendientes'}';
-  }
 }
 
 /// Inicio de Pultec: mantenimientos con alerta previa cuya antelación ya ha llegado, para preparar a tiempo
