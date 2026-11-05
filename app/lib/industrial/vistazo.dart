@@ -337,7 +337,7 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                                         child: Text(
                                           a == null
                                               ? 'Sin activo'
-                                              : [a.nombre, a.tag].where((x) => x.isNotEmpty).join(' - '),
+                                              : a.titulo,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(color: P.textoSuave, fontSize: 14.5),

@@ -413,7 +413,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                 IconoActivo(a.icono, size: 28, color: P.textoSuave),
               ],
             ),
-            titulo: a.titulo.isEmpty ? 'Activo' : [a.nombre, a.tag].where((x) => x.isNotEmpty).join(' - '),
+            titulo: a.titulo.isEmpty ? 'Activo' : a.titulo,
             subtitulo: [
               if (padre != null) 'Componente de ${padre.titulo}',
               a.fabricante,

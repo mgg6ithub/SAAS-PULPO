@@ -54,7 +54,8 @@ class Activo {
   }) : fechaLectura = fechaLectura ?? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
   /// "CAM-01 · Camión cisterna", o lo que haya.
-  String get titulo => [tag, nombre].where((x) => x.isNotEmpty).join(' · ');
+  /// En todo el programa: «Planta de secado térmico - PST-02» (nombre primero, código después).
+  String get titulo => [nombre, tag].where((x) => x.isNotEmpty).join(' - ');
 
   double get horasDesdeMantenimiento => math.max(0, horas - horasUltimoMantenimiento);
   double? get horasRestantes => cadaHoras == null ? null : cadaHoras! - horasDesdeMantenimiento;
