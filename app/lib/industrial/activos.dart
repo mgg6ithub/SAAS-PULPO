@@ -484,6 +484,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                           ),
                           _dato('Contador', horas(horasHoy(a))),
                           _dato('Órdenes pendientes', '${ots.where(otPendiente).length}'),
+                          // Partes con incidencia o sin hacer que aún nadie ha solucionado.
+                          if (ots.where(incidenciaAbierta).length case final n when n > 0)
+                            Pill(n == 1 ? '1 incidencia abierta' : '$n incidencias abiertas', P.rojo, punto: true),
                         ],
                       ),
                       const SizedBox(height: huecoVista),
@@ -547,15 +550,16 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       onTerminar: () => setState(() => vuelta++),
                     ),
                   ),
+                  // Solo las pendientes: las hechas están en Histórico.
                   2 =>
-                    ots.isEmpty
+                    ots.where(otPendiente).isEmpty
                         ? const Vacio(
                             icono: Icons.assignment_outlined,
-                            titulo: 'Sin órdenes de trabajo',
-                            texto: 'Las órdenes de este activo y sus componentes aparecerán aquí.',
+                            titulo: 'Sin órdenes pendientes',
+                            texto: 'Las órdenes por hacer de este activo y sus componentes aparecerán aquí; las hechas, en Histórico.',
                           )
                         : TablaTrabajos(
-                            ots,
+                            ots.where(otPendiente).toList(),
                             conCliente: false,
                             nombre: 'orden de trabajo',
                             onAbrir: (id) => setState(() => tareaId = id),

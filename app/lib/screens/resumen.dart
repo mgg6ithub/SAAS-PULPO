@@ -14,7 +14,7 @@ import '../widgets.dart';
 import 'estadisticas.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
-import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos;
+import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos, historicoTrabajos;
 import '../marca.dart';
 import '../industrial/activos.dart' show abrirActivoForm;
 import '../industrial/vistazo.dart';
@@ -142,7 +142,9 @@ class Resumen extends StatelessWidget {
                         dosCol: dosCol,
                         // Abre Órdenes de trabajo con ese filtro (Para hoy, Sin técnico, Vencidos, Hechos).
                         onTap: (f) {
-                          filtroFechaTrabajos.value = industrial && f == 4 ? 6 : f;
+                          // Pultec: «Completados» abre el histórico; el resto, lo pendiente con su filtro.
+                          historicoTrabajos.value = industrial && f == 4;
+                          filtroFechaTrabajos.value = industrial && f == 4 ? 0 : f;
                           filtroCriticidadTrabajos.value = 0;
                           onIr(Seccion.tareas);
                         },
@@ -158,6 +160,7 @@ class Resumen extends StatelessWidget {
                         onAbrir: onTarea ?? (_) {},
                         onVerMas: (f) {
                           filtroFechaTrabajos.value = periodoInicio.value;
+                          historicoTrabajos.value = false;
                           filtroCriticidadTrabajos.value = f;
                           onIr(Seccion.tareas);
                         },

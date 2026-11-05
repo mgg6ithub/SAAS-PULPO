@@ -15,6 +15,11 @@ final filtroFechaTrabajos = ValueNotifier<int>(0);
 /// Pultec: filtro por criticidad (0 = todas; 1.. = tipo de mantenimiento), también desde Inicio.
 final filtroCriticidadTrabajos = ValueNotifier<int>(0);
 
+/// Pultec: Órdenes de trabajo partida en dos: pendientes (false) o histórico de las hechas (true).
+final historicoTrabajos = ValueNotifier<bool>(false);
+
+bool _hecha(Tarea t) => t.estado == EstadoTrabajo.realizado;
+
 /// Pultec: en vez de «Esta semana», «Sin técnico» (órdenes pendientes que nadie tiene asignadas).
 final _filtrosFecha = [
   ('Para hoy', P.morado, Icons.today_rounded),
@@ -65,12 +70,14 @@ class _TareasPaginaState extends State<TareasPagina> {
     super.initState();
     filtroFechaTrabajos.addListener(_alCambiarFecha);
     filtroCriticidadTrabajos.addListener(_alCambiarFecha);
+    historicoTrabajos.addListener(_alCambiarFecha);
   }
 
   @override
   void dispose() {
     filtroFechaTrabajos.removeListener(_alCambiarFecha);
     filtroCriticidadTrabajos.removeListener(_alCambiarFecha);
+    historicoTrabajos.removeListener(_alCambiarFecha);
     super.dispose();
   }
 
@@ -86,6 +93,7 @@ class _TareasPaginaState extends State<TareasPagina> {
           if (pestana == 0 && t.esPlantilla) return false;
           if (pestana == 1 && !t.esPlantilla) return false;
           if (tipo != null && t.tipo != tipo) return false;
+          if (industrial && !t.esPlantilla && _hecha(t) != historicoTrabajos.value) return false;
           if (!pasaFechaTrabajo(t, fecha)) return false;
           if (criticidad != 0 && t.tipoMantenimiento?.index != criticidad - 1) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
@@ -108,6 +116,20 @@ class _TareasPaginaState extends State<TareasPagina> {
               BarraVista(
                 izquierda: [
                   TituloVista(m('Trabajos')),
+                  // Pultec: pendientes y, aparte, el histórico de las hechas (para que no sea una lista sin fin).
+                  if (industrial)
+                    Pestanas(
+                      opciones: [
+                        'Pendientes · ${store.tareas.where((t) => !t.esPlantilla && !_hecha(t)).length}',
+                        'Histórico · ${store.tareas.where((t) => !t.esPlantilla && _hecha(t)).length}',
+                      ],
+                      iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                      seleccion: historicoTrabajos.value ? 1 : 0,
+                      onChanged: (i) {
+                        historicoTrabajos.value = i == 1;
+                        filtroFechaTrabajos.value = 0;
+                      },
+                    ),
                   // Pultec: la criticidad como filtro, igual que en los mantenimientos de un activo.
                   if (industrial)
                     Pestanas(
@@ -140,70 +162,76 @@ class _TareasPaginaState extends State<TareasPagina> {
                   onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                 ),
               ),
-              const SizedBox(height: huecoVista),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: industrial
-                    ? Row(
-                        // Pultec: «Todos» y un solo filtro a la vez; al tocar el marcado, vuelve a «Todos».
-                        children: [
-                          // (número de filtro, etiqueta, color, icono); sin «Hechos»: lo cubre «Completados».
-                          for (final (i, nombre, color, icono) in [
-                            (0, 'Todos', P.textoSuave, null),
-                            for (final (j, (n, c, ic)) in _filtrosFecha.indexed)
-                              if (j != 3) (j + 1, n, c, ic),
-                            (6, 'Completados', P.verde, Icons.task_alt_rounded),
-                            (5, 'Pendientes', P.morado, Icons.radio_button_unchecked_rounded),
-                            (7, 'Automatizaciones', P.ambar, Icons.bolt_rounded),
-                          ]) ...[
-                            _ChipTipo(
-                              nombre,
-                              color,
-                              fecha == i,
-                              () => filtroFechaTrabajos.value = fecha == i ? 0 : i,
-                              icono: icono,
-                              punto: i != 0,
-                            ),
-                            const SizedBox(width: 6),
-                            // «Todos» aparte del resto.
-                            if (i == 0)
-                              Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                          ],
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          // Por fecha (las mismas cifras de Inicio): al tocar una se filtra; al tocarla otra vez, se quita.
-                          for (final (i, (nombre, color, icono)) in _filtrosFecha.indexed) ...[
-                            _ChipTipo(
-                              fecha == i + 1 ? '$nombre  ×' : nombre,
-                              color,
-                              fecha == i + 1,
-                              () => filtroFechaTrabajos.value = fecha == i + 1 ? 0 : i + 1,
-                              icono: icono,
-                            ),
-                            const SizedBox(width: 6),
-                          ],
-                          Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                          // Pultec: sin etiquetas de tipo («Otro»); se filtra por fecha y criticidad.
-                          if (!industrial)
-                            for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
+              // En el histórico no hacen falta los filtros de lo pendiente.
+              if (!(industrial && historicoTrabajos.value)) ...[
+                const SizedBox(height: huecoVista),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: industrial
+                      ? Row(
+                          // Pultec: «Todos» y un solo filtro a la vez; al tocar el marcado, vuelve a «Todos».
+                          children: [
+                            // (número de filtro, etiqueta, color, icono); sin «Hechos»: lo cubre «Completados».
+                            for (final (i, nombre, color, icono) in [
+                              (0, 'Todos', P.textoSuave, null),
+                              for (final (j, (n, c, ic)) in _filtrosFecha.indexed)
+                                if (j != 3) (j + 1, n, c, ic),
+                              (7, 'Automatizaciones', P.ambar, Icons.bolt_rounded),
+                            ]) ...[
                               _ChipTipo(
-                                x.nombre,
-                                x.color,
-                                tipo == x.nombre,
-                                () => setState(() => tipo = tipo == x.nombre ? null : x.nombre),
+                                nombre,
+                                color,
+                                fecha == i,
+                                () => filtroFechaTrabajos.value = fecha == i ? 0 : i,
+                                icono: icono,
+                                punto: i != 0,
+                              ),
+                              const SizedBox(width: 6),
+                              // «Todos» aparte del resto.
+                              if (i == 0)
+                                Container(
+                                  width: 1,
+                                  height: 20,
+                                  color: P.borde,
+                                  margin: const EdgeInsets.only(right: 6),
+                                ),
+                            ],
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            // Por fecha (las mismas cifras de Inicio): al tocar una se filtra; al tocarla otra vez, se quita.
+                            for (final (i, (nombre, color, icono)) in _filtrosFecha.indexed) ...[
+                              _ChipTipo(
+                                fecha == i + 1 ? '$nombre  ×' : nombre,
+                                color,
+                                fecha == i + 1,
+                                () => filtroFechaTrabajos.value = fecha == i + 1 ? 0 : i + 1,
+                                icono: icono,
                               ),
                               const SizedBox(width: 6),
                             ],
-                          for (final e in store.etiquetas) ...[
-                            _ChipTipo(e.nombre, Color(e.color), false, () => _editarEtiqueta(e)),
-                            const SizedBox(width: 6),
+                            Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
+                            // Pultec: sin etiquetas de tipo («Otro»); se filtra por fecha y criticidad.
+                            if (!industrial)
+                              for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
+                                _ChipTipo(
+                                  x.nombre,
+                                  x.color,
+                                  tipo == x.nombre,
+                                  () => setState(() => tipo = tipo == x.nombre ? null : x.nombre),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                            for (final e in store.etiquetas) ...[
+                              _ChipTipo(e.nombre, Color(e.color), false, () => _editarEtiqueta(e)),
+                              const SizedBox(width: 6),
+                            ],
+                            _ChipNueva(() => _editarEtiqueta(null)),
                           ],
-                          _ChipNueva(() => _editarEtiqueta(null)),
-                        ],
-                      ),
-              ),
+                        ),
+                ),
+              ],
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
                 Consejo(
