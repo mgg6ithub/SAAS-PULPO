@@ -428,7 +428,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             ],
           ),
           const SizedBox(height: 18),
-          PestanasOscuras(
+          // Selector sencillo, como el de criticidad.
+          Pestanas(
             opciones: const ['Resumen', 'Datos', 'Órdenes de trabajo', 'Histórico'],
             seleccion: pestana,
             onChanged: (i) => setState(() {
@@ -504,11 +505,19 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       ),
                     ],
                   ),
-                  1 => ActivoForm(
-                    key: ValueKey('${a.id}-$vuelta-${jsonEncode(a.toJson())}'),
-                    original: a,
-                    incrustada: true,
-                    onTerminar: () => setState(() => vuelta++),
+                  // Con las esquinas y el borde de las demás tarjetas y tablas.
+                  1 => Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(P.radio),
+                      border: Border.all(color: P.borde),
+                    ),
+                    child: ActivoForm(
+                      key: ValueKey('${a.id}-$vuelta-${jsonEncode(a.toJson())}'),
+                      original: a,
+                      incrustada: true,
+                      onTerminar: () => setState(() => vuelta++),
+                    ),
                   ),
                   2 =>
                     ots.isEmpty
