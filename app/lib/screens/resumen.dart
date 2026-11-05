@@ -154,7 +154,7 @@ class Resumen extends StatelessWidget {
                         columnas: dosCol ? 3 : 1,
                       ),
                       const SizedBox(height: 32),
-                      MantenimientosSinAsignar(onAbrir: onCliente ?? (_) {}, columnas: dosCol ? 3 : 1),
+                      MantenimientosSinAsignar(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
                     ] else
                       const SizedBox(height: 16),
