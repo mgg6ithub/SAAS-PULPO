@@ -152,8 +152,8 @@ class _TareasPaginaState extends State<TareasPagina> {
                             (0, 'Todos', P.textoSuave, null),
                             for (final (j, (n, c, ic)) in _filtrosFecha.indexed)
                               if (j != 3) (j + 1, n, c, ic),
-                            (5, 'Pendientes', P.morado, Icons.radio_button_unchecked_rounded),
                             (6, 'Completados', P.verde, Icons.task_alt_rounded),
+                            (5, 'Pendientes', P.morado, Icons.radio_button_unchecked_rounded),
                             (7, 'Automatizaciones', P.ambar, Icons.bolt_rounded),
                           ]) ...[
                             _ChipTipo(
@@ -165,6 +165,9 @@ class _TareasPaginaState extends State<TareasPagina> {
                               punto: i != 0,
                             ),
                             const SizedBox(width: 6),
+                            // «Todos» aparte del resto.
+                            if (i == 0)
+                              Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
                           ],
                         ],
                       )
