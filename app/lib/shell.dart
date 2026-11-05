@@ -229,6 +229,7 @@ class _ShellState extends State<Shell> {
       onIr: ir,
       onTrabajador: (id) => setState(() => trabajadorId = id),
       onCliente: (id) => setState(() => clienteId = id),
+      onTarea: (id) => setState(() => tareaId = id),
     ),
     // ignore: prefer_const_constructors
     Seccion.planificacion => Planificacion(),

@@ -61,7 +61,15 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Orden de trabajo',
     'Asignado a',
   ];
-  static const _porDefecto = {'Código', 'Criticidad', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Asignado a'};
+  static const _porDefecto = {
+    'Código',
+    'Criticidad',
+    'Cada cuánto',
+    'Horas restantes',
+    'Próximo',
+    'Orden de trabajo',
+    'Asignado a',
+  };
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
@@ -75,7 +83,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Categoría': Col('Categoría', flex: 2),
     'Duración': Col('Duración', ancho: 100),
     'Repuestos': Col('Repuestos', flex: 3),
-    'Orden de trabajo': Col('Orden de trabajo', ancho: 140),
+    'Orden de trabajo': Col('Orden de trabajo', ancho: 170),
     'Asignado a': Col('Asignado a', ancho: 96),
   };
 
@@ -203,13 +211,15 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     case 'Repuestos':
                       return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
                     case 'Orden de trabajo':
-                      return otPendienteDe == null
-                          ? celdaTexto('Sin crear', suave: true)
-                          : Pill(
-                              otPendienteDe.trabajadorIds.isEmpty ? 'Sin técnico' : 'Asignada',
-                              P.morado,
-                              punto: true,
-                            );
+                      // Si el mantenimiento ya tiene su orden creada: su estado y su fecha.
+                      if (otPendienteDe == null) return celdaTexto('Sin orden', suave: true);
+                      final f = otPendienteDe.proximo;
+                      final vencida = f != null && diasHasta(f) < 0;
+                      return Pill(
+                        [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' · '),
+                        vencida ? P.rojo : P.morado,
+                        punto: true,
+                      );
                     default:
                       final ot = otPendienteDe ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
                       return SelectorTrabajadores(ot, () {

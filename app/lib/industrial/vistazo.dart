@@ -1,3 +1,5 @@
+import '../screens/tareas.dart' show pasaFechaTrabajo;
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
@@ -56,9 +58,13 @@ class LeyendaEstados extends StatelessWidget {
   }
 }
 
+/// Cifra de Inicio elegida, que filtra las órdenes por criticidad: 0 = pendientes; 1 hoy, 2 semana,
+/// 3 vencidas, 4 hechas (como los filtros de fecha de Órdenes de trabajo).
+final periodoInicio = ValueNotifier<int>(0);
+
 /// Inicio de Pultec: una columna por criticidad con sus primeras órdenes de trabajo pendientes.
-/// Cada tarjeta: arriba el activo principal y debajo el mantenimiento. La criticidad es del mantenimiento,
-/// no del activo. «Ver todas» lleva a Órdenes de trabajo con esa criticidad.
+/// Cada tarjeta es una orden de trabajo: arriba su activo principal, debajo la orden, su fecha y su técnico.
+/// Al tocarla se abre la orden; «Ver todas» lleva a Órdenes de trabajo con la misma criticidad y fecha.
 class VistazoActivos extends StatelessWidget {
   final ValueChanged<String> onAbrir;
 
@@ -70,9 +76,15 @@ class VistazoActivos extends StatelessWidget {
   static const _maximo = 3;
 
   @override
-  Widget build(BuildContext context) {
-    final ots = [...store.tareas, ...store.subtareas].where((t) => otPendiente(t) && !t.esPlantilla).toList()
-      ..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder(valueListenable: periodoInicio, builder: (context, periodo, _) => _construir(periodo));
+
+  Widget _construir(int periodo) {
+    final ots = [...store.tareas, ...store.subtareas].where((t) {
+      if (t.esPlantilla || t.tipoMantenimiento == null) return false;
+      if (periodo == 4) return pasaFechaTrabajo(t, 4);
+      return otPendiente(t) && pasaFechaTrabajo(t, periodo);
+    }).toList()..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -80,7 +92,7 @@ class VistazoActivos extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Mantenimientos por criticidad',
+                'Órdenes de trabajo por criticidad',
                 style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
               ),
             ),
@@ -155,7 +167,7 @@ class _Columna extends StatelessWidget {
       ),
       const SizedBox(height: 10),
       if (ots.isEmpty)
-        Text('Ningún mantenimiento pendiente', style: TextStyle(color: P.textoSuave, fontSize: 13))
+        Text('Ninguna orden de trabajo', style: TextStyle(color: P.textoSuave, fontSize: 13))
       else
         for (final o in ots.take(VistazoActivos._maximo)) ...[
           Builder(
@@ -163,7 +175,7 @@ class _Columna extends StatelessWidget {
               final a = _raiz(o.activoId);
               return HoverCard(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                onTap: a == null ? null : () => onAbrir(a.id),
+                onTap: () => onAbrir(o.id),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -188,7 +200,14 @@ class _Columna extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            o.proximo == null ? 'Sin fecha' : '${relativo(o.proximo!)} · ${fecha(o.proximo!)}',
+                            [
+                              o.proximo == null ? 'Sin fecha' : '${relativo(o.proximo!)} · ${fecha(o.proximo!)}',
+                              o.trabajadorIds.isEmpty
+                                  ? 'Sin técnico'
+                                  : store.trabajador(o.trabajadorIds.first)?.nombre ?? 'Sin técnico',
+                            ].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: o.proximo != null && diasHasta(o.proximo!) < 0 ? P.rojo : P.textoSuave,
                               fontSize: 13,

@@ -16,7 +16,7 @@ final filtroFechaTrabajos = ValueNotifier<int>(0);
 final filtroCriticidadTrabajos = ValueNotifier<int>(0);
 final _filtrosFecha = [('Para hoy', P.morado), ('Esta semana', P.teal), ('Vencidos', P.rojo), ('Hechos', P.verde)];
 
-bool _pasaFecha(Tarea t, int f) {
+bool pasaFechaTrabajo(Tarea t, int f) {
   if (f == 0) return true;
   if (t.esPlantilla || !t.activa) return false;
   if (f == 4) return t.ultimo != null && diasHasta(t.ultimo!) >= -30;
@@ -72,7 +72,7 @@ class _TareasPaginaState extends State<TareasPagina> {
           if (pestana == 0 && t.esPlantilla) return false;
           if (pestana == 1 && !t.esPlantilla) return false;
           if (tipo != null && t.tipo != tipo) return false;
-          if (!_pasaFecha(t, fecha)) return false;
+          if (!pasaFechaTrabajo(t, fecha)) return false;
           if (criticidad != 0 && t.tipoMantenimiento?.index != criticidad - 1) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
               .toLowerCase();

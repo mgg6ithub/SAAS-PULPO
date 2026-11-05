@@ -27,7 +27,10 @@ class Resumen extends StatelessWidget {
 
   /// Abre la ficha de un cliente (desde las estadísticas).
   final ValueChanged<String>? onCliente;
-  const Resumen({super.key, required this.onIr, required this.onTrabajador, this.onCliente});
+
+  /// Abre una orden de trabajo (desde las tarjetas por criticidad de Pultec).
+  final ValueChanged<String>? onTarea;
+  const Resumen({super.key, required this.onIr, required this.onTrabajador, this.onCliente, this.onTarea});
 
   @override
   Widget build(BuildContext context) {
@@ -117,25 +120,34 @@ class Resumen extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                     ],
-                    _Kpis(
-                      hoy: hoyT.length,
-                      semana: semana.length,
-                      vencidas: vencidas.length,
-                      hechas: hechas30,
-                      dosCol: dosCol,
-                      onTap: (f) {
-                        filtroFechaTrabajos.value = f;
-                        onIr(Seccion.tareas);
-                      },
+                    ValueListenableBuilder(
+                      valueListenable: periodoInicio,
+                      builder: (context, elegida, _) => _Kpis(
+                        elegida: industrial ? elegida : 0,
+                        hoy: hoyT.length,
+                        semana: semana.length,
+                        vencidas: vencidas.length,
+                        hechas: hechas30,
+                        dosCol: dosCol,
+                        // Pultec: la cifra filtra las órdenes por criticidad de debajo; Pulcón: abre la lista.
+                        onTap: (f) {
+                          if (industrial) {
+                            periodoInicio.value = periodoInicio.value == f ? 0 : f;
+                            return;
+                          }
+                          filtroFechaTrabajos.value = f;
+                          onIr(Seccion.tareas);
+                        },
+                      ),
                     ),
                     // Pultec: bajo las cifras, las máquinas por tipo de mantenimiento pendiente.
                     if (industrial && store.activos.isNotEmpty) ...[
                       AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
                       VistazoActivos(
-                        onAbrir: onCliente ?? (_) {},
+                        onAbrir: onTarea ?? (_) {},
                         onVerMas: (f) {
-                          filtroFechaTrabajos.value = 0;
+                          filtroFechaTrabajos.value = periodoInicio.value;
                           filtroCriticidadTrabajos.value = f;
                           onIr(Seccion.tareas);
                         },
@@ -1153,7 +1165,11 @@ class _Kpis extends StatelessWidget {
   final int hoy, semana, vencidas, hechas;
   final bool dosCol;
   final ValueChanged<int> onTap;
+
+  /// Cifra marcada (Pultec: filtra las órdenes de debajo); 0 = ninguna.
+  final int elegida;
   const _Kpis({
+    this.elegida = 0,
     required this.onTap,
     required this.hoy,
     required this.semana,
@@ -1190,7 +1206,7 @@ class _Kpis extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: P.superficie,
                   borderRadius: BorderRadius.circular(P.radio),
-                  border: Border.all(color: P.borde),
+                  border: Border.all(color: elegida == i + 1 ? color : P.borde, width: elegida == i + 1 ? 2 : 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
