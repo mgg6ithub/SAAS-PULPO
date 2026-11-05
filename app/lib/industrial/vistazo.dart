@@ -337,7 +337,7 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                                         child: Text(
                                           a == null
                                               ? 'Sin activo'
-                                              : [a.tag, a.nombre].where((x) => x.isNotEmpty).join(' - '),
+                                              : [a.nombre, a.tag].where((x) => x.isNotEmpty).join(' - '),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(color: P.textoSuave, fontSize: 14.5),
@@ -351,7 +351,7 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                                     child: Row(
                                       children: [
                                         Text(
-                                          d == null ? 'Sin fecha' : '${relativo(d)} - ${fecha(d)}',
+                                          d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}',
                                           style: TextStyle(
                                             color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
                                             fontSize: 13,
