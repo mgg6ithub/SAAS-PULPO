@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'iconos.dart';
+import 'uso_maquinas.dart';
 import 'gravedad.dart';
 import 'historicos.dart';
 import 'plan.dart';
@@ -99,7 +100,14 @@ class _ActivosState extends State<Activos> {
         children: [
           BarraVista(
             izquierda: const [TituloVista('Activos')],
-            derecha: const [],
+            // Calendario de turnos de las máquinas con uso planificado (Dominion: trabajo intermitente).
+            derecha: [
+              BotonAccion(
+                'Uso de las máquinas',
+                icono: Icons.event_note_outlined,
+                onPressed: () => abrirUsoMaquinas(context),
+              ),
+            ],
             principal: BotonPrimario(
               'Nuevo activo',
               conIcono: true,
@@ -612,6 +620,7 @@ class _ActivoFormState extends State<ActivoForm> {
   late final ritmo = TextEditingController(text: a.horasUso == 0 ? '' : '${a.horasUso}')..addListener(_actualizar);
   final _claveIdentificacion = GlobalKey(), _claveMantenimiento = GlobalKey();
   late final repuestos = TextEditingController(text: a.repuestos);
+  late final turnoC = TextEditingController(text: a.horasTurno.toStringAsFixed(a.horasTurno % 1 == 0 ? 0 : 1));
   late final notas = TextEditingController(text: a.notas);
   bool intentoGuardar = false;
 
@@ -692,6 +701,18 @@ class _ActivoFormState extends State<ActivoForm> {
   /// Los mantenimientos van aparte (Resumen → Mantenimientos).
   Widget _mantenimiento() {
     final errores = intentoGuardar ? _erroresMantenimiento : <String, String>{};
+    // Un componente cuenta las horas de su activo principal.
+    if (componente) {
+      final r = raizActivo(a.padreId);
+      return Bloque('Contador y uso', descripcion: 'Las horas son las de su activo principal.', [
+        Text(
+          r == null
+              ? 'Usa el contador del activo del que cuelga.'
+              : 'Usa el contador de ${r.titulo}: ${horas(horasHoy(r))} hoy.',
+          style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+        ),
+      ]);
+    }
     return KeyedSubtree(
       key: _claveMantenimiento,
       child: Bloque(
@@ -708,22 +729,38 @@ class _ActivoFormState extends State<ActivoForm> {
               error: errores['actual'],
             ),
           ),
+          // Fijo (por día o por semana) o planificado a mano por turnos en el calendario de uso.
           dos(
-            _menu<bool>(
+            _menu<int>(
               'Ritmo de uso',
-              tooltip: 'Horas de uso diarias o semanales',
-              valor: a.usoSemanal,
-              opciones: const {false: 'Media por día natural', true: 'Total por semana'},
-              onSelected: (v) => setState(() => a.usoSemanal = v),
+              tooltip: 'Cómo se suman las horas: fijas o según los turnos que marques en el calendario',
+              valor: a.usoPlanificado ? 2 : (a.usoSemanal ? 1 : 0),
+              opciones: const {0: 'Media por día natural', 1: 'Total por semana', 2: 'Planificado por turnos'},
+              onSelected: (v) => setState(() {
+                a.usoPlanificado = v == 2;
+                if (v < 2) a.usoSemanal = v == 1;
+              }),
             ),
-            campo(
-              a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
-              ritmo,
-              teclado: const TextInputType.numberWithOptions(decimal: true),
-              hint: 'Sin indicar',
-              error: errores['uso'],
-            ),
+            a.usoPlanificado
+                ? campo(
+                    'Horas por turno',
+                    turnoC,
+                    teclado: const TextInputType.numberWithOptions(decimal: true),
+                    hint: '8',
+                  )
+                : campo(
+                    a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
+                    ritmo,
+                    teclado: const TextInputType.numberWithOptions(decimal: true),
+                    hint: 'Sin indicar',
+                    error: errores['uso'],
+                  ),
           ),
+          if (a.usoPlanificado)
+            Text(
+              'Marca los días y turnos en Activos → «Uso de las máquinas». Cada turno suma sus horas al contador.',
+              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+            ),
         ],
       ),
     );
@@ -741,6 +778,7 @@ class _ActivoFormState extends State<ActivoForm> {
       ..tag = tag.text.trim()
       ..nombre = nombre.text.trim()
       ..descripcion = descripcion.text.trim()
+      ..horasTurno = double.tryParse(turnoC.text.trim().replaceAll(',', '.')) ?? a.horasTurno
       ..fabricante = fabricante.text.trim()
       ..modelo = modelo.text.trim()
       ..numeroSerie = serie.text.trim()
