@@ -577,6 +577,7 @@ class BotonPrimario extends StatelessWidget {
     final m = RegExp(r'^Nuev[oa] (.)').firstMatch(texto);
     return m == null ? texto : m.group(1)!.toUpperCase() + texto.substring(m.end);
   }
+
   final IconData icono;
   final VoidCallback onPressed;
   final String? tecla;
@@ -926,18 +927,34 @@ class Pestanas extends StatelessWidget {
   final List<Color?>? colores;
   final int seleccion;
   final ValueChanged<int> onChanged;
-  const Pestanas({super.key, required this.opciones, required this.seleccion, required this.onChanged, this.colores});
 
-  Widget _opcion(int i, Widget texto) => colores == null ? texto : Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      if (colores != null && colores![i] != null) ...[
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: colores![i], shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-      ],
-      texto,
-    ],
-  );
+  /// Menos aire a los lados de cada opción, para filtros que van junto a otro selector.
+  final bool compactas;
+  const Pestanas({
+    super.key,
+    required this.opciones,
+    required this.seleccion,
+    required this.onChanged,
+    this.colores,
+    this.compactas = false,
+  });
+
+  Widget _opcion(int i, Widget texto) => colores == null
+      ? texto
+      : Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (colores != null && colores![i] != null) ...[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: colores![i], shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+            ],
+            texto,
+          ],
+        );
 
   /// Móvil: un desplegable con la opción elegida (las pestañas no caben y quedarían cortadas).
   Widget _desplegable(TextStyle estilo) => PopupMenuButton<int>(
@@ -958,7 +975,8 @@ class Pestanas extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (seleccion >= 0 && seleccion < opciones.length) _opcion(seleccion, Text(opciones[seleccion], style: estilo)),
+          if (seleccion >= 0 && seleccion < opciones.length)
+            _opcion(seleccion, Text(opciones[seleccion], style: estilo)),
           const SizedBox(width: 4),
           Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
         ],
@@ -982,7 +1000,7 @@ class Pestanas extends StatelessWidget {
       )..layout();
       mayor = max(mayor, tp.width);
     }
-    final w = mayor.ceilToDouble() + 28 + (colores == null ? 0 : 14);
+    final w = mayor.ceilToDouble() + (compactas ? 18 : 28) + (colores == null ? 0 : 14);
     final valida = seleccion >= 0 && seleccion < opciones.length;
     return Container(
       height: 40,
@@ -1227,140 +1245,141 @@ class _TablaState extends State<Tabla> {
       child: TooltipVisibility(
         visible: _columnaArrastrando == null,
         child: CustomPaint(
-        key: _lienzo,
-        foregroundPainter: _columnaArrastrando == null
-            ? null
-            : _GuiasColumna(
-                columna: _claves[columnas[_columnaArrastrando!].titulo]!,
-                lienzo: _lienzo,
-                pie: _pie,
-                primera: _columnaArrastrando == 0,
-                color: P.morado,
-              ),
-        child: Column(
-          mainAxisSize: widget.filas > 15 ? MainAxisSize.max : MainAxisSize.min,
-          children: [
-            Stack(
-              children: [
-                Container(
-                  color: P.cabeceraTabla,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  height: 42,
-                  child: Row(
-                    children: [
-                      for (final (j, c) in columnas.indexed)
-                        _celda(
-                          c,
-                          clave: _claves.putIfAbsent(c.titulo, GlobalKey.new),
-                          c.cabecera ??
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(
-                                        left: j == 0 && widget.seleccionCabecera != null ? 36 : 0,
-                                      ),
-                                      child: _TituloColumna(
-                                        titulo: c.titulo,
-                                        ayuda: c.ayuda,
-                                        derecha: c.derecha,
-                                        onIntercambiar: (origen) => setState(() {
-                                          final desde = _orden.indexOf(origen);
-                                          final hasta = _orden.indexOf(c.titulo);
-                                          _orden[desde] = c.titulo;
-                                          _orden[hasta] = origen;
-                                        }),
-                                      ),
-                                    ),
-                                  ),
-                                  // Asa para redimensionar (no en la última ni en las columnas sin título).
-                                  if (j < columnas.length - 1 && c.titulo.isNotEmpty)
-                                    _AsaColumna(
-                                      onInicio: () {
-                                        Tooltip.dismissAllToolTips();
-                                        final siguiente = columnas[j + 1];
-                                        final izquierda =
-                                            _claves[c.titulo]?.currentContext?.findRenderObject() as RenderBox?;
-                                        final derecha =
-                                            _claves[siguiente.titulo]?.currentContext?.findRenderObject() as RenderBox?;
-                                        if (izquierda != null && derecha != null) {
-                                          setState(() {
-                                            anchos[c.titulo] = izquierda.size.width;
-                                            anchos[siguiente.titulo] = derecha.size.width;
-                                            _columnaArrastrando = j + 1;
-                                          });
-                                        }
-                                      },
-                                      onFin: () => setState(() => _columnaArrastrando = null),
-                                      onMover: (dx) {
-                                        final siguiente = columnas[j + 1];
-                                        final izquierda = anchos[c.titulo]!;
-                                        final derecha = anchos[siguiente.titulo]!;
-                                        final minimoIzquierda = c.ancho == null ? 56.0 : c.ancho!.clamp(0.0, 56.0);
-                                        final minimoDerecha = siguiente.ancho == null
-                                            ? 56.0
-                                            : siguiente.ancho!.clamp(0.0, 56.0);
-                                        final cambio = dx.clamp(minimoIzquierda - izquierda, derecha - minimoDerecha);
-                                        setState(() {
-                                          anchos[c.titulo] = izquierda + cambio;
-                                          anchos[siguiente.titulo] = derecha - cambio;
-                                        });
-                                      },
-                                    ),
-                                ],
-                              ),
-                        ),
-                    ],
-                  ),
+          key: _lienzo,
+          foregroundPainter: _columnaArrastrando == null
+              ? null
+              : _GuiasColumna(
+                  columna: _claves[columnas[_columnaArrastrando!].titulo]!,
+                  lienzo: _lienzo,
+                  pie: _pie,
+                  primera: _columnaArrastrando == 0,
+                  color: P.morado,
                 ),
-                if (widget.seleccionCabecera != null)
-                  Positioned(
-                    left: 8,
-                    top: 0,
-                    width: 32,
+          child: Column(
+            mainAxisSize: widget.filas > 15 ? MainAxisSize.max : MainAxisSize.min,
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    color: P.cabeceraTabla,
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
                     height: 42,
-                    child: Align(alignment: Alignment.centerLeft, child: widget.seleccionCabecera!),
+                    child: Row(
+                      children: [
+                        for (final (j, c) in columnas.indexed)
+                          _celda(
+                            c,
+                            clave: _claves.putIfAbsent(c.titulo, GlobalKey.new),
+                            c.cabecera ??
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Padding(
+                                        padding: EdgeInsets.only(
+                                          left: j == 0 && widget.seleccionCabecera != null ? 36 : 0,
+                                        ),
+                                        child: _TituloColumna(
+                                          titulo: c.titulo,
+                                          ayuda: c.ayuda,
+                                          derecha: c.derecha,
+                                          onIntercambiar: (origen) => setState(() {
+                                            final desde = _orden.indexOf(origen);
+                                            final hasta = _orden.indexOf(c.titulo);
+                                            _orden[desde] = c.titulo;
+                                            _orden[hasta] = origen;
+                                          }),
+                                        ),
+                                      ),
+                                    ),
+                                    // Asa para redimensionar (no en la última ni en las columnas sin título).
+                                    if (j < columnas.length - 1 && c.titulo.isNotEmpty)
+                                      _AsaColumna(
+                                        onInicio: () {
+                                          Tooltip.dismissAllToolTips();
+                                          final siguiente = columnas[j + 1];
+                                          final izquierda =
+                                              _claves[c.titulo]?.currentContext?.findRenderObject() as RenderBox?;
+                                          final derecha =
+                                              _claves[siguiente.titulo]?.currentContext?.findRenderObject()
+                                                  as RenderBox?;
+                                          if (izquierda != null && derecha != null) {
+                                            setState(() {
+                                              anchos[c.titulo] = izquierda.size.width;
+                                              anchos[siguiente.titulo] = derecha.size.width;
+                                              _columnaArrastrando = j + 1;
+                                            });
+                                          }
+                                        },
+                                        onFin: () => setState(() => _columnaArrastrando = null),
+                                        onMover: (dx) {
+                                          final siguiente = columnas[j + 1];
+                                          final izquierda = anchos[c.titulo]!;
+                                          final derecha = anchos[siguiente.titulo]!;
+                                          final minimoIzquierda = c.ancho == null ? 56.0 : c.ancho!.clamp(0.0, 56.0);
+                                          final minimoDerecha = siguiente.ancho == null
+                                              ? 56.0
+                                              : siguiente.ancho!.clamp(0.0, 56.0);
+                                          final cambio = dx.clamp(minimoIzquierda - izquierda, derecha - minimoDerecha);
+                                          setState(() {
+                                            anchos[c.titulo] = izquierda + cambio;
+                                            anchos[siguiente.titulo] = derecha - cambio;
+                                          });
+                                        },
+                                      ),
+                                  ],
+                                ),
+                          ),
+                      ],
+                    ),
                   ),
-              ],
-            ),
-            Divider(height: 1, color: P.borde),
-            Flexible(
-              fit: widget.filas > 15 ? FlexFit.tight : FlexFit.loose,
-              child: ListView.separated(
-                shrinkWrap: widget.filas <= 15,
-                itemCount: widget.filas,
-                separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
-                itemBuilder: (_, i) {
-                  final cs = widget.celdas(i);
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      hoverColor: P.hoverFila,
-                      onTap: widget.onTap == null ? null : () => widget.onTap!(i),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 56),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                          child: Row(
-                            children: [
-                              for (final c in columnas)
-                                _celda(c, cs[widget.columnas.indexOf(c)], inicio: c == columnas.first),
-                            ],
+                  if (widget.seleccionCabecera != null)
+                    Positioned(
+                      left: 8,
+                      top: 0,
+                      width: 32,
+                      height: 42,
+                      child: Align(alignment: Alignment.centerLeft, child: widget.seleccionCabecera!),
+                    ),
+                ],
+              ),
+              Divider(height: 1, color: P.borde),
+              Flexible(
+                fit: widget.filas > 15 ? FlexFit.tight : FlexFit.loose,
+                child: ListView.separated(
+                  shrinkWrap: widget.filas <= 15,
+                  itemCount: widget.filas,
+                  separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
+                  itemBuilder: (_, i) {
+                    final cs = widget.celdas(i);
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        hoverColor: P.hoverFila,
+                        onTap: widget.onTap == null ? null : () => widget.onTap!(i),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 56),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                            child: Row(
+                              children: [
+                                for (final c in columnas)
+                                  _celda(c, cs[widget.columnas.indexOf(c)], inicio: c == columnas.first),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-            if (widget.pie != null) ...[
-              Divider(key: _pie, height: 1, color: P.borde),
-              Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: widget.pie),
+              if (widget.pie != null) ...[
+                Divider(key: _pie, height: 1, color: P.borde),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: widget.pie),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1472,7 +1491,8 @@ class _GuiasColumna extends CustomPainter {
     final derecha = origen.dx + celda.size.width - 7;
     // El pie (el recuento) no es de ninguna columna: las guías paran en la última fila.
     final cajaPie = pie.currentContext?.findRenderObject() as RenderBox?;
-    if (cajaPie != null && cajaPie.hasSize) size = Size(size.width, cajaPie.localToGlobal(Offset.zero, ancestor: tabla).dy);
+    if (cajaPie != null && cajaPie.hasSize)
+      size = Size(size.width, cajaPie.localToGlobal(Offset.zero, ancestor: tabla).dy);
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawRect(Rect.fromLTRB(izquierda, 0, derecha, size.height), Paint()..color = color.withValues(alpha: .07));
