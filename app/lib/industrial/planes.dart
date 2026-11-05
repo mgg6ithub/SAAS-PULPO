@@ -37,7 +37,7 @@ class BotonCrearOrden extends StatelessWidget {
   const BotonCrearOrden(this.onPressed, {super.key});
 
   @override
-  Widget build(BuildContext context) => TextButton.icon(
+  Widget build(BuildContext context) => TextButton(
     style: TextButton.styleFrom(
       foregroundColor: P.morado,
       backgroundColor: P.morado.withValues(alpha: .07),
@@ -48,9 +48,12 @@ class BotonCrearOrden extends StatelessWidget {
       textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
     ),
-    icon: const Icon(Icons.add_rounded, size: 16),
-    label: const Text('Crear orden'),
     onPressed: onPressed,
+    // El «+» pegado al texto.
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [Icon(Icons.add_rounded, size: 16), SizedBox(width: 3), Text('Crear orden')],
+    ),
   );
 }
 
