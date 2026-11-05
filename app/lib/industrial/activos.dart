@@ -474,6 +474,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
                                 '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
                               ],
+                              iconos: const [Icons.content_paste_rounded, Icons.account_tree_outlined],
                               seleccion: vista,
                               onChanged: (i) => setState(() => vista = i),
                             ),

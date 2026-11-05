@@ -934,7 +934,11 @@ class Pestanas extends StatelessWidget {
 
   /// Menos aire a los lados de cada opción, para filtros que van junto a otro selector.
   final bool compactas;
+
+  /// Icono neutro delante de cada opción (null = sin icono).
+  final List<IconData?>? iconos;
   const Pestanas({
+    this.iconos,
     super.key,
     required this.opciones,
     required this.seleccion,
@@ -943,11 +947,15 @@ class Pestanas extends StatelessWidget {
     this.compactas = false,
   });
 
-  Widget _opcion(int i, Widget texto) => colores == null
+  Widget _opcion(int i, Widget texto) => colores == null && iconos == null
       ? texto
       : Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (iconos != null && iconos![i] != null) ...[
+              Icon(iconos![i], size: 17, color: P.textoSuave),
+              const SizedBox(width: 6),
+            ],
             if (colores != null && colores![i] != null) ...[
               Container(
                 width: 8,
@@ -1004,7 +1012,7 @@ class Pestanas extends StatelessWidget {
       )..layout();
       mayor = max(mayor, tp.width);
     }
-    final w = mayor.ceilToDouble() + (compactas ? 18 : 28) + (colores == null ? 0 : 14);
+    final w = mayor.ceilToDouble() + (compactas ? 18 : 28) + (colores == null ? 0 : 14) + (iconos == null ? 0 : 23);
     final valida = seleccion >= 0 && seleccion < opciones.length;
     return Container(
       height: 40,

@@ -288,13 +288,60 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
             children: [
               for (final (i, (p, d, falta)) in vistos.indexed) ...[
                 if (i > 0) Divider(height: 1, color: P.borde),
-                FilaLista(
-                  lider: puntoTipo(p.tipo.color),
-                  titulo: '${p.nombre} · ${_raiz(p.activoId)?.titulo ?? ''}',
-                  subtitulo: [d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}', falta].join(' · '),
-                  onTap: () {
-                    destacarMantenimiento(p.id);
-                    widget.onAbrir(_raiz(p.activoId)?.id ?? p.activoId);
+                // Como las tarjetas de arriba: icono del activo, el activo en pequeño y debajo el mantenimiento.
+                Builder(
+                  builder: (context) {
+                    final a = _raiz(p.activoId);
+                    return InkWell(
+                      onTap: () {
+                        destacarMantenimiento(p.id);
+                        widget.onAbrir(a?.id ?? p.activoId);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
+                        child: Row(
+                          children: [
+                            if (a != null) ...[
+                              IconoActivo(a.icono, size: 26, color: p.tipo.color),
+                              const SizedBox(width: 14),
+                            ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    a?.titulo ?? 'Sin activo',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    p.nombre,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                      letterSpacing: -.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    [d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}', falta].join(' · '),
+                                    style: TextStyle(
+                                      color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded, size: 20, color: P.textoSuave),
+                          ],
+                        ),
+                      ),
+                    );
                   },
                 ),
               ],
