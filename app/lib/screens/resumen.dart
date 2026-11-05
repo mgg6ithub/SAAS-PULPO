@@ -137,13 +137,10 @@ class Resumen extends StatelessWidget {
                         vencidas: vencidas.length,
                         hechas: hechas30,
                         dosCol: dosCol,
-                        // Pultec: la cifra filtra las órdenes por criticidad de debajo; Pulcón: abre la lista.
+                        // Abre Órdenes de trabajo con ese filtro (Para hoy, Sin técnico, Vencidos, Hechos).
                         onTap: (f) {
-                          if (industrial) {
-                            periodoInicio.value = periodoInicio.value == f ? 0 : f;
-                            return;
-                          }
                           filtroFechaTrabajos.value = f;
+                          filtroCriticidadTrabajos.value = 0;
                           onIr(Seccion.tareas);
                         },
                       ),
