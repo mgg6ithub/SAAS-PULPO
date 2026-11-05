@@ -175,14 +175,11 @@ class _TablaActivos extends StatelessWidget {
           filas: activos.length,
           celdas: (i) {
             final a = activos[i];
-            final g = gravedadDe(a.id);
             return [
               Row(
                 children: [
-                  Tooltip(
-                    message: textoEstado(g),
-                    child: IconoActivo(a.icono, color: colorEstado(g), size: 22),
-                  ),
+                  // Sin color: la criticidad es de los mantenimientos, no del activo.
+                  IconoActivo(a.icono, color: P.textoSuave, size: 22),
                   const SizedBox(width: 10),
                   Expanded(
                     // Subcomponentes: el nombre aquí y el tag en su propia columna.
@@ -361,7 +358,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     final componentes = store.hijosDe(a.id);
     final planes = planesRama(a.id);
     final proximo = proximoDe(a.id);
-    final g = gravedadDe(a.id);
     return Padding(
       padding: margenPagina,
       child: Column(
@@ -377,7 +373,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                 ),
                 const SizedBox(width: 4),
-                IconoActivo(a.icono, size: 28, color: colorEstado(g)),
+                IconoActivo(a.icono, size: 28, color: P.textoSuave),
               ],
             ),
             titulo: a.titulo.isEmpty ? 'Activo' : a.titulo,
