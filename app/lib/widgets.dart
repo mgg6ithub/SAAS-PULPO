@@ -2468,3 +2468,45 @@ class _Puntita extends CustomPainter {
   @override
   bool shouldRepaint(_Puntita old) => old.arriba != arriba;
 }
+
+/// Tabla más ancha que la vista: se desplaza en horizontal con una barra siempre visible justo debajo de
+/// la fila de títulos, para arrastrarla con el ratón. Si cabe, no hay barra ni desplazamiento.
+class DesplazarTabla extends StatefulWidget {
+  final double ancho;
+  final Widget child;
+  const DesplazarTabla({super.key, required this.ancho, required this.child});
+
+  @override
+  State<DesplazarTabla> createState() => _DesplazarTablaState();
+}
+
+class _DesplazarTablaState extends State<DesplazarTabla> {
+  final _control = ScrollController();
+
+  @override
+  void dispose() {
+    _control.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final sobra = widget.ancho > box.maxWidth;
+      final contenido = SizedBox(width: sobra ? widget.ancho : box.maxWidth, child: widget.child);
+      if (!sobra) return contenido;
+      return RawScrollbar(
+        controller: _control,
+        thumbVisibility: true,
+        interactive: true,
+        scrollbarOrientation: ScrollbarOrientation.top,
+        // Debajo de la cabecera de la tabla (42 de alto más su línea).
+        padding: const EdgeInsets.only(top: 44, left: 8, right: 8),
+        thickness: 8,
+        radius: const Radius.circular(4),
+        thumbColor: P.textoSuave.withValues(alpha: .45),
+        child: SingleChildScrollView(controller: _control, scrollDirection: Axis.horizontal, child: contenido),
+      );
+    },
+  );
+}

@@ -149,139 +149,135 @@ class _TablaPlanesState extends State<TablaPlanes> {
       ];
       // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
       final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 70.0 * c.flex));
-      final anchoTabla = necesario > box.maxWidth ? necesario : box.maxWidth;
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: anchoTabla,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Tabla(
-              columnas: columnas,
-              filas: ps.length,
-              onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
-              pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
-              resaltar: (i) => ps[i].id == planDestacado.value ? ps[i].tipo.color : null,
-              celdas: (i) {
-                final p = ps[i];
-                final nodo = nodos[p.activoId];
-                final d = proximos[p.id];
-                final otPendienteDe = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
-                Widget celda(String c) {
-                  switch (c) {
-                    case 'Código':
-                      return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
-                    case 'Componente':
-                      return celdaTexto(nodo?.nombre ?? '—', suave: true);
-                    case 'Criticidad':
-                      return PillTipo(p.tipo);
-                    case 'Cada cuánto':
-                      return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);
-                    case 'Horas restantes':
-                      final h = horasRestantesPlan(p);
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
-                      );
-                    case 'Próximo':
-                      final vencido = d != null && d.isBefore(hoy());
-                      return Text(
-                        d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: vencido ? P.rojo : P.textoSuave,
-                          fontWeight: vencido ? FontWeight.w600 : FontWeight.w400,
+      return DesplazarTabla(
+        ancho: necesario,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Tabla(
+            columnas: columnas,
+            filas: ps.length,
+            onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
+            pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
+            resaltar: (i) => ps[i].id == planDestacado.value ? ps[i].tipo.color : null,
+            celdas: (i) {
+              final p = ps[i];
+              final nodo = nodos[p.activoId];
+              final d = proximos[p.id];
+              final otPendienteDe = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
+              Widget celda(String c) {
+                switch (c) {
+                  case 'Código':
+                    return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
+                  case 'Componente':
+                    return celdaTexto(nodo?.nombre ?? '—', suave: true);
+                  case 'Criticidad':
+                    return PillTipo(p.tipo);
+                  case 'Cada cuánto':
+                    return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);
+                  case 'Horas restantes':
+                    final h = horasRestantesPlan(p);
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
+                    );
+                  case 'Próximo':
+                    final vencido = d != null && d.isBefore(hoy());
+                    return Text(
+                      d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: vencido ? P.rojo : P.textoSuave,
+                        fontWeight: vencido ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    );
+                  case 'Último hecho':
+                    return celdaTexto(p.ultimo == null ? '—' : fecha(p.ultimo!), suave: true);
+                  case 'Categoría':
+                    return celdaTexto(p.categoria.isEmpty ? 'Cualquiera' : p.categoria, suave: true);
+                  case 'Duración':
+                    return celdaTexto(duracion(p.duracionMin), suave: true);
+                  case 'Repuestos':
+                    return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
+                  case 'Orden de trabajo':
+                    // El técnico es de la orden, no del mantenimiento. Sin orden: al tocar, se crea.
+                    if (otPendienteDe == null) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Enlace(
+                          '+ Crear orden',
+                          onTap: () =>
+                              abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
                         ),
                       );
-                    case 'Último hecho':
-                      return celdaTexto(p.ultimo == null ? '—' : fecha(p.ultimo!), suave: true);
-                    case 'Categoría':
-                      return celdaTexto(p.categoria.isEmpty ? 'Cualquiera' : p.categoria, suave: true);
-                    case 'Duración':
-                      return celdaTexto(duracion(p.duracionMin), suave: true);
-                    case 'Repuestos':
-                      return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
-                    case 'Orden de trabajo':
-                      // El técnico es de la orden, no del mantenimiento. Sin orden: al tocar, se crea.
-                      if (otPendienteDe == null) {
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Enlace(
-                            '+ Crear orden',
-                            onTap: () =>
-                                abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
-                          ),
-                        );
-                      }
-                      final f = otPendienteDe.proximo;
-                      final vencida = f != null && diasHasta(f) < 0;
-                      final tecnico = otPendienteDe.trabajadorIds.isEmpty
-                          ? null
-                          : store.trabajador(otPendienteDe.trabajadorIds.first)?.nombre;
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: () => abrirTareaForm(context, otPendienteDe),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Pill(
-                                [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' '),
-                                vencida ? P.rojo : P.morado,
-                                punto: true,
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                tecnico ?? 'Sin técnico',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-                              ),
-                            ],
-                          ),
+                    }
+                    final f = otPendienteDe.proximo;
+                    final vencida = f != null && diasHasta(f) < 0;
+                    final tecnico = otPendienteDe.trabajadorIds.isEmpty
+                        ? null
+                        : store.trabajador(otPendienteDe.trabajadorIds.first)?.nombre;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => abrirTareaForm(context, otPendienteDe),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Pill(
+                              [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' '),
+                              vencida ? P.rojo : P.morado,
+                              punto: true,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              tecnico ?? 'Sin técnico',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                            ),
+                          ],
                         ),
-                      );
-                    default:
-                      return const SizedBox();
-                  }
+                      ),
+                    );
+                  default:
+                    return const SizedBox();
                 }
+              }
 
-                return [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
+              return [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true),
+                            if (p.descripcion.isNotEmpty)
+                              Text(
+                                p.descripcion,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12, color: P.textoSuave, height: 1.35),
+                              ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true),
-                              if (p.descripcion.isNotEmpty)
-                                Text(
-                                  p.descripcion,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 12, color: P.textoSuave, height: 1.35),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  for (final c in vistas) celda(c),
-                  if (medio) const SizedBox(),
-                ];
-              },
-            ),
+                ),
+                for (final c in vistas) celda(c),
+                if (medio) const SizedBox(),
+              ];
+            },
           ),
         ),
       );
