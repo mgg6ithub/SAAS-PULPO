@@ -272,12 +272,19 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
         // Título como los de las otras secciones de Inicio.
         Row(
           children: [
-            Expanded(
+            Flexible(
               child: Text(
                 'Mantenimientos sin orden de trabajo',
                 style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
               ),
             ),
+            const SizedBox(width: 10),
+            // Cuántos hay en total, aunque se vean solo los primeros.
+            Text(
+              '${items.length}',
+              style: TextStyle(color: P.textoSuave, fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            const Spacer(),
             if (items.length > _primeros)
               Enlace(todos ? 'Ver menos' : 'Ver todos (${items.length})', onTap: () => setState(() => todos = !todos)),
           ],
