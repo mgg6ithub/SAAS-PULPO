@@ -163,7 +163,8 @@ class Resumen extends StatelessWidget {
                       _CargaTrabajadores(onTrabajador: onTrabajador),
                     ),
                     const SizedBox(height: 32),
-                    _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
+                    // Pultec: lo próximo ya está en las órdenes por criticidad.
+                    if (!industrial) _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
                     // Las estadísticas son de clientes y equipos: en Pultec su lugar lo ocupa el vistazo.
                     if (!industrial) ...[
                       const SizedBox(height: 32),

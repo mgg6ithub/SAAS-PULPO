@@ -46,9 +46,6 @@ class TablaPlanes extends StatefulWidget {
 }
 
 class _TablaPlanesState extends State<TablaPlanes> {
-  /// Borradores de OT de los mantenimientos aún sin asignar, para el selector de técnicos.
-  final _borradores = <String, Tarea>{};
-
   /// Columnas opcionales, en su orden, y las que se ven (se recuerdan mientras dure la sesión).
   static const _opcionales = [
     'Código',
@@ -62,17 +59,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Duración',
     'Repuestos',
     'Orden de trabajo',
-    'Asignado a',
   ];
-  static const _porDefecto = {
-    'Código',
-    'Criticidad',
-    'Cada cuánto',
-    'Horas restantes',
-    'Próximo',
-    'Orden de trabajo',
-    'Asignado a',
-  };
+  static const _porDefecto = {'Código', 'Criticidad', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Orden de trabajo'};
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
@@ -86,8 +74,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Categoría': Col('Categoría', flex: 2),
     'Duración': Col('Duración', ancho: 100),
     'Repuestos': Col('Repuestos', flex: 3),
-    'Orden de trabajo': Col('Orden de trabajo', ancho: 170),
-    'Asignado a': Col('Asignado a', ancho: 96),
+    'Orden de trabajo': Col('Orden de trabajo', ancho: 230),
   };
 
   /// Botón de la última columna: menú con todas las columnas para marcar o desmarcar.
@@ -215,22 +202,49 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     case 'Repuestos':
                       return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
                     case 'Orden de trabajo':
-                      // Si el mantenimiento ya tiene su orden creada: su estado y su fecha.
-                      if (otPendienteDe == null) return celdaTexto('Sin orden', suave: true);
+                      // El técnico es de la orden, no del mantenimiento. Sin orden: al tocar, se crea.
+                      if (otPendienteDe == null) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Enlace(
+                            '+ Crear orden',
+                            onTap: () =>
+                                abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
+                          ),
+                        );
+                      }
                       final f = otPendienteDe.proximo;
                       final vencida = f != null && diasHasta(f) < 0;
-                      return Pill(
-                        [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' · '),
-                        vencida ? P.rojo : P.morado,
-                        punto: true,
+                      final tecnico = otPendienteDe.trabajadorIds.isEmpty
+                          ? null
+                          : store.trabajador(otPendienteDe.trabajadorIds.first)?.nombre;
+                      return InkWell(
+                        onTap: () => abrirTareaForm(context, otPendienteDe),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Pill(
+                              [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' '),
+                              vencida ? P.rojo : P.morado,
+                              punto: true,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              tecnico ?? 'Sin técnico',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: tecnico == null ? P.ambar : P.textoSuave,
+                                fontWeight: tecnico == null ? FontWeight.w600 : FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     default:
-                      final ot = otPendienteDe ?? _borradores.putIfAbsent(p.id, () => p.ot(store.nuevoId()));
-                      return SelectorTrabajadores(ot, () {
-                        // La primera asignación crea la OT; luego se edita la misma.
-                        store.guardarTarea(ot);
-                        setState(() => _borradores.remove(p.id));
-                      }, compacto: true);
+                      return const SizedBox();
                   }
                 }
 
