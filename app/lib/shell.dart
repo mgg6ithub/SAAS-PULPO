@@ -580,83 +580,87 @@ class _BarraState extends State<_Barra> {
                   : Border(right: BorderSide(color: P.borde)),
             ),
             padding: EdgeInsets.fromLTRB(iconos ? 10 : 14, 18, iconos ? 10 : 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Logo y nombre, como en la landing; a la derecha, contraer/expandir.
-                if (iconos) ...[
-                  const Center(child: LogoPulpo(size: 32)),
-                  const SizedBox(height: 4),
-                  _Icono(
-                    ajustes.barraDerecha
-                        ? Icons.keyboard_double_arrow_left_rounded
-                        : Icons.keyboard_double_arrow_right_rounded,
-                    'Expandir',
-                    _alternar,
-                  ),
-                ] else
-                  Row(
-                    children: [
-                      const SizedBox(width: 2),
-                      const LogoPulpo(size: 32),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          Marca.nombre,
-                          maxLines: 1,
-                          overflow: TextOverflow.clip,
-                          style: TextStyle(
-                            fontFamily: P.titulos,
-                            fontSize: 21 * escala,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -.6,
+            child: Material(
+              // Para que el fondo al pasar el ratón se pinte encima del color de la barra.
+              type: MaterialType.transparency,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Logo y nombre, como en la landing; a la derecha, contraer/expandir.
+                  if (iconos) ...[
+                    const Center(child: LogoPulpo(size: 32)),
+                    const SizedBox(height: 4),
+                    _Icono(
+                      ajustes.barraDerecha
+                          ? Icons.keyboard_double_arrow_left_rounded
+                          : Icons.keyboard_double_arrow_right_rounded,
+                      'Expandir',
+                      _alternar,
+                    ),
+                  ] else
+                    Row(
+                      children: [
+                        const SizedBox(width: 2),
+                        const LogoPulpo(size: 32),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            Marca.nombre,
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            style: TextStyle(
+                              fontFamily: P.titulos,
+                              fontSize: 21 * escala,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -.6,
+                            ),
                           ),
                         ),
-                      ),
-                      _Icono(
-                        ajustes.barraDerecha
-                            ? Icons.keyboard_double_arrow_right_rounded
-                            : Icons.keyboard_double_arrow_left_rounded,
-                        'Contraer',
-                        _alternar,
-                        pequeno: true,
-                      ),
-                    ],
+                        _Icono(
+                          ajustes.barraDerecha
+                              ? Icons.keyboard_double_arrow_right_rounded
+                              : Icons.keyboard_double_arrow_left_rounded,
+                          'Contraer',
+                          _alternar,
+                          pequeno: true,
+                        ),
+                      ],
+                    ),
+                  // Contraída: una línea separa el logo del menú. Expandida, solo aire.
+                  if (iconos) ...[
+                    const SizedBox(height: 8),
+                    Divider(height: 1, color: P.borde),
+                    const SizedBox(height: 10),
+                  ] else
+                    const SizedBox(height: 18),
+                  // Empresa abierta, para cambiar de una a otra (solo con sesión).
+                  if (store.nube != null) ...[
+                    SelectorEmpresa(compacto: iconos, escala: escala),
+                    SizedBox(height: iconos ? 8 : 10),
+                  ],
+                  _BotonCrear(compacto: iconos, menu: widget.crear),
+                  SizedBox(height: iconos ? 10 : 14),
+                  _menu(vencidas),
+                  const SizedBox(height: 14),
+                  const Spacer(),
+                  _BotonDemo(
+                    texto: 'Simulaciones',
+                    icono: Icons.science_outlined,
+                    color: P.morado,
+                    compacta: iconos,
+                    escala: escala,
+                    onTap: () => abrirSimulaciones(context),
                   ),
-                // Contraída: una línea separa el logo del menú. Expandida, solo aire.
-                if (iconos) ...[
                   const SizedBox(height: 8),
                   Divider(height: 1, color: P.borde),
-                  const SizedBox(height: 10),
-                ] else
-                  const SizedBox(height: 18),
-                // Empresa abierta, para cambiar de una a otra (solo con sesión).
-                if (store.nube != null) ...[
-                  SelectorEmpresa(compacto: iconos, escala: escala),
-                  SizedBox(height: iconos ? 8 : 10),
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) =>
+                        _fila(Marca.iconoTrabajador, m('Vista de trabajador'), () => abrirVistaTrabajador(context)),
+                  ),
+                  BotonUsuario(compacto: iconos, escala: escala),
                 ],
-                _BotonCrear(compacto: iconos, menu: widget.crear),
-                SizedBox(height: iconos ? 10 : 14),
-                _menu(vencidas),
-                const SizedBox(height: 14),
-                const Spacer(),
-                _BotonDemo(
-                  texto: 'Simulaciones',
-                  icono: Icons.science_outlined,
-                  color: P.morado,
-                  compacta: iconos,
-                  escala: escala,
-                  onTap: () => abrirSimulaciones(context),
-                ),
-                const SizedBox(height: 8),
-                Divider(height: 1, color: P.borde),
-                const SizedBox(height: 8),
-                Builder(
-                  builder: (context) =>
-                      _fila(Marca.iconoTrabajador, m('Vista de trabajador'), () => abrirVistaTrabajador(context)),
-                ),
-                BotonUsuario(compacto: iconos, escala: escala),
-              ],
+              ),
             ),
           ),
         );
@@ -716,6 +720,7 @@ class _BarraState extends State<_Barra> {
     child: InkWell(
       borderRadius: BorderRadius.circular(P.radioControl),
       mouseCursor: SystemMouseCursors.click,
+      hoverColor: P.hover.withValues(alpha: .7),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
@@ -1105,6 +1110,7 @@ class _Icono extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(7),
         mouseCursor: SystemMouseCursors.click,
+        hoverColor: P.hover.withValues(alpha: .7),
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.all(pequeno ? 5 : 9),
@@ -1139,6 +1145,7 @@ class _BotonDemo extends StatelessWidget {
     child: InkWell(
       borderRadius: BorderRadius.circular(P.radioControl),
       mouseCursor: SystemMouseCursors.click,
+      hoverColor: P.hover.withValues(alpha: .7),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
