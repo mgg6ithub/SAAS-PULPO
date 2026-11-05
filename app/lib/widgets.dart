@@ -570,6 +570,13 @@ class Cabecera extends StatelessWidget {
 /// Botón primario con la tecla rápida en un recuadro, como "Nuevo contacto  N" de Holded.
 class BotonPrimario extends StatelessWidget {
   final String texto;
+
+  /// En Pultec el «+» ya dice que es nuevo: «Nuevo mantenimiento» se queda en «Mantenimiento».
+  String get _etiqueta {
+    if (!industrial) return texto;
+    final m = RegExp(r'^Nuev[oa] (.)').firstMatch(texto);
+    return m == null ? texto : m.group(1)!.toUpperCase() + texto.substring(m.end);
+  }
   final IconData icono;
   final VoidCallback onPressed;
   final String? tecla;
@@ -588,7 +595,7 @@ class BotonPrimario extends StatelessWidget {
   @override
   Widget build(BuildContext context) => esMovil(context)
       ? Tooltip(
-          message: texto,
+          message: _etiqueta,
           child: IconButton.filled(
             style: IconButton.styleFrom(
               fixedSize: const Size(40, 40),
@@ -606,7 +613,7 @@ class BotonPrimario extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (conIcono) ...[Icon(icono, size: 18), const SizedBox(width: 6)],
-              Text(texto),
+              Text(_etiqueta),
               if (tecla != null) ...[
                 const SizedBox(width: 10),
                 Container(
