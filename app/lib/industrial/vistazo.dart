@@ -359,9 +359,23 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                                         ),
                                         const SizedBox(width: 14),
                                         // Discreto, como «Ver todas»: la misma ficha que «+ Crear orden» del activo.
-                                        Enlace(
-                                          '+ Crear orden',
-                                          onTap: () => abrirTareaForm(
+                                        // Botón pequeño: azul, con icono, y fondo suave al pasar el ratón.
+                                        TextButton.icon(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: P.morado,
+                                            backgroundColor: P.morado.withValues(alpha: .07),
+                                            overlayColor: P.morado,
+                                            visualDensity: VisualDensity.compact,
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            minimumSize: const Size(0, 30),
+                                            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(P.radioControl),
+                                            ),
+                                          ),
+                                          icon: const Icon(Icons.add_rounded, size: 16),
+                                          label: const Text('Crear orden'),
+                                          onPressed: () => abrirTareaForm(
                                             context,
                                             null,
                                             borrador: p.ot(store.nuevoId())..proximo = d ?? hoy(),
