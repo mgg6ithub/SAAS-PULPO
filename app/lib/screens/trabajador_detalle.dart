@@ -8,6 +8,9 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'invitar.dart';
 import '../marca.dart';
+import '../industrial/gravedad.dart';
+import '../industrial/historicos.dart';
+import 'tabla_trabajos.dart';
 
 /// Vista de un trabajador: en el centro, su trabajo (tareas asignadas); a la derecha, su ficha.
 class TrabajadorDetalle extends StatelessWidget {
@@ -86,9 +89,19 @@ class TrabajadorDetalle extends StatelessWidget {
                     ? (industrial ? 'Sin especialidades indicadas' : 'Sin competencias')
                     : w.competencias.join(' · '),
                 acciones: [
-                  w.activo
-                      ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)
-                      : const Pill('Inactivo', P.gris, punto: true),
+                  // Disponible, ocupado o ausente hoy: se cambia arriba a la derecha de su ficha.
+                  Tooltip(
+                    message: w.activo
+                        ? 'Disponibilidad de hoy. Se cambia en su ficha (arriba a la derecha): Disponible, Ocupado o Ausente.'
+                        : 'De baja: no recibe órdenes de trabajo.',
+                    child: w.activo
+                        ? Pill(
+                            industrial ? 'Hoy: ${w.estadoHoy.etiqueta}' : w.estadoHoy.etiqueta,
+                            w.estadoHoy.color,
+                            punto: true,
+                          )
+                        : Pill(industrial ? 'De baja' : 'Inactivo', P.gris, punto: true),
+                  ),
                   if (!conFicha)
                     OutlinedButton(onPressed: () => abrirTrabajadorForm(context, w), child: const Text('Editar ficha')),
                   if (store.nube != null) _Acceso(w, key: ValueKey('acceso-${w.id}')),
@@ -102,8 +115,8 @@ class TrabajadorDetalle extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              titulo,
-              Expanded(child: lista),
+              // Pultec: cifras del técnico y sus órdenes en Pendientes e Histórico (con su resultado).
+              if (industrial) Expanded(child: _OrdenesTecnico(w)) else ...[titulo, Expanded(child: lista)],
             ],
           ),
         );
@@ -403,6 +416,77 @@ class _AsignarState extends State<_Asignar> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Pultec: lo del técnico de un vistazo (pendientes, vencidas, hechas en 30 días y con incidencia) y sus
+/// órdenes en dos partes. Aquí no se editan: se ve la orden y su parte.
+class _OrdenesTecnico extends StatefulWidget {
+  final Trabajador w;
+  const _OrdenesTecnico(this.w);
+
+  @override
+  State<_OrdenesTecnico> createState() => _OrdenesTecnicoState();
+}
+
+class _OrdenesTecnicoState extends State<_OrdenesTecnico> {
+  int vista = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget.w;
+    final suyas = [
+      ...store.tareas,
+      ...store.subtareas,
+    ].where((t) => !t.esPlantilla && (t.trabajadorIds.contains(w.id) || t.ejecutadoPor == w.id)).toList();
+    final pendientes = suyas.where(otPendiente).toList()
+      ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
+    final vencidas = pendientes.where((t) => t.proximo != null && diasHasta(t.proximo!) < 0).length;
+    final hechas30 = suyas.where((t) => t.ultimo != null && diasHasta(t.ultimo!) >= -30).length;
+    final conIncidencia = suyas.where((t) => (t.resultado ?? 0) > 0).length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Rejilla(
+          columnas: 4,
+          children: [
+            Tarjeta(child: Cifra('Pendientes', pendientes.length, punto: P.morado)),
+            Tarjeta(
+              child: Cifra('Vencidas', vencidas, punto: P.rojo, color: vencidas > 0 ? P.rojo : null),
+            ),
+            Tarjeta(
+              child: Cifra('Hechas', hechas30, nota: 'últimos 30 días', punto: P.verde),
+            ),
+            Tarjeta(child: Cifra('Con incidencia', conIncidencia, punto: P.ambar)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Pestanas(
+            opciones: ['Pendientes · ${pendientes.length}', 'Histórico'],
+            iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+            seleccion: vista,
+            onChanged: (i) => setState(() => vista = i),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Expanded(
+          child: vista == 1
+              ? Historicos(tecnicoId: w.id, incrustada: true)
+              : pendientes.isEmpty
+              ? const Vacio(icono: Icons.assignment_outlined, texto: 'No tiene órdenes de trabajo pendientes.')
+              : TablaTrabajos(
+                  pendientes,
+                  nombre: 'orden de trabajo',
+                  onAbrir: (id) {
+                    final t = store.tarea(id) ?? store.subtareas.where((x) => x.id == id).firstOrNull;
+                    if (t != null) verOrdenHecha(context, t);
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

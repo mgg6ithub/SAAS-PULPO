@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../screens/informes.dart' show InformesDelTrabajo;
 import 'gravedad.dart';
+import 'planes.dart' show raizActivo;
 import 'tipo_mantenimiento.dart';
 
 /// Una OT realizada: el día en que se hizo y la OT.
@@ -36,7 +37,10 @@ const _periodos = <(String, int?)>[
 class Historicos extends StatefulWidget {
   final String? activoId;
   final bool incrustada;
-  const Historicos({super.key, this.activoId, this.incrustada = false});
+
+  /// Solo las de este técnico (ficha del técnico).
+  final String? tecnicoId;
+  const Historicos({super.key, this.activoId, this.incrustada = false, this.tecnicoId});
 
   @override
   State<Historicos> createState() => _HistoricosState();
@@ -55,7 +59,8 @@ class _HistoricosState extends State<Historicos> {
     return otsRealizadas().where((r) {
       final (d, t) = r;
       if (rama != null && !rama.contains(t.activoId)) return false;
-      if (tecnicoId != null && !t.trabajadorIds.contains(tecnicoId)) return false;
+      final tec = widget.tecnicoId ?? tecnicoId;
+      if (tec != null && t.ejecutadoPor != tec && !t.trabajadorIds.contains(tec)) return false;
       return dias == null || diasHasta(d) >= -dias;
     }).toList();
   }
@@ -198,7 +203,8 @@ class _TablaRealizadas extends StatelessWidget {
             ),
           ];
         },
-        onTap: (i) => abrirTareaForm(context, lista[i].$2),
+        // Lo hecho no se edita aquí: se ve la orden con su parte.
+        onTap: (i) => verOrdenHecha(context, lista[i].$2),
         pie: pieTabla(lista.length, lista.length == 1 ? 'orden de trabajo realizada' : 'órdenes de trabajo realizadas'),
       );
     },
@@ -292,4 +298,58 @@ class _Filtro<T> extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Una OT del histórico: activo, criticidad, resultado y sus partes (fotos, firma, PDF). Solo lectura.
+Future<void> verOrdenHecha(BuildContext context, Tarea t) {
+  final a = raizActivo(t.activoId);
+  final (texto, color) = resultadoOt(t);
+  return showDialog(
+    context: context,
+    builder: (c) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 10, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(a?.titulo ?? 'Sin activo', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+                        const SizedBox(height: 2),
+                        Text(t.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Cerrar',
+                    onPressed: () => Navigator.pop(c),
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (t.tipoMantenimiento != null) PillTipo(t.tipoMantenimiento!),
+                  Pill(texto, color, punto: true),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Flexible(child: SingleChildScrollView(child: InformesDelTrabajo(t))),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
