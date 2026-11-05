@@ -524,44 +524,48 @@ class Cabecera extends StatelessWidget {
   final Widget? lider;
   const Cabecera({super.key, required this.titulo, this.subtitulo, this.acciones = const [], this.lider});
 
+  /// Las acciones se quedan siempre arriba a la derecha; si falta ancho, solo con su icono.
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      runSpacing: 12,
-      spacing: 12,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (lider != null) ...[lider!, const SizedBox(width: 12)],
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    titulo,
-                    style: TextStyle(
-                      fontFamily: P.titulos,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -1,
-                      height: 1.15,
+        Expanded(
+          child: Row(
+            children: [
+              if (lider != null) ...[lider!, const SizedBox(width: 12)],
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      titulo,
+                      style: TextStyle(
+                        fontFamily: P.titulos,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -1,
+                        height: 1.15,
+                      ),
                     ),
-                  ),
-                  if (subtitulo != null) ...[
-                    const SizedBox(height: 4),
-                    Text(subtitulo!, style: TextStyle(color: P.textoSuave, fontSize: 14.5)),
+                    if (subtitulo != null) ...[
+                      const SizedBox(height: 4),
+                      Text(subtitulo!, style: TextStyle(color: P.textoSuave, fontSize: 14.5)),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: acciones),
+        if (acciones.isNotEmpty) ...[
+          const SizedBox(width: 12),
+          _Compacto(
+            compacto: box.maxWidth < 900,
+            child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: acciones),
+          ),
+        ],
       ],
     ),
   );

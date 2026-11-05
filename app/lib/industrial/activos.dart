@@ -32,6 +32,10 @@ final _aLaLista = ValueNotifier(0);
 /// en la lista, null y el atajo abre el alta de activo.
 Future<void> Function(BuildContext)? nuevoEnActivo;
 
+/// Activo abierto y lo que se miraba dentro; sobreviven a que la vista se vuelva a crear al redimensionar.
+final _abierto = ValueNotifier<String?>(null);
+var _pestana = 0, _vista = 0, _criticidad = 0;
+
 /// Desde Inicio: Activos en la lista (nunca dentro de un activo abierto antes).
 void abrirListaActivos() => _aLaLista.value++;
 
@@ -48,7 +52,10 @@ class Activos extends StatefulWidget {
 
 class _ActivosState extends State<Activos> {
   String q = '';
-  String? abierto;
+
+  /// Fuera del estado: al estrechar la ventana el diseño cambia y Activos se vuelve a crear.
+  String? get abierto => _abierto.value;
+  set abierto(String? v) => _abierto.value = v;
 
   @override
   void initState() {
@@ -253,19 +260,22 @@ class ActivoDetalle extends StatefulWidget {
 
 class _ActivoDetalleState extends State<ActivoDetalle> {
   late String elegido = widget.activoId;
-  int pestana = 0;
+  int get pestana => _pestana;
+  set pestana(int v) => _pestana = v;
 
   /// Sube al guardar o cancelar en Datos: el formulario vuelve a leer el activo.
   int vuelta = 0;
   String? tareaId;
 
   /// Qué enseña Resumen: 0 = mantenimientos (por defecto), 1 = subcomponentes.
-  int vista = 0;
-  int criticidad = 0;
+  int get vista => _vista;
+  set vista(int v) => _vista = v;
+  int get criticidad => _criticidad;
+  set criticidad(int v) => _criticidad = v;
 
   void _abrir(String id) => setState(() {
     Tooltip.dismissAllToolTips();
-    elegido = id;
+    elegido = _abierto.value = id;
     pestana = 0;
     vista = 0;
   });
@@ -442,39 +452,33 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         ],
                       ),
                       const SizedBox(height: huecoVista),
-                      Row(
-                        children: [
-                          // Con la ventana estrecha, el selector y el filtro se desplazan en vez de desbordar.
-                          Expanded(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  Pestanas(
-                                    opciones: [
-                                      'Mantenimientos · ${planes.length}',
-                                      // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
-                                      '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
-                                    ],
-                                    seleccion: vista,
-                                    onChanged: (i) => setState(() => vista = i),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          // El filtro de criticidad, a la derecha del todo y entero: si falta sitio, se desplaza el selector.
-                          if (vista == 0) ...[
-                            const SizedBox(width: 12),
+                      // Selector a la izquierda y filtro a la derecha; si no caben juntos, el filtro baja a otra línea.
+                      SizedBox(
+                        width: double.infinity,
+                        child: Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          spacing: 12,
+                          runSpacing: 8,
+                          children: [
                             Pestanas(
-                              opciones: _filtrosCriticidad,
-                              colores: [null, for (final t in TipoMantenimiento.values) t.color],
-                              seleccion: criticidad,
-                              compactas: true,
-                              onChanged: (i) => setState(() => criticidad = i),
+                              opciones: [
+                                'Mantenimientos · ${planes.length}',
+                                // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
+                                '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
+                              ],
+                              seleccion: vista,
+                              onChanged: (i) => setState(() => vista = i),
                             ),
+                            if (vista == 0)
+                              Pestanas(
+                                opciones: _filtrosCriticidad,
+                                colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                                seleccion: criticidad,
+                                compactas: true,
+                                onChanged: (i) => setState(() => criticidad = i),
+                              ),
                           ],
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Expanded(
