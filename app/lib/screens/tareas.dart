@@ -104,6 +104,15 @@ class _TareasPaginaState extends State<TareasPagina> {
               BarraVista(
                 izquierda: [
                   TituloVista(m('Trabajos')),
+                  // Pultec: la criticidad como filtro, igual que en los mantenimientos de un activo.
+                  if (industrial)
+                    Pestanas(
+                      opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
+                      colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                      seleccion: criticidad,
+                      compactas: true,
+                      onChanged: (i) => filtroCriticidadTrabajos.value = i,
+                    ),
                   // Pultec, de momento sin plantillas: solo la lista de órdenes de trabajo.
                   if (!industrial)
                     Pestanas(
@@ -143,18 +152,6 @@ class _TareasPaginaState extends State<TareasPagina> {
                       const SizedBox(width: 6),
                     ],
                     Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                    if (industrial) ...[
-                      for (final x in TipoMantenimiento.values) ...[
-                        _ChipTipo(
-                          criticidad == x.index + 1 ? '${x.etiqueta}  ×' : x.etiqueta,
-                          x.color,
-                          criticidad == x.index + 1,
-                          () => filtroCriticidadTrabajos.value = criticidad == x.index + 1 ? 0 : x.index + 1,
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                    ],
                     for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
                       _ChipTipo(
                         x.nombre,
