@@ -1360,7 +1360,8 @@ class _TablaState extends State<Tabla> {
                   itemBuilder: (_, i) {
                     final cs = widget.celdas(i);
                     final borde = widget.resaltar?.call(i);
-                    return Material(
+                    // Destacada: un poco hacia dentro para que el borde se vea entero también por los lados.
+                    final fila = Material(
                       color: borde == null ? Colors.transparent : borde.withValues(alpha: .06),
                       shape: borde == null
                           ? null
@@ -1385,6 +1386,7 @@ class _TablaState extends State<Tabla> {
                         ),
                       ),
                     );
+                    return borde == null ? fila : Padding(padding: const EdgeInsets.all(3), child: fila);
                   },
                 ),
               ),
