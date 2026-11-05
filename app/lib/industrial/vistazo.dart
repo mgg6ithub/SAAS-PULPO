@@ -274,7 +274,7 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
           children: [
             Expanded(
               child: Text(
-                'Mantenimientos sin asignar',
+                'Mantenimientos sin orden de trabajo',
                 style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
               ),
             ),
