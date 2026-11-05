@@ -28,6 +28,10 @@ String textoEstado(TipoMantenimiento? g) => g?.etiqueta ?? 'Al día';
 /// Avisa a Activos de que vuelva a la lista (aunque el filtro no cambie), al llegar desde Inicio.
 final _aLaLista = ValueNotifier(0);
 
+/// Lo que hace la N en Activos: dentro de un activo, lo mismo que su botón (mantenimiento o componente);
+/// en la lista, null y el atajo abre el alta de activo.
+Future<void> Function(BuildContext)? nuevoEnActivo;
+
 /// Desde Inicio: Activos en la lista (nunca dentro de un activo abierto antes).
 void abrirListaActivos() => _aLaLista.value++;
 
@@ -326,8 +330,20 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   );
 
   @override
+  @override
+  void dispose() {
+    nuevoEnActivo = null;
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final a = store.activo(elegido) ?? store.activo(widget.activoId);
+    nuevoEnActivo = a == null
+        ? null
+        : vista == 0
+        ? (c) => abrirPlanForm(c, activoId: a.id)
+        : (c) => abrirActivoForm(c, padreId: a.id);
     if (a == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => widget.onVolver());
       return const SizedBox();

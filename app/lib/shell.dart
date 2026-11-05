@@ -95,6 +95,8 @@ class _ShellState extends State<Shell> {
     final abierta = store.tarea(tareaId);
     await switch (seccion) {
       _ when abierta != null => abrirSubtrabajoRapido(context, abierta),
+      // Pultec: lo mismo que el botón de la vista (activo, o mantenimiento/componente dentro de un activo).
+      Seccion.clientes when industrial => (nuevoEnActivo ?? abrirActivoForm)(context),
       Seccion.clientes => abrirClienteForm(context),
       Seccion.trabajadores => abrirTrabajadorForm(context),
       Seccion.finanzas => abrirDocumento(context, Documento(vence: masDias(hoy(), 30))),
