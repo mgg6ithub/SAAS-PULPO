@@ -17,10 +17,10 @@ final filtroCriticidadTrabajos = ValueNotifier<int>(0);
 
 /// Pultec: en vez de «Esta semana», «Sin técnico» (órdenes pendientes que nadie tiene asignadas).
 final _filtrosFecha = [
-  ('Para hoy', P.morado),
-  industrial ? ('Sin técnico', P.teal) : ('Esta semana', P.teal),
-  ('Vencidos', P.rojo),
-  ('Hechos', P.verde),
+  ('Para hoy', P.morado, Icons.today_rounded),
+  industrial ? ('Sin técnico', P.teal, Icons.person_off_outlined) : ('Esta semana', P.teal, Icons.date_range_rounded),
+  ('Vencidos', P.rojo, Icons.warning_amber_rounded),
+  ('Hechos', P.verde, Icons.task_alt_rounded),
 ];
 
 bool pasaFechaTrabajo(Tarea t, int f) {
@@ -142,12 +142,13 @@ class _TareasPaginaState extends State<TareasPagina> {
                 child: Row(
                   children: [
                     // Por fecha (las mismas cifras de Inicio): al tocar una se filtra; al tocarla otra vez, se quita.
-                    for (final (i, (nombre, color)) in _filtrosFecha.indexed) ...[
+                    for (final (i, (nombre, color, icono)) in _filtrosFecha.indexed) ...[
                       _ChipTipo(
                         fecha == i + 1 ? '$nombre  ×' : nombre,
                         color,
                         fecha == i + 1,
                         () => filtroFechaTrabajos.value = fecha == i + 1 ? 0 : i + 1,
+                        icono: icono,
                       ),
                       const SizedBox(width: 6),
                     ],
@@ -260,7 +261,10 @@ class _ChipTipo extends StatelessWidget {
   final Color color;
   final bool sel;
   final VoidCallback onTap;
-  const _ChipTipo(this.nombre, this.color, this.sel, this.onTap);
+
+  /// Icono de su color en lugar del punto (los filtros de fecha, como las cifras de Inicio).
+  final IconData? icono;
+  const _ChipTipo(this.nombre, this.color, this.sel, this.onTap, {this.icono});
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -277,11 +281,14 @@ class _ChipTipo extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
+          if (icono != null)
+            Icon(icono, size: 15, color: color)
+          else
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
           const SizedBox(width: 7),
           Text(
             nombre,
