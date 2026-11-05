@@ -839,10 +839,10 @@ class _ActivoFormState extends State<ActivoForm> {
             ),
             // Opcional, como la de los mantenimientos: sale bajo el nombre en las listas.
             campo(
-              'Breve descripción',
+              'Descripción',
               descripcion,
               hint: componente ? 'Motor diésel de 6 cilindros' : 'Transporte de residuos líquidos',
-              lineas: 2,
+              lineas: 4, // Tan alto como la rejilla de iconos de al lado.
             ),
           ],
         ),
