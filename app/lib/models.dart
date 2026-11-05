@@ -46,9 +46,8 @@ extension EstadoTrabajoX on EstadoTrabajo {
 }
 
 /// Opciones de la interfaz; conserva los valores guardados del flujo residencial y del técnico.
-List<EstadoTrabajo> get estadosTrabajo => industrial
-    ? const [EstadoTrabajo.pendiente, EstadoTrabajo.realizado]
-    : EstadoTrabajo.values;
+List<EstadoTrabajo> get estadosTrabajo =>
+    industrial ? const [EstadoTrabajo.pendiente, EstadoTrabajo.realizado] : EstadoTrabajo.values;
 
 enum EstadoMaquina { operativa, revision, averiada }
 
@@ -430,7 +429,13 @@ class Tarea {
 
   /// Color elegido para su bloque en el calendario (ARGB); null = el de su tipo.
   int? color;
-  Color get colorBloque => color != null ? Color(color!) : tipoDe(tipo).color;
+
+  /// Pultec: el color de su criticidad (preventivo, no crítico, crítico) en calendarios y agendas.
+  Color get colorBloque => industrial && tipoMantenimiento != null
+      ? tipoMantenimiento!.color
+      : color != null
+      ? Color(color!)
+      : tipoDe(tipo).color;
 
   /// Completada ese día: se hizo ese día y no es un día futuro (lo futuro siempre está pendiente).
   bool hechaEl(DateTime dia) => ultimo != null && DateUtils.isSameDay(ultimo, dia) && diasHasta(dia) <= 0;
@@ -488,9 +493,7 @@ class Tarea {
     id: _s(j, 'id'),
     clienteId: j['clienteId'] as String?,
     equipoId: j['equipoId'] as String?,
-    tipoMantenimiento: j['tipoMantenimiento'] == null
-        ? null
-        : TipoMantenimiento.values[j['tipoMantenimiento'] as int],
+    tipoMantenimiento: j['tipoMantenimiento'] == null ? null : TipoMantenimiento.values[j['tipoMantenimiento'] as int],
     activoId: j['activoId'] as String?,
     planId: j['planId'] as String?,
     ejecutadoPor: j['ejecutadoPor'] as String?,

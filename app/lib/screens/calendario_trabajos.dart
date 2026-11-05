@@ -15,6 +15,8 @@ import 'calendario_datos.dart';
 import 'tarea_detalle.dart';
 import 'vista_dias.dart' show lunesDe, diasSemana;
 import '../marca.dart';
+import '../industrial/iconos.dart';
+import '../industrial/tipo_mantenimiento.dart';
 
 enum ModoCalendario { mes, semana, dia }
 
@@ -837,92 +839,98 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxHeight: alto),
                         child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(18),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        t.tipo.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: P.moradoOscuro,
-                                          fontWeight: FontWeight.w700,
+                          child: industrial
+                              ? _resumenPultec(v, t, color)
+                              : Padding(
+                                  padding: const EdgeInsets.all(18),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              t.tipo.toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: P.moradoOscuro,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Cerrar resumen',
+                                            onPressed: _cerrar,
+                                            icon: const Icon(CupertinoIcons.xmark, size: 17),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(t.nombre, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        v.hecha ? 'Completado' : 'Pendiente',
+                                        style: TextStyle(color: v.hecha ? P.verde : P.textoSuave, fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      _dato(Marca.iconoCliente, store.cliente(t.clienteId)?.nombre ?? m('Sin cliente')),
+                                      _dato(
+                                        Icons.schedule_rounded,
+                                        '${fecha(v.dia)} · ${v.inicio == null ? 'Sin hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'} · ${t.duracionMin} min',
+                                      ),
+                                      _dato(Icons.place_outlined, t.ubicacion.isEmpty ? 'Sin ubicación' : t.ubicacion),
+                                      _dato(
+                                        Icons.people_outline,
+                                        t.trabajadorIds.isEmpty
+                                            ? 'Sin asignar'
+                                            : t.trabajadorIds
+                                                  .map(
+                                                    (id) =>
+                                                        store.trabajador(id)?.nombreCompleto ??
+                                                        m('Trabajador no disponible'),
+                                                  )
+                                                  .join(', '),
+                                      ),
+                                      _dato(
+                                        Icons.repeat_rounded,
+                                        '${t.periodicidad.etiqueta} · ${t.criticidad.etiqueta}',
+                                      ),
+                                      if (t.notas.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(bottom: 12),
+                                          child: Text(t.notas, maxLines: 4, overflow: TextOverflow.ellipsis),
                                         ),
+                                      const Divider(),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          FilledButton(
+                                            onPressed: () {
+                                              _cerrar();
+                                              widget.onDetalle(t.id);
+                                            },
+                                            child: const Text('Ver detalles'),
+                                          ),
+                                          OutlinedButton(
+                                            onPressed: () {
+                                              _cerrar();
+                                              abrirTareaForm(this.context, t);
+                                            },
+                                            child: const Text('Editar'),
+                                          ),
+                                          if (!v.hecha && DateUtils.isSameDay(v.dia, hoy()))
+                                            TextButton(
+                                              onPressed: () {
+                                                _cerrar();
+                                                store.marcarHecha(t);
+                                              },
+                                              child: const Text('Completar'),
+                                            ),
+                                        ],
                                       ),
-                                    ),
-                                    IconButton(
-                                      tooltip: 'Cerrar resumen',
-                                      onPressed: _cerrar,
-                                      icon: const Icon(CupertinoIcons.xmark, size: 17),
-                                    ),
-                                  ],
-                                ),
-                                Text(t.nombre, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 6),
-                                Text(
-                                  v.hecha ? 'Completado' : 'Pendiente',
-                                  style: TextStyle(color: v.hecha ? P.verde : P.textoSuave, fontSize: 12),
-                                ),
-                                const SizedBox(height: 14),
-                                _dato(Marca.iconoCliente, store.cliente(t.clienteId)?.nombre ?? m('Sin cliente')),
-                                _dato(
-                                  Icons.schedule_rounded,
-                                  '${fecha(v.dia)} · ${v.inicio == null ? 'Sin hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'} · ${t.duracionMin} min',
-                                ),
-                                _dato(Icons.place_outlined, t.ubicacion.isEmpty ? 'Sin ubicación' : t.ubicacion),
-                                _dato(
-                                  Icons.people_outline,
-                                  t.trabajadorIds.isEmpty
-                                      ? 'Sin asignar'
-                                      : t.trabajadorIds
-                                            .map(
-                                              (id) =>
-                                                  store.trabajador(id)?.nombreCompleto ?? m('Trabajador no disponible'),
-                                            )
-                                            .join(', '),
-                                ),
-                                _dato(Icons.repeat_rounded, '${t.periodicidad.etiqueta} · ${t.criticidad.etiqueta}'),
-                                if (t.notas.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Text(t.notas, maxLines: 4, overflow: TextOverflow.ellipsis),
+                                    ],
                                   ),
-                                const Divider(),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    FilledButton(
-                                      onPressed: () {
-                                        _cerrar();
-                                        widget.onDetalle(t.id);
-                                      },
-                                      child: const Text('Ver detalles'),
-                                    ),
-                                    OutlinedButton(
-                                      onPressed: () {
-                                        _cerrar();
-                                        abrirTareaForm(this.context, t);
-                                      },
-                                      child: const Text('Editar'),
-                                    ),
-                                    if (!v.hecha && DateUtils.isSameDay(v.dia, hoy()))
-                                      TextButton(
-                                        onPressed: () {
-                                          _cerrar();
-                                          store.marcarHecha(t);
-                                        },
-                                        child: const Text('Completar'),
-                                      ),
-                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
                         ),
                       ),
                     ),
@@ -991,6 +999,128 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Pultec: resumen de la orden con su activo, su criticidad y su mantenimiento, compacto y en color.
+  Widget _resumenPultec(VisitaCalendario v, Tarea t, Color color) {
+    var a = store.activo(t.activoId);
+    final componente = a;
+    while (a?.padreId != null && store.activo(a!.padreId!) != null) {
+      a = store.activo(a.padreId!);
+    }
+    final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: a == null
+                    ? Icon(Icons.assignment_outlined, size: 28, color: color)
+                    : IconoActivo(a.icono, size: 28, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      a?.titulo ?? 'Sin activo',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(t.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, height: 1.2)),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cerrar resumen',
+                visualDensity: VisualDensity.compact,
+                onPressed: _cerrar,
+                icon: const Icon(CupertinoIcons.xmark, size: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                if (t.tipoMantenimiento != null) PillTipo(t.tipoMantenimiento!),
+                Pill(v.hecha ? 'Completada' : 'Pendiente', v.hecha ? P.verde : P.textoSuave, punto: true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (componente != null && componente.id != a?.id) _dato(Icons.account_tree_outlined, componente.titulo),
+          if (plan != null)
+            _dato(Icons.content_paste_rounded, [plan.nombre, if (plan.cada.isNotEmpty) plan.cada].join(' · ')),
+          _dato(
+            Icons.schedule_rounded,
+            '${fecha(v.dia)} · ${v.inicio == null ? 'Sin hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'} · ${t.duracionMin} min',
+          ),
+          _dato(
+            Icons.person_outline_rounded,
+            t.trabajadorIds.isEmpty
+                ? 'Sin técnico'
+                : t.trabajadorIds
+                      .map((id) => store.trabajador(id)?.nombreCompleto ?? 'Técnico no disponible')
+                      .join(', '),
+          ),
+          if (t.notas.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12, right: 8),
+              child: Text(
+                t.notas,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+              ),
+            ),
+          Divider(height: 1, color: P.borde),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    _cerrar();
+                    widget.onDetalle(t.id);
+                  },
+                  child: const Text('Ver orden'),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    _cerrar();
+                    abrirTareaForm(context, t);
+                  },
+                  child: const Text('Editar'),
+                ),
+                if (!v.hecha && DateUtils.isSameDay(v.dia, hoy()))
+                  TextButton(
+                    onPressed: () {
+                      _cerrar();
+                      store.marcarHecha(t);
+                    },
+                    child: const Text('Completar'),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
