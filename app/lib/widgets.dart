@@ -1014,6 +1014,13 @@ class Pestanas extends StatelessWidget {
     }
     final w = mayor.ceilToDouble() + (compactas ? 18 : 28) + (colores == null ? 0 : 14) + (iconos == null ? 0 : 23);
     final valida = seleccion >= 0 && seleccion < opciones.length;
+    // Si no caben enteras en el ancho que hay, desplegable (nunca cortadas ni desbordando).
+    return LayoutBuilder(
+      builder: (context, box) => w * opciones.length + 6 > box.maxWidth ? _desplegable(estilo) : _pestanas(w, valida, estilo),
+    );
+  }
+
+  Widget _pestanas(double w, bool valida, TextStyle estilo) {
     return Container(
       height: 40,
       padding: const EdgeInsets.all(3),

@@ -22,22 +22,22 @@ void main() {
     store.activos = [];
     store.planes = [];
     store.incidencias = [];
-    store.tareas.removeWhere((t) => t.id.startsWith('ot'));
+    store.tareas.removeWhere((t) => t.id.startsWith('ot') || t.tipoMantenimiento != null);
+    reiniciarVistaActivos();
     store
       ..guardarActivo(Activo(id: 'a1', tag: 'CAM-01', nombre: 'Camión'))
       ..guardarActivo(Activo(id: 'a2', padreId: 'a1', tag: 'CAM-01-MOT', nombre: 'Motor'))
       ..guardarActivo(Activo(id: 'a3', padreId: 'a2', tag: 'CAM-01-MOT-B', nombre: 'Bomba'));
   });
 
-  test('la clasificación pertenece al activo y no cambia al completar una OT', () {
-    expect(gravedadDe('a1'), TipoMantenimiento.preventivo);
-    store.activo('a2')!.tipo = TipoMantenimiento.correctivoNoCritico;
+  test('la criticidad es de las OT: el activo toma la de su OT pendiente más grave', () {
+    expect(gravedadDe('a1'), isNull);
     final ot = Tarea(id: 'ot1', nombre: 'Fuga', activoId: 'a3', tipoMantenimiento: TipoMantenimiento.correctivoCritico);
     store.tareas.add(ot);
-    expect(gravedadDe('a1'), TipoMantenimiento.preventivo);
-    expect(gravedadDe('a2'), TipoMantenimiento.correctivoNoCritico);
+    expect(gravedadDe('a1'), TipoMantenimiento.correctivoCritico);
+    expect(gravedadDe('a2'), TipoMantenimiento.correctivoCritico);
     ot.estado = EstadoTrabajo.realizado;
-    expect(gravedadDe('a2'), TipoMantenimiento.correctivoNoCritico);
+    expect(gravedadDe('a1'), isNull);
   });
 
   test('borrar un activo quita sus componentes y deja sus OT sin activo', () {
@@ -146,7 +146,11 @@ void main() {
       expect(find.text('Fuga de aceite'), findsOneWidget);
       expect(find.text('Ruido raro'), findsOneWidget);
       // Solo las de la prensa, sin depender de la navegación global retirada.
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Mantenimientos(incidencias: true, activoId: 'b1'))));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: Mantenimientos(incidencias: true, activoId: 'b1')),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Fuga de aceite'), findsNothing);
       expect(find.text('Ruido raro'), findsOneWidget);
@@ -166,30 +170,41 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
       await tester.pumpAndSettle();
-      expect(find.text('CAM-01 · Camión'), findsOneWidget);
-      await tester.tap(find.text('CAM-01 · Camión'));
+      // En todo el programa: nombre - código.
+      expect(find.text('Camión - CAM-01'), findsOneWidget);
+      await tester.tap(find.text('Camión - CAM-01'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('CAM-01-MOT · Motor'));
-      await tester.pumpAndSettle();
-      expect(find.text('CAM-01-MOT-B · Bomba'), findsOneWidget);
-      expect(find.text('Nuevo mantenimiento'), findsNothing);
       expect(find.text('Resumen'), findsOneWidget);
-      expect(find.text('Datos'), findsOneWidget);
-      if (ancho > 600) {
-        await tester.tap(find.text('Nuevo componente'));
+      if (ancho > 1000) {
+        expect(find.text('Datos'), findsOneWidget);
+        // Dentro de un activo: «Componentes»; el botón de arriba cambia con el selector.
+        expect(find.text('Mantenimiento'), findsOneWidget);
+        await tester.tap(find.text('Componentes · 1'));
         await tester.pumpAndSettle();
-        expect(find.text('Nuevo componente'), findsWidgets);
+        expect(find.text('Componente'), findsWidgets);
+        await tester.tap(find.text('Motor'));
+        await tester.pumpAndSettle();
+        // Dentro de un componente: «Subcomponentes».
+        expect(find.text('Subcomponentes · 1'), findsOneWidget);
       }
     });
   }
 
   for (final columnas in [3, 1]) {
-    testWidgets('Inicio: máquinas agrupadas por su clasificación en $columnas columnas', (tester) async {
+    testWidgets('Inicio: órdenes de trabajo por criticidad en $columnas columnas', (tester) async {
       tester.view.physicalSize = Size(columnas == 3 ? 1280 : 420, 1000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      store.guardarActivo(Activo(id: 'b1', tag: 'PRE-01', nombre: 'Prensa'));
-      store.activo('a1')!.tipo = TipoMantenimiento.correctivoCritico;
+      store.tareas.add(
+        Tarea(
+          id: 'ot9',
+          nombre: 'Fuga hidráulica',
+          activoId: 'a2',
+          plantilla: false,
+          proximo: hoy(),
+          tipoMantenimiento: TipoMantenimiento.correctivoCritico,
+        ),
+      );
       String? abierto;
       await tester.pumpWidget(
         MaterialApp(
@@ -201,10 +216,10 @@ void main() {
         ),
       );
       expect(find.byTooltip(TipoMantenimiento.correctivoCritico.descripcion), findsOneWidget);
-      expect(find.text('CAM-01 · Camión'), findsOneWidget);
-      expect(find.text('Correctivo crítico'), findsOneWidget);
-      await tester.tap(find.text('PRE-01 · Prensa'));
-      expect(abierto, 'b1');
+      // Arriba el activo principal, debajo la orden; al tocarla se abre la orden.
+      expect(find.text('Camión - CAM-01'), findsOneWidget);
+      await tester.tap(find.text('Fuga hidráulica'));
+      expect(abierto, 'ot9');
     });
   }
 

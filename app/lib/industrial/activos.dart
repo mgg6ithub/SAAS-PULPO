@@ -43,6 +43,13 @@ void destacarMantenimiento(String planId) {
   planDestacado.value = planId;
 }
 
+/// Vuelve a la lista con la ficha como recién abierta (tests).
+@visibleForTesting
+void reiniciarVistaActivos() {
+  _abierto.value = null;
+  _pestana = _vista = _criticidad = 0;
+}
+
 /// Desde Inicio: Activos en la lista (nunca dentro de un activo abierto antes).
 void abrirListaActivos() => _aLaLista.value++;
 
