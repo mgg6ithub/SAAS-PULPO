@@ -197,7 +197,26 @@ class _TablaActivos extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     // Subcomponentes: el nombre aquí y el tag en su propia columna.
-                    child: celdaTexto(componentes && a.nombre.isNotEmpty ? a.nombre : a.titulo, negrita: true),
+                    child: a.descripcion.isEmpty
+                        ? celdaTexto(componentes && a.nombre.isNotEmpty ? a.nombre : a.titulo, negrita: true)
+                        // Con descripción: debajo del nombre, como en los mantenimientos.
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                celdaTexto(componentes && a.nombre.isNotEmpty ? a.nombre : a.titulo, negrita: true),
+                                const SizedBox(height: 2),
+                                Text(
+                                  a.descripcion,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12.5, color: P.textoSuave, height: 1.3),
+                                ),
+                              ],
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -575,6 +594,7 @@ class _ActivoFormState extends State<ActivoForm> {
   late final modelo = TextEditingController(text: a.modelo);
   late final serie = TextEditingController(text: a.numeroSerie);
   late final division = TextEditingController(text: a.division);
+  late final descripcion = TextEditingController(text: a.descripcion);
   late final horasC = TextEditingController(text: a.horas == 0 ? '' : '${a.horas}')
     ..addListener(() => setState(() => a.fechaLectura = hoy()));
   late final ultimoContador = TextEditingController(text: '${a.horasUltimoMantenimiento}')..addListener(_actualizar);
@@ -709,6 +729,7 @@ class _ActivoFormState extends State<ActivoForm> {
     a
       ..tag = tag.text.trim()
       ..nombre = nombre.text.trim()
+      ..descripcion = descripcion.text.trim()
       ..fabricante = fabricante.text.trim()
       ..modelo = modelo.text.trim()
       ..numeroSerie = serie.text.trim()
@@ -815,6 +836,13 @@ class _ActivoFormState extends State<ActivoForm> {
                 child: campo('Tag', tag, hint: componente ? 'CAM-01-MOT' : 'CAM-01', error: error, obligatorio: true),
               ),
               campo('Nombre', nombre, hint: componente ? 'Motor' : 'Camión cisterna', obligatorio: true),
+            ),
+            // Opcional, como la de los mantenimientos: sale bajo el nombre en las listas.
+            campo(
+              'Breve descripción',
+              descripcion,
+              hint: componente ? 'Motor diésel de 6 cilindros' : 'Transporte de residuos líquidos',
+              lineas: 2,
             ),
           ],
         ),

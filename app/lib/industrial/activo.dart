@@ -10,7 +10,7 @@ class Activo {
   String id;
   String icono;
   String? padreId;
-  String tag, nombre, fabricante, modelo, numeroSerie, division, repuestos, notas;
+  String tag, nombre, descripcion, fabricante, modelo, numeroSerie, division, repuestos, notas;
 
   /// Horas de uso del contador (la última lectura).
   double horas;
@@ -38,6 +38,7 @@ class Activo {
     this.division = '',
     this.repuestos = '',
     this.notas = '',
+    this.descripcion = '',
     this.horas = 0,
     this.activo = true,
     this.frecuencia = FrecuenciaActivo.sinDefinir,
@@ -96,6 +97,7 @@ class Activo {
     'division': division,
     'repuestos': repuestos,
     'notas': notas,
+    'descripcion': descripcion,
     'horas': horas,
     'activo': activo,
     'frecuencia': frecuencia.index,
@@ -122,6 +124,7 @@ class Activo {
     division: j['division'] as String? ?? '',
     repuestos: j['repuestos'] as String? ?? '',
     notas: j['notas'] as String? ?? '',
+    descripcion: j['descripcion'] as String? ?? '',
     horas: (j['horas'] as num? ?? 0).toDouble(),
     activo: j['activo'] as bool? ?? true,
     frecuencia: FrecuenciaActivo.values[j['frecuencia'] as int? ?? 0],

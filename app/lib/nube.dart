@@ -319,19 +319,23 @@ class Nube {
     final rutaFirma = firma == null ? null : await subir('firma.png', firma, 'image/png');
     final x = await _db
         .from('informes')
-        .upsert({
-          'id': id,
-          'empresa_id': empresaId,
-          'trabajo_id': _u(i.trabajoId),
-          'trabajador_id': i.trabajadorId == null ? null : _u(i.trabajadorId!),
-          'resultado': i.resultado,
-          'notas': i.notas,
-          'material': i.material,
-          'minutos': i.minutos,
-          'fotos': rutas,
-          'firma': rutaFirma,
-          'firmante': i.firmante,
-        }, onConflict: 'id', ignoreDuplicates: true)
+        .upsert(
+          {
+            'id': id,
+            'empresa_id': empresaId,
+            'trabajo_id': _u(i.trabajoId),
+            'trabajador_id': i.trabajadorId == null ? null : _u(i.trabajadorId!),
+            'resultado': i.resultado,
+            'notas': i.notas,
+            'material': i.material,
+            'minutos': i.minutos,
+            'fotos': rutas,
+            'firma': rutaFirma,
+            'firmante': i.firmante,
+          },
+          onConflict: 'id',
+          ignoreDuplicates: true,
+        )
         .select('created_at');
     return i.guardado(
       id: id,
@@ -750,9 +754,18 @@ class Nube {
             avisarDias: x['avisar_dias'],
           ),
       ],
-      activos: [if (industrial) for (final x in r[12]) _activo(x)],
-      planes: [if (industrial) for (final x in r[13]) _plan(x)],
-      incidencias: [if (industrial) for (final x in r[14]) _incidencia(x)],
+      activos: [
+        if (industrial)
+          for (final x in r[12]) _activo(x),
+      ],
+      planes: [
+        if (industrial)
+          for (final x in r[13]) _plan(x),
+      ],
+      incidencias: [
+        if (industrial)
+          for (final x in r[14]) _incidencia(x),
+      ],
     );
   }
 
@@ -1104,6 +1117,7 @@ class Nube {
           'division': a.division,
           'repuestos': a.repuestos,
           'notas': a.notas,
+          'descripcion': a.descripcion,
           'horas': a.horas,
           'mantenimiento_modo': a.frecuencia.index,
           'mantenimiento_cada_horas': a.cadaHoras,
@@ -1409,6 +1423,7 @@ Activo _activo(Map x) => Activo(
   division: x['division'],
   repuestos: x['repuestos'],
   notas: x['notas'],
+  descripcion: x['descripcion'] as String? ?? '',
   horas: (x['horas'] as num).toDouble(),
   activo: x['activo'],
   frecuencia: FrecuenciaActivo.values[(x['mantenimiento_modo'] as num?)?.toInt() ?? 0],
