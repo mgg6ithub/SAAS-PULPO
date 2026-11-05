@@ -234,7 +234,11 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     return desplazado && t.isNotEmpty ? t : widget.titulo;
   }
 
-  Widget _cabecera() => MouseRegion(
+  /// Incrustada (Datos de un activo): barra baja, del color de la cabecera de las tablas y sin etiqueta.
+  Widget _cabecera() =>
+      widget.incrustada ? ColoredBox(color: P.cabeceraTabla, child: _cabeceraBase()) : _cabeceraBase();
+
+  Widget _cabeceraBase() => MouseRegion(
     cursor: acoplada || widget.incrustada ? MouseCursor.defer : SystemMouseCursors.move,
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -248,9 +252,9 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             // A la derecha, sitio para los botones de ventana (y la criticidad debajo, si la hay).
             padding: EdgeInsets.fromLTRB(
               _movil ? 16 : 32,
-              acoplada || widget.incrustada ? 16 : 6,
+              widget.incrustada ? 10 : (acoplada ? 16 : 6),
               widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : (_movil ? 56 : 120)),
-              8,
+              widget.incrustada ? 10 : 8,
             ),
             child: Column(
               children: [
@@ -262,7 +266,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (widget.etiqueta != null)
+                          if (widget.etiqueta != null && !widget.incrustada)
                             Text(
                               widget.etiqueta!.toUpperCase(),
                               style: TextStyle(
@@ -283,7 +287,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontFamily: P.titulos,
-                                fontSize: 20,
+                                fontSize: widget.incrustada ? 16 : 20,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -.5,
                               ),
