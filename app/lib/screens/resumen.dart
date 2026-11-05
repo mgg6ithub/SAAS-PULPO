@@ -125,7 +125,15 @@ class Resumen extends StatelessWidget {
                       builder: (context, elegida, _) => _Kpis(
                         elegida: industrial ? elegida : 0,
                         hoy: hoyT.length,
-                        semana: semana.length,
+                        semana: industrial
+                            ? activas
+                                  .where(
+                                    (t) =>
+                                        t.trabajadorIds.isEmpty &&
+                                        (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso),
+                                  )
+                                  .length
+                            : semana.length,
                         vencidas: vencidas.length,
                         hechas: hechas30,
                         dosCol: dosCol,
@@ -1185,7 +1193,9 @@ class _Kpis extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       (Icons.today_rounded, 'Para hoy', hoy, P.morado, 'en agenda'),
-      (Icons.date_range_rounded, 'Esta semana', semana, P.teal, 'próximos 7 días'),
+      industrial
+          ? (Icons.person_off_outlined, 'Sin técnico', semana, P.teal, 'órdenes por asignar')
+          : (Icons.date_range_rounded, 'Esta semana', semana, P.teal, 'próximos 7 días'),
       (
         Icons.warning_amber_rounded,
         'Vencidos',

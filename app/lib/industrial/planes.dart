@@ -219,28 +219,28 @@ class _TablaPlanesState extends State<TablaPlanes> {
                           ? null
                           : store.trabajador(otPendienteDe.trabajadorIds.first)?.nombre;
                       return InkWell(
+                        borderRadius: BorderRadius.circular(10),
                         onTap: () => abrirTareaForm(context, otPendienteDe),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Pill(
-                              [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' '),
-                              vencida ? P.rojo : P.morado,
-                              punto: true,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              tecnico ?? 'Sin técnico',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: tecnico == null ? P.ambar : P.textoSuave,
-                                fontWeight: tecnico == null ? FontWeight.w600 : FontWeight.w400,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Pill(
+                                [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' '),
+                                vencida ? P.rojo : P.morado,
+                                punto: true,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 3),
+                              Text(
+                                tecnico ?? 'Sin técnico',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     default:

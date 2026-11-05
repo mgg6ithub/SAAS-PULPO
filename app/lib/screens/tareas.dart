@@ -14,12 +14,22 @@ final filtroFechaTrabajos = ValueNotifier<int>(0);
 
 /// Pultec: filtro por criticidad (0 = todas; 1.. = tipo de mantenimiento), también desde Inicio.
 final filtroCriticidadTrabajos = ValueNotifier<int>(0);
-final _filtrosFecha = [('Para hoy', P.morado), ('Esta semana', P.teal), ('Vencidos', P.rojo), ('Hechos', P.verde)];
+
+/// Pultec: en vez de «Esta semana», «Sin técnico» (órdenes pendientes que nadie tiene asignadas).
+final _filtrosFecha = [
+  ('Para hoy', P.morado),
+  industrial ? ('Sin técnico', P.teal) : ('Esta semana', P.teal),
+  ('Vencidos', P.rojo),
+  ('Hechos', P.verde),
+];
 
 bool pasaFechaTrabajo(Tarea t, int f) {
   if (f == 0) return true;
   if (t.esPlantilla || !t.activa) return false;
   if (f == 4) return t.ultimo != null && diasHasta(t.ultimo!) >= -30;
+  if (f == 2 && industrial) {
+    return t.trabajadorIds.isEmpty && (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso);
+  }
   if (t.proximo == null) return false;
   final d = diasHasta(t.proximo!);
   return switch (f) {
