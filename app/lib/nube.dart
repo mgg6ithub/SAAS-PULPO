@@ -1127,6 +1127,9 @@ class Nube {
           'mantenimiento_ultimo_horas': a.horasUltimoMantenimiento,
           'uso_horas': a.horasUso,
           'uso_semanal': a.usoSemanal,
+          'uso_planificado': a.usoPlanificado,
+          'horas_turno': a.horasTurno,
+          'turnos': a.turnos,
           'lectura_fecha': a.fechaLectura.toIso8601String().substring(0, 10),
           'mantenimiento_tipo': a.tipo.index,
           'icono': a.icono,
@@ -1260,6 +1263,9 @@ class Nube {
         // Solo si los hay: los rellena la base (OT automáticas, al cerrar) y no hay que pisarlos con null.
         if (industrial && t.planId != null) 'plan_id': _u(t.planId!),
         if (industrial && t.ejecutadoPor != null) 'ejecutado_por': _u(t.ejecutadoPor!),
+        // El resultado lo pone el parte (en la base); aquí solo se manda si ya se sabe, para no pisarlo.
+        if (industrial && t.resultado != null) 'resultado': t.resultado,
+        if (industrial) 'resultado_resuelto': t.resultadoResuelto,
         'plantilla': t.plantilla,
         'color': t.color,
         'plantilla_id': ids.contains(t.plantillaId) ? _u(t.plantillaId!) : null,
@@ -1434,6 +1440,9 @@ Activo _activo(Map x) => Activo(
   horasUltimoMantenimiento: (x['mantenimiento_ultimo_horas'] as num?)?.toDouble() ?? 0,
   horasUso: (x['uso_horas'] as num?)?.toDouble() ?? 0,
   usoSemanal: x['uso_semanal'] as bool? ?? false,
+  usoPlanificado: x['uso_planificado'] as bool? ?? false,
+  horasTurno: (x['horas_turno'] as num?)?.toDouble() ?? 8,
+  turnos: {for (final e in ((x['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
   fechaLectura: DateTime.tryParse(x['lectura_fecha'] as String? ?? ''),
   tipo: TipoMantenimiento.values[(x['mantenimiento_tipo'] as num?)?.toInt() ?? 0],
 );
@@ -1494,6 +1503,8 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       activoId: x['activo_id'],
       planId: x['plan_id'],
       ejecutadoPor: x['ejecutado_por'],
+      resultado: (x['resultado'] as num?)?.toInt(),
+      resultadoResuelto: x['resultado_resuelto'] as bool? ?? false,
       tipoMantenimiento: x['tipo_mantenimiento'] == null
           ? null
           : TipoMantenimiento.values[x['tipo_mantenimiento'] as int],

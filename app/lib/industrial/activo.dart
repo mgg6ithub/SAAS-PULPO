@@ -23,6 +23,12 @@ class Activo {
   bool usoSemanal;
   DateTime fechaLectura;
 
+  /// Uso planificado a mano: turnos por día (`aaaa-mm-dd` → 1 o 2) de [horasTurno] horas cada uno,
+  /// en vez del ritmo fijo de [horasUso]. Solo en activos principales: los componentes usan el suyo.
+  bool usoPlanificado;
+  double horasTurno;
+  Map<String, int> turnos;
+
   /// Estado de mantenimiento del activo: preventivo, correctivo no crítico o crítico.
   TipoMantenimiento tipo;
 
@@ -49,9 +55,13 @@ class Activo {
     this.horasUltimoMantenimiento = 0,
     this.horasUso = 0,
     this.usoSemanal = false,
+    this.usoPlanificado = false,
+    this.horasTurno = 8,
+    Map<String, int>? turnos,
     DateTime? fechaLectura,
     this.tipo = TipoMantenimiento.preventivo,
-  }) : fechaLectura = fechaLectura ?? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  }) : turnos = turnos ?? {},
+       fechaLectura = fechaLectura ?? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
   /// "CAM-01 · Camión cisterna", o lo que haya.
   /// En todo el programa: «Planta de secado térmico - PST-02» (nombre primero, código después).
@@ -109,6 +119,9 @@ class Activo {
     'horasUltimoMantenimiento': horasUltimoMantenimiento,
     'horasUso': horasUso,
     'usoSemanal': usoSemanal,
+    'usoPlanificado': usoPlanificado,
+    'horasTurno': horasTurno,
+    'turnos': turnos,
     'fechaLectura': fechaLectura.toIso8601String(),
     'tipo': tipo.index,
   };
@@ -136,6 +149,9 @@ class Activo {
     horasUltimoMantenimiento: (j['horasUltimoMantenimiento'] as num?)?.toDouble() ?? 0,
     horasUso: (j['horasUso'] as num?)?.toDouble() ?? 0,
     usoSemanal: j['usoSemanal'] as bool? ?? false,
+    usoPlanificado: j['usoPlanificado'] as bool? ?? false,
+    horasTurno: (j['horasTurno'] as num?)?.toDouble() ?? 8,
+    turnos: {for (final e in ((j['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
     fechaLectura: DateTime.tryParse(j['fechaLectura'] as String? ?? ''),
     tipo: TipoMantenimiento.values[j['tipo'] as int? ?? 0],
   );

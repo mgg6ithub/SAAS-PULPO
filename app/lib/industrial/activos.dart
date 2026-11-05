@@ -231,7 +231,7 @@ class _TablaActivos extends StatelessWidget {
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
               if (ancho) celdaTexto(a.division, suave: true),
               if (ancho)
-                Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(a.horas), suave: true)),
+                Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(horasHoy(a)), suave: true)),
               if (medio)
                 Padding(
                   padding: const EdgeInsets.only(right: 16),
@@ -482,7 +482,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             'Próximo',
                             proximo == null ? 'Sin estimar' : '${relativo(proximo)} · ${fecha(proximo)}',
                           ),
-                          _dato('Contador', horas(a.horas)),
+                          _dato('Contador', horas(horasHoy(a))),
                           _dato('Órdenes pendientes', '${ots.where(otPendiente).length}'),
                         ],
                       ),

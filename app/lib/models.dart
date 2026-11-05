@@ -339,6 +339,11 @@ class Tarea {
 
   /// OT industrial: mantenimiento del que sale y técnico que la cerró (lo pone la base al cerrarla).
   String? planId, ejecutadoPor;
+
+  /// OT industrial: cómo acabó según el parte (0 bien, 1 con incidencia, 2 no se pudo hacer; null = sin parte)
+  /// y si su incidencia ya está solucionada.
+  int? resultado;
+  bool resultadoResuelto;
   DateTime? instalacion, ultimo, proximo;
 
   /// Cuándo pidió el cliente este mantenimiento.
@@ -385,6 +390,8 @@ class Tarea {
     this.activoId,
     this.planId,
     this.ejecutadoPor,
+    this.resultado,
+    this.resultadoResuelto = false,
     bool? plantilla,
     this.color,
     this.plantillaId,
@@ -456,6 +463,8 @@ class Tarea {
     if (activoId != null) 'activoId': activoId,
     if (planId != null) 'planId': planId,
     if (ejecutadoPor != null) 'ejecutadoPor': ejecutadoPor,
+    if (resultado != null) 'resultado': resultado,
+    if (resultadoResuelto) 'resultadoResuelto': true,
     'plantilla': plantilla,
     'color': color,
     'plantillaId': plantillaId,
@@ -497,6 +506,8 @@ class Tarea {
     activoId: j['activoId'] as String?,
     planId: j['planId'] as String?,
     ejecutadoPor: j['ejecutadoPor'] as String?,
+    resultado: j['resultado'] as int?,
+    resultadoResuelto: j['resultadoResuelto'] as bool? ?? false,
     plantilla: j['plantilla'] as bool?,
     color: j['color'] as int?,
     plantillaId: j['plantillaId'] as String?,

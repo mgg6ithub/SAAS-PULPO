@@ -6,27 +6,72 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'gravedad.dart';
+import 'activo.dart';
 import 'plan.dart';
 import 'tipo_mantenimiento.dart';
 
 /// Próximo de un mantenimiento: el puesto a mano o, si va por horas, estimado con el contador y el ritmo de uso
 /// de su activo o componente.
+/// Activo principal (sin padre) del que cuelga un activo o componente: su contador es el de todos.
+Activo? raizActivo(String? id) {
+  var a = id == null ? null : store.activo(id);
+  while (a?.padreId != null) {
+    final p = store.activo(a!.padreId!);
+    if (p == null) break;
+    a = p;
+  }
+  return a;
+}
+
+String _dia(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+/// Turnos marcados para un día en el calendario de uso (0 = no trabaja).
+int turnosDe(Activo r, DateTime d) => r.turnos[_dia(d)] ?? 0;
+
+void ponerTurnos(Activo r, DateTime d, int n) => n <= 0 ? r.turnos.remove(_dia(d)) : r.turnos[_dia(d)] = n;
+
+/// Horas de hoy: las del activo principal. Uso planificado: la lectura más los turnos marcados desde entonces;
+/// si no, la lectura más el ritmo de uso por los días pasados.
+double horasHoy(Activo a) {
+  final r = raizActivo(a.id) ?? a;
+  final desde = r.fechaLectura;
+  if (r.usoPlanificado) {
+    var t = 0;
+    for (var d = masDias(desde, 1); !d.isAfter(hoy()); d = masDias(d, 1)) {
+      t += turnosDe(r, d);
+    }
+    return r.horas + t * r.horasTurno;
+  }
+  return r.horas + r.usoDiario * diasHasta(desde).abs().clamp(0, 36500);
+}
+
+/// Cuándo toca un mantenimiento: su fecha o, por horas, la estimada con el uso de su activo principal
+/// (planificado: el primer día del calendario en que se alcanzan las horas; null si no llega a planificarse).
 DateTime? proximoPlan(PlanMantenimiento p) {
   if (p.proximo != null || p.cadaHoras == null) return p.proximo;
   final a = store.activo(p.activoId);
-  if (a == null || a.usoDiario <= 0) return null;
-  final quedan = p.cadaHoras! - (a.horas - (p.ultimoHoras ?? 0));
-  if (quedan <= 0) return a.fechaLectura;
-  final dias = (quedan / a.usoDiario).ceil();
+  if (a == null) return null;
+  final r = raizActivo(a.id) ?? a;
+  var quedan = p.cadaHoras! - (horasHoy(a) - (p.ultimoHoras ?? 0));
+  if (quedan <= 0) return hoy();
+  if (r.usoPlanificado) {
+    for (var d = masDias(hoy(), 1), i = 0; i < 400; d = masDias(d, 1), i++) {
+      quedan -= turnosDe(r, d) * r.horasTurno;
+      if (quedan <= 0) return d;
+    }
+    return null;
+  }
+  if (r.usoDiario <= 0) return null;
+  final dias = (quedan / r.usoDiario).ceil();
   if (dias > 3652500) return null;
-  return masDias(a.fechaLectura, dias);
+  return masDias(hoy(), dias);
 }
 
-/// Horas que le quedan a un mantenimiento por horas, con el contador de su activo o componente.
+/// Horas que le quedan a un mantenimiento por horas, con el contador de su activo principal.
 double? horasRestantesPlan(PlanMantenimiento p) {
   final a = store.activo(p.activoId);
   if (p.cadaHoras == null || a == null) return null;
-  return p.cadaHoras! - (a.horas - (p.ultimoHoras ?? 0));
+  return p.cadaHoras! - (horasHoy(a) - (p.ultimoHoras ?? 0));
 }
 
 /// Lista de mantenimientos en tabla, como la de componentes: qué es (con su breve descripción), cada cuánto,
