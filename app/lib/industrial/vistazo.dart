@@ -2,6 +2,7 @@ import '../screens/tareas.dart' show pasaFechaTrabajo;
 
 import 'package:flutter/material.dart';
 
+import '../forms.dart' show abrirTareaForm;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -294,9 +295,9 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              for (final (i, (p, d, falta)) in vistos.indexed) ...[
+              for (final (i, (p, d, _)) in vistos.indexed) ...[
                 if (i > 0) Divider(height: 1, color: P.borde),
-                // Como las tarjetas de arriba: icono del activo, el activo en pequeño y debajo el mantenimiento.
+                // Primero el mantenimiento; una flecha curva lleva a su activo; debajo, cuándo toca.
                 Builder(
                   builder: (context) {
                     final a = _raiz(p.activoId);
@@ -309,42 +310,62 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                         padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
                         child: Row(
                           children: [
-                            if (a != null) ...[
-                              IconoActivo(a.icono, size: 26, color: p.tipo.color),
-                              const SizedBox(width: 14),
-                            ],
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    a?.titulo ?? 'Sin activo',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(color: P.textoSuave, fontSize: 12.5),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
                                     p.nombre,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15.5,
                                       letterSpacing: -.2,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    [d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}', falta].join(' · '),
-                                    style: TextStyle(
-                                      color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
-                                      fontSize: 13,
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.subdirectory_arrow_right_rounded, size: 18, color: P.textoSuave),
+                                      const SizedBox(width: 4),
+                                      if (a != null) ...[
+                                        IconoActivo(a.icono, size: 20, color: p.tipo.color),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      Flexible(
+                                        child: Text(
+                                          a?.titulo ?? 'Sin activo',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(color: P.textoSuave, fontSize: 13),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 22),
+                                    child: Text(
+                                      d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}',
+                                      style: TextStyle(
+                                        color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
+                                        fontSize: 12.5,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 12),
+                            // La misma ficha que «+ Crear orden» dentro del activo.
+                            BotonAccion(
+                              'Crear orden',
+                              icono: Icons.add_rounded,
+                              onPressed: () =>
+                                  abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
+                            ),
+                            const SizedBox(width: 8),
                             Icon(Icons.chevron_right_rounded, size: 20, color: P.textoSuave),
                           ],
                         ),
