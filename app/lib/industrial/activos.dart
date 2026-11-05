@@ -508,7 +508,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   // Con las esquinas y el borde de las demás tarjetas y tablas.
                   1 => Container(
                     clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(P.radio)),
+                    // El borde encima del formulario: si no, su fondo blanco lo tapa en las esquinas.
+                    foregroundDecoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(P.radio),
                       border: Border.all(color: P.borde),
                     ),
