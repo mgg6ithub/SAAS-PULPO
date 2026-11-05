@@ -31,6 +31,9 @@ double? horasRestantesPlan(PlanMantenimiento p) {
 
 /// Lista de mantenimientos en tabla, como la de componentes: qué es (con su breve descripción), cada cuánto,
 /// horas que quedan, próximo y a quién se asigna. Asignar a un técnico crea su OT.
+/// Mantenimiento que se abrió desde Inicio: su fila sale con el borde del color de su criticidad.
+final planDestacado = ValueNotifier<String?>(null);
+
 class TablaPlanes extends StatefulWidget {
   final List<PlanMantenimiento> planes;
 
@@ -171,6 +174,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
               filas: ps.length,
               onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
               pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
+              resaltar: (i) => ps[i].id == planDestacado.value ? ps[i].tipo.color : null,
               celdas: (i) {
                 final p = ps[i];
                 final nodo = nodos[p.activoId];

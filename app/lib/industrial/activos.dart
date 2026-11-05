@@ -36,6 +36,13 @@ Future<void> Function(BuildContext)? nuevoEnActivo;
 final _abierto = ValueNotifier<String?>(null);
 var _pestana = 0, _vista = 0, _criticidad = 0;
 
+/// Desde Inicio, al abrir un activo por uno de sus mantenimientos: Resumen, Mantenimientos, sin filtro,
+/// y ese mantenimiento destacado.
+void destacarMantenimiento(String planId) {
+  _pestana = _vista = _criticidad = 0;
+  planDestacado.value = planId;
+}
+
 /// Desde Inicio: Activos en la lista (nunca dentro de un activo abierto antes).
 void abrirListaActivos() => _aLaLista.value++;
 
@@ -340,6 +347,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   @override
   void dispose() {
     nuevoEnActivo = null;
+    planDestacado.value = null;
     super.dispose();
   }
 

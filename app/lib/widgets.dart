@@ -1185,6 +1185,9 @@ class Tabla extends StatefulWidget {
   final void Function(int i)? onTap;
   final Widget? pie;
   final Widget? seleccionCabecera;
+
+  /// Color del borde de una fila destacada (p. ej. la que se abrió desde Inicio); null = sin destacar.
+  final Color? Function(int i)? resaltar;
   const Tabla({
     super.key,
     required this.columnas,
@@ -1193,6 +1196,7 @@ class Tabla extends StatefulWidget {
     this.onTap,
     this.pie,
     this.seleccionCabecera,
+    this.resaltar,
   });
 
   @override
@@ -1355,8 +1359,15 @@ class _TablaState extends State<Tabla> {
                   separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
                   itemBuilder: (_, i) {
                     final cs = widget.celdas(i);
+                    final borde = widget.resaltar?.call(i);
                     return Material(
-                      color: Colors.transparent,
+                      color: borde == null ? Colors.transparent : borde.withValues(alpha: .06),
+                      shape: borde == null
+                          ? null
+                          : RoundedRectangleBorder(
+                              side: BorderSide(color: borde, width: 2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                       child: InkWell(
                         hoverColor: P.hoverFila,
                         onTap: widget.onTap == null ? null : () => widget.onTap!(i),

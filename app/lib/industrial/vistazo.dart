@@ -9,6 +9,7 @@ import '../widgets.dart';
 import 'activo.dart';
 import 'iconos.dart';
 import 'gravedad.dart';
+import 'activos.dart' show destacarMantenimiento;
 import 'plan.dart';
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
@@ -264,20 +265,42 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
     if (items.isEmpty) return const SizedBox.shrink();
     items.sort((a, b) => (a.$2 ?? DateTime(9999)).compareTo(b.$2 ?? DateTime(9999)));
     final vistos = todos ? items : items.take(_primeros).toList();
-    return SeccionTarjeta(
-      titulo: 'Mantenimientos sin asignar',
-      subtitulo: 'Sin orden de trabajo o sin técnico que se encargue',
-      accion: items.length > _primeros
-          ? Enlace(todos ? 'Ver menos' : 'Ver todos (${items.length})', onTap: () => setState(() => todos = !todos))
-          : null,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final (p, d, falta) in vistos)
-          FilaLista(
-            lider: puntoTipo(p.tipo.color),
-            titulo: '${p.nombre} · ${_raiz(p.activoId)?.titulo ?? ''}',
-            subtitulo: [d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}', falta].join(' · '),
-            onTap: () => widget.onAbrir(p.activoId),
+        // Título como los de las otras secciones de Inicio.
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Mantenimientos sin asignar',
+                style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
+              ),
+            ),
+            if (items.length > _primeros)
+              Enlace(todos ? 'Ver menos' : 'Ver todos (${items.length})', onTap: () => setState(() => todos = !todos)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Tarjeta(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (final (i, (p, d, falta)) in vistos.indexed) ...[
+                if (i > 0) Divider(height: 1, color: P.borde),
+                FilaLista(
+                  lider: puntoTipo(p.tipo.color),
+                  titulo: '${p.nombre} · ${_raiz(p.activoId)?.titulo ?? ''}',
+                  subtitulo: [d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}', falta].join(' · '),
+                  onTap: () {
+                    destacarMantenimiento(p.id);
+                    widget.onAbrir(_raiz(p.activoId)?.id ?? p.activoId);
+                  },
+                ),
+              ],
+            ],
           ),
+        ),
       ],
     );
   }
