@@ -320,50 +320,58 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 15.5,
+                                      fontSize: 17,
                                       letterSpacing: -.2,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Icon(Icons.subdirectory_arrow_right_rounded, size: 18, color: P.textoSuave),
+                                      Icon(Icons.subdirectory_arrow_right_rounded, size: 20, color: P.textoSuave),
                                       const SizedBox(width: 4),
                                       if (a != null) ...[
-                                        IconoActivo(a.icono, size: 20, color: p.tipo.color),
+                                        IconoActivo(a.icono, size: 24, color: p.tipo.color),
                                         const SizedBox(width: 8),
                                       ],
                                       Flexible(
                                         child: Text(
-                                          a?.titulo ?? 'Sin activo',
+                                          a == null
+                                              ? 'Sin activo'
+                                              : [a.tag, a.nombre].where((x) => x.isNotEmpty).join(' - '),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(color: P.textoSuave, fontSize: 13),
+                                          style: TextStyle(color: P.textoSuave, fontSize: 14.5),
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
                                   Padding(
-                                    padding: const EdgeInsets.only(left: 22),
-                                    child: Text(
-                                      d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}',
-                                      style: TextStyle(
-                                        color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
-                                        fontSize: 12.5,
-                                      ),
+                                    padding: const EdgeInsets.only(left: 24),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          d == null ? 'Sin fecha' : '${relativo(d)} - ${fecha(d)}',
+                                          style: TextStyle(
+                                            color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        // Discreto, como «Ver todas»: la misma ficha que «+ Crear orden» del activo.
+                                        Enlace(
+                                          '+ Crear orden',
+                                          onTap: () => abrirTareaForm(
+                                            context,
+                                            null,
+                                            borrador: p.ot(store.nuevoId())..proximo = d ?? hoy(),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            // La misma ficha que «+ Crear orden» dentro del activo.
-                            BotonAccion(
-                              'Crear orden',
-                              icono: Icons.add_rounded,
-                              onPressed: () =>
-                                  abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
                             ),
                             const SizedBox(width: 8),
                             Icon(Icons.chevron_right_rounded, size: 20, color: P.textoSuave),
