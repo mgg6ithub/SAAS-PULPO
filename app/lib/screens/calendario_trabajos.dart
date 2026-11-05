@@ -107,7 +107,12 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
         Expanded(
           child: Container(
             clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(color: P.superficie),
+            // Como las tablas: esquinas redondeadas y borde fino.
+            decoration: BoxDecoration(
+              color: P.superficie,
+              borderRadius: BorderRadius.circular(P.radio),
+              border: Border.all(color: P.borde),
+            ),
             child: switch (widget.modo) {
               ModoCalendario.mes => _MesCalendario(
                 dia: widget.dia,

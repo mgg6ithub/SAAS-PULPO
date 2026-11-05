@@ -74,7 +74,7 @@ class _PlanificacionState extends State<Planificacion> {
 
   /// Panel lateral con los trabajos sin técnico.
   bool sinAsignar = false;
-  ModoCalendario modoCalendario = ModoCalendario.semana;
+  ModoCalendario modoCalendario = ModoCalendario.mes;
   int get escala => vista == 0
       ? 0
       : switch (modoCalendario) {
