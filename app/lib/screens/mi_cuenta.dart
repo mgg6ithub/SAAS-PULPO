@@ -189,6 +189,10 @@ class _SelectorEmpresaState extends State<SelectorEmpresa> {
       child: InkWell(
         borderRadius: BorderRadius.circular(P.radioControl),
         mouseCursor: SystemMouseCursors.click,
+        // Solo icono: la llave ya tiene su fondo; no se ilumina otro al pasar el ratón.
+        hoverColor: widget.compacto ? Colors.transparent : null,
+        splashFactory: widget.compacto ? NoSplash.splashFactory : null,
+        highlightColor: widget.compacto ? Colors.transparent : null,
         onTap: () => abrirSelectorEmpresa(context, empresas: _empresas),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: widget.compacto ? 0 : 6, vertical: 6),

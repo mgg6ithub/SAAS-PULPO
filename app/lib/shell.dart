@@ -792,7 +792,8 @@ class _BarraState extends State<_Barra> {
           // Sin onda ni destello al pulsar: solo se desliza el fondo.
           splashFactory: NoSplash.splashFactory,
           highlightColor: Colors.transparent,
-          hoverColor: sel ? Colors.transparent : P.hover.withValues(alpha: .7),
+          // Mismo color siempre: al pulsar, el fondo de la elegida (encima) lo tapa sin cambio brusco ni parpadeo.
+          hoverColor: P.hover.withValues(alpha: .7),
           onTap: () => widget.onTap(s),
           child: Container(
             height: _altoItem,
