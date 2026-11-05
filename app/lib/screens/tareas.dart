@@ -9,6 +9,23 @@ import 'tabla_trabajos.dart';
 import 'tarea_card.dart';
 import '../marca.dart';
 
+/// Filtro por fecha que llega desde las cifras de Inicio: 0 ninguno, 1 hoy, 2 semana, 3 vencidos, 4 hechos.
+final filtroFechaTrabajos = ValueNotifier<int>(0);
+const _filtrosFecha = ['', 'Para hoy', 'Esta semana', 'Vencidos', 'Hechos'];
+
+bool _pasaFecha(Tarea t, int f) {
+  if (f == 0) return true;
+  if (t.esPlantilla || !t.activa) return false;
+  if (f == 4) return t.ultimo != null && diasHasta(t.ultimo!) >= -30;
+  if (t.proximo == null) return false;
+  final d = diasHasta(t.proximo!);
+  return switch (f) {
+    1 => d == 0,
+    2 => d >= 0 && d <= 7,
+    _ => d < 0,
+  };
+}
+
 /// Todas las tareas: las de cada cliente y las plantillas (sin cliente).
 class TareasPagina extends StatefulWidget {
   final ValueChanged<String> onAbrir;
@@ -24,16 +41,32 @@ class _TareasPaginaState extends State<TareasPagina> {
   String? tipo;
   bool lista = true;
 
+  void _alCambiarFecha() => setState(() => pestana = 0);
+
+  @override
+  void initState() {
+    super.initState();
+    filtroFechaTrabajos.addListener(_alCambiarFecha);
+  }
+
+  @override
+  void dispose() {
+    filtroFechaTrabajos.removeListener(_alCambiarFecha);
+    super.dispose();
+  }
+
   Future<void> _editarEtiqueta(EtiquetaTrabajo? e) => showDialog(context: context, builder: (_) => _EtiquetaDialogo(e));
 
   @override
   Widget build(BuildContext context) {
     final nTrabajos = store.tareas.length - store.plantillas.length;
+    final fecha = filtroFechaTrabajos.value;
     final filtradas =
         store.tareas.where((t) {
           if (pestana == 0 && t.esPlantilla) return false;
           if (pestana == 1 && !t.esPlantilla) return false;
           if (tipo != null && t.tipo != tipo) return false;
+          if (!_pasaFecha(t, fecha)) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
               .toLowerCase();
           return texto.contains(q.toLowerCase());
@@ -80,6 +113,11 @@ class _TareasPaginaState extends State<TareasPagina> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
+                    // El filtro que viene de Inicio, marcado; al tocarlo se quita.
+                    if (fecha != 0) ...[
+                      _ChipTipo('${_filtrosFecha[fecha]}  ×', P.morado, true, () => filtroFechaTrabajos.value = 0),
+                      const SizedBox(width: 6),
+                    ],
                     for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
                       _ChipTipo(
                         x.nombre,
@@ -100,8 +138,10 @@ class _TareasPaginaState extends State<TareasPagina> {
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
                 Consejo(
-                  m('Las plantillas son trabajos que dejas pre-creados con ciertos campos ya rellenos. '
-                  'Al crear un trabajo, eliges una plantilla y se rellena casi todo.'),
+                  m(
+                    'Las plantillas son trabajos que dejas pre-creados con ciertos campos ya rellenos. '
+                    'Al crear un trabajo, eliges una plantilla y se rellena casi todo.',
+                  ),
                 ),
               ],
               const SizedBox(height: huecoVista),
@@ -114,7 +154,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                             ? m('Crea tu primer trabajo, desde cero o a partir de una plantilla.')
                             : m('No hay trabajos con estos filtros'),
                         // Sin búsqueda ni filtro de tipo: botón para crear (el primero, si aún no hay).
-                        accion: q.isEmpty && tipo == null
+                        accion: q.isEmpty && tipo == null && fecha == 0
                             ? FilledButton(
                                 onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                                 child: Text(

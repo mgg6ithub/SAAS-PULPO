@@ -14,6 +14,7 @@ import '../widgets.dart';
 import 'estadisticas.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
+import 'tareas.dart' show filtroFechaTrabajos;
 import '../marca.dart';
 import '../industrial/activos.dart' show abrirActivoForm, abrirListaActivos;
 import '../industrial/vistazo.dart';
@@ -43,12 +44,14 @@ class Resumen extends StatelessWidget {
     final hayTrabajoAsignado = store.tareas.any(
       (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
     );
-    final pasos = ajustes.guiaOrganizar ? const [true, true, true, true] : [
-      industrial ? store.activos.isNotEmpty : store.clientes.isNotEmpty,
-      hayTarea,
-      hayTarea && ajustes.guiaItinerario,
-      hayTrabajador && hayTarea && ajustes.guiaOrganizar && hayTrabajoAsignado,
-    ];
+    final pasos = ajustes.guiaOrganizar
+        ? const [true, true, true, true]
+        : [
+            industrial ? store.activos.isNotEmpty : store.clientes.isNotEmpty,
+            hayTarea,
+            hayTarea && ajustes.guiaItinerario,
+            hayTrabajador && hayTarea && ajustes.guiaOrganizar && hayTrabajoAsignado,
+          ];
 
     // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
     return SegunTamano(
@@ -94,6 +97,10 @@ class Resumen extends StatelessWidget {
                       vencidas: vencidas.length,
                       hechas: hechas30,
                       dosCol: dosCol,
+                      onTap: (f) {
+                        filtroFechaTrabajos.value = f;
+                        onIr(Seccion.tareas);
+                      },
                     ),
                     // iPultec: bajo las cifras, las máquinas por tipo de mantenimiento pendiente.
                     if (industrial && store.activos.isNotEmpty) ...[
@@ -1118,7 +1125,9 @@ class _IconoSaludo extends CustomPainter {
 class _Kpis extends StatelessWidget {
   final int hoy, semana, vencidas, hechas;
   final bool dosCol;
+  final ValueChanged<int> onTap;
   const _Kpis({
+    required this.onTap,
     required this.hoy,
     required this.semana,
     required this.vencidas,
@@ -1143,45 +1152,51 @@ class _Kpis extends StatelessWidget {
     return Rejilla(
       columnas: dosCol ? 4 : 2,
       children: [
-        for (final (icono, etiqueta, valor, color, nota) in items)
-          // Tarjeta blanca con una barra de su color abajo del todo.
-          Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: P.superficie,
-              borderRadius: BorderRadius.circular(P.radio),
-              border: Border.all(color: P.borde),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Cifra(
-                          etiqueta,
-                          valor,
-                          nota: nota,
-                          tamano: 32,
-                          color: color == P.rojo && valor > 0 ? P.rojo : null,
-                          punto: color,
-                        ),
-                      ),
-                      // Icono arriba a la derecha para reconocer la cifra de un vistazo.
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
-                        child: Icon(icono, size: 17, color: color),
-                      ),
-                    ],
-                  ),
+        for (final (i, (icono, etiqueta, valor, color, nota)) in items.indexed)
+          // Tarjeta blanca con una barra de su color abajo del todo; al tocarla, abre esos trabajos.
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => onTap(i + 1),
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: P.superficie,
+                  borderRadius: BorderRadius.circular(P.radio),
+                  border: Border.all(color: P.borde),
                 ),
-                Container(height: 4, color: color),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Cifra(
+                              etiqueta,
+                              valor,
+                              nota: nota,
+                              tamano: 32,
+                              color: color == P.rojo && valor > 0 ? P.rojo : null,
+                              punto: color,
+                            ),
+                          ),
+                          // Icono arriba a la derecha para reconocer la cifra de un vistazo.
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
+                            child: Icon(icono, size: 17, color: color),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(height: 4, color: color),
+                  ],
+                ),
+              ),
             ),
           ),
       ],
