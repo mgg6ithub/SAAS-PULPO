@@ -9,6 +9,7 @@ import '../widgets.dart';
 import 'activo.dart';
 import 'iconos.dart';
 import 'gravedad.dart';
+import 'plan.dart';
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
@@ -228,6 +229,119 @@ class _Columna extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Enlace('Ver todas (${ots.length})', onTap: onVerMas),
         ),
+    ],
+  );
+}
+
+/// Inicio de Pultec: mantenimientos que aún no tienen quien los haga. Sin orden de trabajo pendiente o con
+/// la orden sin técnico, por criticidad y del más cercano al más lejano. Al tocar uno se abre su activo.
+class MantenimientosSinAsignar extends StatelessWidget {
+  final ValueChanged<String> onAbrir;
+  final int columnas;
+  const MantenimientosSinAsignar({super.key, required this.onAbrir, required this.columnas});
+
+  @override
+  Widget build(BuildContext context) {
+    // Una pasada por las OT pendientes: por su enlace al mantenimiento; las antiguas, por activo y nombre.
+    final ots = <String, Tarea>{
+      for (final t in [...store.tareas, ...store.subtareas])
+        if (!t.esPlantilla && otPendiente(t)) t.planId ?? '${t.activoId}|${t.nombre}': t,
+    };
+    final items = <(PlanMantenimiento, DateTime?, String)>[];
+    for (final p in store.planes.where((p) => p.activa)) {
+      final ot = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
+      if (ot != null && ot.trabajadorIds.isNotEmpty) continue;
+      items.add((p, ot?.proximo ?? proximoPlan(p), ot == null ? 'Sin orden de trabajo' : 'Sin técnico'));
+    }
+    items.sort((a, b) => (a.$2 ?? DateTime(9999)).compareTo(b.$2 ?? DateTime(9999)));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Mantenimientos sin asignar',
+          style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
+        ),
+        const SizedBox(height: 14),
+        Rejilla(
+          columnas: columnas,
+          children: [
+            for (final t in TipoMantenimiento.values)
+              _columna(t, [
+                for (final x in items)
+                  if (x.$1.tipo == t) x,
+              ]),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _columna(TipoMantenimiento tipo, List<(PlanMantenimiento, DateTime?, String)> lista) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
+        children: [
+          puntoTipo(tipo.color),
+          const SizedBox(width: 8),
+          Text(tipo.etiqueta, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          const SizedBox(width: 6),
+          Text('${lista.length}', style: TextStyle(color: P.textoSuave, fontSize: 14)),
+        ],
+      ),
+      const SizedBox(height: 10),
+      if (lista.isEmpty)
+        Text('Todos asignados', style: TextStyle(color: P.textoSuave, fontSize: 13))
+      else
+        for (final (p, d, falta) in lista.take(VistazoActivos._maximo)) ...[
+          Builder(
+            builder: (context) {
+              final a = _raiz(p.activoId);
+              return HoverCard(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                onTap: () => onAbrir(p.activoId),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (a != null) ...[IconoActivo(a.icono, size: 26, color: tipo.color), const SizedBox(width: 12)],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            a?.titulo ?? 'Sin activo',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            p.nombre,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: -.2),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            [d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}', falta].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      if (lista.length > VistazoActivos._maximo)
+        Text('y ${lista.length - VistazoActivos._maximo} más', style: TextStyle(color: P.textoSuave, fontSize: 13)),
     ],
   );
 }
