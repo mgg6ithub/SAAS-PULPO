@@ -562,7 +562,7 @@ class Cabecera extends StatelessWidget {
         if (acciones.isNotEmpty) ...[
           const SizedBox(width: 12),
           _Compacto(
-            compacto: box.maxWidth < 900,
+            compacto: box.maxWidth < 560,
             child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: acciones),
           ),
         ],
