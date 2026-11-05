@@ -1223,6 +1223,11 @@ class _TablaState extends State<Tabla> {
   /// Esc quita la marca. No actúa al escribir en un campo ni con una ventana encima.
   static final _abiertas = <_TablaState>[];
   int? _foco;
+
+  /// Columna marcada dentro de la fila (←/→); Intro o espacio la «pulsan» como un clic.
+  int? _col;
+  int _nCols = 0;
+  final _celdas = <int, GlobalKey>{};
   final _scroll = ScrollController();
   final _filas = <int, GlobalKey>{};
 
@@ -1241,13 +1246,42 @@ class _TablaState extends State<Tabla> {
     super.dispose();
   }
 
+  /// Busca dentro de la celda lo primero que se pueda pulsar y lo pulsa.
+  bool _pulsarCelda(int j) {
+    final c = _celdas[j]?.currentContext;
+    if (c == null) return false;
+    VoidCallback? accion;
+    void buscar(Element e) {
+      if (accion != null) return;
+      final w = e.widget;
+      if (w is InkWell && w.onTap != null) {
+        accion = w.onTap;
+      } else if (w is GestureDetector && w.onTap != null) {
+        accion = w.onTap;
+      } else if (w is ButtonStyleButton && w.onPressed != null) {
+        accion = w.onPressed;
+      } else if (w is IconButton && w.onPressed != null) {
+        accion = w.onPressed;
+      } else {
+        e.visitChildElements(buscar);
+      }
+    }
+
+    (c as Element).visitChildElements(buscar);
+    accion?.call();
+    return accion != null;
+  }
+
   bool _tecla(KeyEvent e) {
     if (e is! KeyDownEvent && e is! KeyRepeatEvent) return false;
     final k = e.logicalKey;
     const teclas = [
       LogicalKeyboardKey.arrowDown,
       LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.arrowLeft,
+      LogicalKeyboardKey.arrowRight,
       LogicalKeyboardKey.enter,
+      LogicalKeyboardKey.space,
       LogicalKeyboardKey.escape,
     ];
     if (!teclas.contains(k) || !mounted || _abiertas.lastOrNull != this || widget.filas == 0) return false;
@@ -1255,14 +1289,38 @@ class _TablaState extends State<Tabla> {
     if (foco?.findAncestorStateOfType<EditableTextState>() != null) return false;
     final arriba = foco == null ? null : ModalRoute.of(foco);
     if (arriba != null && arriba != ModalRoute.of(context)) return false;
-    if (k == LogicalKeyboardKey.enter) {
-      if (_foco == null || widget.onTap == null) return false;
+    if (k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.space) {
+      if (_foco == null) return false;
+      // En una celda: lo mismo que un clic en lo que tenga (selector, enlace…); si no tiene nada, la fila.
+      if (_col != null && _pulsarCelda(_col!)) return true;
+      if (widget.onTap == null) return false;
       widget.onTap!(_foco!);
       return true;
     }
     if (k == LogicalKeyboardKey.escape) {
       if (_foco == null) return false;
-      setState(() => _foco = null);
+      setState(() => _foco = _col = null);
+      return true;
+    }
+    if (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.arrowRight) {
+      if (_foco == null || _nCols == 0) return false;
+      final der = k == LogicalKeyboardKey.arrowRight;
+      final j = _col == null ? (der ? 0 : _nCols - 1) : (_col! + (der ? 1 : -1)).clamp(0, _nCols - 1);
+      setState(() => _col = j);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final c = _celdas[j]?.currentContext;
+        final ro = c?.findRenderObject();
+        final lado = c == null ? null : Scrollable.maybeOf(c, axis: Axis.horizontal);
+        if (ro != null && lado != null) {
+          lado.position.ensureVisible(
+            ro,
+            duration: const Duration(milliseconds: 120),
+            alignmentPolicy: der
+                ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+                : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+          );
+        }
+      });
       return true;
     }
     final baja = k == LogicalKeyboardKey.arrowDown;
@@ -1326,6 +1384,7 @@ class _TablaState extends State<Tabla> {
         if (b.titulo.isEmpty) return 1;
         return _orden.indexOf(a.titulo).compareTo(_orden.indexOf(b.titulo));
       });
+    _nCols = columnas.length;
     return Container(
       decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
       // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
@@ -1470,8 +1529,24 @@ class _TablaState extends State<Tabla> {
                             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                             child: Row(
                               children: [
-                                for (final c in columnas)
-                                  _celda(c, cs[widget.columnas.indexOf(c)], inicio: c == columnas.first),
+                                for (final (j, c) in columnas.indexed)
+                                  _celda(
+                                    c,
+                                    // Celda marcada con el teclado: un recuadro algo más oscuro encima.
+                                    marcada && j == _col
+                                        ? Container(
+                                            key: _celdas.putIfAbsent(j, GlobalKey.new),
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: P.hover,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: P.borde),
+                                            ),
+                                            child: cs[widget.columnas.indexOf(c)],
+                                          )
+                                        : cs[widget.columnas.indexOf(c)],
+                                    inicio: c == columnas.first,
+                                  ),
                               ],
                             ),
                           ),
