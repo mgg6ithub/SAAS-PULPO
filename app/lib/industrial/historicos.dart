@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'gravedad.dart';
 import 'tipo_mantenimiento.dart';
 
 /// Una OT realizada: el día en que se hizo y la OT.
@@ -17,6 +18,9 @@ List<Realizada> otsRealizadas() => [
     // Sin mirar si es plantilla: una OT de un activo puede no tener cliente, y las plantillas no tienen historial.
     if (t.activoId != null || t.tipoMantenimiento != null)
       for (final d in {...t.historial, ?t.ultimo}) (d, t),
+  // Las que no se pudieron hacer también cuentan en el historial (siguen pendientes, pero con aviso).
+  for (final t in [...store.tareas, ...store.subtareas])
+    if (t.resultado == 2 && t.ultimo == null) (t.proximo ?? hoy(), t),
 ]..sort((a, b) => b.$1.compareTo(a.$1));
 
 /// Periodos del filtro de fecha, en días hacia atrás (null = todo).
@@ -150,6 +154,7 @@ class _TablaRealizadas extends StatelessWidget {
           if (medio) const Col('Activo', flex: 3),
           if (medio) const Col('Ejecutado por', flex: 2),
           if (medio) const Col('Tipo', ancho: 190),
+          const Col('Resultado', ancho: 170),
         ],
         filas: lista.length,
         celdas: (i) {
@@ -181,6 +186,16 @@ class _TablaRealizadas extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
               ),
+            // Verde si fue bien; ámbar con incidencia; rojo si no se pudo hacer.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Builder(
+                builder: (_) {
+                  final (texto, color) = resultadoOt(t);
+                  return Pill(texto, color, punto: true);
+                },
+              ),
+            ),
           ];
         },
         onTap: (i) => abrirTareaForm(context, lista[i].$2),

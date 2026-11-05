@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart' show Color;
+
+import '../theme.dart';
 import '../models.dart';
 
 /// OT que aún cuenta para el estado de un activo: activa y sin terminar.
@@ -14,3 +17,16 @@ TipoMantenimiento? masGrave(Iterable<Tarea> ots) {
   }
   return r;
 }
+
+/// Cómo acabó una OT según su parte: (texto, color). Sin parte, si está hecha, «Hecha».
+(String, Color) resultadoOt(Tarea t) => switch (t.resultado) {
+  1 => ('Con incidencia', P.ambar),
+  2 => ('No se pudo hacer', P.rojo),
+  _ => (
+    t.estado == EstadoTrabajo.realizado || t.ultimo != null ? 'Hecha' : 'Pendiente',
+    t.ultimo != null || t.estado == EstadoTrabajo.realizado ? P.verde : P.textoSuave,
+  ),
+};
+
+/// Incidencia de un parte (con incidencia o sin poder hacerse) que aún nadie ha dado por solucionada.
+bool incidenciaAbierta(Tarea t) => !t.esPlantilla && (t.resultado ?? 0) > 0 && !t.resultadoResuelto;

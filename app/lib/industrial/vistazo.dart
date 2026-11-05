@@ -235,6 +235,133 @@ class _Columna extends StatelessWidget {
   );
 }
 
+/// Inicio de Pultec: partes con incidencia o que no se pudieron hacer y que nadie ha dado aún por
+/// solucionados. Cada uno: «Solucionada» con un clic o «Crear orden» para arreglarlo. Sin ninguna, no se ve.
+class IncidenciasAbiertas extends StatelessWidget {
+  final ValueChanged<String> onAbrir;
+  const IncidenciasAbiertas({super.key, required this.onAbrir});
+
+  Future<void> _crearOrden(BuildContext context, Tarea t) async {
+    final id = store.nuevoId();
+    await abrirTareaForm(
+      context,
+      null,
+      borrador: Tarea(
+        id: id,
+        nombre: t.resultado == 2 ? t.nombre : 'Arreglar: ${t.nombre}',
+        activoId: t.activoId,
+        plantilla: false,
+        proximo: hoy(),
+        tipoMantenimiento: t.resultado == 2 ? t.tipoMantenimiento : TipoMantenimiento.correctivoNoCritico,
+        criticidad: Criticidad.rutinaria,
+      ),
+    );
+    // Con su orden creada, la incidencia queda atendida.
+    if (store.tarea(id) != null) {
+      t.resultadoResuelto = true;
+      store.guardarTarea(t);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lista = [...store.tareas, ...store.subtareas].where(incidenciaAbierta).toList()
+      ..sort((a, b) => (b.ultimo ?? b.proximo ?? hoy()).compareTo(a.ultimo ?? a.proximo ?? hoy()));
+    if (lista.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  'Incidencias abiertas',
+                  style: TextStyle(
+                    fontFamily: P.titulos,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${lista.length}',
+                style: TextStyle(color: P.rojo, fontSize: 20, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Tarjeta(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (final (i, t) in lista.indexed) ...[
+                  if (i > 0) Divider(height: 1, color: P.borde),
+                  Builder(
+                    builder: (context) {
+                      final a = _raiz(t.activoId);
+                      final (texto, color) = resultadoOt(t);
+                      return InkWell(
+                        onTap: () => onAbrir(t.id),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
+                          child: Row(
+                            children: [
+                              if (a != null) ...[
+                                IconoActivo(a.icono, size: 24, color: color),
+                                const SizedBox(width: 14),
+                              ],
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      a?.titulo ?? 'Sin activo',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      t.nombre,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Pill(texto, color, punto: true),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              TextButton(
+                                onPressed: () {
+                                  t.resultadoResuelto = true;
+                                  store.guardarTarea(t);
+                                },
+                                child: const Text('Solucionada'),
+                              ),
+                              const SizedBox(width: 6),
+                              BotonCrearOrden(() => _crearOrden(context, t)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Inicio de Pultec: mantenimientos que aún no tienen orden de trabajo pendiente (los que la tienen ya
 /// salen arriba, como órdenes). Lista sencilla, del más cercano al más lejano: 4 y «Ver todos» la despliega aquí
 /// mismo. Al tocar uno se abre su activo, donde se crea la orden o se asigna el técnico.

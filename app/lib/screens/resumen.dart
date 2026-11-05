@@ -152,6 +152,8 @@ class Resumen extends StatelessWidget {
                     if (industrial && store.activos.isNotEmpty) ...[
                       AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
+                      // Lo primero que hay que atender: partes con incidencia o sin hacer.
+                      IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
                       VistazoActivos(
                         onAbrir: onTarea ?? (_) {},
                         onVerMas: (f) {
