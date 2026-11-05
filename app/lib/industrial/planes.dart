@@ -65,11 +65,11 @@ class _TablaPlanesState extends State<TablaPlanes> {
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
-    'Código': Col('Código', flex: 2),
+    'Código': Col('Código', ancho: 130),
     'Componente': Col('Componente', flex: 2),
-    'Criticidad': Col('Criticidad', ancho: 170),
-    'Cada cuánto': Col('Cada cuánto', flex: 2),
-    'Horas restantes': Col('Horas restantes', ancho: 130, derecha: true),
+    'Criticidad': Col('Criticidad', ancho: 150),
+    'Cada cuánto': Col('Cada cuánto', ancho: 120),
+    'Horas restantes': Col('Horas restantes', ancho: 120, derecha: true),
     'Próximo': Col('Próximo', ancho: 140),
     'Último hecho': Col('Último hecho', ancho: 120),
     'Categoría': Col('Categoría', flex: 2),
@@ -150,7 +150,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
         if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
       ];
       // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
-      final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 110.0 * c.flex));
+      final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 70.0 * c.flex));
       final anchoTabla = necesario > box.maxWidth ? necesario : box.maxWidth;
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
