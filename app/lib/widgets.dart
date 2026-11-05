@@ -1219,6 +1219,79 @@ class _TablaState extends State<Tabla> {
   int? _columnaArrastrando;
   final _orden = <String>[];
 
+  /// Teclado: ↓/↑ recorren las filas de la tabla de la vista (la última abierta), Intro abre la marcada y
+  /// Esc quita la marca. No actúa al escribir en un campo ni con una ventana encima.
+  static final _abiertas = <_TablaState>[];
+  int? _foco;
+  final _scroll = ScrollController();
+  final _filas = <int, GlobalKey>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _abiertas.add(this);
+    HardwareKeyboard.instance.addHandler(_tecla);
+  }
+
+  @override
+  void dispose() {
+    _abiertas.remove(this);
+    HardwareKeyboard.instance.removeHandler(_tecla);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  bool _tecla(KeyEvent e) {
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) return false;
+    final k = e.logicalKey;
+    const teclas = [
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.enter,
+      LogicalKeyboardKey.escape,
+    ];
+    if (!teclas.contains(k) || !mounted || _abiertas.lastOrNull != this || widget.filas == 0) return false;
+    final foco = primaryFocus?.context;
+    if (foco?.findAncestorStateOfType<EditableTextState>() != null) return false;
+    final arriba = foco == null ? null : ModalRoute.of(foco);
+    if (arriba != null && arriba != ModalRoute.of(context)) return false;
+    if (k == LogicalKeyboardKey.enter) {
+      if (_foco == null || widget.onTap == null) return false;
+      widget.onTap!(_foco!);
+      return true;
+    }
+    if (k == LogicalKeyboardKey.escape) {
+      if (_foco == null) return false;
+      setState(() => _foco = null);
+      return true;
+    }
+    final baja = k == LogicalKeyboardKey.arrowDown;
+    final i = _foco == null ? (baja ? 0 : widget.filas - 1) : (_foco! + (baja ? 1 : -1)).clamp(0, widget.filas - 1);
+    setState(() => _foco = i);
+    void mostrar() {
+      final c = _filas[i]?.currentContext;
+      if (c == null) return;
+      Scrollable.ensureVisible(
+        c,
+        duration: const Duration(milliseconds: 120),
+        alignmentPolicy: baja
+            ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+            : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+      );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Fila aún sin construir (fuera de la vista): primero se acerca la lista y luego se ajusta.
+      if (_filas[i]?.currentContext == null && _scroll.hasClients) {
+        _scroll.jumpTo((i * 57.0).clamp(0, _scroll.position.maxScrollExtent));
+        WidgetsBinding.instance.addPostFrameCallback((_) => mostrar());
+      } else {
+        mostrar();
+      }
+    });
+    return true;
+  }
+
   Widget _celda(Col c, Widget w, {GlobalKey? clave, bool inicio = false}) {
     final contenido = clave == null && (c.titulo.isEmpty || inicio) && widget.seleccionCabecera != null
         ? Transform.translate(offset: const Offset(-4, 0), child: w)
@@ -1362,15 +1435,22 @@ class _TablaState extends State<Tabla> {
               Flexible(
                 fit: widget.filas > 15 ? FlexFit.tight : FlexFit.loose,
                 child: ListView.separated(
+                  controller: _scroll,
                   shrinkWrap: widget.filas <= 15,
                   itemCount: widget.filas,
                   separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
                   itemBuilder: (_, i) {
                     final cs = widget.celdas(i);
                     final borde = widget.resaltar?.call(i);
+                    final marcada = i == _foco;
                     // Destacada: un poco hacia dentro para que el borde se vea entero también por los lados.
                     final fila = Material(
-                      color: borde == null ? Colors.transparent : borde.withValues(alpha: .06),
+                      key: _filas.putIfAbsent(i, GlobalKey.new),
+                      color: borde != null
+                          ? borde.withValues(alpha: .06)
+                          : marcada
+                          ? P.hoverFila
+                          : Colors.transparent,
                       shape: borde == null
                           ? null
                           : RoundedRectangleBorder(
