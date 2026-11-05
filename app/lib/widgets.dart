@@ -1271,8 +1271,12 @@ class _TablaState extends State<Tabla> {
     void mostrar() {
       final c = _filas[i]?.currentContext;
       if (c == null) return;
-      Scrollable.ensureVisible(
-        c,
+      // Solo en vertical: si la tabla también se desplaza de lado, eso no se toca.
+      final vertical = Scrollable.maybeOf(c, axis: Axis.vertical);
+      final ro = c.findRenderObject();
+      if (vertical == null || ro == null) return;
+      vertical.position.ensureVisible(
+        ro,
         duration: const Duration(milliseconds: 120),
         alignmentPolicy: baja
             ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
