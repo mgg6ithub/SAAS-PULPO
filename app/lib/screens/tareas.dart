@@ -27,6 +27,10 @@ bool pasaFechaTrabajo(Tarea t, int f) {
   if (f == 0) return true;
   if (t.esPlantilla || !t.activa) return false;
   if (f == 4) return t.ultimo != null && diasHasta(t.ultimo!) >= -30;
+  // Pultec: estado y automatizaciones (5 pendientes, 6 completadas, 7 con automatizaciones).
+  if (f == 5) return t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso;
+  if (f == 6) return t.estado == EstadoTrabajo.realizado;
+  if (f == 7) return t.automatizaciones.isNotEmpty;
   if (f == 2 && industrial) {
     return t.trabajadorIds.isEmpty && (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso);
   }
@@ -139,38 +143,61 @@ class _TareasPaginaState extends State<TareasPagina> {
               const SizedBox(height: huecoVista),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    // Por fecha (las mismas cifras de Inicio): al tocar una se filtra; al tocarla otra vez, se quita.
-                    for (final (i, (nombre, color, icono)) in _filtrosFecha.indexed) ...[
-                      _ChipTipo(
-                        fecha == i + 1 ? '$nombre  ×' : nombre,
-                        color,
-                        fecha == i + 1,
-                        () => filtroFechaTrabajos.value = fecha == i + 1 ? 0 : i + 1,
-                        icono: icono,
+                child: industrial
+                    ? Row(
+                        // Pultec: «Todos» y un solo filtro a la vez; al tocar el marcado, vuelve a «Todos».
+                        children: [
+                          for (final (i, (nombre, color, icono)) in [
+                            ('Todos', P.textoSuave, null),
+                            ..._filtrosFecha,
+                            ('Pendientes', P.morado, Icons.radio_button_unchecked_rounded),
+                            ('Completados', P.verde, Icons.check_circle_outline_rounded),
+                            ('Automatizaciones', P.ambar, Icons.bolt_rounded),
+                          ].indexed) ...[
+                            _ChipTipo(
+                              nombre,
+                              color,
+                              fecha == i,
+                              () => filtroFechaTrabajos.value = fecha == i ? 0 : i,
+                              icono: icono,
+                              punto: i != 0,
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          // Por fecha (las mismas cifras de Inicio): al tocar una se filtra; al tocarla otra vez, se quita.
+                          for (final (i, (nombre, color, icono)) in _filtrosFecha.indexed) ...[
+                            _ChipTipo(
+                              fecha == i + 1 ? '$nombre  ×' : nombre,
+                              color,
+                              fecha == i + 1,
+                              () => filtroFechaTrabajos.value = fecha == i + 1 ? 0 : i + 1,
+                              icono: icono,
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
+                          // Pultec: sin etiquetas de tipo («Otro»); se filtra por fecha y criticidad.
+                          if (!industrial)
+                            for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
+                              _ChipTipo(
+                                x.nombre,
+                                x.color,
+                                tipo == x.nombre,
+                                () => setState(() => tipo = tipo == x.nombre ? null : x.nombre),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                          for (final e in store.etiquetas) ...[
+                            _ChipTipo(e.nombre, Color(e.color), false, () => _editarEtiqueta(e)),
+                            const SizedBox(width: 6),
+                          ],
+                          _ChipNueva(() => _editarEtiqueta(null)),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                    ],
-                    Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                    // Pultec: sin etiquetas de tipo («Otro»); se filtra por fecha y criticidad.
-                    if (!industrial)
-                      for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
-                        _ChipTipo(
-                          x.nombre,
-                          x.color,
-                          tipo == x.nombre,
-                          () => setState(() => tipo = tipo == x.nombre ? null : x.nombre),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                    for (final e in store.etiquetas) ...[
-                      _ChipTipo(e.nombre, Color(e.color), false, () => _editarEtiqueta(e)),
-                      const SizedBox(width: 6),
-                    ],
-                    _ChipNueva(() => _editarEtiqueta(null)),
-                  ],
-                ),
               ),
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
@@ -266,7 +293,8 @@ class _ChipTipo extends StatelessWidget {
 
   /// Icono de su color en lugar del punto (los filtros de fecha, como las cifras de Inicio).
   final IconData? icono;
-  const _ChipTipo(this.nombre, this.color, this.sel, this.onTap, {this.icono});
+  final bool punto;
+  const _ChipTipo(this.nombre, this.color, this.sel, this.onTap, {this.icono, this.punto = true});
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -285,13 +313,13 @@ class _ChipTipo extends StatelessWidget {
         children: [
           if (icono != null)
             Icon(icono, size: 15, color: color)
-          else
+          else if (punto)
             Container(
               width: 7,
               height: 7,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-          const SizedBox(width: 7),
+          if (icono != null || punto) const SizedBox(width: 7),
           Text(
             nombre,
             style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: sel ? color : P.texto),
