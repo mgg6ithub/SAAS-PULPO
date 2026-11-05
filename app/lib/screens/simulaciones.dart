@@ -1,3 +1,5 @@
+import '../industrial/simulacion_dominion.dart';
+
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -472,6 +474,39 @@ class _SimulacionesState extends State<_Simulaciones> {
                     child: Text(_resultado!, style: TextStyle(color: P.texto)),
                   ),
                 ),
+              // Pultec: juego pequeño de Dominion; se suma a lo que haya cada vez que se pulsa.
+              if (industrial) ...[
+                const SizedBox(height: 16),
+                Tarjeta(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Dominion', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Planta de secado, dos camiones y una estación de bombeo, con pocos componentes y '
+                              'mantenimientos preventivos, no críticos y críticos.',
+                              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      BotonAccion(
+                        'Crear',
+                        icono: Icons.add_rounded,
+                        onPressed: () {
+                          final n = crearSimulacionDominion();
+                          _mostrarResultado('Dominion: 4 activos y $n mantenimientos creados.');
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               Text(
                 'Cada simulación sustituye a la anterior. Al quitar los datos de ejemplo se recuperan tus datos originales.',

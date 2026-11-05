@@ -415,21 +415,34 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       const SizedBox(height: huecoVista),
                       Row(
                         children: [
-                          Pestanas(
-                            opciones: ['Mantenimientos · ${planes.length}', 'Subcomponentes · ${componentes.length}'],
-                            seleccion: vista,
-                            onChanged: (i) => setState(() => vista = i),
-                          ),
-                          if (vista == 0) ...[
-                            const SizedBox(width: 12),
-                            Pestanas(
-                              opciones: _filtrosCriticidad,
-                              colores: [null, for (final t in TipoMantenimiento.values) t.color],
-                              seleccion: criticidad,
-                              onChanged: (i) => setState(() => criticidad = i),
+                          // Con la ventana estrecha, el selector y el filtro se desplazan en vez de desbordar.
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  Pestanas(
+                                    opciones: [
+                                      'Mantenimientos · ${planes.length}',
+                                      'Subcomponentes · ${componentes.length}',
+                                    ],
+                                    seleccion: vista,
+                                    onChanged: (i) => setState(() => vista = i),
+                                  ),
+                                  if (vista == 0) ...[
+                                    const SizedBox(width: 12),
+                                    Pestanas(
+                                      opciones: _filtrosCriticidad,
+                                      colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                                      seleccion: criticidad,
+                                      onChanged: (i) => setState(() => criticidad = i),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
-                          ],
-                          const Spacer(),
+                          ),
+                          const SizedBox(width: 12),
                           vista == 0
                               ? BotonPrimario(
                                   'Nuevo mantenimiento',
