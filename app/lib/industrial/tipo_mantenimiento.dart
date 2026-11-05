@@ -22,7 +22,7 @@ class PillTipo extends StatelessWidget {
       Tooltip(message: tipo.descripcion, child: Pill(tipo.etiqueta, tipo.color, punto: true));
 }
 
-/// Tipo de mantenimiento de la OT en el menú pequeño de arriba a la derecha del formulario (en iPultec
+/// Tipo de mantenimiento de la OT en el menú pequeño de arriba a la derecha del formulario (en Pultec
 /// sustituye a la criticidad). La descripción de cada opción sale al pasar el ratón.
 class MenuTipoMantenimiento extends StatelessWidget {
   final TipoMantenimiento valor;

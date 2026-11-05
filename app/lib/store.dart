@@ -250,13 +250,13 @@ class Store extends ChangeNotifier {
   List<Equipo> equipos = [];
   List<Vencimiento> vencimientos = [];
 
-  /// iPultec: máquinas y componentes en árbol (vacío en Pultec).
+  /// Pultec: máquinas y componentes en árbol (vacío en Pultec).
   List<Activo> activos = [];
 
-  /// iPultec: mantenimientos periódicos de cada activo o componente.
+  /// Pultec: mantenimientos periódicos de cada activo o componente.
   List<PlanMantenimiento> planes = [];
 
-  /// iPultec: avisos de avería de los activos.
+  /// Pultec: avisos de avería de los activos.
   List<Incidencia> incidencias = [];
   SharedPreferences? _prefs;
 
@@ -577,7 +577,7 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
-  // ── Activos (iPultec) ──
+  // ── Activos (Pultec) ──
   Activo? activo(String? id) => id == null ? null : activos.where((a) => a.id == id).firstOrNull;
 
   /// Componentes directos de un activo (o los activos raíz con null), por tag y nombre.
@@ -886,7 +886,7 @@ class Store extends ChangeNotifier {
 
   bool esApto(Trabajador w, Tarea t) => w.activo && faltan(w, t).isEmpty;
 
-  /// iPultec: la OT solo se le puede dar a un técnico de su categoría. En Pultec, a cualquiera (con aviso).
+  /// Pultec: la OT solo se le puede dar a un técnico de su categoría. En Pultec, a cualquiera (con aviso).
   bool puedeRecibir(Trabajador w, Tarea t) => !industrial || esApto(w, t);
 
   /// Apto y disponible hoy con menos tareas asignadas. Primer paso de la automatización.

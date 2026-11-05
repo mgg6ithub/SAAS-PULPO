@@ -6,7 +6,7 @@ hace hot reload (r) sin perder el estado; si cambian assets o pubspec, o Flutter
 el reload (cambios de estructura), hot restart (R).
 
 Uso (desde app/):  python3 tool/vivo.py     · Ctrl+C para parar.
-                   python3 tool/vivo.py --industrial  → iPultec (MARCA=industrial) en :8081.
+                   python3 tool/vivo.py --industrial  → Pultec (MARCA=industrial) en :8081.
 """
 
 import os
@@ -47,7 +47,7 @@ def main():
         text=True,
         bufsize=1,
     )
-    print(f"\n🐙 {'iPultec' if INDUSTRIAL else 'Pulpo'} en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)
+    print(f"\n🐙 {'Pultec' if INDUSTRIAL else 'Pulpo'} en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)
 
     def enviar(tecla):
         try:

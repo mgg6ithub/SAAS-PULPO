@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
-/// Variante de la app, elegida al compilar: Pultec (por defecto) o iPultec, la industrial
+/// Variante de la app, elegida al compilar: Pultec (por defecto) o Pultec, la industrial
 /// (`--dart-define=MARCA=industrial`). Todo lo que cambia entre las dos sale de aquí: nombre, color,
 /// palabras, iconos y funciones visibles. Al ser constante, en Pultec lo industrial ni se compila.
 const industrial = String.fromEnvironment('MARCA') == 'industrial';
 
 class Marca {
-  static const nombre = industrial ? 'iPultec' : 'Pulpo';
+  static const nombre = industrial ? 'Pultec' : 'Pulpo';
 
-  /// Color principal y de acento: morado del logo en Pultec, azul apagado en iPultec.
+  /// Color principal y de acento: morado del logo en Pultec, azul apagado en Pultec.
   static const color = industrial ? Color(0xFF4F77A6) : Color(0xFF6A2FF6);
   static const nombreColor = industrial ? 'Azul' : 'Morado';
 
-  /// Itinerario con mapa y rutas (iPultec, de momento, sin rutas).
+  /// Itinerario con mapa y rutas (Pultec, de momento, sin rutas).
   static const mapa = !industrial;
 
-  /// Sección de Finanzas (iPultec, de momento, sin ella).
+  /// Sección de Finanzas (Pultec, de momento, sin ella).
   static const finanzas = !industrial;
 
   /// Iconos de clientes/activos, trabajadores/técnicos y trabajos/órdenes de trabajo.
@@ -24,8 +24,8 @@ class Marca {
   static const iconoTrabajo = industrial ? Icons.assignment_outlined : Icons.handyman_outlined;
 }
 
-/// Texto visible según la variante: en Pultec, tal cual; en iPultec, cliente → activo,
-/// trabajador → técnico y trabajo → orden de trabajo (con su artículo en femenino) y Pulpo → iPultec.
+/// Texto visible según la variante: en Pultec, tal cual; en Pultec, cliente → activo,
+/// trabajador → técnico y trabajo → orden de trabajo (con su artículo en femenino) y Pulpo → Pultec.
 String m(String texto) => industrial ? _industrial(texto) : texto;
 
 // Artículos y adjetivos que van delante de «trabajo» y cambian a femenino con «orden».

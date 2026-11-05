@@ -27,7 +27,7 @@ const _periodos = <(String, int?)>[
   ('Todo', null),
 ];
 
-/// Sección «Históricos» de iPultec: registro de las OT realizadas, filtrable por activo, técnico, tipo
+/// Sección «Históricos» de Pultec: registro de las OT realizadas, filtrable por activo, técnico, tipo
 /// y fecha. Arriba, cuántas hay de cada tipo (pulsar una filtra por ese tipo).
 class Historicos extends StatefulWidget {
   final String? activoId;

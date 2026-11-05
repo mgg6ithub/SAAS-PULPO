@@ -102,7 +102,7 @@ class Resumen extends StatelessWidget {
                         onIr(Seccion.tareas);
                       },
                     ),
-                    // iPultec: bajo las cifras, las máquinas por tipo de mantenimiento pendiente.
+                    // Pultec: bajo las cifras, las máquinas por tipo de mantenimiento pendiente.
                     if (industrial && store.activos.isNotEmpty) ...[
                       AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
@@ -123,7 +123,7 @@ class Resumen extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
                     _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
-                    // Las estadísticas son de clientes y equipos: en iPultec su lugar lo ocupa el vistazo.
+                    // Las estadísticas son de clientes y equipos: en Pultec su lugar lo ocupa el vistazo.
                     if (!industrial) ...[
                       const SizedBox(height: 32),
                       Estadisticas(dosCol: dosCol, onCliente: onCliente ?? (_) {}),
@@ -169,9 +169,9 @@ class _ComoFunciona extends StatelessWidget {
             (
               P.teal,
               'Sus órdenes de trabajo',
-              'Qué mantenimiento lleva cada componente, cada cuánto y de qué tipo. iPultec calcula cuándo toca y avisa de lo que vence.',
+              'Qué mantenimiento lleva cada componente, cada cuánto y de qué tipo. Pultec calcula cuándo toca y avisa de lo que vence.',
             ),
-            (P.ambar, 'iPultec organiza', 'Reparte las órdenes de trabajo entre tus técnicos según su categoría.'),
+            (P.ambar, 'Pultec organiza', 'Reparte las órdenes de trabajo entre tus técnicos según su categoría.'),
           ]
         : [
             (
@@ -274,7 +274,7 @@ class _ComoFunciona extends StatelessWidget {
         else
           for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(height: 12), t],
         const SizedBox(height: 24),
-        // iPultec: el color de cada máquina, que verá en Inicio en cuanto dé de alta sus activos.
+        // Pultec: el color de cada máquina, que verá en Inicio en cuanto dé de alta sus activos.
         if (industrial) ...[
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 10),
@@ -356,7 +356,7 @@ class _PrimerosPasos extends StatelessWidget {
         m('Crea un trabajo'),
         industrial
             ? 'Un mantenimiento de una máquina o de uno de sus componentes: qué hay que hacer, cada cuánto y de qué '
-                  'tipo (preventivo, correctivo no crítico o crítico). iPultec calcula cuándo toca.'
+                  'tipo (preventivo, correctivo no crítico o crítico). Pultec calcula cuándo toca.'
             : m(
                 'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
                 'También puedes crearlo desde la ficha del cliente.',
@@ -863,7 +863,7 @@ class _HeroState extends State<_Hero> {
   }
 
   String get saludo {
-    // iPultec: tono de planta, sin saludo ni sol.
+    // Pultec: tono de planta, sin saludo ni sol.
     if (industrial) return 'Estado de ${store.nube?.nombre ?? 'la planta'}';
     final h = _ahora.hour;
     return h >= 6 && h < 14 ? 'Buenos días' : (h >= 14 && h < 21 ? 'Buenas tardes' : 'Buenas noches');
@@ -936,7 +936,7 @@ class _HeroState extends State<_Hero> {
           padding: const EdgeInsets.fromLTRB(_sangriaHero, 18, _sangriaHero, 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
-            // iPultec: color liso, más sobrio. Pulpo: claro a la izquierda y el morado del logo a la derecha.
+            // Pultec: color liso, más sobrio. Pulpo: claro a la izquierda y el morado del logo a la derecha.
             color: industrial ? P.morado : null,
             gradient: industrial
                 ? null

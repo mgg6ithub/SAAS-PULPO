@@ -23,7 +23,7 @@ extension EstadoIncidenciaX on EstadoIncidencia {
   Color get color => [P.rojo, P.azul, P.gris][index];
 }
 
-/// Aviso de avería de un activo o componente de iPultec, con su gravedad y fotos. Puede acabar en una OT.
+/// Aviso de avería de un activo o componente de Pultec, con su gravedad y fotos. Puede acabar en una OT.
 class Incidencia {
   String id, activoId, descripcion;
   String? trabajoId;

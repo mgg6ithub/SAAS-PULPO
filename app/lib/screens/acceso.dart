@@ -107,8 +107,8 @@ class _PuertaNubeState extends State<PuertaNube> {
           SnackBar(
             content: Text(
               industrial
-                  ? 'Esa cuenta es de Pultec residencial. Entra en iPultec con una cuenta industrial.'
-                  : 'Esa cuenta es de iPultec industrial. Entra en Pultec con una cuenta residencial.',
+                  ? 'Esa cuenta es de Pulcón (residencial). Entra en Pultec con una cuenta industrial.'
+                  : 'Esa cuenta es de Pultec (industrial). Entra en Pulcón con una cuenta residencial.',
             ),
           ),
         );
@@ -117,7 +117,7 @@ class _PuertaNubeState extends State<PuertaNube> {
       if (mounted) {
         setState(() => _fase = _Fase.acceso);
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('En iPultec solo se entra con invitación. Pide a tu empresa que te invite.')),
+          const SnackBar(content: Text('En Pultec solo se entra con invitación. Pide a tu empresa que te invite.')),
         );
       }
     } on InvitacionNoValida {
@@ -466,7 +466,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         ),
         if (!_nueva && _porConfirmar != null)
           TextButton(onPressed: _enviando ? null : _reenviar, child: const Text('Reenviar el correo de confirmación')),
-        // iPultec: solo por invitación (IPT-013); sin enlace, solo se entra.
+        // Pultec: solo por invitación (IPT-013); sin enlace, solo se entra.
         if (!industrial || Nube.invitacion != null) ...[
           const SizedBox(height: 14),
           Wrap(

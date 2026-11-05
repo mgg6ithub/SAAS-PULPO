@@ -4,7 +4,7 @@ import '../models.dart' show TipoMantenimiento;
 
 enum FrecuenciaActivo { sinDefinir, horas, meses, fecha }
 
-/// Máquina o componente de iPultec. Forman un árbol como trabajos y subtrabajos: un activo (sin
+/// Máquina o componente de Pultec. Forman un árbol como trabajos y subtrabajos: un activo (sin
 /// [padreId]) tiene componentes y cada componente puede tener subcomponentes.
 class Activo {
   String id;

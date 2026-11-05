@@ -9,7 +9,7 @@ import 'marca.dart';
 class P {
   static bool get _o => ajustes.oscuro;
 
-  /// Neutro según la variante: con tinte lavanda en Pultec, gris azulado en iPultec.
+  /// Neutro según la variante: con tinte lavanda en Pultec, gris azulado en Pultec.
   static Color _n(int pultec, int ipultec) => Color(industrial ? ipultec : pultec);
 
   /// Color de acento (por defecto el morado del logo; se cambia en Ajustes).
@@ -69,7 +69,7 @@ class LogoPulpo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Image.asset(
-    // En iPultec, el mismo pulpo en el azul de la marca (PNG propio, sin fondo).
+    // En Pultec, el mismo pulpo en el azul de la marca (PNG propio, sin fondo).
     industrial ? 'assets/ipultec.png' : 'assets/pulpo.png',
     width: size,
     height: size,

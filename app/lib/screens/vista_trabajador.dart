@@ -710,7 +710,7 @@ class _MisTrabajos extends StatelessWidget {
     }
     return ListView(
       children: [
-        // iPultec: arriba, el día del técnico en cifras, como el Inicio del administrador.
+        // Pultec: arriba, el día del técnico en cifras, como el Inicio del administrador.
         if (industrial) ...[_CifrasTecnico(w, pendientes), const SizedBox(height: 16)],
         for (final g in grupos.entries) ...[
           SeccionTarjeta(

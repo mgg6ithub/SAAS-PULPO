@@ -277,7 +277,7 @@ class _PlanificacionState extends State<Planificacion> {
                   if (vista == 1) const SizedBox(width: 8),
                   // El pulpo: organiza el día que estás viendo.
                   BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
-                  // iPultec, sin rutas: sin mapa ni su botón.
+                  // Pultec, sin rutas: sin mapa ni su botón.
                   if (Marca.mapa && vista == 1) ...[const SizedBox(width: 8), _BotonMapa(mapa, () => setState(() => mapa = !mapa))],
                 ],
               );

@@ -1516,7 +1516,7 @@ class _TareaFormState extends State<TareaForm> {
     }
   }
 
-  /// Arriba a la derecha: la criticidad en Pultec. En iPultec el tipo de mantenimiento es del activo, no de la OT.
+  /// Arriba a la derecha: la criticidad en Pultec. En Pultec el tipo de mantenimiento es del activo, no de la OT.
   Widget? _menuGravedad() => industrial ? null : _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c));
 
   @override

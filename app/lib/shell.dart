@@ -209,7 +209,7 @@ class _ShellState extends State<Shell> {
   }
 
   Widget _detalle() => clienteId != null
-      // iPultec: desde Inicio se abre la ficha del activo.
+      // Pultec: desde Inicio se abre la ficha del activo.
       ? industrial
             ? ActivoDetalle(activoId: clienteId!, onVolver: () => setState(() => clienteId = null))
             : ClienteDetalle(clienteId: clienteId!, onVolver: () => setState(() => clienteId = null))
@@ -230,7 +230,7 @@ class _ShellState extends State<Shell> {
     ),
     // ignore: prefer_const_constructors
     Seccion.planificacion => Planificacion(),
-    // iPultec: los clientes son activos (máquinas con su árbol de componentes).
+    // Pultec: los clientes son activos (máquinas con su árbol de componentes).
     // ignore: prefer_const_constructors
     Seccion.clientes => industrial ? Activos() : Clientes(onAbrir: (id) => setState(() => clienteId = id)),
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),

@@ -32,7 +32,7 @@ class CuentaDeOtraMarca implements Exception {
   const CuentaDeOtraMarca();
 }
 
-/// iPultec (IPT-013): la cuenta no trae invitación ni es de ninguna empresa industrial.
+/// Pultec (IPT-013): la cuenta no trae invitación ni es de ninguna empresa industrial.
 class SinInvitacion implements Exception {
   const SinInvitacion();
 }
@@ -670,7 +670,7 @@ class Nube {
       _todo('vencimientos'),
       // El trabajador no ve precios: la base le devuelve la lista vacía.
       _db.from('trabajo_precios').select('trabajo_id, precio, iva').eq('empresa_id', empresaId),
-      // iPultec: en Pultec no se piden (no hay activos).
+      // Pultec: en Pultec no se piden (no hay activos).
       if (industrial) _todo('activos'),
       if (industrial) _todo('planes_mantenimiento'),
       if (industrial) _todo('incidencias'),

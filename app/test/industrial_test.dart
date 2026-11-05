@@ -14,7 +14,7 @@ import 'package:pulpo/marca.dart';
 import 'package:pulpo/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// iPultec: clasificación propia del activo, independiente de sus órdenes de trabajo.
+/// Pultec: clasificación propia del activo, independiente de sus órdenes de trabajo.
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});

@@ -1,6 +1,6 @@
 import '../models.dart';
 
-/// Mantenimiento periódico de un activo o componente de iPultec: cada cuántos días u horas toca, de qué
+/// Mantenimiento periódico de un activo o componente de Pultec: cada cuántos días u horas toca, de qué
 /// tipo es, qué categoría de técnico puede hacerlo, con qué repuestos y cómo. De él salen las OT.
 class PlanMantenimiento {
   String id, activoId, nombre, descripcion, categoria, repuestos, procedimiento;

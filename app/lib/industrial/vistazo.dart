@@ -11,7 +11,7 @@ import 'gravedad.dart';
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
-/// Leyenda de los tres colores de estado, con los textos del planteamiento de iPultec.
+/// Leyenda de los tres colores de estado, con los textos del planteamiento de Pultec.
 class LeyendaEstados extends StatelessWidget {
   final bool columnas;
   const LeyendaEstados({super.key, required this.columnas});
@@ -57,7 +57,7 @@ class LeyendaEstados extends StatelessWidget {
   }
 }
 
-/// Inicio de iPultec: una columna por estado de mantenimiento con sus 3 primeros activos.
+/// Inicio de Pultec: una columna por estado de mantenimiento con sus 3 primeros activos.
 /// «Ver más» lleva a Activos filtrado por ese tipo; al pulsar una máquina se abre su ficha.
 class VistazoActivos extends StatelessWidget {
   final ValueChanged<String> onAbrir;
@@ -193,7 +193,7 @@ class _Columna extends StatelessWidget {
   }
 }
 
-/// Inicio de iPultec: mantenimientos con alerta previa cuya antelación ya ha llegado, para preparar a tiempo
+/// Inicio de Pultec: mantenimientos con alerta previa cuya antelación ya ha llegado, para preparar a tiempo
 /// grúas, repuestos o personal externo. Sin ninguno, no se ve.
 class AvisosPreparacion extends StatelessWidget {
   final ValueChanged<String> onAbrir;

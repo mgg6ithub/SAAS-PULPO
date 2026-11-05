@@ -39,7 +39,7 @@ extension EstadoTrabajoX on EstadoTrabajo {
   String get etiqueta => industrial
       ? (this == EstadoTrabajo.realizado ? 'Completada' : 'Pendiente')
       : const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
-  // iPultec: completada en verde y pendiente en rojo.
+  // Pultec: completada en verde y pendiente en rojo.
   Color get color => industrial
       ? (this == EstadoTrabajo.realizado ? P.verde : P.rojo)
       : const [P.ambar, P.azul, P.verde, P.rojo][index];
@@ -57,7 +57,7 @@ extension EstadoMaquinaX on EstadoMaquina {
   Color get color => const [P.verde, P.ambar, P.rojo][index];
 }
 
-/// Tipo de mantenimiento de una OT industrial (iPultec), de menos a más grave. Pultec no lo usa (null).
+/// Tipo de mantenimiento de una OT industrial (Pultec), de menos a más grave. Pultec no lo usa (null).
 enum TipoMantenimiento { preventivo, correctivoNoCritico, correctivoCritico }
 
 extension TipoMantenimientoX on TipoMantenimiento {
@@ -332,7 +332,7 @@ class Tarea {
   /// Equipo del cliente sobre el que se hace (ascensor, caldera…); null = sin equipo.
   String? equipoId;
 
-  /// OT industrial (iPultec): su tipo de mantenimiento; null en Pultec.
+  /// OT industrial (Pultec): su tipo de mantenimiento; null en Pultec.
   TipoMantenimiento? tipoMantenimiento;
 
   /// OT industrial: activo o componente sobre el que se hace (null = sin activo, siempre en Pultec).

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publica Pultec en / e iPultec en /industrial/ con la misma versión del repositorio.
+# Publica Pultec en / e Pultec en /industrial/ con la misma versión del repositorio.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -31,10 +31,10 @@ for carpeta in [salida, salida / 'industrial']:
     bootstrap.write_text(texto)
     (carpeta / 'version.txt').write_text(version + '\n')
 indice = salida / 'industrial/index.html'
-indice.write_text(indice.read_text().replace('<title>Pulpo</title>', '<title>iPultec</title>')
-                  .replace('content="Pulpo"', 'content="iPultec"'))
+indice.write_text(indice.read_text().replace('<title>Pulpo</title>', '<title>Pultec</title>')
+                  .replace('content="Pulpo"', 'content="Pultec"'))
 manifiesto = salida / 'industrial/manifest.json'
 datos = json.loads(manifiesto.read_text())
-datos.update(name='iPultec', short_name='iPultec')
+datos.update(name='Pultec', short_name='Pultec')
 manifiesto.write_text(json.dumps(datos, ensure_ascii=False, indent=2) + '\n')
 PY

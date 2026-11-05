@@ -44,7 +44,7 @@ bool _pasaFiltro(TipoMantenimiento? g) => switch (filtroActivos.value) {
   final f => g?.index == f - 1,
 };
 
-/// Sección «Activos» de iPultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
+/// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
   const Activos({super.key});
 
