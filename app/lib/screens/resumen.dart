@@ -135,11 +135,14 @@ class Resumen extends StatelessWidget {
                                   .length
                             : semana.length,
                         vencidas: vencidas.length,
-                        hechas: hechas30,
+                        // Pultec: «Completados», todas las órdenes realizadas.
+                        hechas: industrial
+                            ? activas.where((t) => t.estado == EstadoTrabajo.realizado).length
+                            : hechas30,
                         dosCol: dosCol,
                         // Abre Órdenes de trabajo con ese filtro (Para hoy, Sin técnico, Vencidos, Hechos).
                         onTap: (f) {
-                          filtroFechaTrabajos.value = f;
+                          filtroFechaTrabajos.value = industrial && f == 4 ? 6 : f;
                           filtroCriticidadTrabajos.value = 0;
                           onIr(Seccion.tareas);
                         },
@@ -1200,7 +1203,9 @@ class _Kpis extends StatelessWidget {
         P.rojo,
         vencidas == 0 ? '¡todo al día!' : 'requieren atención',
       ),
-      (Icons.task_alt_rounded, 'Hechos', hechas, P.verde, 'últimos 30 días'),
+      industrial
+          ? (Icons.task_alt_rounded, 'Completados', hechas, P.verde, 'órdenes realizadas')
+          : (Icons.task_alt_rounded, 'Hechos', hechas, P.verde, 'últimos 30 días'),
     ];
     return Rejilla(
       columnas: dosCol ? 4 : 2,

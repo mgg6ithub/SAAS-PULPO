@@ -147,13 +147,15 @@ class _TareasPaginaState extends State<TareasPagina> {
                     ? Row(
                         // Pultec: «Todos» y un solo filtro a la vez; al tocar el marcado, vuelve a «Todos».
                         children: [
-                          for (final (i, (nombre, color, icono)) in [
-                            ('Todos', P.textoSuave, null),
-                            ..._filtrosFecha,
-                            ('Pendientes', P.morado, Icons.radio_button_unchecked_rounded),
-                            ('Completados', P.verde, Icons.check_circle_outline_rounded),
-                            ('Automatizaciones', P.ambar, Icons.bolt_rounded),
-                          ].indexed) ...[
+                          // (número de filtro, etiqueta, color, icono); sin «Hechos»: lo cubre «Completados».
+                          for (final (i, nombre, color, icono) in [
+                            (0, 'Todos', P.textoSuave, null),
+                            for (final (j, (n, c, ic)) in _filtrosFecha.indexed)
+                              if (j != 3) (j + 1, n, c, ic),
+                            (5, 'Pendientes', P.morado, Icons.radio_button_unchecked_rounded),
+                            (6, 'Completados', P.verde, Icons.task_alt_rounded),
+                            (7, 'Automatizaciones', P.ambar, Icons.bolt_rounded),
+                          ]) ...[
                             _ChipTipo(
                               nombre,
                               color,
