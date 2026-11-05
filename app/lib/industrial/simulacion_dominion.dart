@@ -46,7 +46,8 @@ int crearSimulacionDominion() {
         proximo: masDias(hoy(), desfase),
       );
       store.guardarPlan(p);
-      store.guardarTarea(p.ot(store.nuevoId()));
+      // Uno de cada tres sin orden de trabajo, para que se vean en «Mantenimientos sin asignar».
+      if (n % 3 != 2) store.guardarTarea(p.ot(store.nuevoId()));
       n++;
       desfase += 2;
     }

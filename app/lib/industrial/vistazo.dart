@@ -234,8 +234,8 @@ class _Columna extends StatelessWidget {
   );
 }
 
-/// Inicio de Pultec: mantenimientos que aún no tienen quien los haga (sin orden de trabajo pendiente o con
-/// la orden sin técnico). Lista sencilla, del más cercano al más lejano: 4 y «Ver todos» la despliega aquí
+/// Inicio de Pultec: mantenimientos que aún no tienen orden de trabajo pendiente (los que la tienen ya
+/// salen arriba, como órdenes). Lista sencilla, del más cercano al más lejano: 4 y «Ver todos» la despliega aquí
 /// mismo. Al tocar uno se abre su activo, donde se crea la orden o se asigna el técnico.
 class MantenimientosSinAsignar extends StatefulWidget {
   final ValueChanged<String> onAbrir;
@@ -259,8 +259,9 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
     final items = <(PlanMantenimiento, DateTime?, String)>[];
     for (final p in store.planes.where((p) => p.activa)) {
       final ot = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
-      if (ot != null && ot.trabajadorIds.isNotEmpty) continue;
-      items.add((p, ot?.proximo ?? proximoPlan(p), ot == null ? 'Sin orden de trabajo' : 'Sin técnico'));
+      // Con orden de trabajo ya es trabajo (sale arriba); aquí solo lo que aún no tiene orden.
+      if (ot != null) continue;
+      items.add((p, proximoPlan(p), 'Sin orden de trabajo'));
     }
     if (items.isEmpty) return const SizedBox.shrink();
     items.sort((a, b) => (a.$2 ?? DateTime(9999)).compareTo(b.$2 ?? DateTime(9999)));
