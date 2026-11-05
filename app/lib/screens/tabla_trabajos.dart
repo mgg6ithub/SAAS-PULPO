@@ -278,12 +278,14 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         celdaTexto(t.nombre, negrita: true),
-                        Text(
-                          [t.tipo, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11.5, color: P.textoSuave),
-                        ),
+                        // Pultec: sin el tipo («Otro»), que no significa nada; solo la ubicación si la hay.
+                        if (!industrial || t.ubicacion.isNotEmpty)
+                          Text(
+                            industrial ? t.ubicacion : [t.tipo, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11.5, color: P.textoSuave),
+                          ),
                       ],
                     ),
                   ),

@@ -446,11 +446,14 @@ class _BotonPulpoState extends State<BotonPulpo> {
           // En móvil, solo el pulpo.
           padding: EdgeInsets.symmetric(horizontal: esMovil(context) ? 10 : 16),
           transform: Matrix4.translationValues(0, hover ? -1 : 0, 0),
+          // Pultec: secundario (blanco con borde); el principal es «Orden de trabajo».
           decoration: BoxDecoration(
-            color: P.morado,
+            color: industrial ? (hover ? P.hover : P.superficie) : P.morado,
             borderRadius: BorderRadius.circular(P.radioControl),
+            border: industrial ? Border.all(color: P.borde) : null,
             boxShadow: [
-              if (hover) BoxShadow(color: P.morado.withValues(alpha: .45), blurRadius: 20, offset: const Offset(0, 8)),
+              if (hover && !industrial)
+                BoxShadow(color: P.morado.withValues(alpha: .45), blurRadius: 20, offset: const Offset(0, 8)),
             ],
           ),
           // widthFactor 1: centrado sin estirarse a todo el ancho.
@@ -458,15 +461,20 @@ class _BotonPulpoState extends State<BotonPulpo> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // El pulpo del logo, en blanco sobre el morado (como en la landing).
-              const ColorFiltered(
-                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                child: LogoPulpo(size: 20),
+              ColorFiltered(
+                colorFilter: ColorFilter.mode(industrial ? P.morado : Colors.white, BlendMode.srcIn),
+                child: const LogoPulpo(size: 20),
               ),
-              if (!esMovil(context)) ...const [
-                SizedBox(width: 8),
+              if (!esMovil(context)) ...[
+                const SizedBox(width: 8),
                 Text(
                   'Organizar',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -.1),
+                  style: TextStyle(
+                    color: industrial ? P.texto : Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -.1,
+                  ),
                 ),
               ],
             ],
