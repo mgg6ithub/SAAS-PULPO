@@ -162,48 +162,47 @@ class _Columna extends StatelessWidget {
             builder: (context) {
               final a = _raiz(o.activoId);
               return HoverCard(
-                padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                 onTap: a == null ? null : () => onAbrir(a.id),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        if (a != null) IconoActivo(a.icono, size: 20, color: P.textoSuave),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                    // El color ya lo dice la columna: el icono del activo lo lleva, sin repetir el punto.
+                    if (a != null) ...[IconoActivo(a.icono, size: 26, color: tipo.color), const SizedBox(width: 12)],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
                             a?.titulo ?? 'Sin activo',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: P.textoSuave, fontSize: 13),
+                            style: TextStyle(color: P.textoSuave, fontSize: 12.5),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        puntoTipo(tipo.color),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                          const SizedBox(height: 2),
+                          Text(
                             o.nombre,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -.2),
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: -.2),
                           ),
-                        ),
-                        if (o.proximo != null)
-                          Text(relativo(o.proximo!), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            o.proximo == null ? 'Sin fecha' : '${relativo(o.proximo!)} · ${fecha(o.proximo!)}',
+                            style: TextStyle(
+                              color: o.proximo != null && diasHasta(o.proximo!) < 0 ? P.rojo : P.textoSuave,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               );
             },
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
         ],
       if (ots.length > VistazoActivos._maximo)
         Align(
