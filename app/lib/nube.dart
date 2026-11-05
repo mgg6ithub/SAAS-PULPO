@@ -561,6 +561,13 @@ class Nube {
   static Future<Map<String, dynamic>> datosEmpresa(String id) =>
       _db.from('empresas').select('nombre, tipo, cif, direccion, telefono, logo, icono, color').eq('id', id).single();
 
+  /// Pultec: si las OT de los mantenimientos por horas se crean solas al llegar sus horas.
+  static Future<bool> otsAutomaticas(String id) async =>
+      (await _db.from('empresas').select('ots_automaticas').eq('id', id).single())['ots_automaticas'] as bool? ?? true;
+
+  static Future<void> ponerOtsAutomaticas(String id, bool v) =>
+      _db.from('empresas').update({'ots_automaticas': v}).eq('id', id);
+
   static Future<void> guardarEmpresa(String id, Map<String, dynamic> datos) async {
     await _db.from('empresas').update(datos).eq('id', id);
     reabrir.value++; // el nombre, el icono y el color salen en el selector de empresas

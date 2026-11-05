@@ -158,6 +158,15 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                   ),
                 ),
               ]),
+              // Pultec: OT automáticas (activadas por defecto). Sin ellas, todo se crea a mano.
+              if (industrial && store.nube != null && !(store.nube?.esTrabajador ?? false))
+                _Grupo('Órdenes de trabajo', [
+                  _Fila(
+                    titulo: 'Crear órdenes solas',
+                    subtitulo: 'Cuando un mantenimiento por horas llega a sus horas, Pultec crea su orden de trabajo.',
+                    child: _OtsAutomaticas(store.nube!.empresaId),
+                  ),
+                ]),
               _Grupo('Empresa', [
                 _Fila(
                   titulo: m('Tipos de trabajo'),
@@ -267,5 +276,40 @@ class _Fila extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+
+/// Interruptor de las OT automáticas de la empresa (se guarda en la base; lo lee la tarea de cada hora).
+class _OtsAutomaticas extends StatefulWidget {
+  final String empresaId;
+  const _OtsAutomaticas(this.empresaId);
+
+  @override
+  State<_OtsAutomaticas> createState() => _OtsAutomaticasState();
+}
+
+class _OtsAutomaticasState extends State<_OtsAutomaticas> {
+  bool? valor;
+
+  @override
+  void initState() {
+    super.initState();
+    Nube.otsAutomaticas(widget.empresaId).then((v) {
+      if (mounted) setState(() => valor = v);
+    }).catchError((_) {
+      if (mounted) setState(() => valor = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Switch(
+    value: valor ?? true,
+    onChanged: valor == null
+        ? null
+        : (v) {
+            setState(() => valor = v);
+            Nube.ponerOtsAutomaticas(widget.empresaId, v);
+          },
   );
 }
