@@ -91,7 +91,9 @@ class _TrabajadoresState extends State<Trabajadores> {
                         icono: Marca.iconoTrabajador,
                         titulo: store.trabajadores.isEmpty ? m('Aún no hay trabajadores') : null,
                         texto: store.trabajadores.isEmpty
-                            ? m('Añade a tu equipo con sus competencias para que Pulpo sepa a quién asignar cada trabajo.')
+                            ? m(
+                                'Añade a tu equipo con sus competencias para que Pulpo sepa a quién asignar cada trabajo.',
+                              )
                             : m('No hay trabajadores con estos filtros'),
                         accion: store.trabajadores.isEmpty
                             ? FilledButton(

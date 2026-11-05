@@ -11,7 +11,7 @@ import '../marca.dart';
 
 /// Filtro por fecha que llega desde las cifras de Inicio: 0 ninguno, 1 hoy, 2 semana, 3 vencidos, 4 hechos.
 final filtroFechaTrabajos = ValueNotifier<int>(0);
-const _filtrosFecha = ['', 'Para hoy', 'Esta semana', 'Vencidos', 'Hechos'];
+final _filtrosFecha = [('Para hoy', P.morado), ('Esta semana', P.teal), ('Vencidos', P.rojo), ('Hechos', P.verde)];
 
 bool _pasaFecha(Tarea t, int f) {
   if (f == 0) return true;
@@ -115,11 +115,17 @@ class _TareasPaginaState extends State<TareasPagina> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    // El filtro que viene de Inicio, marcado; al tocarlo se quita.
-                    if (fecha != 0) ...[
-                      _ChipTipo('${_filtrosFecha[fecha]}  ×', P.morado, true, () => filtroFechaTrabajos.value = 0),
+                    // Por fecha (las mismas cifras de Inicio): al tocar una se filtra; al tocarla otra vez, se quita.
+                    for (final (i, (nombre, color)) in _filtrosFecha.indexed) ...[
+                      _ChipTipo(
+                        fecha == i + 1 ? '$nombre  ×' : nombre,
+                        color,
+                        fecha == i + 1,
+                        () => filtroFechaTrabajos.value = fecha == i + 1 ? 0 : i + 1,
+                      ),
                       const SizedBox(width: 6),
                     ],
+                    Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
                     for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
                       _ChipTipo(
                         x.nombre,

@@ -227,8 +227,10 @@ class _FichaRapida extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              m('Nadie tiene ${t.competencias.join(', ')}. Pulpo no puede asignarlo: añádesela a un '
-                              'trabajador o elige uno a mano.'),
+                              m(
+                                'Nadie tiene ${t.competencias.join(', ')}. Pulpo no puede asignarlo: añádesela a un '
+                                'trabajador o elige uno a mano.',
+                              ),
                               style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                             ),
                           ),

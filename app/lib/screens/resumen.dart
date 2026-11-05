@@ -91,6 +91,32 @@ class Resumen extends StatelessWidget {
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pulpo.
                   if (!hayTarea && !ajustes.guiaOrganizar) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
+                    // Pultec: las cuatro cifras son de órdenes de trabajo; con su título, como «Estado de los activos».
+                    if (industrial) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Resumen de órdenes de trabajo',
+                              style: TextStyle(
+                                fontFamily: P.titulos,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -.5,
+                              ),
+                            ),
+                          ),
+                          Enlace(
+                            'Ver todas',
+                            onTap: () {
+                              filtroFechaTrabajos.value = 0;
+                              onIr(Seccion.tareas);
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     _Kpis(
                       hoy: hoyT.length,
                       semana: semana.length,

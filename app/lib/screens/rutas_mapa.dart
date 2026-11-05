@@ -421,8 +421,10 @@ class _BotonPulpoState extends State<BotonPulpo> {
         content: Text(
           asignacionTutorial
               ? m('Pulpo ha asignado el trabajo al técnico.')
-              : m('Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
-                    '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}'),
+              : m(
+                  'Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
+                  '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}',
+                ),
         ),
       ),
     );

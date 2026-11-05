@@ -36,8 +36,10 @@ class _VistaFinanzasState extends State<VistaFinanzas> {
     final una = nuevas.length == 1;
     final ok = await confirmar(
       context,
-      m('Se ${una ? 'creará 1 factura proforma' : 'crearán ${nuevas.length} facturas proforma'} con los trabajos '
-      'hechos en ${mesYAno(mes)} (total ${euros(total)}).'),
+      m(
+        'Se ${una ? 'creará 1 factura proforma' : 'crearán ${nuevas.length} facturas proforma'} con los trabajos '
+        'hechos en ${mesYAno(mes)} (total ${euros(total)}).',
+      ),
       accion: una ? 'Crear 1 factura' : 'Crear ${nuevas.length} facturas',
       icono: Icons.receipt_long_outlined,
       destructivo: false,

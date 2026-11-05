@@ -21,7 +21,8 @@ import '../screens/tarea_detalle.dart';
 /// Color del estado de un activo: el de su mantenimiento pendiente más grave (él y sus componentes).
 /// Sin nada pendiente, verde: puede funcionar.
 /// El estado de mantenimiento lo marca cada activo en su ficha (no sus OT).
-TipoMantenimiento? gravedadDe(String activoId) => store.activo(activoId)?.tipo;
+/// La criticidad es de los mantenimientos, no del activo: el activo toma la de su OT pendiente más grave.
+TipoMantenimiento? gravedadDe(String activoId) => masGrave(store.otsDe(activoId));
 Color colorEstado(TipoMantenimiento? g) => g?.color ?? P.verde;
 String textoEstado(TipoMantenimiento? g) => g?.etiqueta ?? 'Al día';
 
@@ -37,6 +38,7 @@ void abrirListaActivos(int filtro) {
   filtroActivos.value = filtro;
   _aLaLista.value++;
 }
+
 const _filtros = ['Todos', 'Preventivo', 'No crítico', 'Crítico'];
 
 bool _pasaFiltro(TipoMantenimiento? g) => switch (filtroActivos.value) {
@@ -106,9 +108,7 @@ class _ActivosState extends State<Activos> {
                 onChanged: (i) => filtroActivos.value = i,
               ),
             ],
-            derecha: [
-              Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
-            ],
+            derecha: [Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v))],
           ),
           const SizedBox(height: huecoVista),
           Expanded(
@@ -180,7 +180,7 @@ class _TablaActivos extends StatelessWidget {
             if (ancho) const Col('Horas totales', ancho: 120, derecha: true),
             if (medio) const Col('Mantenimientos', ancho: 130, derecha: true),
             if (medio) const Col('Próximo mantenimiento', ancho: 160),
-            const Col('Tipo de mantenimiento', ancho: 160),
+            const Col('Criticidad', ancho: 160),
             if (medio)
               Col(
                 'Componentes',
@@ -199,7 +199,10 @@ class _TablaActivos extends StatelessWidget {
             return [
               Row(
                 children: [
-                  Tooltip(message: textoEstado(g), child: IconoActivo(a.icono, color: colorEstado(g), size: 22)),
+                  Tooltip(
+                    message: textoEstado(g),
+                    child: IconoActivo(a.icono, color: colorEstado(g), size: 22),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     // Subcomponentes: el nombre aquí y el tag en su propia columna.
@@ -210,7 +213,8 @@ class _TablaActivos extends StatelessWidget {
               if (componentes) celdaTexto(a.tag.isEmpty ? '—' : a.tag, suave: true),
               if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
               if (ancho) celdaTexto(a.division, suave: true),
-              if (ancho) Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(a.horas), suave: true)),
+              if (ancho)
+                Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(a.horas), suave: true)),
               if (medio)
                 Padding(
                   padding: const EdgeInsets.only(right: 16),
@@ -277,6 +281,7 @@ class ActivoDetalle extends StatefulWidget {
 class _ActivoDetalleState extends State<ActivoDetalle> {
   late String elegido = widget.activoId;
   int pestana = 0;
+
   /// Sube al guardar o cancelar en Datos: el formulario vuelve a leer el activo.
   int vuelta = 0;
   String? tareaId;
@@ -316,8 +321,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   Widget _dato(String etiqueta, String valor) => Text.rich(
     TextSpan(
       children: [
-        TextSpan(text: '$etiqueta  ', style: TextStyle(color: P.textoSuave)),
-        TextSpan(text: valor, style: const TextStyle(fontWeight: FontWeight.w600)),
+        TextSpan(
+          text: '$etiqueta  ',
+          style: TextStyle(color: P.textoSuave),
+        ),
+        TextSpan(
+          text: valor,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ],
     ),
     style: const TextStyle(fontSize: 13.5),
@@ -384,7 +395,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             ].where((x) => x.isNotEmpty).join(' · '),
             acciones: [
               if (pestana == 2)
-                BotonPrimario('Nueva orden de trabajo', conIcono: true, icono: Icons.add_rounded, onPressed: () => _nuevaOt(a)),
+                BotonPrimario(
+                  'Nueva orden de trabajo',
+                  conIcono: true,
+                  icono: Icons.add_rounded,
+                  onPressed: () => _nuevaOt(a),
+                ),
             ],
           ),
           const SizedBox(height: 18),
@@ -412,7 +428,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Pill(textoEstado(g), colorEstado(g), punto: true),
-                          _dato('Próximo', proximo == null ? 'Sin estimar' : '${relativo(proximo)} · ${fecha(proximo)}'),
+                          _dato(
+                            'Próximo',
+                            proximo == null ? 'Sin estimar' : '${relativo(proximo)} · ${fecha(proximo)}',
+                          ),
                           _dato('Contador', horas(a.horas)),
                           _dato('Órdenes pendientes', '${ots.where(otPendiente).length}'),
                         ],
@@ -451,7 +470,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             ? Vacio(
                                 icono: Icons.account_tree_outlined,
                                 titulo: 'Sin componentes',
-                                texto: 'Añade las piezas y los componentes de este ${a.padreId == null ? 'activo' : 'componente'}.',
+                                texto:
+                                    'Añade las piezas y los componentes de este ${a.padreId == null ? 'activo' : 'componente'}.',
                               )
                             : _TablaActivos(componentes, _abrir, componentes: true),
                       ),
@@ -591,9 +611,7 @@ class _ActivoFormState extends State<ActivoForm> {
           opciones: [for (final e in opciones.entries) (e.key, Text(e.value))],
           onSelected: onSelected,
           child: InputDecorator(
-            decoration: InputDecoration(
-              suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
-            ),
+            decoration: InputDecoration(suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave)),
             child: Text(opciones[valor]!),
           ),
         ),
@@ -683,7 +701,6 @@ class _ActivoFormState extends State<ActivoForm> {
       titulo: existe ? 'Editar $que' : 'Nuevo $que',
       tituloDesplazado: [tag.text, nombre.text].where((x) => x.isNotEmpty).join(' · '),
       onGuardar: guardar,
-      bajoBotones: MenuTipoMantenimiento(a.tipo, (t) => setState(() => a.tipo = t)),
       avisos: [
         if (error != null) ('Te falta el tag o el nombre', () => _irA(_claveIdentificacion)),
         if (intentoGuardar && _erroresMantenimiento.isNotEmpty)

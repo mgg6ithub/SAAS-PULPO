@@ -2,7 +2,9 @@ import '../models.dart';
 
 /// OT que aún cuenta para el estado de un activo: activa y sin terminar.
 bool otPendiente(Tarea t) =>
-    t.activa && t.tipoMantenimiento != null && (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso);
+    t.activa &&
+    t.tipoMantenimiento != null &&
+    (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso);
 
 /// El mantenimiento pendiente más grave de estas OT (null = nada pendiente): da el color del activo.
 TipoMantenimiento? masGrave(Iterable<Tarea> ots) {

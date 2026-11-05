@@ -68,12 +68,12 @@ class TareaCard extends StatelessWidget {
             Row(
               children: [
                 if (!industrial) ...[
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(color: t.colorBloque, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(color: t.colorBloque, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
                 ],
                 Expanded(
                   child: Text(

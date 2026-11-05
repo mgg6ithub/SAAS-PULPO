@@ -107,7 +107,6 @@ class VistazoActivos extends StatelessWidget {
   }
 }
 
-
 class _Columna extends StatelessWidget {
   final TipoMantenimiento tipo;
   final List<Activo> activos;

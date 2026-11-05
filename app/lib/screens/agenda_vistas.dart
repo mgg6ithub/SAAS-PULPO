@@ -1238,11 +1238,7 @@ class _HerramientasMapa extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: FittedBox(
-                  child: Pestanas(
-                    opciones: [m('Cliente'), 'Técnico', 'Tipo'],
-                    seleccion: colorPor,
-                    onChanged: onColor,
-                  ),
+                  child: Pestanas(opciones: [m('Cliente'), 'Técnico', 'Tipo'], seleccion: colorPor, onChanged: onColor),
                 ),
               ),
             ),

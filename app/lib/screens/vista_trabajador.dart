@@ -404,7 +404,9 @@ class _AccionesOtState extends State<_AccionesOt> {
       } else {
         // La vista de prueba conserva la sesión del administrador; no puede tomar la OT como técnico.
         final t = store.tarea(widget.t.id);
-        if (t == null || !t.activa || t.esPlantilla ||
+        if (t == null ||
+            !t.activa ||
+            t.esPlantilla ||
             (t.estado != EstadoTrabajo.pendiente && t.estado != EstadoTrabajo.enCurso) ||
             (t.trabajadorIds.isNotEmpty && !t.trabajadorIds.contains(widget.w.id))) {
           throw StateError('La OT ya no está disponible para este técnico');
@@ -624,13 +626,13 @@ class _FilaTrabajo extends StatelessWidget {
                 ],
               )
             : Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (industrial) ...[Pill(t.estado.etiqueta, t.estado.color, punto: true), const SizedBox(width: 12)],
-            Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
-            if (marcable && !industrial) ...[const SizedBox(width: 6), _MarcaHecho(t)],
-          ],
-        ),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (industrial) ...[Pill(t.estado.etiqueta, t.estado.color, punto: true), const SizedBox(width: 12)],
+                  Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+                  if (marcable && !industrial) ...[const SizedBox(width: 6), _MarcaHecho(t)],
+                ],
+              ),
         onTap: () => abrir(t),
       ),
     );
@@ -739,7 +741,9 @@ class _IconoActivo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
-      child: a == null ? Icon(Icons.assignment_outlined, size: size * .53, color: color) : IconoActivo(a.icono, size: size * .53, color: color),
+      child: a == null
+          ? Icon(Icons.assignment_outlined, size: size * .53, color: color)
+          : IconoActivo(a.icono, size: size * .53, color: color),
     );
   }
 }
@@ -761,7 +765,10 @@ class _CifrasTecnico extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(_diaLargo(hoy()), style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(
+          _diaLargo(hoy()),
+          style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 4),
         Text(
           'Hola, ${w.nombre}',
@@ -1168,10 +1175,11 @@ class _FormularioInformeState extends State<FormularioInforme> {
           ],
         ),
       ]),
-      Bloque(m('Firma del cliente'), descripcion: 'Que firme con el dedo en el recuadro. Si no está, déjalo en blanco.', [
-        PanelFirma(firma),
-        campo('Nombre de quien firma', firmante, hint: 'Ej.: Ana López, presidenta'),
-      ]),
+      Bloque(
+        m('Firma del cliente'),
+        descripcion: 'Que firme con el dedo en el recuadro. Si no está, déjalo en blanco.',
+        [PanelFirma(firma), campo('Nombre de quien firma', firmante, hint: 'Ej.: Ana López, presidenta')],
+      ),
     ],
   );
 }

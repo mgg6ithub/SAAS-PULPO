@@ -50,7 +50,8 @@ class _PlanificacionState extends State<Planificacion> {
   // y guardar), el itinerario sigue exactamente donde estaba.
   static int? _vista;
   static DateTime? _dia;
-  int get vista => _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? (industrial ? 1 : ajustes.vistaInicio)).clamp(0, 1);
+  int get vista => _vista ??=
+      (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? (industrial ? 1 : ajustes.vistaInicio)).clamp(0, 1);
   set vista(int v) => _vista = v;
   DateTime get dia => _dia ??= hoy();
   set dia(DateTime d) => _dia = d;
@@ -278,7 +279,10 @@ class _PlanificacionState extends State<Planificacion> {
                   // El pulpo: organiza el día que estás viendo.
                   BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
                   // Pultec, sin rutas: sin mapa ni su botón.
-                  if (Marca.mapa && vista == 1) ...[const SizedBox(width: 8), _BotonMapa(mapa, () => setState(() => mapa = !mapa))],
+                  if (Marca.mapa && vista == 1) ...[
+                    const SizedBox(width: 8),
+                    _BotonMapa(mapa, () => setState(() => mapa = !mapa)),
+                  ],
                 ],
               );
               // Con menos de 900 los botones van solo con icono: así caben junto a la fecha sin solaparse.

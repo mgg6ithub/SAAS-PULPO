@@ -50,7 +50,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
   static const _opcionales = [
     'Código',
     'Componente',
-    'Tipo',
+    'Criticidad',
     'Cada cuánto',
     'Horas restantes',
     'Próximo',
@@ -61,13 +61,13 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Orden de trabajo',
     'Asignado a',
   ];
-  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Asignado a'};
+  static const _porDefecto = {'Código', 'Criticidad', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Asignado a'};
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
     'Código': Col('Código', flex: 2),
     'Componente': Col('Componente', flex: 2),
-    'Tipo': Col('Tipo', ancho: 170),
+    'Criticidad': Col('Criticidad', ancho: 170),
     'Cada cuánto': Col('Cada cuánto', flex: 2),
     'Horas restantes': Col('Horas restantes', ancho: 130, derecha: true),
     'Próximo': Col('Próximo', ancho: 140),
@@ -174,7 +174,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                       return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
                     case 'Componente':
                       return celdaTexto(nodo?.nombre ?? '—', suave: true);
-                    case 'Tipo':
+                    case 'Criticidad':
                       return PillTipo(p.tipo);
                     case 'Cada cuánto':
                       return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);

@@ -70,12 +70,13 @@ class _HistoricosState extends State<Historicos> {
           BarraVista(
             izquierda: [TituloVista(widget.incrustada ? 'Histórico' : 'Históricos')],
             derecha: [
-              if (widget.activoId == null) _Filtro<String>(
-                todos: 'Todos los activos',
-                valor: activoId,
-                opciones: [for (final a in activos) (a.id, a.titulo)],
-                onChanged: (v) => setState(() => activoId = v),
-              ),
+              if (widget.activoId == null)
+                _Filtro<String>(
+                  todos: 'Todos los activos',
+                  valor: activoId,
+                  opciones: [for (final a in activos) (a.id, a.titulo)],
+                  onChanged: (v) => setState(() => activoId = v),
+                ),
               _Filtro<String>(
                 todos: 'Todos los técnicos',
                 valor: tecnicoId,
@@ -214,8 +215,14 @@ class _ChipCuenta extends StatelessWidget {
         children: [
           puntoTipo(tipo.color),
           const SizedBox(width: 8),
-          Flexible(child: Text(tipo.etiqueta, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13, color: sel ? tipo.color : P.texto))),
+          Flexible(
+            child: Text(
+              tipo.etiqueta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: sel ? tipo.color : P.texto),
+            ),
+          ),
           const SizedBox(width: 8),
           Text(
             '$n',

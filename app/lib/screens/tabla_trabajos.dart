@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../industrial/tipo_mantenimiento.dart';
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos;
 import '../models.dart';
@@ -101,11 +102,19 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                   store.cambiarEstado(sel, e);
                   aplicado();
                 },
-                icono: industrial ? Icon(e == EstadoTrabajo.realizado ? Icons.check_circle_outline_rounded : Icons.radio_button_unchecked_rounded, size: 18, color: P.textoSuave) : Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
-                ),
+                icono: industrial
+                    ? Icon(
+                        e == EstadoTrabajo.realizado
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.radio_button_unchecked_rounded,
+                        size: 18,
+                        color: P.textoSuave,
+                      )
+                    : Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
+                      ),
               ),
           ],
           child: const Text('Estado'),
@@ -124,24 +133,26 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
           child: const Text('Asignado a'),
         ),
         if (industrial)
-          SubmenuButton(menuChildren: [
-            opcion('Sin activo', () => aplicar((t) => t.activoId = null)),
-            for (final (a, _) in arbolActivos())
-              opcion(a.titulo, () => aplicar((t) => t.activoId = a.id)),
-          ], child: const Text('Activo o componente'))
+          SubmenuButton(
+            menuChildren: [
+              opcion('Sin activo', () => aplicar((t) => t.activoId = null)),
+              for (final (a, _) in arbolActivos()) opcion(a.titulo, () => aplicar((t) => t.activoId = a.id)),
+            ],
+            child: const Text('Activo o componente'),
+          )
         else
-        SubmenuButton(
-          menuChildren: [
-            opcion(m('Sin cliente'), () => aplicar((t) => t.clienteId = null)),
-            for (final c in [...store.clientes]..sort((a, b) => a.nombre.compareTo(b.nombre)))
-              opcion(
-                c.nombre,
-                () => aplicar((t) => t.clienteId = c.id),
-                icono: Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
-              ),
-          ],
-          child: Text(m('Cliente')),
-        ),
+          SubmenuButton(
+            menuChildren: [
+              opcion(m('Sin cliente'), () => aplicar((t) => t.clienteId = null)),
+              for (final c in [...store.clientes]..sort((a, b) => a.nombre.compareTo(b.nombre)))
+                opcion(
+                  c.nombre,
+                  () => aplicar((t) => t.clienteId = c.id),
+                  icono: Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
+                ),
+            ],
+            child: Text(m('Cliente')),
+          ),
         opcion('Fecha…', () async {
           final d = await showDatePicker(
             context: context,
@@ -228,12 +239,21 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (ancho) const Col('Periodicidad', flex: 2),
             const Col('Fecha y hora', flex: 3),
             if (medio) const Col('Asignado a', ancho: 96),
+            if (industrial) const Col('Criticidad', ancho: 170),
             const Col('Estado', ancho: 140, derecha: true),
             if (industrial && medio)
-              Col('Automatización', ancho: 44, derecha: true,
-                cabecera: Tooltip(message: 'Automatizaciones', child: Icon(Icons.bolt_rounded, size: 18, color: P.textoSuave))),
+              Col(
+                'Automatización',
+                ancho: 44,
+                derecha: true,
+                cabecera: Tooltip(
+                  message: 'Automatizaciones',
+                  child: Icon(Icons.bolt_rounded, size: 18, color: P.textoSuave),
+                ),
+              ),
             // Solo si algún trabajo de la lista tiene subtrabajos; al final y abreviada.
-            if (!industrial && medio && ts.any((t) => store.hijas(t.id).isNotEmpty)) const Col('Sub', ancho: 60, ayuda: 'Subtrabajos'),
+            if (!industrial && medio && ts.any((t) => store.hijas(t.id).isNotEmpty))
+              const Col('Sub', ancho: 60, ayuda: 'Subtrabajos'),
           ],
           filas: ts.length,
           onTap: (i) {
@@ -252,10 +272,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (seleccionando) CirculoSeleccion(seleccion.contains(t.id)),
               Row(
                 children: [
-                  if (!industrial) ...[
-                    BarraTipo(t.tipo, alto: 28, color: t.colorBloque),
-                    const SizedBox(width: 10),
-                  ],
+                  if (!industrial) ...[BarraTipo(t.tipo, alto: 28, color: t.colorBloque), const SizedBox(width: 10)],
                   Flexible(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +292,10 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
               if (medio && widget.conCliente)
                 industrial && !t.esPlantilla
-                    ? SelectorActivo(t.activoId, (id) { t.activoId = id; store.guardarTarea(t); }, compacto: true)
+                    ? SelectorActivo(t.activoId, (id) {
+                        t.activoId = id;
+                        store.guardarTarea(t);
+                      }, compacto: true)
                     : t.esPlantilla
                     ? Etiqueta('Plantilla', P.morado)
                     : t.padreId == null
@@ -317,16 +337,32 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (medio)
                 t.esPlantilla
                     ? const SizedBox()
-                    : SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true, ofrecerSubtrabajos: !industrial),
+                    : SelectorTrabajadores(
+                        t,
+                        () => store.guardarTarea(t),
+                        compacto: true,
+                        ofrecerSubtrabajos: !industrial,
+                      ),
+              if (industrial)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
+                ),
               t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
               if (industrial && medio)
                 Tooltip(
                   message: t.automatizaciones.isEmpty
                       ? 'Sin automatizaciones'
                       : '${t.automatizaciones.length} automatizaciones · ${t.automatizaciones.where((a) => a.activa).length} activas',
-                  child: Icon(t.automatizaciones.isEmpty ? Icons.remove_rounded
-                      : t.automatizaciones.any((a) => a.activa) ? Icons.bolt_rounded : Icons.pause_rounded,
-                    size: 18, color: P.textoSuave),
+                  child: Icon(
+                    t.automatizaciones.isEmpty
+                        ? Icons.remove_rounded
+                        : t.automatizaciones.any((a) => a.activa)
+                        ? Icons.bolt_rounded
+                        : Icons.pause_rounded,
+                    size: 18,
+                    color: P.textoSuave,
+                  ),
                 ),
               if (!industrial && medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
             ];

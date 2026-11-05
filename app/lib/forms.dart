@@ -1,3 +1,5 @@
+import 'industrial/tipo_mantenimiento.dart';
+
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -1522,8 +1524,13 @@ class _TareaFormState extends State<TareaForm> {
     }
   }
 
-  /// Arriba a la derecha: la criticidad en Pultec. En Pultec el tipo de mantenimiento es del activo, no de la OT.
-  Widget? _menuGravedad() => industrial ? null : _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c));
+  /// Arriba a la derecha: la criticidad (en Pultec, preventivo, correctivo no crítico o crítico, igual que en los mantenimientos).
+  Widget? _menuGravedad() => industrial
+      ? MenuTipoMantenimiento(
+          t.tipoMantenimiento ?? TipoMantenimiento.preventivo,
+          (x) => setState(() => t.tipoMantenimiento = x),
+        )
+      : _MenuCriticidad(t.criticidad, (c) => setState(() => t.criticidad = c));
 
   @override
   Widget build(BuildContext context) {

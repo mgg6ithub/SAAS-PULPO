@@ -219,7 +219,9 @@ class _SimulacionesState extends State<_Simulaciones> {
                 ),
                 Text(
                   activa
-                      ? m('${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · $trabajos trabajos${store.subtareas.isEmpty ? '' : ' · ${store.subtareas.length} subtrabajos'}')
+                      ? m(
+                          '${store.trabajadores.length} trabajadores · ${store.clientes.length} clientes · $trabajos trabajos${store.subtareas.isEmpty ? '' : ' · ${store.subtareas.length} subtrabajos'}',
+                        )
                       : 'Crea una simulación para cargar datos de prueba.',
                   style: TextStyle(fontSize: 12, color: P.textoSuave),
                 ),
