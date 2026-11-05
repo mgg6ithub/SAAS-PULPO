@@ -382,7 +382,24 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               a.fabricante,
               a.modelo,
             ].where((x) => x.isNotEmpty).join(' · '),
+            // Arriba a la derecha, como en el resto de vistas; no junto al selector.
             acciones: [
+              if (pestana == 0)
+                vista == 0
+                    ? BotonPrimario(
+                        'Nuevo mantenimiento',
+                        conIcono: true,
+                        icono: Icons.add_rounded,
+                        tecla: 'N',
+                        onPressed: () => abrirPlanForm(context, activoId: a.id),
+                      )
+                    : BotonPrimario(
+                        a.padreId == null ? 'Nuevo componente' : 'Nuevo subcomponente',
+                        conIcono: true,
+                        icono: Icons.add_rounded,
+                        tecla: 'N',
+                        onPressed: () => abrirActivoForm(context, padreId: a.id),
+                      ),
               if (pestana == 2)
                 BotonPrimario(
                   'Nueva orden de trabajo',
@@ -436,7 +453,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   Pestanas(
                                     opciones: [
                                       'Mantenimientos · ${planes.length}',
-                                      'Subcomponentes · ${componentes.length}',
+                                      // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
+                                      '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
                                     ],
                                     seleccion: vista,
                                     onChanged: (i) => setState(() => vista = i),
@@ -454,22 +472,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          vista == 0
-                              ? BotonPrimario(
-                                  'Nuevo mantenimiento',
-                                  conIcono: true,
-                                  icono: Icons.add_rounded,
-                                  tecla: 'N',
-                                  onPressed: () => abrirPlanForm(context, activoId: a.id),
-                                )
-                              : BotonPrimario(
-                                  'Nuevo componente',
-                                  conIcono: true,
-                                  icono: Icons.add_rounded,
-                                  tecla: 'N',
-                                  onPressed: () => abrirActivoForm(context, padreId: a.id),
-                                ),
                         ],
                       ),
                       const SizedBox(height: 10),
