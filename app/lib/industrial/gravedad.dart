@@ -22,10 +22,11 @@ TipoMantenimiento? masGrave(Iterable<Tarea> ots) {
 (String, Color) resultadoOt(Tarea t) => switch (t.resultado) {
   1 => ('Con incidencia', P.ambar),
   2 => ('No se pudo hacer', P.rojo),
-  _ => (
-    t.estado == EstadoTrabajo.realizado || t.ultimo != null ? 'Hecha' : 'Pendiente',
-    t.ultimo != null || t.estado == EstadoTrabajo.realizado ? P.verde : P.textoSuave,
-  ),
+  // Sin parte: si ya se hizo alguna vez (o está cerrada), «Hecha».
+  _ =>
+    t.estado == EstadoTrabajo.realizado || t.ultimo != null || t.historial.isNotEmpty
+        ? ('Hecha', P.verde)
+        : ('Pendiente', P.textoSuave),
 };
 
 /// Incidencia de un parte (con incidencia o sin poder hacerse) que aún nadie ha dado por solucionada.

@@ -154,7 +154,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Fuga de aceite'), findsNothing);
       expect(find.text('Ruido raro'), findsOneWidget);
-      if (ancho > 980) expect(find.text('Leve'), findsOneWidget);
+      if (ancho > 980) expect(find.text('Correctivo no crítico'), findsWidgets);
       // La incidencia abre su ficha con la gravedad.
       await tester.tap(find.text('Ruido raro'));
       await tester.pumpAndSettle();
