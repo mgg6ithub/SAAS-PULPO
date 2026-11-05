@@ -31,6 +31,29 @@ double? horasRestantesPlan(PlanMantenimiento p) {
 
 /// Lista de mantenimientos en tabla, como la de componentes: qué es (con su breve descripción), cada cuánto,
 /// horas que quedan, próximo y a quién se asigna. Asignar a un técnico crea su OT.
+/// «+ Crear orden» de un mantenimiento: botón pequeño azul con fondo suave (en el activo y en Inicio).
+class BotonCrearOrden extends StatelessWidget {
+  final VoidCallback onPressed;
+  const BotonCrearOrden(this.onPressed, {super.key});
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+    style: TextButton.styleFrom(
+      foregroundColor: P.morado,
+      backgroundColor: P.morado.withValues(alpha: .07),
+      overlayColor: P.morado,
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      minimumSize: const Size(0, 30),
+      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+    ),
+    icon: const Icon(Icons.add_rounded, size: 16),
+    label: const Text('Crear orden'),
+    onPressed: onPressed,
+  );
+}
+
 /// Mantenimiento que se abrió desde Inicio: su fila sale con el borde del color de su criticidad.
 final planDestacado = ValueNotifier<String?>(null);
 
@@ -203,10 +226,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     if (otPendienteDe == null) {
                       return Align(
                         alignment: Alignment.centerLeft,
-                        child: Enlace(
-                          '+ Crear orden',
-                          onTap: () =>
-                              abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
+                        child: BotonCrearOrden(
+                          () => abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
                         ),
                       );
                     }
