@@ -258,10 +258,12 @@ class _PlanificacionState extends State<Planificacion> {
                     const SizedBox(width: 8),
                   ],
                   if (vista == 1)
-                    BotonAccion(
+                    // Como en Órdenes de trabajo: botón principal con su «+» y la tecla N.
+                    BotonPrimario(
                       m('Nuevo trabajo'),
+                      conIcono: true,
                       icono: Icons.add_rounded,
-                      tooltip: m('Crear un trabajo (N)'),
+                      tecla: 'N',
                       onPressed: () async {
                         final f = dia;
                         // Con hora, para que se vea como bloque: la próxima hora en punto si es hoy; si no, a las 9.
