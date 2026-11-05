@@ -153,15 +153,17 @@ class _TareasPaginaState extends State<TareasPagina> {
                       const SizedBox(width: 6),
                     ],
                     Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                    for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
-                      _ChipTipo(
-                        x.nombre,
-                        x.color,
-                        tipo == x.nombre,
-                        () => setState(() => tipo = tipo == x.nombre ? null : x.nombre),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
+                    // Pultec: sin etiquetas de tipo («Otro»); se filtra por fecha y criticidad.
+                    if (!industrial)
+                      for (final x in tipos.where((x) => tiposUsados.contains(x.nombre))) ...[
+                        _ChipTipo(
+                          x.nombre,
+                          x.color,
+                          tipo == x.nombre,
+                          () => setState(() => tipo = tipo == x.nombre ? null : x.nombre),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
                     for (final e in store.etiquetas) ...[
                       _ChipTipo(e.nombre, Color(e.color), false, () => _editarEtiqueta(e)),
                       const SizedBox(width: 6),
