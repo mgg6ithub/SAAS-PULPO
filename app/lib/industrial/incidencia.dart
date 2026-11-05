@@ -7,8 +7,9 @@ import '../theme.dart';
 enum Gravedad { leve, media, grave }
 
 extension GravedadX on Gravedad {
-  String get etiqueta => const ['Leve', 'Media', 'Grave'][index];
-  Color get color => const [P.verde, P.ambar, P.rojo][index];
+  /// Los mismos nombres que la criticidad de los mantenimientos y las OT.
+  String get etiqueta => const ['Correctivo no crítico', 'Correctivo no crítico', 'Correctivo crítico'][index];
+  Color get color => const [P.ambar, P.ambar, P.rojo][index];
 
   /// El tipo de la OT que la arregla: grave = el activo no puede funcionar.
   TipoMantenimiento get tipo =>

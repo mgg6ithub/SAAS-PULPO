@@ -273,7 +273,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
         seleccionado: x.gravedad,
         onSelected: (g) => setState(() => x.gravedad = g),
         opciones: [
-          for (final g in Gravedad.values)
+          for (final g in const [Gravedad.media, Gravedad.grave])
             (g, Row(children: [puntoTipo(g.color), const SizedBox(width: 10), Text(g.etiqueta)])),
         ],
         child: SizedBox(

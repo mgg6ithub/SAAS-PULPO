@@ -148,7 +148,9 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
         BotonMenu<Gravedad>(
           tooltip: '¿Cómo de grave es la avería?',
           seleccionado: gravedad,
-          opciones: [for (final g in Gravedad.values) (g, Text(g.etiqueta))],
+          opciones: [
+            for (final g in const [Gravedad.media, Gravedad.grave]) (g, Text(g.etiqueta)),
+          ],
           onSelected: (g) => setState(() => gravedad = g),
           child: InputDecorator(
             decoration: const InputDecoration(labelText: 'Gravedad'),

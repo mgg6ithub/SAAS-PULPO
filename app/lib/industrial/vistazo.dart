@@ -335,9 +335,7 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                                       ],
                                       Flexible(
                                         child: Text(
-                                          a == null
-                                              ? 'Sin activo'
-                                              : a.titulo,
+                                          a == null ? 'Sin activo' : a.titulo,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(color: P.textoSuave, fontSize: 14.5),

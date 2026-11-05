@@ -13,6 +13,7 @@ import '../industrial/activos.dart' show colorEstado, gravedadDe;
 import '../industrial/iconos.dart';
 import '../industrial/incidencia_form.dart';
 import '../industrial/mantenimientos.dart';
+import '../industrial/planes.dart' show raizActivo, horasHoy;
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 import '../models.dart';
 import '../nube.dart';
@@ -1006,15 +1007,28 @@ class _FormularioInformeState extends State<FormularioInforme> {
   int resultado = 0;
   bool intentado = false, guardando = false, leyendoFotos = false;
 
+  /// Pultec: activo principal de la OT, cuyo contador apunta el técnico al cerrar (en vez de los minutos).
+  late final raiz = industrial ? raizActivo(widget.t.activoId) : null;
+  final contador = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     if (widget.minutosIniciales != null) minutos.text = '${widget.minutosIniciales}';
+    if (raiz != null) contador.text = horasHoy(raiz!).toStringAsFixed(0);
+  }
+
+  /// Horas del contador escritas (null = vacío; -1 = no válidas).
+  double? get _contador {
+    final c = contador.text.trim().replaceAll(',', '.');
+    if (c.isEmpty) return null;
+    final n = double.tryParse(c);
+    return n == null || n < 0 ? -1 : n;
   }
 
   @override
   void dispose() {
-    for (final c in [notas, material, minutos, firmante]) {
+    for (final c in [notas, material, minutos, firmante, contador]) {
       c.dispose();
     }
     firma.dispose();
@@ -1046,7 +1060,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
 
   Future<void> _guardar() async {
     if (guardando || leyendoFotos) return;
-    if (notas.text.trim().isEmpty || _minutos == -1) {
+    if (notas.text.trim().isEmpty || _minutos == -1 || _contador == -1) {
       setState(() => intentado = true);
       return;
     }
@@ -1063,8 +1077,8 @@ class _FormularioInformeState extends State<FormularioInforme> {
           resultado: resultado,
           notas: notas.text.trim(),
           material: material.text.trim(),
-          minutos: _minutos,
-          firmante: firma.vacia ? '' : firmante.text.trim(),
+          minutos: raiz != null ? null : _minutos,
+          firmante: firma.vacia || industrial ? '' : firmante.text.trim(),
         ),
         fotos: fotos,
         firma: await firma.png(),
@@ -1074,6 +1088,21 @@ class _FormularioInformeState extends State<FormularioInforme> {
       if (mounted) setState(() => guardando = false);
       aviso('No se pudo guardar el informe. Inténtalo de nuevo.');
       return;
+    }
+    // Pultec: el resultado queda en la OT (con incidencia o sin hacer, sale como aviso) y la lectura del
+    // contador, en su activo principal.
+    if (industrial) {
+      widget.t
+        ..resultado = resultado
+        ..resultadoResuelto = false;
+      final h = _contador;
+      if (raiz != null && h != null && h >= 0) {
+        raiz!
+          ..horas = h
+          ..fechaLectura = hoy();
+        store.guardarActivo(raiz!);
+      }
+      if (resultado == 2) store.guardarTarea(widget.t);
     }
     if (widget.cerrarOt && resultado != 2) {
       store.marcarHecha(widget.t);
@@ -1137,6 +1166,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
     avisos: [
       if (intentado && notas.text.trim().isEmpty) ('Cuenta qué has hecho', () {}),
       if (intentado && _minutos == -1) ('El tiempo va en minutos', () {}),
+      if (intentado && _contador == -1) ('El contador va en horas, con números', () {}),
     ],
     campos: [
       Bloque('Resultado', primero: true, descripcion: m('Cómo ha ido el trabajo.'), [
@@ -1156,15 +1186,29 @@ class _FormularioInformeState extends State<FormularioInforme> {
           error: intentado && notas.text.trim().isEmpty ? 'Escribe qué has hecho' : null,
         ),
       ]),
-      Bloque('Material y tiempo', descripcion: 'Lo que has usado y cuánto has tardado.', [
-        campo(industrial ? 'Repuestos' : 'Material', material, lineas: 2, hint: 'Ej.: 1 correa, 2 l de aceite'),
-        campo(
-          'Minutos',
-          minutos,
-          hint: 'Ej.: 90',
-          error: intentado && _minutos == -1 ? 'Escribe solo los minutos, con números' : null,
-        ),
-      ]),
+      Bloque(
+        raiz != null ? 'Repuestos y contador' : 'Material y tiempo',
+        descripcion: raiz != null
+            ? 'Lo que has usado y las horas que marca ahora el contador de ${raiz!.titulo}.'
+            : 'Lo que has usado y cuánto has tardado.',
+        [
+          campo(industrial ? 'Repuestos' : 'Material', material, lineas: 2, hint: 'Ej.: 1 correa, 2 l de aceite'),
+          if (raiz != null)
+            campo(
+              'Contador (h)',
+              contador,
+              hint: 'Ej.: 6240',
+              error: intentado && _contador == -1 ? 'Escribe las horas del contador, con números' : null,
+            )
+          else
+            campo(
+              'Minutos',
+              minutos,
+              hint: 'Ej.: 90',
+              error: intentado && _minutos == -1 ? 'Escribe solo los minutos, con números' : null,
+            ),
+        ],
+      ),
       Bloque('Fotos', descripcion: m('Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.'), [
         Wrap(
           spacing: 8,
@@ -1176,9 +1220,13 @@ class _FormularioInformeState extends State<FormularioInforme> {
         ),
       ]),
       Bloque(
-        m('Firma del cliente'),
+        industrial ? 'Firma del responsable' : m('Firma del cliente'),
         descripcion: 'Que firme con el dedo en el recuadro. Si no está, déjalo en blanco.',
-        [PanelFirma(firma), campo('Nombre de quien firma', firmante, hint: 'Ej.: Ana López, presidenta')],
+        [
+          PanelFirma(firma),
+          // Pultec: quien hace el parte ya ha entrado con su usuario; no hace falta su nombre.
+          if (!industrial) campo('Nombre de quien firma', firmante, hint: 'Ej.: Ana López, presidenta'),
+        ],
       ),
     ],
   );
