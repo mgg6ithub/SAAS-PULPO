@@ -134,8 +134,6 @@ class _ActivosState extends State<Activos> {
             ],
             derecha: const [],
           ),
-            ],
-          ),
           const SizedBox(height: huecoVista),
           Expanded(
             child: activos.isEmpty
