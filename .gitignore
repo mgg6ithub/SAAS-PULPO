@@ -11,3 +11,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+MEJORAS/*
+Plan_PULPO_PULTEC.pdf
+video/*
