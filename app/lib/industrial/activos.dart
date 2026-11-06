@@ -123,15 +123,17 @@ class _ActivosState extends State<Activos> {
           const SizedBox(height: 8),
           BarraVista(
             // Sin filtro de criticidad: un activo no es crítico; lo son sus mantenimientos (dentro del activo).
-            izquierda: const [SizedBox.shrink()],
-            // Buscador y, a su derecha, el calendario de turnos de las máquinas con uso planificado.
-            derecha: [
+            // Buscador y, a su derecha, el calendario de turnos; los dos a la izquierda.
+            izquierda: [
               Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
               BotonAccion(
                 'Uso de las máquinas',
                 icono: Icons.event_note_outlined,
                 onPressed: () => abrirUsoMaquinas(context),
               ),
+            ],
+            derecha: const [],
+          ),
             ],
           ),
           const SizedBox(height: huecoVista),
