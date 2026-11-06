@@ -716,7 +716,18 @@ class Buscador extends StatelessWidget {
         hintMaxLines: 1,
         hintStyle: TextStyle(color: P.textoSuave, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        prefixIcon: Icon(Icons.search_rounded, size: 18, color: P.textoSuave),
+        // Lupa y una raya vertical fina que la separa del texto.
+        prefixIcon: Padding(
+          padding: const EdgeInsets.only(left: 10, right: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_rounded, size: 18, color: P.textoSuave),
+              const SizedBox(width: 8),
+              Container(width: 1, height: 18, color: P.borde),
+            ],
+          ),
+        ),
         prefixIconConstraints: const BoxConstraints(minWidth: 34),
       ),
     ),
