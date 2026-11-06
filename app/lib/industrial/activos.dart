@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../marca.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -99,15 +100,18 @@ class _ActivosState extends State<Activos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BarraVista(
-            izquierda: const [TituloVista('Activos')],
-            // Calendario de turnos de las máquinas con uso planificado (Dominion: trabajo intermitente).
-            derecha: [
-              BotonAccion(
-                'Uso de las máquinas',
-                icono: Icons.event_note_outlined,
-                onPressed: () => abrirUsoMaquinas(context),
+            // Icono de Activos en grande delante del título.
+            izquierda: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Marca.iconoCliente, size: 30, color: P.textoSuave),
+                  const SizedBox(width: 12),
+                  const TituloVista('Activos'),
+                ],
               ),
             ],
+            derecha: const [],
             principal: BotonPrimario(
               'Nuevo activo',
               conIcono: true,
@@ -120,7 +124,15 @@ class _ActivosState extends State<Activos> {
           BarraVista(
             // Sin filtro de criticidad: un activo no es crítico; lo son sus mantenimientos (dentro del activo).
             izquierda: const [SizedBox.shrink()],
-            derecha: [Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v))],
+            // Buscador y, a su derecha, el calendario de turnos de las máquinas con uso planificado.
+            derecha: [
+              Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
+              BotonAccion(
+                'Uso de las máquinas',
+                icono: Icons.event_note_outlined,
+                onPressed: () => abrirUsoMaquinas(context),
+              ),
+            ],
           ),
           const SizedBox(height: huecoVista),
           Expanded(
