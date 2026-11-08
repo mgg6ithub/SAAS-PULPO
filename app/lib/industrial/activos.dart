@@ -127,10 +127,14 @@ class _ActivosState extends State<Activos> {
           BarraVista(
             // Icono de Activos en grande delante del título.
             izquierda: [
-              widget.navegacion ?? SizedBox(height: 40, child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                widget.navegacion ?? SizedBox(height: 40, child: Row(mainAxisSize: MainAxisSize.min, children: [
                 _flechaActivo(false, null), _flechaActivo(true, null),
                 const SizedBox(width: 4), _raizActivos(),
               ])),
+                Padding(padding: const EdgeInsets.only(left: 60),
+                  child: Text('Todos los activos de tu empresa', style: TextStyle(fontSize: 13.5, color: P.textoSuave))),
+              ]),
             ],
             derecha: const [],
             principal: BotonPrimario(
@@ -498,11 +502,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             ),
           ],
         )),
-        if (descripcion.isNotEmpty)
-          Padding(
+        Padding(
             padding: const EdgeInsets.only(left: 60),
             child: Text(
-              descripcion,
+              descripcion.isEmpty ? ' ' : descripcion,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 13.5, color: P.textoSuave),

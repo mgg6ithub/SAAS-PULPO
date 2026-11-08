@@ -118,7 +118,18 @@ class _TareasPaginaState extends State<TareasPagina> {
               // Una sola barra (como el Itinerario): título y filtros a la izquierda; buscador y acciones a la derecha.
               BarraVista(
                 izquierda: [
-                  TituloVista(m('Trabajos')),
+                  if (industrial)
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Marca.iconoTrabajo, size: 28, color: P.textoSuave),
+                        const SizedBox(width: 8),
+                        TituloVista(m('Trabajos')),
+                      ]),
+                      const SizedBox(height: 4),
+                      Text('Organiza y asigna las intervenciones de tu empresa',
+                        style: TextStyle(fontSize: 13.5, color: P.textoSuave)),
+                    ])
+                  else TituloVista(m('Trabajos')),
                   // Pultec: pendientes y, aparte, el histórico de las hechas (para que no sea una lista sin fin).
                   if (industrial)
                     Pestanas(
