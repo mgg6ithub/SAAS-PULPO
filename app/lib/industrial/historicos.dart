@@ -90,9 +90,9 @@ class _HistoricosState extends State<Historicos> {
                 children: [
                   Pestanas(
                     opciones: ['Todos', for (final t in TipoMantenimiento.values)
-                      '${t.etiqueta} ${base.where((r) => r.$2.tipoMantenimiento == t).length}'],
+                      '${const ['Preventivo', 'No crítico', 'Crítico'][t.index]} ${base.where((r) => r.$2.tipoMantenimiento == t).length}'],
                     colores: [null, for (final t in TipoMantenimiento.values) t.color],
-                    anchosIguales: false,
+                    anchosIguales: true,
                     seleccion: tipo == null ? 0 : tipo!.index + 1,
                     compactas: true,
                     onChanged: (i) => setState(() => tipo = i == 0 ? null : TipoMantenimiento.values[i - 1]),
