@@ -120,6 +120,7 @@ class _HistoricosState extends State<Historicos> {
                       ),
                     _Filtro<String>(
                       todos: 'Todos los técnicos', valor: tecnicoId,
+                      iconoOpcion: (id) => AvataresTrabajadores([id], size: 22),
                       opciones: [for (final w in tecnicos) (w.id, w.nombre)],
                       onChanged: (v) => setState(() => tecnicoId = v),
                     ),
@@ -240,7 +241,8 @@ class _Filtro<T> extends StatelessWidget {
   final T? valor;
   final List<(T, String)> opciones;
   final ValueChanged<T?> onChanged;
-  const _Filtro({required this.todos, required this.valor, required this.opciones, required this.onChanged});
+  final Widget Function(T)? iconoOpcion;
+  const _Filtro({required this.todos, required this.valor, required this.opciones, required this.onChanged, this.iconoOpcion});
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +253,14 @@ class _Filtro<T> extends StatelessWidget {
       tooltip: todos,
       seleccionado: valor,
       onSelected: onChanged,
-      opciones: [(null, Text(todos)), for (final (v, t) in opciones) (v, Text(t))],
+      opciones: [
+        (null, Text(todos)),
+        for (final (v, t) in opciones)
+          (v, Row(mainAxisSize: MainAxisSize.min, children: [
+            if (iconoOpcion != null) ...[iconoOpcion!(v), const SizedBox(width: 8)],
+            Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ])),
+      ],
       child: Container(
         height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 12),
