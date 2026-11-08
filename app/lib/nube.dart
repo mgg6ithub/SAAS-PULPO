@@ -1157,6 +1157,7 @@ class Nube {
           'empresa_externa': p.empresaExterna,
           'tipo_mantenimiento': 0,
           'prioridad': p.prioridad.index,
+          'color': p.color,
           'cada_dias': p.cadaDias,
           'cada_horas': p.cadaHoras,
           'categoria': p.categoria,
@@ -1456,6 +1457,7 @@ Activo _activo(Map x) => Activo(
 );
 
 PlanMantenimiento _plan(Map x) => PlanMantenimiento(
+  color: (x['color'] as num?)?.toInt(),
   id: x['id'],
   activoId: x['activo_id'],
   nombre: x['nombre'],

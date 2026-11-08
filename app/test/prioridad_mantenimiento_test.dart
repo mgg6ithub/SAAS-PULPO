@@ -18,4 +18,10 @@ void main() {
     expect(p.copia().prioridad, PrioridadMantenimiento.critica);
     expect(p.ot('ot').tipoMantenimiento, TipoMantenimiento.preventivo);
   });
+  test('el color del mantenimiento se conserva sin alterar su tipo', () {
+    final plan = PlanMantenimiento(id: 'p', activoId: 'a', color: 0xFF0D9488);
+    expect(plan.copia().color, 0xFF0D9488);
+    expect(plan.ot('ot').tipoMantenimiento, TipoMantenimiento.preventivo);
+    expect(PlanMantenimiento.fromJson({'id': 'p', 'activoId': 'a'}).color, isNull);
+  });
 }

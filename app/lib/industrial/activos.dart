@@ -10,6 +10,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
+import 'filtro_flujo.dart';
 import 'iconos.dart';
 import 'uso_maquinas.dart';
 import 'gravedad.dart';
@@ -762,7 +763,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   ? 'Próximo sin estimar'
                                   : 'Próximo ${relativo(proximo).toLowerCase()}: '),
                               if (siguiente != null) ...[
-                                // Futuro: punto del color de prioridad.
+                                WidgetSpan(alignment: PlaceholderAlignment.middle,
+                                  child: Padding(padding: const EdgeInsets.only(right: 5),
+                                    child: Container(width: 7, height: 7, decoration: BoxDecoration(
+                                      color: siguiente.color == null ? P.morado : Color(siguiente.color!), shape: BoxShape.circle)))),
                                 TextSpan(text: '${siguiente.nombre} · ${fecha(proximo!)}',
                                   style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                               ],
@@ -809,12 +813,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               onChanged: (i) => setState(() => vista = i),
                             ),
                             if (vista == 0)
-                              Pestanas(
-                                opciones: const ['Todos', 'Sin orden', 'Sin asignar', 'Asignados'],
-                                iconos: const [null, Icons.playlist_add_rounded,
-                                  Icons.radio_button_unchecked_rounded, Icons.check_circle_outline_rounded],
+                              FiltroFlujoMantenimiento(
                                 seleccion: _estadoOrden,
-                                compactas: true,
                                 onChanged: (i) => setState(() => _estadoOrden = i),
                               ),
                             // Futuro: filtro de prioridad Normal / Alta / Muy alta.

@@ -2640,9 +2640,19 @@ class _SelectorCuandoState extends State<SelectorCuando> {
 /// Color del bloque en el calendario: circulitos con colores habituales y "+" para cualquier otro.
 /// El primero es "Automático": el color de su tipo.
 class SelectorColorTarea extends StatelessWidget {
-  final Tarea t;
+  final Tarea? t;
+  final int? valor;
+  final ValueChanged<int?>? onColor;
+  int? get color => t?.color ?? valor;
+  void cambiar(int? nuevo) {
+    if (t != null) t!.color = nuevo;
+    onColor?.call(nuevo);
+    onCambio();
+  }
   final VoidCallback onCambio;
-  const SelectorColorTarea(this.t, this.onCambio, {super.key});
+  const SelectorColorTarea(this.t, this.onCambio, {super.key}) : valor = null, onColor = null;
+  SelectorColorTarea.valor(this.valor, this.onColor, {super.key}) : t = null, onCambio = _sinCambio;
+  static void _sinCambio() {}
 
   static const colores = [
     0xFF7C3AED,
@@ -2715,14 +2725,13 @@ class SelectorColorTarea extends StatelessWidget {
       ),
     );
     if (elegido != null) {
-      t.color = elegido.toARGB32();
-      onCambio();
+      cambiar(elegido.toARGB32());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final propio = t.color != null && !colores.contains(t.color);
+    final propio = color != null && !colores.contains(color);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2732,14 +2741,13 @@ class SelectorColorTarea extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _circulo(
-              tipoDe(t.tipo).color,
-              t.color == null,
+              t == null ? P.morado : tipoDe(t!.tipo).color,
+              color == null,
               () {
-                t.color = null;
-                onCambio();
+                cambiar(null);
               },
-              tip: 'Automático (color del tipo)',
-              dentro: t.color == null
+              tip: t == null ? 'Color predeterminado' : 'Automático (color del tipo)',
+              dentro: color == null
                   ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
                   : const Text(
                       'A',
@@ -2747,11 +2755,10 @@ class SelectorColorTarea extends StatelessWidget {
                     ),
             ),
             for (final c in colores)
-              _circulo(Color(c), t.color == c, () {
-                t.color = c;
-                onCambio();
+              _circulo(Color(c), color == c, () {
+                cambiar(c);
               }),
-            if (propio) _circulo(Color(t.color!), true, () {}),
+            if (propio) _circulo(Color(color!), true, () {}),
             Tooltip(
               message: 'Otro color',
               child: InkWell(

@@ -132,7 +132,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Código',
     'Orden de trabajo',
     // 'Prioridad', // Aparcada para el futuro.
-    'Próximo',
+    'Fecha',
     'Cada cuánto',
     'Horas restantes',
     'Componente',
@@ -141,7 +141,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Duración',
     'Repuestos',
   ];
-  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Orden de trabajo'};
+  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Fecha', 'Orden de trabajo'};
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
@@ -150,7 +150,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Prioridad': Col('Prioridad', ancho: 150),
     'Cada cuánto': Col('Cada cuánto', ancho: 120),
     'Horas restantes': Col('Horas restantes', ancho: 120, derecha: true),
-    'Próximo': Col('Próximo', ancho: 140),
+    'Fecha': Col('Fecha', ancho: 140),
     'Último hecho': Col('Último hecho', ancho: 120),
     'Categoría': Col('Categoría', flex: 2),
     'Duración': Col('Duración', ancho: 100),
@@ -215,7 +215,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
       final proximos = {for (final p in ps) p.id: proximoPlan(p)};
       final vistas = [
         for (final c in _opcionales)
-          if (medio ? _visibles.contains(c) : c == 'Próximo') c,
+          if (medio ? _visibles.contains(c) : c == 'Fecha') c,
       ];
       final columnas = [
         const Col('Mantenimiento', flex: 4),
@@ -255,7 +255,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                       padding: const EdgeInsets.only(right: 16),
                       child: celdaTexto(h == null ? '—' : '≈ ${h <= 0 ? 0 : h.toStringAsFixed(0)} h', suave: true),
                     );
-                  case 'Próximo':
+                  case 'Fecha':
                     final vencido = d != null && d.isBefore(hoy());
                     return Text(
                       d == null ? '—' : '${p.proximo == null ? '≈ ' : ''}${fecha(d)}',
@@ -319,7 +319,9 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Futuro: punto del color de prioridad.
+                      Padding(padding: const EdgeInsets.only(top: 6),
+                        child: puntoTipo(p.color == null ? P.morado : Color(p.color!))),
+                      const SizedBox(width: 10),
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,6 +455,8 @@ class _PlanFormState extends State<PlanForm> {
         Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
           campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
+          etiqueta('Color'),
+          SelectorColorTarea.valor(p.color, (c) => setState(() => p.color = c)),
         ]),
         Bloque(
           'Cada cuánto',

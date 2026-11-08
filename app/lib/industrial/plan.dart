@@ -19,6 +19,7 @@ enum PrioridadMantenimiento {
 class PlanMantenimiento {
   String id, activoId, nombre, descripcion, categoria, repuestos, procedimiento;
   PrioridadMantenimiento prioridad;
+  int? color;
   TipoMantenimiento get tipo => TipoMantenimiento.preventivo;
 
   /// Cada cuántos días o cada cuántas horas de uso (lo que llegue antes); null = sin ese límite.
@@ -39,6 +40,7 @@ class PlanMantenimiento {
     required this.activoId,
     this.nombre = '',
     this.descripcion = '',
+    this.color,
     TipoMantenimiento tipo = TipoMantenimiento.preventivo,
     PrioridadMantenimiento? prioridad,
     this.cadaDias,
@@ -92,6 +94,7 @@ class PlanMantenimiento {
     'descripcion': descripcion,
     'tipo': 0,
     'prioridad': prioridad.index,
+    'color': color,
     'cadaDias': cadaDias,
     'cadaHoras': cadaHoras,
     'categoria': categoria,
@@ -114,6 +117,7 @@ class PlanMantenimiento {
     activoId: j['activoId'] as String,
     nombre: j['nombre'] as String? ?? '',
     descripcion: j['descripcion'] as String? ?? '',
+    color: j['color'] as int?,
     prioridad: PrioridadMantenimiento.values[j['prioridad'] as int? ?? j['tipo'] as int? ?? 0],
     cadaDias: j['cadaDias'] as int?,
     cadaHoras: j['cadaHoras'] as int?,
