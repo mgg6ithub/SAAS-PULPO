@@ -358,6 +358,9 @@ class ActivoDetalle extends StatefulWidget {
 
 class _ActivoDetalleState extends State<ActivoDetalle> {
   late String elegido = widget.activoId;
+  final _rutaScroll = ScrollController();
+  String? _rutaVisible;
+
   late final List<String?> _historial = [null, widget.activoId];
   int _posicion = 1;
 
@@ -377,6 +380,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     while (nodo != null && vistos.add(nodo.id)) {
       ruta.insert(0, nodo);
       nodo = store.activo(nodo.padreId);
+    }
+    if (_rutaVisible != a.id) {
+      _rutaVisible = a.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _rutaScroll.hasClients) {
+          _rutaScroll.jumpTo(_rutaScroll.position.maxScrollExtent);
+        }
+      });
     }
     final principal = ruta.first;
     final descripcion = a.descripcion.trim().isNotEmpty
@@ -413,6 +424,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             const SizedBox(width: 4),
             Expanded(
               child: SingleChildScrollView(
+                controller: _rutaScroll,
                 scrollDirection: Axis.horizontal,
                 reverse: false,
                 child: Row(
@@ -432,7 +444,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                           final activo = ruta[i];
                           final actual = i == ruta.length - 1;
                           final nombre =
-                              (ruta.length == 1 ? activo.titulo : activo.nombre)
+                              (ruta.length == 1 || activo.nombre.trim().isEmpty
+                                  ? activo.titulo : activo.nombre)
                                   .trim();
                           final letras = nombre.characters;
                           final texto = ruta.length > 1 && letras.length > 25
@@ -585,6 +598,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   @override
   @override
   void dispose() {
+    _rutaScroll.dispose();
     nuevoEnActivo = null;
     planDestacado.value = null;
     super.dispose();
