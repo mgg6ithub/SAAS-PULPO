@@ -5,7 +5,7 @@ import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/store.dart';
 
 void main() {
-  testWidgets('solo muestra raíces y permite elegir descendientes o el padre', (tester) async {
+  testWidgets('muestra solo hijos en submenús compactos y permite elegir una hoja', (tester) async {
     store.activos = [
       Activo(id: 'a', nombre: 'Camión'),
       Activo(id: 'b', padreId: 'a', nombre: 'Bomba'),
@@ -21,7 +21,7 @@ void main() {
     expect(find.text('Bomba'), findsNothing);
     await tester.tap(find.text('Camión'));
     await tester.pumpAndSettle();
-    expect(find.text('Seleccionar Camión'), findsOneWidget);
+    expect(find.textContaining('Seleccionar '), findsNothing);
     expect(find.text('Bomba'), findsOneWidget);
     expect(find.text('Válvula'), findsNothing);
     await tester.tap(find.text('Bomba'));
@@ -30,13 +30,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(elegido, 'c');
     expect(find.text('Válvula'), findsNothing);
-    await tester.tap(find.text('Elegir activo'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Camión'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Seleccionar Camión'));
-    await tester.pumpAndSettle();
-    expect(elegido, 'a');
     expect(tester.takeException(), isNull);
   });
 }

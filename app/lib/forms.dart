@@ -2076,9 +2076,22 @@ class SelectorActivo extends StatelessWidget {
     for (final a in store.activos) {
       (hijos[a.padreId] ??= []).add(a);
     }
-    Widget texto(Activo a) => ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 300),
-      child: Text(a.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
+    Widget texto(Activo a) => Tooltip(
+      message: a.titulo,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: a.padreId == null ? 300 : 190),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(a.nombre.trim().isEmpty ? a.tag : a.nombre,
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+            if (a.nombre.trim().isNotEmpty && a.tag.isNotEmpty)
+              Text(a.tag, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
+          ],
+        ),
+      ),
     );
     final estilo = MenuStyle(
       backgroundColor: WidgetStatePropertyAll(P.superficie),
@@ -2095,15 +2108,8 @@ class SelectorActivo extends StatelessWidget {
         );
       }
       return SubmenuButton(
-        menuStyle: estilo,
+        menuStyle: estilo.copyWith(maximumSize: const WidgetStatePropertyAll(Size(270, 420))),
         menuChildren: [
-          MenuItemButton(
-            onPressed: () => elegir(a.id),
-            leadingIcon: Icon(Icons.check_rounded, size: 18, color: valor == a.id ? P.morado : P.textoSuave),
-            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 300),
-              child: Text('Seleccionar ${a.titulo}', maxLines: 1, overflow: TextOverflow.ellipsis)),
-          ),
-          const Divider(height: 8),
           for (final h in componentes) opcion(h, {...ancestros, a.id}),
         ],
         child: texto(a),
