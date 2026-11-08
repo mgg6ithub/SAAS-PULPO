@@ -57,7 +57,7 @@ void reiniciarVistaActivos() {
 void abrirListaActivos() => _aLaLista.value++;
 
 /// Filtro de criticidad de la pestaña Mantenimientos de un activo: 0 = todos; 1.. = tipo.
-const _filtrosCriticidad = ['Todos', 'Normal', 'Alta', 'Crítica'];
+const _filtrosCriticidad = ['Todos', 'Normal', 'Alta', 'Muy alta'];
 
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {

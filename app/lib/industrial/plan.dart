@@ -7,7 +7,7 @@ import '../models.dart';
 enum PrioridadMantenimiento {
   normal('Normal', 'Se realiza según la planificación.'),
   alta('Alta', 'Priorizarlo: retrasarlo aumenta el riesgo de avería o parada.'),
-  critica('Crítica', 'No debe aplazarse por seguridad, cumplimiento o continuidad de producción.');
+  critica('Muy alta', 'No debe aplazarse por seguridad, cumplimiento o continuidad de producción.');
 
   final String etiqueta, descripcion;
   const PrioridadMantenimiento(this.etiqueta, this.descripcion);
