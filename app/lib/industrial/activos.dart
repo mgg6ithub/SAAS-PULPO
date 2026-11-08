@@ -209,10 +209,10 @@ class _TablaActivos extends StatelessWidget {
         alignment: Alignment.topCenter,
         child: Tabla(
           columnas: [
-            Col(componentes ? 'Componente' : 'Activo', flex: 3),
+            Col(componentes ? 'Componente' : 'Activo', flex: componentes ? 3 : 6),
             if (componentes) const Col('Tag', flex: 2),
             if (ancho) const Col('Fabricante y modelo', flex: 2),
-            if (ancho) const Col('División', flex: 2),
+            if (ancho) const Col('División', ancho: 80),
             if (ancho) const Col('Horas totales', ancho: 120, derecha: true),
             if (medio) const Col('Mantenimientos', ancho: 130, derecha: true),
             if (medio) const Col('Próximo mantenimiento', ancho: 160),
