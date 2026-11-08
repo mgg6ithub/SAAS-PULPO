@@ -392,18 +392,18 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           children: [
             IconButton(
               tooltip: 'Atrás',
-              constraints: const BoxConstraints.tightFor(width: 28, height: 40),
+              constraints: const BoxConstraints.tightFor(width: 28, height: 32),
               padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
+              visualDensity: VisualDensity.standard,
               style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
               onPressed: _posicion > 0 ? () => _recorrer(-1) : null,
               icon: const Icon(Icons.arrow_back_rounded, size: 20),
             ),
             IconButton(
               tooltip: 'Adelante',
-              constraints: const BoxConstraints.tightFor(width: 28, height: 40),
+              constraints: const BoxConstraints.tightFor(width: 28, height: 32),
               padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
+              visualDensity: VisualDensity.standard,
               style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
               onPressed: _posicion + 1 < _historial.length
                   ? () => _recorrer(1)
@@ -446,7 +446,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   : () => _abrir(activo.id),
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.zero,
-                                minimumSize: const Size(0, 40),
+                                minimumSize: const Size(0, 32),
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 foregroundColor: P.textoSuave,
                                 disabledForegroundColor: Theme.of(context)
