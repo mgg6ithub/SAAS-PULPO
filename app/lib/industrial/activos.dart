@@ -391,23 +391,27 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           children: [
             IconButton(
               tooltip: 'Atrás',
-              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+              constraints: const BoxConstraints.tightFor(width: 28, height: 40),
               padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
               onPressed: _posicion > 0 ? () => _recorrer(-1) : null,
               icon: const Icon(Icons.arrow_back_rounded, size: 20),
             ),
             IconButton(
               tooltip: 'Adelante',
-              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+              constraints: const BoxConstraints.tightFor(width: 28, height: 40),
               padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
               onPressed: _posicion + 1 < _historial.length
                   ? () => _recorrer(1)
                   : null,
               icon: const Icon(Icons.arrow_forward_rounded, size: 20),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             IconoActivo(a.icono, size: 24, color: P.textoSuave),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -432,7 +436,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               (ruta.length == 1 ? activo.titulo : activo.nombre)
                                   .trim();
                           final letras = nombre.characters;
-                          final texto = letras.length > 25
+                          final texto = ruta.length > 1 && letras.length > 25
                               ? '${letras.take(24)}…'
                               : nombre;
                           return Tooltip(
@@ -442,6 +446,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   ? null
                                   : () => _abrir(activo.id),
                               style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 40),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 foregroundColor: P.textoSuave,
                                 disabledForegroundColor: Theme.of(context)
                                     .colorScheme
@@ -469,7 +476,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         ),
         if (descripcion.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 112, top: 4),
+            padding: const EdgeInsets.only(left: 88, top: 4),
             child: Text(
               descripcion,
               maxLines: 2,
