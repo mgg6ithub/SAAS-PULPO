@@ -155,7 +155,7 @@ class _ActivosState extends State<Activos> {
                 onChanged: (v) => setState(() => q = v),
               ),
               BotonAccion(
-                'Uso de las máquinas',
+                'Uso de activos',
                 icono: Icons.event_note_outlined,
                 onPressed: () => abrirUsoMaquinas(context),
               ),
@@ -1132,7 +1132,7 @@ class _ActivoFormState extends State<ActivoForm> {
           ),
           if (a.usoPlanificado)
             Text(
-              'Marca los días y turnos en Activos → «Uso de las máquinas». Cada turno suma sus horas al contador.',
+              'Marca los días y turnos en Activos → «Uso de activos». Cada turno suma sus horas al contador.',
               style: TextStyle(fontSize: 12.5, color: P.textoSuave),
             ),
         ],
