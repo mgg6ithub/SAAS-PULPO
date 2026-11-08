@@ -91,6 +91,7 @@ class _HistoricosState extends State<Historicos> {
                     opciones: ['Todos', for (final t in TipoMantenimiento.values)
                       '${t.etiqueta} ${base.where((r) => r.$2.tipoMantenimiento == t).length}'],
                     colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                    anchosIguales: false,
                     seleccion: tipo == null ? 0 : tipo!.index + 1,
                     compactas: true,
                     onChanged: (i) => setState(() => tipo = i == 0 ? null : TipoMantenimiento.values[i - 1]),
@@ -235,6 +236,8 @@ class _Filtro<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final texto = opciones.where((o) => o.$1 == valor).firstOrNull?.$2 ?? todos;
     return BotonMenu<T?>(
+      resaltarHover: false,
+      relleno: EdgeInsets.zero,
       tooltip: todos,
       seleccionado: valor,
       onSelected: onChanged,

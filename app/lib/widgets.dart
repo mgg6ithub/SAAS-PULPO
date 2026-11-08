@@ -956,6 +956,7 @@ class Pestanas extends StatelessWidget {
 
   /// Menos aire a los lados de cada opción, para filtros que van junto a otro selector.
   final bool compactas;
+  final bool anchosIguales;
 
   /// Icono neutro delante de cada opción (null = sin icono).
   final List<IconData?>? iconos;
@@ -967,6 +968,7 @@ class Pestanas extends StatelessWidget {
     required this.onChanged,
     this.colores,
     this.compactas = false,
+    this.anchosIguales = true,
   });
 
   Widget _opcion(int i, Widget texto) => colores == null && iconos == null
@@ -1023,42 +1025,45 @@ class Pestanas extends StatelessWidget {
     final estilo = DefaultTextStyle.of(context).style.merge(const TextStyle(fontSize: 14, fontWeight: FontWeight.w600));
     if (esMovil(context)) return _desplegable(estilo);
     final escala = MediaQuery.textScalerOf(context);
-    // Ancho de cada opción: el del texto más largo (mismo ancho para todas, así la pastilla solo se desplaza).
-    var mayor = 0.0;
+    final anchosTexto = <double>[];
     for (final o in opciones) {
       final tp = TextPainter(
         text: TextSpan(text: o, style: estilo),
-        textDirection: TextDirection.ltr,
-        textScaler: escala,
-        maxLines: 1,
+        textDirection: Directionality.of(context), textScaler: escala, maxLines: 1,
       )..layout();
-      mayor = max(mayor, tp.width);
+      anchosTexto.add(tp.width.ceilToDouble());
+      tp.dispose();
     }
-    final w = mayor.ceilToDouble() + (compactas ? 18 : 28) + (colores == null ? 0 : 14) + (iconos == null ? 0 : 23);
+    final mayor = anchosTexto.fold<double>(0, max);
+    final anchos = [for (var i = 0; i < opciones.length; i++)
+      (anchosIguales ? mayor : anchosTexto[i]) + (compactas ? 18 : 28) +
+      (colores != null && (anchosIguales || colores![i] != null) ? 14 : 0) +
+      (iconos != null && (anchosIguales || iconos![i] != null) ? 23 : 0)];
+    final total = anchos.fold<double>(0, (a, b) => a + b);
     final valida = seleccion >= 0 && seleccion < opciones.length;
     // Si no caben enteras en el ancho que hay, desplegable (nunca cortadas ni desbordando).
     return LayoutBuilder(
-      builder: (context, box) => w * opciones.length + 6 > box.maxWidth ? _desplegable(estilo) : _pestanas(w, valida, estilo),
+      builder: (context, box) => total + 6 > box.maxWidth ? _desplegable(estilo) : _pestanas(anchos, valida, estilo),
     );
   }
 
-  Widget _pestanas(double w, bool valida, TextStyle estilo) {
+  Widget _pestanas(List<double> anchos, bool valida, TextStyle estilo) {
     return Container(
       height: 40,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(P.radioControl)),
       child: SizedBox(
-        width: w * opciones.length,
+        width: anchos.fold<double>(0, (a, b) => a + b),
         child: Stack(
           children: [
             if (valida)
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
-                left: seleccion * w,
+                left: anchos.take(seleccion).fold<double>(0, (a, b) => a + b),
                 top: 0,
                 bottom: 0,
-                width: w,
+                width: anchos[seleccion],
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: P.superficie,
@@ -1078,7 +1083,7 @@ class Pestanas extends StatelessWidget {
                       behavior: HitTestBehavior.opaque,
                       onTap: () => onChanged(i),
                       child: SizedBox(
-                        width: w,
+                        width: anchos[i],
                         child: Center(
                           child: AnimatedDefaultTextStyle(
                             duration: const Duration(milliseconds: 200),
@@ -2405,6 +2410,7 @@ class BotonMenu<T> extends StatefulWidget {
   final T? seleccionado;
   final ValueChanged<T> onSelected;
   final Widget child;
+  final bool resaltarHover;
   const BotonMenu({
     super.key,
     required this.tooltip,
@@ -2412,6 +2418,7 @@ class BotonMenu<T> extends StatefulWidget {
     required this.onSelected,
     required this.child,
     this.seleccionado,
+    this.resaltarHover = true,
     this.relleno = const EdgeInsets.symmetric(horizontal: 8),
   });
 
@@ -2459,7 +2466,7 @@ class _BotonMenuState<T> extends State<BotonMenu<T>> {
           curve: Curves.easeOut,
           padding: widget.relleno,
           decoration: BoxDecoration(
-            color: hover && !abierto ? P.hover : P.hover.withValues(alpha: 0),
+            color: widget.resaltarHover && hover && !abierto ? P.hover : P.hover.withValues(alpha: 0),
             borderRadius: BorderRadius.circular(P.radioControl),
           ),
           child: widget.child,
