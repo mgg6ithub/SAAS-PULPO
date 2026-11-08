@@ -569,7 +569,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     if (planes.isEmpty) {
       return Vacio(
         icono: Icons.filter_alt_off_outlined,
-        texto: 'Ningún mantenimiento con estos filtros',
+        texto: switch (_estadoOrden) {
+          1 => 'No tienes mantenimientos sin una orden de trabajo pendiente.',
+          2 => 'No tienes mantenimientos con una orden de trabajo pendiente sin técnico asignado.',
+          3 => 'No tienes mantenimientos con una orden de trabajo pendiente asignada a un técnico.',
+          _ => 'No tienes mantenimientos con estos filtros.',
+        },
       );
     }
     final proximos = {

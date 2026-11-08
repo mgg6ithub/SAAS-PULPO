@@ -2359,35 +2359,22 @@ class SelectorTrabajadores extends StatelessWidget {
             child: Text('Asignar también a sus ${store.descendientes(t.id).length} subtrabajos'),
           ),
         ],
-        const Divider(height: 8),
-        MenuItemButton(
-          onPressed: null,
-          child: Text('Equipos · próximamente', style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
-        ),
       ],
       builder: (context, menu, _) => reducido
-          ? SizedBox(
-              width: 145, height: 26,
-              child: TextButton(
-                onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: P.textoSuave,
-                  backgroundColor: P.cabeceraTabla,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
-                ),
-                child: Row(children: [
+          ? Tooltip(
+              message: elegidos.isEmpty ? textoSinAsignar : elegidos.map((w) => w.nombreCompleto).join(', '),
+              child: _CajaMenu(
+                abierto: menu.isOpen,
+                compacta: true,
+                onTap: () => menu.isOpen ? menu.close() : menu.open(),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AvataresTrabajadores(t.trabajadorIds, size: 22),
                   if (elegidos.isNotEmpty) ...[
-                    AvataresTrabajadores(t.trabajadorIds, size: 20),
                     const SizedBox(width: 6),
+                    Flexible(child: Text(elegidos.map((w) => w.nombre).join(', '),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12.5))),
                   ],
-                  Expanded(child: Text(elegidos.isEmpty ? textoSinAsignar : elegidos.map((w) => w.nombre).join(', '),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12.5))),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.unfold_more_rounded, size: 14),
                 ]),
               ),
             )
