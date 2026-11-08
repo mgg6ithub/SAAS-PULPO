@@ -63,7 +63,8 @@ void abrirListaActivos() => _aLaLista.value++;
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
   final ValueChanged<String>? onAbrir;
-  const Activos({super.key, this.onAbrir});
+  final Widget? navegacion;
+  const Activos({super.key, this.onAbrir, this.navegacion});
 
   @override
   State<Activos> createState() => _ActivosState();
@@ -110,14 +111,13 @@ class _ActivosState extends State<Activos> {
           BarraVista(
             // Icono de Activos en grande delante del título.
             izquierda: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Marca.iconoCliente, size: 30, color: P.textoSuave),
-                  const SizedBox(width: 12),
-                  const TituloVista('Activos'),
-                ],
-              ),
+              widget.navegacion ?? Row(mainAxisSize: MainAxisSize.min, children: [
+                const IconButton(tooltip: 'Atrás', onPressed: null, icon: Icon(Icons.arrow_back_rounded, size: 20)),
+                const IconButton(tooltip: 'Adelante', onPressed: null, icon: Icon(Icons.arrow_forward_rounded, size: 20)),
+                Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
+                const SizedBox(width: 6),
+                const Text('Activos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              ]),
             ],
             derecha: const [],
             principal: BotonPrimario(
@@ -431,6 +431,19 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _posicion = 0;
+                      }),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32),
+                        foregroundColor: P.textoSuave, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
+                        const SizedBox(width: 4),
+                        const Text('Activos', style: TextStyle(fontSize: 18)),
+                      ]),
+                    ),
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('/', style: TextStyle(color: P.textoSuave))),
                     for (var i = 0; i < ruta.length; i++) ...[
                       if (i > 0)
                         Padding(
@@ -645,34 +658,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       );
     }
     if (_historial[_posicion] == null) {
-      return Padding(
-        padding: margenPagina,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  tooltip: 'Atrás',
-                  onPressed: null,
-                  icon: const Icon(Icons.arrow_back_rounded),
-                ),
-                IconButton(
-                  tooltip: 'Adelante',
-                  onPressed: () => _recorrer(1),
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                ),
-                const TituloVista('Activos'),
-                const Spacer(),
-                TextButton(
-                  onPressed: widget.onVolver,
-                  child: const Text('Ver activos'),
-                ),
-              ],
-            ),
-            Expanded(child: Activos(onAbrir: _abrir)),
-          ],
-        ),
-      );
+      nuevoEnActivo = (c) => abrirActivoForm(c);
+      return Activos(onAbrir: _abrir, navegacion: Row(mainAxisSize: MainAxisSize.min, children: [
+        const IconButton(tooltip: 'Atrás', onPressed: null, icon: Icon(Icons.arrow_back_rounded, size: 20)),
+        IconButton(tooltip: 'Adelante', onPressed: _posicion + 1 < _historial.length ? () => _recorrer(1) : null,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 20)),
+        Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
+        const SizedBox(width: 6),
+        const Text('Activos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+      ]));
     }
     elegido = a.id;
 
