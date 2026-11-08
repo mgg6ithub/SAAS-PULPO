@@ -509,6 +509,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   }
 
   int _estadoOrden = 0;
+  int _asignacionOt = 0;
 
   int get pestana => _pestana;
   set pestana(int v) => _pestana = v;
@@ -861,19 +862,41 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                     ),
                   ),
                   // Solo las pendientes: las hechas están en Histórico.
-                  2 =>
-                    ots.where(otPendiente).isEmpty
-                        ? const Vacio(
-                            icono: Icons.assignment_outlined,
-                            titulo: 'Sin órdenes pendientes',
-                            texto: 'Las órdenes por hacer de este activo y sus componentes aparecerán aquí; las hechas, en Histórico.',
-                          )
-                        : TablaTrabajos(
-                            ots.where(otPendiente).toList(),
-                            conCliente: false,
-                            nombre: 'orden de trabajo',
-                            onAbrir: (id) => setState(() => tareaId = id),
-                          ),
+                  2 => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Pestanas(
+                          opciones: const ['Todos', 'Sin asignar', 'Asignados'],
+                          iconos: const [null, Icons.radio_button_unchecked_rounded, Icons.check_circle_outline_rounded],
+                          seleccion: _asignacionOt,
+                          compactas: true,
+                          onChanged: (i) => setState(() => _asignacionOt = i),
+                        ),
+                      ),
+                      const SizedBox(height: huecoVista),
+                      Expanded(child: Builder(builder: (context) {
+                        final filtradas = ots.where(otPendiente).where((ot) => switch (_asignacionOt) {
+                          1 => ot.trabajadorIds.isEmpty,
+                          2 => ot.trabajadorIds.isNotEmpty,
+                          _ => true,
+                        }).toList();
+                        return filtradas.isEmpty
+                            ? Vacio(
+                                icono: Icons.assignment_outlined,
+                                titulo: _asignacionOt == 0 ? 'Sin órdenes pendientes' : 'Sin órdenes con este filtro',
+                                texto: 'Las órdenes por hacer de este activo y sus componentes aparecerán aquí; las hechas, en Histórico.',
+                              )
+                            : TablaTrabajos(
+                                filtradas,
+                                conCliente: false,
+                                nombre: 'orden de trabajo',
+                                onAbrir: (id) => setState(() => tareaId = id),
+                              );
+                      })),
+                    ],
+                  ),
                   _ => Historicos(activoId: a.id, incrustada: true),
                 },
               ),

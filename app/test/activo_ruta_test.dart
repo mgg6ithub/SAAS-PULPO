@@ -79,5 +79,16 @@ void main() {
       }
       expect(tester.takeException(), isNull);
     }
+    await tester.tap(find.text('Órdenes de trabajo').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sin asignar').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Plan 2'), findsOneWidget);
+    expect(find.text('Plan 3'), findsNothing);
+    await tester.tap(find.text('Asignados').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Plan 3'), findsOneWidget);
+    expect(find.text('Plan 2'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

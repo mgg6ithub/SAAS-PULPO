@@ -2349,6 +2349,10 @@ class SelectorTrabajadores extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
                 ),
                 child: Row(children: [
+                  if (elegidos.isNotEmpty) ...[
+                    AvataresTrabajadores(t.trabajadorIds, size: 20),
+                    const SizedBox(width: 6),
+                  ],
                   Expanded(child: Text(elegidos.isEmpty ? textoSinAsignar : elegidos.map((w) => w.nombre).join(', '),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12.5))),
