@@ -26,10 +26,10 @@ List<Realizada> otsRealizadas() => [
 
 /// Periodos del filtro de fecha, en días hacia atrás (null = todo).
 const _periodos = <(String, int?)>[
+  ('Todo', null),
   ('Últimos 30 días', 30),
   ('Últimos 3 meses', 91),
   ('Último año', 365),
-  ('Todo', null),
 ];
 
 /// Sección «Históricos» de Pultec: registro de las OT realizadas, filtrable por activo, técnico, tipo
@@ -49,7 +49,7 @@ class Historicos extends StatefulWidget {
 class _HistoricosState extends State<Historicos> {
   String? activoId, tecnicoId;
   TipoMantenimiento? tipo;
-  int periodo = 1;
+  int periodo = 2;
 
   /// Lo que pasa los filtros de activo, técnico y fecha (el de tipo va aparte para contar por tipo).
   List<Realizada> _filtradas() {
@@ -87,6 +87,14 @@ class _HistoricosState extends State<Historicos> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: 12, runSpacing: 8,
                 children: [
+                  Pestanas(
+                    opciones: ['Todos', for (final t in TipoMantenimiento.values)
+                      '${t.etiqueta} ${base.where((r) => r.$2.tipoMantenimiento == t).length}'],
+                    colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                    seleccion: tipo == null ? 0 : tipo!.index + 1,
+                    compactas: true,
+                    onChanged: (i) => setState(() => tipo = i == 0 ? null : TipoMantenimiento.values[i - 1]),
+                  ),
                   Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     if (box.maxWidth > 1500)
                       Pestanas(
@@ -97,21 +105,11 @@ class _HistoricosState extends State<Historicos> {
                       )
                     else
                       _Filtro<int>(
-                        todos: _periodos.last.$1,
-                        valor: periodo == _periodos.length - 1 ? null : periodo,
-                        opciones: [for (final (i, p) in _periodos.indexed.take(_periodos.length - 1)) (i, p.$1)],
-                        onChanged: (v) => setState(() => periodo = v ?? _periodos.length - 1),
+                        todos: _periodos.first.$1,
+                        valor: periodo == 0 ? null : periodo,
+                        opciones: [for (final (i, p) in _periodos.indexed.skip(1)) (i, p.$1)],
+                        onChanged: (v) => setState(() => periodo = v ?? 0),
                       ),
-                    Pestanas(
-                      opciones: ['Todos', for (final t in TipoMantenimiento.values)
-                        '${t.etiqueta} · ${base.where((r) => r.$2.tipoMantenimiento == t).length}'],
-                      colores: [null, for (final t in TipoMantenimiento.values) t.color],
-                      seleccion: tipo == null ? 0 : tipo!.index + 1,
-                      compactas: true,
-                      onChanged: (i) => setState(() => tipo = i == 0 ? null : TipoMantenimiento.values[i - 1]),
-                    ),
-                  ]),
-                  Wrap(spacing: 12, runSpacing: 8, children: [
                     if (widget.activoId == null)
                       _Filtro<String>(
                         todos: 'Todos los activos', valor: activoId,
@@ -242,7 +240,7 @@ class _Filtro<T> extends StatelessWidget {
       onSelected: onChanged,
       opciones: [(null, Text(todos)), for (final (v, t) in opciones) (v, Text(t))],
       child: Container(
-        height: 36,
+        height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(P.radioControl),
