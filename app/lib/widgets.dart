@@ -522,7 +522,8 @@ class Cabecera extends StatelessWidget {
   final String? subtitulo;
   final List<Widget> acciones;
   final Widget? lider;
-  const Cabecera({super.key, required this.titulo, this.subtitulo, this.acciones = const [], this.lider});
+  final Widget? contenido;
+  const Cabecera({super.key, required this.titulo, this.subtitulo, this.acciones = const [], this.lider, this.contenido});
 
   /// Las acciones se quedan siempre arriba a la derecha; si falta ancho, solo con su icono.
   @override
@@ -531,7 +532,7 @@ class Cabecera extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Row(
+          child: contenido ?? Row(
             children: [
               if (lider != null) ...[lider!, const SizedBox(width: 12)],
               Flexible(

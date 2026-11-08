@@ -23,7 +23,8 @@ import '../screens/tarea_detalle.dart';
 /// Sin nada pendiente, verde: puede funcionar.
 /// El estado de mantenimiento lo marca cada activo en su ficha (no sus OT).
 /// La criticidad es de los mantenimientos, no del activo: el activo toma la de su OT pendiente más grave.
-TipoMantenimiento? gravedadDe(String activoId) => masGrave(store.otsDe(activoId));
+TipoMantenimiento? gravedadDe(String activoId) =>
+    masGrave(store.otsDe(activoId));
 Color colorEstado(TipoMantenimiento? g) => g?.color ?? P.verde;
 String textoEstado(TipoMantenimiento? g) => g?.etiqueta ?? 'Al día';
 
@@ -60,7 +61,8 @@ const _filtrosCriticidad = ['Todos', 'Preventivo', 'No crítico', 'Crítico'];
 
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
-  const Activos({super.key});
+  final ValueChanged<String>? onAbrir;
+  const Activos({super.key, this.onAbrir});
 
   @override
   State<Activos> createState() => _ActivosState();
@@ -89,9 +91,14 @@ class _ActivosState extends State<Activos> {
 
   @override
   Widget build(BuildContext context) {
-    if (abierto != null) return ActivoDetalle(activoId: abierto!, onVolver: () => setState(() => abierto = null));
+    if (abierto != null && widget.onAbrir == null)
+      return ActivoDetalle(
+        activoId: abierto!,
+        onVolver: () => setState(() => abierto = null),
+      );
     final activos = store.hijosDe(null).where((a) {
-      final t = '${a.tag} ${a.nombre} ${a.fabricante} ${a.modelo} ${a.division}'.toLowerCase();
+      final t = '${a.tag} ${a.nombre} ${a.fabricante} ${a.modelo} ${a.division}'
+          .toLowerCase();
       return t.contains(q.toLowerCase());
     }).toList();
     return Padding(
@@ -125,7 +132,10 @@ class _ActivosState extends State<Activos> {
             // Sin filtro de criticidad: un activo no es crítico; lo son sus mantenimientos (dentro del activo).
             // Buscador y, a su derecha, el calendario de turnos; los dos a la izquierda.
             izquierda: [
-              Buscador(hint: 'Buscar activo…', onChanged: (v) => setState(() => q = v)),
+              Buscador(
+                hint: 'Buscar activo…',
+                onChanged: (v) => setState(() => q = v),
+              ),
               BotonAccion(
                 'Uso de las máquinas',
                 icono: Icons.event_note_outlined,
@@ -153,7 +163,11 @@ class _ActivosState extends State<Activos> {
                 : _TablaActivos(activos, (id) {
                     // Al cambiar de vista con el ratón encima de un tipo, su aviso se quedaba pegado.
                     Tooltip.dismissAllToolTips();
-                    setState(() => abierto = id);
+                    if (widget.onAbrir != null) {
+                      widget.onAbrir!(id);
+                    } else {
+                      setState(() => abierto = id);
+                    }
                   }),
           ),
         ],
@@ -209,7 +223,11 @@ class _TablaActivos extends StatelessWidget {
                 derecha: true,
                 cabecera: Tooltip(
                   message: 'Componentes',
-                  child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
+                  child: Icon(
+                    Icons.account_tree_outlined,
+                    size: 18,
+                    color: P.textoSuave,
+                  ),
                 ),
               ),
           ],
@@ -225,7 +243,12 @@ class _TablaActivos extends StatelessWidget {
                   Expanded(
                     // Subcomponentes: el nombre aquí y el tag en su propia columna.
                     child: a.descripcion.isEmpty
-                        ? celdaTexto(componentes && a.nombre.isNotEmpty ? a.nombre : a.titulo, negrita: true)
+                        ? celdaTexto(
+                            componentes && a.nombre.isNotEmpty
+                                ? a.nombre
+                                : a.titulo,
+                            negrita: true,
+                          )
                         // Con descripción: debajo del nombre, como en los mantenimientos.
                         : Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -233,13 +256,22 @@ class _TablaActivos extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                celdaTexto(componentes && a.nombre.isNotEmpty ? a.nombre : a.titulo, negrita: true),
+                                celdaTexto(
+                                  componentes && a.nombre.isNotEmpty
+                                      ? a.nombre
+                                      : a.titulo,
+                                  negrita: true,
+                                ),
                                 const SizedBox(height: 2),
                                 Text(
                                   a.descripcion,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 12.5, color: P.textoSuave, height: 1.3),
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: P.textoSuave,
+                                    height: 1.3,
+                                  ),
                                 ),
                               ],
                             ),
@@ -247,11 +279,19 @@ class _TablaActivos extends StatelessWidget {
                   ),
                 ],
               ),
-              if (componentes) celdaTexto(a.tag.isEmpty ? '—' : a.tag, suave: true),
-              if (ancho) celdaTexto([a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '), suave: true),
+              if (componentes)
+                celdaTexto(a.tag.isEmpty ? '—' : a.tag, suave: true),
+              if (ancho)
+                celdaTexto(
+                  [a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '),
+                  suave: true,
+                ),
               if (ancho) celdaTexto(a.division, suave: true),
               if (ancho)
-                Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(horas(horasHoy(a)), suave: true)),
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: celdaTexto(horas(horasHoy(a)), suave: true),
+                ),
               if (medio)
                 Padding(
                   padding: const EdgeInsets.only(right: 16),
@@ -262,7 +302,8 @@ class _TablaActivos extends StatelessWidget {
                   message: 'El más cercano de sus mantenimientos y los de sus componentes.',
                   child: celdaTexto(proximaFecha(a), suave: true),
                 ),
-              if (medio) celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
+              if (medio)
+                celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
             ];
           },
           onTap: (i) => onAbrir(activos[i].id),
@@ -305,7 +346,11 @@ String horas(double h) => h == 0 ? '—' : '${h % 1 == 0 ? h.toInt() : h} h';
 class ActivoDetalle extends StatefulWidget {
   final String activoId;
   final VoidCallback onVolver;
-  const ActivoDetalle({super.key, required this.activoId, required this.onVolver});
+  const ActivoDetalle({
+    super.key,
+    required this.activoId,
+    required this.onVolver,
+  });
 
   @override
   State<ActivoDetalle> createState() => _ActivoDetalleState();
@@ -313,6 +358,125 @@ class ActivoDetalle extends StatefulWidget {
 
 class _ActivoDetalleState extends State<ActivoDetalle> {
   late String elegido = widget.activoId;
+  late final List<String?> _historial = [null, widget.activoId];
+  int _posicion = 1;
+
+  void _recorrer(int paso) {
+    setState(() {
+      _posicion += paso;
+      final id = _historial[_posicion];
+      if (id != null) elegido = _abierto.value = id;
+      pestana = vista = 0;
+    });
+  }
+
+  Widget _cabeceraRuta(Activo a) {
+    final ruta = <Activo>[];
+    final vistos = <String>{};
+    Activo? nodo = a;
+    while (nodo != null && vistos.add(nodo.id)) {
+      ruta.insert(0, nodo);
+      nodo = store.activo(nodo.padreId);
+    }
+    final descripcion = a.descripcion.trim().isNotEmpty
+        ? a.descripcion.trim()
+        : [
+            a.fabricante,
+            a.modelo,
+          ].where((x) => x.trim().isNotEmpty).join(' · ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              tooltip: 'Atrás',
+              onPressed: _posicion > 0 ? () => _recorrer(-1) : null,
+              icon: const Icon(Icons.arrow_back_rounded, size: 20),
+            ),
+            IconButton(
+              tooltip: 'Adelante',
+              onPressed: _posicion + 1 < _historial.length
+                  ? () => _recorrer(1)
+                  : null,
+              icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+            ),
+            const SizedBox(width: 8),
+            IconoActivo(a.icono, size: 24, color: P.textoSuave),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < ruta.length; i++) ...[
+                      if (i > 0)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Text(
+                            '/',
+                            style: TextStyle(color: P.textoSuave),
+                          ),
+                        ),
+                      Builder(
+                        builder: (context) {
+                          final activo = ruta[i];
+                          final actual = i == ruta.length - 1;
+                          final nombre =
+                              (ruta.length == 1 ? activo.titulo : activo.nombre)
+                                  .trim();
+                          final letras = nombre.characters;
+                          final texto = letras.length > 25
+                              ? '${letras.take(24)}…'
+                              : nombre;
+                          return Tooltip(
+                            message: activo.titulo,
+                            child: TextButton(
+                              onPressed: actual
+                                  ? null
+                                  : () => _abrir(activo.id),
+                              style: TextButton.styleFrom(
+                                foregroundColor: P.textoSuave,
+                                disabledForegroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface,
+                              ),
+                              child: Text(
+                                texto.isEmpty ? 'Activo' : texto,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: actual
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (descripcion.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 120, top: 4),
+            child: Text(
+              descripcion,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+            ),
+          ),
+      ],
+    );
+  }
+
   int get pestana => _pestana;
   set pestana(int v) => _pestana = v;
 
@@ -328,6 +492,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
 
   void _abrir(String id) => setState(() {
     Tooltip.dismissAllToolTips();
+    if (_historial[_posicion] != id) {
+      _historial.removeRange(_posicion + 1, _historial.length);
+      _historial.add(id);
+      _posicion++;
+    }
     elegido = _abierto.value = id;
     pestana = 0;
     vista = 0;
@@ -349,12 +518,19 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         ),
       );
     }
-    if (criticidad != 0) planes = planes.where((p) => p.tipo.index == criticidad - 1).toList();
+    if (criticidad != 0)
+      planes = planes.where((p) => p.tipo.index == criticidad - 1).toList();
     if (planes.isEmpty) {
-      return Vacio(icono: Icons.filter_alt_off_outlined, texto: 'Ningún mantenimiento con esta criticidad');
+      return Vacio(
+        icono: Icons.filter_alt_off_outlined,
+        texto: 'Ningún mantenimiento con esta criticidad',
+      );
     }
-    final proximos = {for (final p in planes) p.id: proximoPlan(p) ?? DateTime(9999)};
-    final lista = [...planes]..sort((x, y) => proximos[x.id]!.compareTo(proximos[y.id]!));
+    final proximos = {
+      for (final p in planes) p.id: proximoPlan(p) ?? DateTime(9999),
+    };
+    final lista = [...planes]
+      ..sort((x, y) => proximos[x.id]!.compareTo(proximos[y.id]!));
     return TablaPlanes(lista, activoId: a.id);
   }
 
@@ -416,9 +592,42 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         onAbrir: (id) => setState(() => tareaId = id),
       );
     }
+    if (_historial[_posicion] == null) {
+      return Padding(
+        padding: margenPagina,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  tooltip: 'Atrás',
+                  onPressed: null,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
+                IconButton(
+                  tooltip: 'Adelante',
+                  onPressed: () => _recorrer(1),
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                ),
+                const TituloVista('Activos'),
+                const Spacer(),
+                TextButton(
+                  onPressed: widget.onVolver,
+                  child: const Text('Ver activos'),
+                ),
+              ],
+            ),
+            Expanded(child: Activos(onAbrir: _abrir)),
+          ],
+        ),
+      );
+    }
     elegido = a.id;
-    final padre = store.activo(a.padreId);
-    final ots = store.otsDe(a.id).where((t) => !t.esPlantilla && t.activa).toList();
+
+    final ots = store
+        .otsDe(a.id)
+        .where((t) => !t.esPlantilla && t.activa)
+        .toList();
     final componentes = store.hijosDe(a.id);
     final planes = planesRama(a.id);
     final proximo = proximoDe(a.id);
@@ -428,24 +637,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Cabecera(
-            lider: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: padre == null ? 'Volver a Activos' : 'Volver a ${padre.titulo}',
-                  onPressed: padre == null ? widget.onVolver : () => _abrir(padre.id),
-                  icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
-                ),
-                const SizedBox(width: 4),
-                IconoActivo(a.icono, size: 28, color: P.textoSuave),
-              ],
-            ),
-            titulo: a.titulo.isEmpty ? 'Activo' : a.titulo,
-            subtitulo: [
-              if (padre != null) 'Componente de ${padre.titulo}',
-              a.fabricante,
-              a.modelo,
-            ].where((x) => x.isNotEmpty).join(' · '),
+            titulo: '',
+            lider: null,
+            contenido: _cabeceraRuta(a),
             // Arriba a la derecha, como en el resto de vistas; no junto al selector.
             acciones: [
               if (pestana == 0)
@@ -458,11 +652,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         onPressed: () => abrirPlanForm(context, activoId: a.id),
                       )
                     : BotonPrimario(
-                        a.padreId == null ? 'Nuevo componente' : 'Nuevo subcomponente',
+                        a.padreId == null
+                            ? 'Nuevo componente'
+                            : 'Nuevo subcomponente',
                         conIcono: true,
                         icono: Icons.add_rounded,
                         tecla: 'N',
-                        onPressed: () => abrirActivoForm(context, padreId: a.id),
+                        onPressed: () =>
+                            abrirActivoForm(context, padreId: a.id),
                       ),
               if (pestana == 2)
                 BotonPrimario(
@@ -476,7 +673,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           const SizedBox(height: 18),
           // Selector sencillo, como el de criticidad.
           Pestanas(
-            opciones: const ['Resumen', 'Datos', 'Órdenes de trabajo', 'Histórico'],
+            opciones: const [
+              'Resumen',
+              'Datos',
+              'Órdenes de trabajo',
+              'Histórico',
+            ],
             seleccion: pestana,
             onChanged: (i) => setState(() {
               pestana = i;
@@ -486,7 +688,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
-              layoutBuilder: (actual, anteriores) => Stack(fit: StackFit.expand, children: [...anteriores, ?actual]),
+              layoutBuilder: (actual, anteriores) => Stack(
+                fit: StackFit.expand,
+                children: [...anteriores, ?actual],
+              ),
               child: KeyedSubtree(
                 key: ValueKey('$elegido-$pestana'),
                 child: switch (pestana) {
@@ -500,13 +705,25 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         children: [
                           _dato(
                             'Próximo',
-                            proximo == null ? 'Sin estimar' : '${relativo(proximo)} · ${fecha(proximo)}',
+                            proximo == null
+                                ? 'Sin estimar'
+                                : '${relativo(proximo)} · ${fecha(proximo)}',
                           ),
                           _dato('Contador', horas(horasHoy(a))),
-                          _dato('Órdenes pendientes', '${ots.where(otPendiente).length}'),
+                          _dato(
+                            'Órdenes pendientes',
+                            '${ots.where(otPendiente).length}',
+                          ),
                           // Partes con incidencia o sin hacer que aún nadie ha solucionado.
-                          if (ots.where(incidenciaAbierta).length case final n when n > 0)
-                            Pill(n == 1 ? '1 incidencia abierta' : '$n incidencias abiertas', P.rojo, punto: true),
+                          if (ots.where(incidenciaAbierta).length case final n
+                              when n > 0)
+                            Pill(
+                              n == 1
+                                  ? '1 incidencia abierta'
+                                  : '$n incidencias abiertas',
+                              P.rojo,
+                              punto: true,
+                            ),
                         ],
                       ),
                       const SizedBox(height: huecoVista),
@@ -524,17 +741,25 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
                                 '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
                               ],
-                              iconos: const [Icons.content_paste_rounded, Icons.account_tree_outlined],
+                              iconos: const [
+                                Icons.content_paste_rounded,
+                                Icons.account_tree_outlined,
+                              ],
                               seleccion: vista,
                               onChanged: (i) => setState(() => vista = i),
                             ),
                             if (vista == 0)
                               Pestanas(
                                 opciones: _filtrosCriticidad,
-                                colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                                colores: [
+                                  null,
+                                  for (final t in TipoMantenimiento.values)
+                                    t.color,
+                                ],
                                 seleccion: criticidad,
                                 compactas: true,
-                                onChanged: (i) => setState(() => criticidad = i),
+                                onChanged: (i) =>
+                                    setState(() => criticidad = i),
                               ),
                           ],
                         ),
@@ -550,21 +775,29 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 texto:
                                     'Añade las piezas y los componentes de este ${a.padreId == null ? 'activo' : 'componente'}.',
                               )
-                            : _TablaActivos(componentes, _abrir, componentes: true),
+                            : _TablaActivos(
+                                componentes,
+                                _abrir,
+                                componentes: true,
+                              ),
                       ),
                     ],
                   ),
                   // Con las esquinas y el borde de las demás tarjetas y tablas.
                   1 => Container(
                     clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(P.radio)),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(P.radio),
+                    ),
                     // El borde encima del formulario: si no, su fondo blanco lo tapa en las esquinas.
                     foregroundDecoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(P.radio),
                       border: Border.all(color: P.borde),
                     ),
                     child: ActivoForm(
-                      key: ValueKey('${a.id}-$vuelta-${jsonEncode(a.toJson())}'),
+                      key: ValueKey(
+                        '${a.id}-$vuelta-${jsonEncode(a.toJson())}',
+                      ),
                       original: a,
                       incrustada: true,
                       onTerminar: () => setState(() => vuelta++),
@@ -595,8 +828,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   }
 }
 
-Future<void> abrirActivoForm(BuildContext context, {Activo? original, String? padreId}) =>
-    abrirPanel(context, ActivoForm(original: original, padreId: padreId));
+Future<void> abrirActivoForm(
+  BuildContext context, {
+  Activo? original,
+  String? padreId,
+}) => abrirPanel(context, ActivoForm(original: original, padreId: padreId));
 
 /// Alta y edición de un activo o de un componente (con [padreId], dentro de un activo o de otro componente).
 class ActivoForm extends StatefulWidget {
@@ -618,21 +854,32 @@ class ActivoForm extends StatefulWidget {
 }
 
 class _ActivoFormState extends State<ActivoForm> {
-  late final Activo a = widget.original?.copia() ?? Activo(id: store.nuevoId(), padreId: widget.padreId);
-  late final tag = TextEditingController(text: a.tag)..addListener(() => setState(() {}));
-  late final nombre = TextEditingController(text: a.nombre)..addListener(() => setState(() {}));
+  late final Activo a =
+      widget.original?.copia() ??
+      Activo(id: store.nuevoId(), padreId: widget.padreId);
+  late final tag = TextEditingController(text: a.tag)
+    ..addListener(() => setState(() {}));
+  late final nombre = TextEditingController(text: a.nombre)
+    ..addListener(() => setState(() {}));
   late final fabricante = TextEditingController(text: a.fabricante);
   late final modelo = TextEditingController(text: a.modelo);
   late final serie = TextEditingController(text: a.numeroSerie);
   late final division = TextEditingController(text: a.division);
   late final descripcion = TextEditingController(text: a.descripcion);
-  late final horasC = TextEditingController(text: a.horas == 0 ? '' : '${a.horas}')
-    ..addListener(() => setState(() => a.fechaLectura = hoy()));
-  late final ultimoContador = TextEditingController(text: '${a.horasUltimoMantenimiento}')..addListener(_actualizar);
-  late final ritmo = TextEditingController(text: a.horasUso == 0 ? '' : '${a.horasUso}')..addListener(_actualizar);
+  late final horasC = TextEditingController(
+    text: a.horas == 0 ? '' : '${a.horas}',
+  )..addListener(() => setState(() => a.fechaLectura = hoy()));
+  late final ultimoContador = TextEditingController(
+    text: '${a.horasUltimoMantenimiento}',
+  )..addListener(_actualizar);
+  late final ritmo = TextEditingController(
+    text: a.horasUso == 0 ? '' : '${a.horasUso}',
+  )..addListener(_actualizar);
   final _claveIdentificacion = GlobalKey(), _claveMantenimiento = GlobalKey();
   late final repuestos = TextEditingController(text: a.repuestos);
-  late final turnoC = TextEditingController(text: a.horasTurno.toStringAsFixed(a.horasTurno % 1 == 0 ? 0 : 1));
+  late final turnoC = TextEditingController(
+    text: a.horasTurno.toStringAsFixed(a.horasTurno % 1 == 0 ? 0 : 1),
+  );
   late final notas = TextEditingController(text: a.notas);
   bool intentoGuardar = false;
 
@@ -661,7 +908,8 @@ class _ActivoFormState extends State<ActivoForm> {
   double? _valor(TextEditingController c, {double? vacio}) {
     var texto = c.text.trim().replaceAll(' ', '');
     if (texto.isEmpty) return vacio;
-    if (RegExp(r'^\d{1,3}(\.\d{3})+(,\d+)?$').hasMatch(texto)) texto = texto.replaceAll('.', '');
+    if (RegExp(r'^\d{1,3}(\.\d{3})+(,\d+)?$').hasMatch(texto))
+      texto = texto.replaceAll('.', '');
     final n = double.tryParse(texto.replaceAll(',', '.'));
     return n != null && n.isFinite ? n : null;
   }
@@ -670,17 +918,26 @@ class _ActivoFormState extends State<ActivoForm> {
     final errores = <String, String>{};
     final actual = _valor(horasC, vacio: 0);
     final uso = _valor(ritmo, vacio: 0);
-    if (actual == null || actual < 0) errores['actual'] = 'Escribe un contador válido, desde 0';
+    if (actual == null || actual < 0)
+      errores['actual'] = 'Escribe un contador válido, desde 0';
     if (uso == null || uso < 0 || uso > (a.usoSemanal ? 168 : 24)) {
-      errores['uso'] = a.usoSemanal ? 'Entre 0 y 168 horas semanales' : 'Entre 0 y 24 horas al día';
+      errores['uso'] = a.usoSemanal
+          ? 'Entre 0 y 168 horas semanales'
+          : 'Entre 0 y 24 horas al día';
     }
     return errores;
   }
 
-  void _irA(GlobalKey clave) => WidgetsBinding.instance.addPostFrameCallback((_) {
-    final c = clave.currentContext;
-    if (c != null) Scrollable.ensureVisible(c, duration: const Duration(milliseconds: 300), alignment: .1);
-  });
+  void _irA(GlobalKey clave) =>
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final c = clave.currentContext;
+        if (c != null)
+          Scrollable.ensureVisible(
+            c,
+            duration: const Duration(milliseconds: 300),
+            alignment: .1,
+          );
+      });
 
   /// Desplegable con aspecto de campo (etiqueta encima y chevron), alineado con los campos de texto.
   Widget _menu<T>(
@@ -701,7 +958,13 @@ class _ActivoFormState extends State<ActivoForm> {
           opciones: [for (final e in opciones.entries) (e.key, Text(e.value))],
           onSelected: onSelected,
           child: InputDecorator(
-            decoration: InputDecoration(suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave)),
+            decoration: InputDecoration(
+              suffixIcon: Icon(
+                Icons.unfold_more_rounded,
+                size: 18,
+                color: P.textoSuave,
+              ),
+            ),
             child: Text(opciones[valor]!),
           ),
         ),
@@ -716,14 +979,18 @@ class _ActivoFormState extends State<ActivoForm> {
     // Un componente cuenta las horas de su activo principal.
     if (componente) {
       final r = raizActivo(a.padreId);
-      return Bloque('Contador y uso', descripcion: 'Las horas son las de su activo principal.', [
-        Text(
-          r == null
-              ? 'Usa el contador del activo del que cuelga.'
-              : 'Usa el contador de ${r.titulo}: ${horas(horasHoy(r))} hoy.',
-          style: TextStyle(fontSize: 13.5, color: P.textoSuave),
-        ),
-      ]);
+      return Bloque(
+        'Contador y uso',
+        descripcion: 'Las horas son las de su activo principal.',
+        [
+          Text(
+            r == null
+                ? 'Usa el contador del activo del que cuelga.'
+                : 'Usa el contador de ${r.titulo}: ${horas(horasHoy(r))} hoy.',
+            style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+          ),
+        ],
+      );
     }
     return KeyedSubtree(
       key: _claveMantenimiento,
@@ -732,7 +999,12 @@ class _ActivoFormState extends State<ActivoForm> {
         descripcion: 'Con ellos se estiman los mantenimientos por horas de este activo o componente.',
         [
           dos(
-            CampoFecha('Fecha de la lectura', a.fechaLectura, (d) => setState(() => a.fechaLectura = d), hasta: hoy()),
+            CampoFecha(
+              'Fecha de la lectura',
+              a.fechaLectura,
+              (d) => setState(() => a.fechaLectura = d),
+              hasta: hoy(),
+            ),
             campo(
               'Contador actual (h)',
               horasC,
@@ -747,7 +1019,11 @@ class _ActivoFormState extends State<ActivoForm> {
               'Ritmo de uso',
               tooltip: 'Cómo se suman las horas: fijas o según los turnos que marques en el calendario',
               valor: a.usoPlanificado ? 2 : (a.usoSemanal ? 1 : 0),
-              opciones: const {0: 'Media por día natural', 1: 'Total por semana', 2: 'Planificado por turnos'},
+              opciones: const {
+                0: 'Media por día natural',
+                1: 'Total por semana',
+                2: 'Planificado por turnos',
+              },
               onSelected: (v) => setState(() {
                 a.usoPlanificado = v == 2;
                 if (v < 2) a.usoSemanal = v == 1;
@@ -757,13 +1033,19 @@ class _ActivoFormState extends State<ActivoForm> {
                 ? campo(
                     'Horas por turno',
                     turnoC,
-                    teclado: const TextInputType.numberWithOptions(decimal: true),
+                    teclado: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     hint: '8',
                   )
                 : campo(
-                    a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
+                    a.usoSemanal
+                        ? 'Horas de uso por semana'
+                        : 'Horas de uso por día',
                     ritmo,
-                    teclado: const TextInputType.numberWithOptions(decimal: true),
+                    teclado: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     hint: 'Sin indicar',
                     error: errores['uso'],
                   ),
@@ -780,7 +1062,9 @@ class _ActivoFormState extends State<ActivoForm> {
 
   bool get componente => a.padreId != null;
   String? get error =>
-      intentoGuardar && tag.text.trim().isEmpty && nombre.text.trim().isEmpty ? 'Ponle un tag o un nombre' : null;
+      intentoGuardar && tag.text.trim().isEmpty && nombre.text.trim().isEmpty
+      ? 'Ponle un tag o un nombre'
+      : null;
 
   void guardar() {
     setState(() => intentoGuardar = true);
@@ -790,13 +1074,18 @@ class _ActivoFormState extends State<ActivoForm> {
       ..tag = tag.text.trim()
       ..nombre = nombre.text.trim()
       ..descripcion = descripcion.text.trim()
-      ..horasTurno = double.tryParse(turnoC.text.trim().replaceAll(',', '.')) ?? a.horasTurno
+      ..horasTurno =
+          double.tryParse(turnoC.text.trim().replaceAll(',', '.')) ??
+          a.horasTurno
       ..fabricante = fabricante.text.trim()
       ..modelo = modelo.text.trim()
       ..numeroSerie = serie.text.trim()
       ..division = division.text.trim()
       ..horas = _valor(horasC, vacio: 0) ?? 0
-      ..horasUltimoMantenimiento = math.min(_valor(ultimoContador, vacio: 0) ?? 0, _valor(horasC, vacio: 0) ?? 0)
+      ..horasUltimoMantenimiento = math.min(
+        _valor(ultimoContador, vacio: 0) ?? 0,
+        _valor(horasC, vacio: 0) ?? 0,
+      )
       ..horasUso = _valor(ritmo, vacio: 0) ?? 0
       ..repuestos = repuestos.text.trim()
       ..notas = notas.text.trim();
@@ -812,6 +1101,7 @@ class _ActivoFormState extends State<ActivoForm> {
   Widget build(BuildContext context) {
     final existe = widget.original != null;
     final padre = store.activo(a.padreId);
+
     final que = componente ? 'componente' : 'activo';
     return VentanaFormulario(
       incrustada: widget.incrustada,
@@ -819,10 +1109,14 @@ class _ActivoFormState extends State<ActivoForm> {
       onCancelar: widget.incrustada ? widget.onTerminar : null,
       etiqueta: padre?.titulo ?? 'Activos',
       titulo: existe ? 'Editar $que' : 'Nuevo $que',
-      tituloDesplazado: [tag.text, nombre.text].where((x) => x.isNotEmpty).join(' · '),
+      tituloDesplazado: [
+        tag.text,
+        nombre.text,
+      ].where((x) => x.isNotEmpty).join(' · '),
       onGuardar: guardar,
       avisos: [
-        if (error != null) ('Te falta el tag o el nombre', () => _irA(_claveIdentificacion)),
+        if (error != null)
+          ('Te falta el tag o el nombre', () => _irA(_claveIdentificacion)),
         if (intentoGuardar && _erroresMantenimiento.isNotEmpty)
           (_erroresMantenimiento.values.first, () => _irA(_claveMantenimiento)),
       ],
@@ -831,8 +1125,13 @@ class _ActivoFormState extends State<ActivoForm> {
           : () async {
               final nav = Navigator.of(context);
               final n = store.ramaDe(a.id).length - 1;
-              final con = n == 0 ? '' : ' y sus $n ${n == 1 ? 'componente' : 'componentes'}';
-              if (await confirmar(context, '¿Eliminar ${a.titulo}$con? Sus OT se quedan, sin activo.')) {
+              final con = n == 0
+                  ? ''
+                  : ' y sus $n ${n == 1 ? 'componente' : 'componentes'}';
+              if (await confirmar(
+                context,
+                '¿Eliminar ${a.titulo}$con? Sus OT se quedan, sin activo.',
+              )) {
                 store.borrarActivo(a.id);
                 if (widget.incrustada) {
                   widget.onTerminar?.call();
@@ -845,7 +1144,9 @@ class _ActivoFormState extends State<ActivoForm> {
         Bloque(
           componente ? 'Componente' : 'Activo',
           primero: true,
-          descripcion: componente ? 'Qué pieza de la máquina es.' : 'Qué máquina es y cómo se identifica.',
+          descripcion: componente
+              ? 'Qué pieza de la máquina es.'
+              : 'Qué máquina es y cómo se identifica.',
           pie: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -858,16 +1159,25 @@ class _ActivoFormState extends State<ActivoForm> {
                   for (final (clave, nombre) in [
                     ...todosLosIconos.take(11),
                     if (!todosLosIconos.take(11).any((i) => i.$1 == a.icono))
-                      todosLosIconos.firstWhere((i) => i.$1 == a.icono, orElse: () => todosLosIconos[11]),
+                      todosLosIconos.firstWhere(
+                        (i) => i.$1 == a.icono,
+                        orElse: () => todosLosIconos[11],
+                      ),
                   ])
                     IconButton(
                       tooltip: nombre,
                       isSelected: a.icono == clave,
                       style: IconButton.styleFrom(
                         fixedSize: const Size(40, 40),
-                        backgroundColor: a.icono == clave ? P.morado.withValues(alpha: .1) : Colors.transparent,
-                        foregroundColor: a.icono == clave ? P.morado : P.textoSuave,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                        backgroundColor: a.icono == clave
+                            ? P.morado.withValues(alpha: .1)
+                            : Colors.transparent,
+                        foregroundColor: a.icono == clave
+                            ? P.morado
+                            : P.textoSuave,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                        ),
                       ),
                       onPressed: () => setState(() => a.icono = clave),
                       icon: IconoActivo(clave, size: 22),
@@ -878,7 +1188,9 @@ class _ActivoFormState extends State<ActivoForm> {
                       fixedSize: const Size(40, 40),
                       foregroundColor: P.textoSuave,
                       side: BorderSide(color: P.borde),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(P.radioControl),
+                      ),
                     ),
                     onPressed: () async {
                       final clave = await elegirIcono(context, a.icono);
@@ -894,15 +1206,28 @@ class _ActivoFormState extends State<ActivoForm> {
             dos(
               KeyedSubtree(
                 key: _claveIdentificacion,
-                child: campo('Tag', tag, hint: componente ? 'CAM-01-MOT' : 'CAM-01', error: error, obligatorio: true),
+                child: campo(
+                  'Tag',
+                  tag,
+                  hint: componente ? 'CAM-01-MOT' : 'CAM-01',
+                  error: error,
+                  obligatorio: true,
+                ),
               ),
-              campo('Nombre', nombre, hint: componente ? 'Motor' : 'Camión cisterna', obligatorio: true),
+              campo(
+                'Nombre',
+                nombre,
+                hint: componente ? 'Motor' : 'Camión cisterna',
+                obligatorio: true,
+              ),
             ),
             // Opcional, como la de los mantenimientos: sale bajo el nombre en las listas.
             campo(
               'Descripción',
               descripcion,
-              hint: componente ? 'Motor diésel de 6 cilindros' : 'Transporte de residuos líquidos',
+              hint: componente
+                  ? 'Motor diésel de 6 cilindros'
+                  : 'Transporte de residuos líquidos',
               lineas: 4, // Tan alto como la rejilla de iconos de al lado.
             ),
           ],
@@ -910,10 +1235,17 @@ class _ActivoFormState extends State<ActivoForm> {
         Bloque('Ficha técnica', descripcion: 'Los datos de la placa.', [
           dos(campo('Fabricante', fabricante), campo('Modelo', modelo)),
           campo('Número de serie', serie),
-          if (!componente) campo('División o actividad', division, hint: 'Limpieza de tanques, transporte…'),
+          if (!componente)
+            campo(
+              'División o actividad',
+              division,
+              hint: 'Limpieza de tanques, transporte…',
+            ),
         ]),
         _mantenimiento(),
-        Bloque('Repuestos', descripcion: 'Piezas y consumibles que usa.', [campo('Repuestos', repuestos, lineas: 3)]),
+        Bloque('Repuestos', descripcion: 'Piezas y consumibles que usa.', [
+          campo('Repuestos', repuestos, lineas: 3),
+        ]),
         Bloque('Notas', [campo('Notas internas', notas, lineas: 3)]),
       ],
     );
