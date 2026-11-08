@@ -208,14 +208,15 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                                 )
                               : null,
                           derecha: [
-                            if (store.nube?.esTrabajador ?? false)
-                              BotonAccion(
-                                'Cerrar sesión',
-                                icono: Icons.logout_rounded,
-                                tooltip: store.nube!.nombre,
-                                onPressed: Nube.cerrarSesion,
-                              )
-                            else
+                            BotonAccion(
+                              'Cerrar sesión',
+                              icono: Icons.logout_rounded,
+                              onPressed: () async {
+                                if (store.nube != null) await Nube.cerrarSesion();
+                                rolTrabajador.value = null;
+                              },
+                            ),
+                            if (!(store.nube?.esTrabajador ?? false))
                               BotonAccion(
                                 'Vista de administrador',
                                 icono: Icons.swap_horiz_rounded,

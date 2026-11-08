@@ -10,7 +10,6 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'incidencia.dart';
-import 'mantenimientos.dart';
 
 class AvisoIncidenciaForm extends StatefulWidget {
   const AvisoIncidenciaForm({super.key});
@@ -82,7 +81,9 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       }
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incidencia enviada. El responsable decidirá si crea una orden.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Incidencia enviada. El responsable decidirá si crea una orden.')));
       }
     } catch (_) {
       if (mounted) {
@@ -95,6 +96,72 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       }
     }
   }
+
+  Widget _campoMenu(String etiqueta, Widget child, {double ancho = 280}) => Align(
+    alignment: Alignment.centerLeft,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: ancho),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(etiqueta, style: TextStyle(fontSize: 13, color: P.textoSuave)),
+          const SizedBox(height: 6),
+          child,
+        ],
+      ),
+    ),
+  );
+
+  Widget _cajaMenu(Widget child) => Container(
+    constraints: const BoxConstraints(minHeight: 46),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      border: Border.all(color: P.borde),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        Expanded(child: child),
+        const SizedBox(width: 6),
+        Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+      ],
+    ),
+  );
+
+  Widget _gravedad(Gravedad g) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(Icons.circle, size: 8, color: g.color),
+      const SizedBox(width: 8),
+      Flexible(
+        child: Text(
+          g.etiqueta,
+          style: TextStyle(color: g.color),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ],
+  );
+
+  Widget _categoria(String c) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(
+        switch (c) {
+          'Mecánica' => Icons.settings_outlined,
+          'Hidráulica' => Icons.water_drop_outlined,
+          'Neumática' => Icons.air_rounded,
+          'Automatización' => Icons.precision_manufacturing_outlined,
+          'Soldadura' => Icons.local_fire_department_outlined,
+          _ => Icons.category_outlined,
+        },
+        size: 20,
+        color: P.textoSuave,
+      ),
+      const SizedBox(width: 8),
+      Flexible(child: Text(c.isEmpty ? 'Cualquier categoría' : c, overflow: TextOverflow.ellipsis)),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
@@ -109,18 +176,17 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       Bloque('Dónde', primero: true, [
         KeyedSubtree(
           key: claveActivo,
-          child: BotonMenu<String>(
-            tooltip: 'Elige el activo o componente de la avería',
-            seleccionado: activoId,
-            opciones: [for (final a in store.activos.where((a) => a.activo)) (a.id, Text(dondeEs(a.id)))],
-            onSelected: (id) => setState(() => activoId = id),
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Activo o componente',
-                errorText: intentado && activoId == null ? 'Te falta el activo o componente' : null,
-              ),
-              child: Text(activoId == null ? 'Elegir…' : dondeEs(activoId)),
+          child: _campoMenu(
+            'Activo o componente',
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectorActivo(activoId, (id) => setState(() => activoId = id)),
+                if (intentado && activoId == null)
+                  Text('Te falta el activo o componente', style: TextStyle(color: P.rojo, fontSize: 12)),
+              ],
             ),
+            ancho: 360,
           ),
         ),
       ]),
@@ -134,27 +200,31 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
             error: intentado && descripcion.text.trim().isEmpty ? 'Te falta la descripción' : null,
           ),
         ),
-        BotonMenu<Gravedad>(
-          tooltip: '¿Cómo de grave es la avería?',
-          seleccionado: gravedad,
-          opciones: [
-            for (final g in const [Gravedad.media, Gravedad.grave]) (g, Text(g.etiqueta)),
-          ],
-          onSelected: (g) => setState(() => gravedad = g),
-          child: InputDecorator(
-            decoration: const InputDecoration(labelText: 'Gravedad'),
-            child: Text(gravedad.etiqueta),
+        _campoMenu(
+          'Gravedad',
+          BotonMenu<Gravedad>(
+            tooltip: '¿Cómo de grave es la avería?',
+            resaltarHover: false,
+            relleno: EdgeInsets.zero,
+            seleccionado: gravedad,
+            opciones: [
+              for (final g in const [Gravedad.media, Gravedad.grave]) (g, _gravedad(g)),
+            ],
+            onSelected: (g) => setState(() => gravedad = g),
+            child: _cajaMenu(_gravedad(gravedad)),
           ),
         ),
         const SizedBox(height: 10),
-        BotonMenu<String>(
-          tooltip: '¿Qué categoría debe tener el técnico?',
-          seleccionado: categoria,
-          opciones: [('', const Text('Cualquier categoría')), for (final c in competencias) (c, Text(c))],
-          onSelected: (c) => setState(() => categoria = c),
-          child: InputDecorator(
-            decoration: const InputDecoration(labelText: 'Categoría'),
-            child: Text(categoria.isEmpty ? 'Cualquier categoría' : categoria),
+        _campoMenu(
+          'Categoría',
+          BotonMenu<String>(
+            tooltip: '¿Qué categoría debe tener el técnico?',
+            resaltarHover: false,
+            relleno: EdgeInsets.zero,
+            seleccionado: categoria,
+            opciones: [('', _categoria('')), for (final c in competencias) (c, _categoria(c))],
+            onSelected: (c) => setState(() => categoria = c),
+            child: _cajaMenu(_categoria(categoria)),
           ),
         ),
       ]),

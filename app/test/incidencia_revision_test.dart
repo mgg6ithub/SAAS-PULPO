@@ -9,7 +9,6 @@ import 'package:pulpo/industrial/vistazo.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/store.dart';
 import 'package:pulpo/screens/vista_trabajador.dart';
-import 'package:pulpo/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -31,7 +30,7 @@ void main() {
     )))));
     await tester.tap(find.text('Avisar'));
     await tester.pumpAndSettle();
-    tester.widget<BotonMenu<String>>(find.byType(BotonMenu<String>).first).onSelected('a');
+    tester.widget<SelectorActivo>(find.byType(SelectorActivo)).onChanged('a');
     await tester.pump();
     await tester.enterText(find.byType(TextField).first, 'Fuga de aceite');
     await tester.pump();
