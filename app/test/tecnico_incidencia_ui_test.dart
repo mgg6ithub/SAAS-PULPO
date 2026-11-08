@@ -45,14 +45,14 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: AvisoIncidenciaForm())));
     final gravedad = find.byType(BotonMenu<Gravedad>);
-    final categoria = find.byType(BotonMenu<String>);
+    final categoria = find.byType(BotonMenu<String>).last;
     final descripcion = find.byType(TextField);
     expect(tester.getSize(gravedad).width, lessThan(tester.getSize(descripcion).width));
     expect(tester.getTopLeft(gravedad).dx, tester.getTopLeft(descripcion).dx);
     expect(tester.getTopLeft(categoria).dx, tester.getTopLeft(descripcion).dx);
     expect(tester.widget<BotonMenu<Gravedad>>(gravedad).resaltarHover, isFalse);
     expect(tester.widget<BotonMenu<String>>(categoria).resaltarHover, isFalse);
-    expect(find.byIcon(Icons.unfold_more_rounded), findsNWidgets(3));
+    expect(find.byIcon(Icons.unfold_more_rounded), findsNWidgets(4));
     await tester.tap(gravedad);
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(find.text('Correctivo crítico')).style!.color, Gravedad.grave.color);

@@ -241,6 +241,8 @@ class Nube {
           'p_gravedad': i.gravedad.index,
           'p_categoria': categoria,
           'p_fotos': rutas,
+          'p_tecnico': i.tecnicoId == null ? null : _u(i.tecnicoId!),
+          'p_origen': i.origenTrabajoId == null ? null : _u(i.origenTrabajoId!),
         },
       );
     } catch (_) {
@@ -296,6 +298,25 @@ class Nube {
           cuando: DateTime.parse(x['created_at'] as String).toLocal(),
         ),
     ];
+  }
+
+  Future<List<Informe>> historialTecnico(String tecnicoId) async {
+    final filas = <Map<String, dynamic>>[];
+    while (true) {
+      final lote = await _db.from('informes').select()
+        .eq('empresa_id', empresaId).eq('trabajador_id', _u(tecnicoId))
+        .order('created_at', ascending: false).order('id')
+        .range(filas.length, filas.length + 499);
+      filas.addAll(lote);
+      if (lote.length < 500) break;
+    }
+    return [for (final x in filas) Informe(
+      id: x['id'], trabajoId: x['trabajo_id'], trabajadorId: x['trabajador_id'],
+      resultado: x['resultado'], notas: x['notas'], material: x['material'],
+      minutos: x['minutos'], fotos: List<String>.from(x['fotos'] as List),
+      firma: x['firma'], firmante: x['firmante'],
+      cuando: DateTime.parse(x['created_at'] as String).toLocal(),
+    )];
   }
 
   /// Sube las fotos (JPEG) y la firma (PNG) a `<empresa>/informes/<informe>/` y guarda el informe. Espera
@@ -1340,6 +1361,8 @@ class Nube {
         'empresa_id': e,
         'activo_id': _u(x.activoId),
         'trabajo_id': ids.contains(x.trabajoId) ? _u(x.trabajoId!) : null,
+        'tecnico_id': x.tecnicoId == null ? null : _u(x.tecnicoId!),
+        'origen_trabajo_id': x.origenTrabajoId == null ? null : _u(x.origenTrabajoId!),
         'descripcion': x.descripcion,
         'gravedad': x.gravedad.index,
         'estado': x.estado.index,
@@ -1484,6 +1507,9 @@ Incidencia _incidencia(Map x) => Incidencia(
   id: x['id'],
   activoId: x['activo_id'],
   trabajoId: x['trabajo_id'],
+  tecnicoId: x['tecnico_id'],
+  origenTrabajoId: x['origen_trabajo_id'],
+  creadaPor: x['creada_por'],
   descripcion: x['descripcion'],
   gravedad: Gravedad.values[x['gravedad'] as int],
   estado: EstadoIncidencia.values[x['estado'] as int],

@@ -27,7 +27,7 @@ extension EstadoIncidenciaX on EstadoIncidencia {
 /// Aviso de avería de un activo o componente de Pultec, con su gravedad y fotos. Puede acabar en una OT.
 class Incidencia {
   String id, activoId, descripcion;
-  String? trabajoId;
+  String? trabajoId, tecnicoId, origenTrabajoId, creadaPor;
   Gravedad gravedad;
   EstadoIncidencia estado;
   List<String> fotos;
@@ -37,6 +37,9 @@ class Incidencia {
     required this.id,
     required this.activoId,
     this.trabajoId,
+    this.tecnicoId,
+    this.origenTrabajoId,
+    this.creadaPor,
     this.descripcion = '',
     this.gravedad = Gravedad.media,
     this.estado = EstadoIncidencia.abierta,
@@ -49,6 +52,9 @@ class Incidencia {
     'id': id,
     'activoId': activoId,
     'trabajoId': trabajoId,
+    'tecnicoId': tecnicoId,
+    'origenTrabajoId': origenTrabajoId,
+    'creadaPor': creadaPor,
     'descripcion': descripcion,
     'gravedad': gravedad.index,
     'estado': estado.index,
@@ -60,6 +66,9 @@ class Incidencia {
     id: j['id'] as String,
     activoId: j['activoId'] as String,
     trabajoId: j['trabajoId'] as String?,
+    tecnicoId: j['tecnicoId'] as String?,
+    origenTrabajoId: j['origenTrabajoId'] as String?,
+    creadaPor: j['creadaPor'] as String?,
     descripcion: j['descripcion'] as String? ?? '',
     gravedad: Gravedad.values[j['gravedad'] as int? ?? 1],
     estado: EstadoIncidencia.values[j['estado'] as int? ?? 0],

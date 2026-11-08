@@ -12,7 +12,8 @@ import '../widgets.dart';
 import 'incidencia.dart';
 
 class AvisoIncidenciaForm extends StatefulWidget {
-  const AvisoIncidenciaForm({super.key});
+  final String? tecnicoId, origenTrabajoId;
+  const AvisoIncidenciaForm({super.key, this.tecnicoId, this.origenTrabajoId});
   @override
   State<AvisoIncidenciaForm> createState() => _AvisoIncidenciaFormState();
 }
@@ -21,7 +22,16 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
   late final descripcion = TextEditingController()..addListener(() => setState(() {}));
   final claveActivo = GlobalKey(), claveDescripcion = GlobalKey();
   final fotos = <Uint8List>[];
-  String? activoId;
+  String? activoId, origenTrabajoId;
+  String? get tecnicoId => widget.tecnicoId ?? store.nube?.trabajadorId;
+
+  @override
+  void initState() {
+    super.initState();
+    origenTrabajoId = widget.origenTrabajoId;
+    activoId = store.tarea(origenTrabajoId ?? '')?.activoId;
+  }
+
   String categoria = '';
   Gravedad gravedad = Gravedad.media;
   bool intentado = false, ocupada = false, leyendo = false;
@@ -68,6 +78,8 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       final i = Incidencia(
         id: store.nuevoId(),
         activoId: activoId!,
+        tecnicoId: tecnicoId,
+        origenTrabajoId: origenTrabajoId,
         descripcion: descripcion.text.trim(),
         gravedad: gravedad,
         estado: EstadoIncidencia.abierta,
@@ -188,6 +200,33 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
             ),
             ancho: 360,
           ),
+        ),
+        const SizedBox(height: 10),
+        _campoMenu(
+          'Orden relacionada (opcional)',
+          BotonMenu<String>(
+            tooltip: '¿Durante qué orden has detectado la incidencia?',
+            resaltarHover: false,
+            relleno: EdgeInsets.zero,
+            seleccionado: origenTrabajoId ?? '',
+            opciones: [
+              ('', const Text('Sin orden asociada')),
+              for (final t in store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(tecnicoId)))
+                (t.id, Text(t.nombre, maxLines: 2, overflow: TextOverflow.ellipsis)),
+            ],
+            onSelected: (id) => setState(() {
+              origenTrabajoId = id.isEmpty ? null : id;
+              if (id.isNotEmpty) activoId = store.tarea(id)?.activoId;
+            }),
+            child: _cajaMenu(
+              Text(
+                store.tarea(origenTrabajoId ?? '')?.nombre ?? 'Sin orden asociada',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          ancho: 360,
         ),
       ]),
       Bloque('Qué ocurre', [

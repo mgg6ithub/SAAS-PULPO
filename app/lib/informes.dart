@@ -180,6 +180,13 @@ class Informes extends ChangeNotifier {
     }
   }
 
+  Future<List<Informe>> delTecnico(String id) async {
+    final nube = store.nube;
+    if (nube != null) return nube.historialTecnico(id);
+    return _local.where((i) => i.trabajadorId == id).toList()
+      ..sort((a, b) => b.cuando.compareTo(a.cuando));
+  }
+
   /// Informes del trabajo, el más reciente primero (null = cargando).
   List<Informe>? de(String trabajoId) {
     final n = store.nube;

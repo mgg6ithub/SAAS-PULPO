@@ -80,9 +80,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Revisión 0'), findsOneWidget);
     expect(find.text('Revisión -1'), findsOneWidget);
-    expect(find.text('Revisión 3').hitTestable(), findsNothing);
-    await tester.tap(find.text('Próximas órdenes · 1'));
-    await tester.pumpAndSettle();
+    expect(find.textContaining('Próximas órdenes'), findsNothing);
     expect(find.text('Revisión 3').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -12,6 +12,8 @@ import '../marca.dart';
 import '../industrial/activos.dart' show colorEstado, gravedadDe;
 import '../industrial/iconos.dart';
 import '../industrial/incidencia_form.dart';
+import '../industrial/incidencia.dart';
+import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/mantenimientos.dart';
 import '../industrial/planes.dart' show raizActivo, horasHoy;
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
@@ -204,7 +206,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                               ? BotonPrimario(
                                   'Nueva incidencia',
                                   icono: Icons.add_rounded,
-                                  onPressed: () => abrirPanel(context, const AvisoIncidenciaForm()),
+                                  onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
                                 )
                               : null,
                           derecha: [
@@ -234,7 +236,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                               child: tarea != null
                                   ? _DetalleTrabajo(tarea, w)
                                   : industrial
-                                  ? _MisTrabajos(w, _abrir)
+                                  ? _PanelTecnico(w, _abrir)
                                   : switch (pestana) {
                                       0 => _Hoy(w, _abrir),
                                       1 => _Semana(w, semana, _abrir, (d) => setState(() => semana = d)),
@@ -442,6 +444,8 @@ class _AccionesOtState extends State<_AccionesOt> {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
+        BotonAccion('Comunicar incidencia', icono: Icons.report_problem_outlined,
+          onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: widget.w.id, origenTrabajoId: t.id))),
         if (!enCurso)
           BotonAccion(
             ocupada ? 'Empezando…' : 'Empezar OT',
@@ -690,53 +694,230 @@ class _MisTrabajos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pendientes =
-        _misTrabajos(w)
-            .where((t) => (industrial || t.proximo != null) && t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy()))
-            .toList()
-          ..sort((a, b) {
-            final c = (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100));
-            return c != 0 ? c : _porHora(a, b);
-          });
+    final pendientes = _misTrabajos(w)
+      .where((t) => t.proximo != null && t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy())).toList()
+      ..sort((a, b) {
+        final c = a.proximo!.compareTo(b.proximo!);
+        return c != 0 ? c : _porHora(a, b);
+      });
     if (pendientes.isEmpty) {
       return Vacio(icono: Icons.task_alt_rounded, titulo: 'Todo al día', texto: m('No tienes trabajos pendientes.'));
     }
     final grupos = <String, List<Tarea>>{};
     for (final t in pendientes) {
-      final n = t.proximo == null ? null : diasHasta(t.proximo!);
-      final clave = industrial
-          ? n == null ? 'Sin fecha' : n < 0 ? 'Atrasados' : n == 0 ? 'Para hoy' : 'Próximas órdenes'
-          : n == null ? 'Sin fecha' : n < 0 ? 'Atrasados' : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
+      final clave = diasHasta(t.proximo!) < 0 ? 'Atrasados' : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
       (grupos[clave] ??= []).add(t);
     }
-    return ListView(
-      children: [
-        // Pultec: arriba, el día del técnico en cifras, como el Inicio del administrador.
-        if (industrial) ...[_CifrasTecnico(w, pendientes), const SizedBox(height: 16)],
-        if (industrial && !grupos.containsKey('Para hoy')) ...[
-          const Tarjeta(child: Row(children: [
-            Icon(Icons.today_rounded), SizedBox(width: 12),
-            Expanded(child: Text('No tienes órdenes para hoy. Revisa las atrasadas o las próximas intervenciones.')),
-          ])),
-          const SizedBox(height: huecoVista),
-        ],
-        for (final clave in industrial ? ['Para hoy', 'Atrasados', 'Próximas órdenes', 'Sin fecha'] : grupos.keys)
-          if (grupos[clave] case final grupo?) ...[
-            if (industrial && (clave == 'Próximas órdenes' || clave == 'Sin fecha'))
-              Card(child: ExpansionTile(
-                title: Text('$clave · ${grupo.length}'),
-                children: [for (final t in grupo) _FilaTrabajo(t, abrir, mostrarDia: true)],
-              ))
-            else
-              SeccionTarjeta(
-                titulo: clave, subtitulo: '${grupo.length}',
-                children: [for (final t in grupo) _FilaTrabajo(t, abrir, mostrarDia: clave == 'Atrasados')],
-              ),
-            const SizedBox(height: huecoVista),
-          ],
+    return ListView(children: [
+      for (final clave in grupos.keys) ...[
+        SeccionTarjeta(titulo: clave, subtitulo: '${grupos[clave]!.length}',
+          children: [for (final t in grupos[clave]!) _FilaTrabajo(t, abrir, mostrarDia: clave == 'Atrasados')]),
+        const SizedBox(height: huecoVista),
       ],
+    ]);
+  }
+}
+
+/// Pendientes, avisos enviados y partes del técnico, con filtros independientes de la navegación.
+class _PanelTecnico extends StatefulWidget {
+  final Trabajador w;
+  final ValueChanged<Tarea> abrir;
+  const _PanelTecnico(this.w, this.abrir);
+  @override
+  State<_PanelTecnico> createState() => _PanelTecnicoState();
+}
+
+class _PanelTecnicoState extends State<_PanelTecnico> {
+  int vista = 0, fecha = 0;
+  int? estado, resultado;
+  TipoMantenimiento? tipo;
+  String? activoId;
+  String busqueda = '';
+  Future<List<Informe>>? historial;
+  static const fechas = ['Todas las fechas', 'Para hoy', 'Atrasadas', 'Próximos 7 días', 'Próximas'];
+
+  bool _coincide(String texto, String? activo, TipoMantenimiento? clase, DateTime? dia) {
+    if (tipo != null && tipo != clase) return false;
+    if (activoId != null && !store.ramaDe(activoId!).contains(activo)) return false;
+    if (!'$texto ${dondeEs(activo)}'.toLowerCase().contains(busqueda.toLowerCase().trim())) return false;
+    final d = dia == null ? null : diasHasta(dia);
+    return switch (fecha) {
+      1 => d == 0, 2 => d != null && d < 0,
+      3 => d != null && d >= 0 && d <= 7, 4 => d != null && d > 0, _ => true,
+    };
+  }
+
+  void _vista(int n) => setState(() {
+    vista = n;
+    // Las fechas de planificación no deben ocultar el historial al cambiar de vista.
+    fecha = 0;
+    if (n == 2) historial = informes.delTecnico(widget.w.id);
+  });
+
+  Widget _filtros() {
+    final n = [tipo, activoId, if (fecha != 0) fecha, if (vista != 2) estado, if (vista == 2) resultado]
+      .where((x) => x != null).length;
+    MenuItemButton opcion(String nombre, bool marcado, VoidCallback elegir, {Color? color}) => MenuItemButton(
+      leadingIcon: color == null ? null : Icon(Icons.circle, size: 8, color: color),
+      trailingIcon: marcado ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
+      onPressed: () => setState(elegir), child: Text(nombre),
+    );
+    return MenuAnchor(
+      menuChildren: [
+        SubmenuButton(menuChildren: [
+          opcion('Todos los tipos', tipo == null, () => tipo = null),
+          for (final t in TipoMantenimiento.values)
+            opcion(t.etiqueta, tipo == t, () => tipo = t, color: t.color),
+        ], child: const Text('Tipo de intervención')),
+        if (vista == 0) ...[
+          SubmenuButton(menuChildren: [
+            for (final (i, nombre) in fechas.indexed) opcion(nombre, fecha == i, () => fecha = i),
+          ], child: const Text('Fecha prevista')),
+          SubmenuButton(menuChildren: [
+            opcion('Todos los estados', estado == null, () => estado = null),
+            opcion('Pendiente', estado == 0, () => estado = 0),
+            opcion('En curso', estado == 1, () => estado = 1),
+          ], child: const Text('Estado de la orden')),
+        ],
+        if (vista == 1) SubmenuButton(menuChildren: [
+          opcion('Todos los estados', estado == null, () => estado = null),
+          for (final e in EstadoIncidencia.values) opcion(e.etiqueta, estado == e.index, () => estado = e.index),
+        ], child: const Text('Estado de la incidencia')),
+        if (vista == 2) SubmenuButton(menuChildren: [
+          opcion('Todos los resultados', resultado == null, () => resultado = null),
+          for (final (i, nombre) in ['Completadas', 'Con incidencias', 'No se pudo hacer'].indexed)
+            opcion(nombre, resultado == i, () => resultado = i, color: coloresResultado[i]),
+        ], child: const Text('Resultado del parte')),
+        const Divider(),
+        MenuItemButton(onPressed: () => setState(() {
+          tipo = null; activoId = null; fecha = 0; estado = null; resultado = null;
+        }), child: const Text('Quitar filtros')),
+      ],
+      builder: (context, menu, _) => BotonAccion(n == 0 ? 'Filtros' : 'Filtros · $n',
+        icono: Icons.filter_list_rounded, onPressed: () => menu.isOpen ? menu.close() : menu.open()),
     );
   }
+
+  Widget _vacio(String texto) => Vacio(icono: Icons.filter_alt_off_outlined,
+    titulo: texto, texto: 'Prueba a cambiar los filtros o la búsqueda.');
+
+  String _cuando(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} · ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+  void _verIncidencia(Incidencia i) => abrirPanel(context, VentanaFormulario(
+    etiqueta: 'Mis incidencias', titulo: 'Incidencia enviada', soloLectura: true, onGuardar: () {},
+    campos: [
+      Bloque('Aviso', primero: true, [
+        Text(i.descripcion), const SizedBox(height: 12),
+        Text('Enviada el ${_cuando(i.creada)}'),
+        const SizedBox(height: 8), Pill(i.estado.etiqueta, i.estado.color),
+      ]),
+      Bloque('Activo', [Row(children: [
+        _IconoActivo(i.activoId), const SizedBox(width: 8), Expanded(child: Text(dondeEs(i.activoId))),
+      ])]),
+      Bloque('Órdenes relacionadas', [
+        for (final (id, etiqueta) in [(i.origenTrabajoId, 'Orden de origen'), (i.trabajoId, 'Orden para resolverla')])
+          if (store.tarea(id ?? '') case final t?)
+Text('$etiqueta: ${t.nombre}')
+          else Text('$etiqueta: sin orden asociada'),
+      ]),
+      if (i.fotos.isNotEmpty) Bloque('Fotos', [Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final f in i.fotos) FotoGuardada(f, width: 100, height: 100),
+      ])]),
+    ],
+  ));
+
+  @override
+  Widget build(BuildContext context) {
+    final pendientes = _misTrabajos(widget.w).where((t) => t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy())).toList()
+      ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
+    final avisos = store.incidencias.where((i) => i.tecnicoId == widget.w.id ||
+      (i.tecnicoId == null && (store.nube?.esTrabajador ?? false))).toList()
+      ..sort((a, b) => b.creada.compareTo(a.creada));
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _CifrasTecnico(widget.w, pendientes),
+      const SizedBox(height: 14),
+      BarraVista(izquierda: [Pestanas(opciones: ['Pendientes · ${pendientes.length}', 'Incidencias · ${avisos.length}', 'Histórico'],
+        seleccion: vista, onChanged: (n) { estado = null; _vista(n); })], derecha: [_filtros()]),
+      const SizedBox(height: 10),
+      Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8, runSpacing: 8, children: [
+        Buscador(hint: 'Buscar en la lista…', width: 260, onChanged: (s) => setState(() => busqueda = s)),
+        ConstrainedBox(constraints: const BoxConstraints(maxWidth: 250),
+          child: SelectorActivo(activoId, (id) => setState(() => activoId = id), filtro: true)),
+      ]),
+      if (tipo != null || fecha != 0 || estado != null || resultado != null) Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text([
+          if (tipo != null) tipo!.etiqueta, if (fecha != 0) fechas[fecha],
+          if (estado != null) vista == 1 ? EstadoIncidencia.values[estado!].etiqueta : estado == 0 ? 'Pendiente' : 'En curso',
+          if (vista == 2 && resultado != null) ['Completadas', 'Con incidencias', 'No se pudo hacer'][resultado!],
+        ].join(' · '), style: TextStyle(color: P.textoSuave, fontSize: 12)),
+      ),
+      const SizedBox(height: 10),
+      Expanded(child: switch (vista) {
+        1 => _listaIncidencias(avisos),
+        2 => _historial(),
+        _ => _listaPendientes(pendientes),
+      }),
+    ]);
+  }
+
+  Widget _listaPendientes(List<Tarea> pendientes) {
+    final lista = pendientes.where((t) => _coincide(t.nombre, t.activoId, t.tipoMantenimiento, t.proximo)
+      && (estado == null || (estado == 0 ? t.estado == EstadoTrabajo.pendiente : t.estado == EstadoTrabajo.enCurso))).toList();
+    if (lista.isEmpty) return _vacio('No tienes órdenes pendientes con estos filtros');
+    return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Tarjeta(padding: EdgeInsets.zero, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _FilaTrabajo(lista[n], widget.abrir, mostrarDia: true),
+        Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(lista[n].tipoMantenimiento ?? TipoMantenimiento.preventivo)),
+      ])),
+    ));
+  }
+
+  Widget _listaIncidencias(List<Incidencia> avisos) {
+    final lista = avisos.where((i) => _coincide(i.descripcion, i.activoId, i.gravedad.tipo, i.creada)
+      && (estado == null || i.estado.index == estado)).toList();
+    if (lista.isEmpty) return _vacio('No tienes incidencias enviadas con estos filtros');
+    return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) {
+      final i = lista[n];
+      return Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(padding: EdgeInsets.zero,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          FilaLista(lider: _IconoActivo(i.activoId), titulo: i.descripcion,
+            subtitulo: '${_cuando(i.creada)} · ${dondeEs(i.activoId)}',
+            derecha: Pill(i.estado.etiqueta, i.estado.color), onTap: () => _verIncidencia(i)),
+          Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: Text(
+            'Orden de origen: ${store.tarea(i.origenTrabajoId ?? '')?.nombre ?? 'Sin orden asociada'}'
+            '${i.trabajoId == null ? '' : '\nOrden para resolverla: ${store.tarea(i.trabajoId!)?.nombre ?? 'Orden no disponible'}'}',
+            style: TextStyle(color: P.textoSuave, fontSize: 12))),
+        ]),
+      ));
+    });
+  }
+
+  Widget _historial() => FutureBuilder<List<Informe>>(future: historial, builder: (context, snap) {
+    if (snap.hasError) {
+      return Column(children: [const Text('No se pudo cargar el histórico.'),
+        TextButton(onPressed: () => setState(() => historial = informes.delTecnico(widget.w.id)), child: const Text('Reintentar'))]);
+    }
+    if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+    final lista = snap.data!.where((i) {
+      final t = store.tarea(i.trabajoId);
+      return _coincide(t?.nombre ?? '', t?.activoId, t?.tipoMantenimiento, i.cuando)
+        && (resultado == null || i.resultado == resultado);
+    }).toList();
+    if (lista.isEmpty) return _vacio('No tienes partes registrados con estos filtros');
+    return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) {
+      final i = lista[n], t = store.tarea(i.trabajoId);
+      final texto = ['Completada', 'Con incidencias', 'No se pudo hacer'][i.resultado];
+      return Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(padding: EdgeInsets.zero,
+        child: FilaLista(lider: Icon(i.resultado == 0 ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
+          color: coloresResultado[i.resultado]), titulo: t?.nombre ?? 'Orden no disponible',
+          subtitulo: '${_cuando(i.cuando)} · $texto\n${dondeEs(t?.activoId)}',
+          onTap: t == null ? null : () => verInforme(context, i, t)),
+      ));
+    });
+  });
 }
 
 /// Icono del activo de la OT en un círculo del color de su estado de mantenimiento.
