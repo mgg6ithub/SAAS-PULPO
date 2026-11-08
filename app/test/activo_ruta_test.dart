@@ -70,7 +70,7 @@ void main() {
       body: ActivoDetalle(activoId: 'a', onVolver: () {}),
     )));
     await tester.pumpAndSettle();
-    for (final caso in [('Sin orden', 'Plan 1'), ('Sin técnico', 'Plan 2'), ('Con técnico', 'Plan 3')]) {
+    for (final caso in [('Sin orden', 'Plan 1'), ('Sin asignar', 'Plan 2'), ('Asignados', 'Plan 3')]) {
       await tester.tap(find.text(caso.$1).first);
       await tester.pumpAndSettle();
       expect(find.text(caso.$2), findsOneWidget);

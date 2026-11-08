@@ -57,7 +57,7 @@ void reiniciarVistaActivos() {
 void abrirListaActivos() => _aLaLista.value++;
 
 /// Filtro de criticidad de la pestaña Mantenimientos de un activo: 0 = todos; 1.. = tipo.
-const _filtrosCriticidad = ['Todos', 'Normal', 'Alta', 'Muy alta'];
+// Futuro: const _filtrosCriticidad = ['Todos', 'Normal', 'Alta', 'Muy alta'];
 
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
@@ -562,8 +562,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         };
       }).toList();
     }
-    if (criticidad != 0)
-      planes = planes.where((p) => p.prioridad.index == criticidad - 1).toList();
+    // Prioridad aparcada para el futuro.
+    // if (criticidad != 0) planes = planes.where((p) => p.prioridad.index == criticidad - 1).toList();
     if (planes.isEmpty) {
       return Vacio(
         icono: Icons.filter_alt_off_outlined,
@@ -762,10 +762,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   ? 'Próximo sin estimar'
                                   : 'Próximo ${relativo(proximo).toLowerCase()}: '),
                               if (siguiente != null) ...[
-                                WidgetSpan(alignment: PlaceholderAlignment.middle,
-                                  child: Padding(padding: const EdgeInsets.only(right: 5),
-                                    child: Container(width: 7, height: 7,
-                                      decoration: BoxDecoration(color: siguiente.prioridad.color, shape: BoxShape.circle)))),
+                                // Futuro: punto del color de prioridad.
                                 TextSpan(text: '${siguiente.nombre} · ${fecha(proximo!)}',
                                   style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                               ],
@@ -812,30 +809,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               onChanged: (i) => setState(() => vista = i),
                             ),
                             if (vista == 0)
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Pestanas(
-                                    opciones: const ['Todos', 'Sin orden', 'Sin técnico', 'Con técnico'],
-                                    seleccion: _estadoOrden,
-                                    compactas: true,
-                                    onChanged: (i) => setState(() => _estadoOrden = i),
-                                  ),
-                                  const SizedBox(height: 8),
                               Pestanas(
-                                opciones: _filtrosCriticidad,
-                                colores: [
-                                  null,
-                                  for (final t in PrioridadMantenimiento.values)
-                                    t.color,
-                                ],
-                                seleccion: criticidad,
+                                opciones: const ['Todos', 'Sin orden', 'Sin asignar', 'Asignados'],
+                                iconos: const [null, Icons.playlist_add_rounded,
+                                  Icons.radio_button_unchecked_rounded, Icons.check_circle_outline_rounded],
+                                seleccion: _estadoOrden,
                                 compactas: true,
-                                onChanged: (i) =>
-                                    setState(() => criticidad = i),
+                                onChanged: (i) => setState(() => _estadoOrden = i),
                               ),
-                                ],
-                              ),
+                            // Futuro: filtro de prioridad Normal / Alta / Muy alta.
                           ],
                         ),
                       ),

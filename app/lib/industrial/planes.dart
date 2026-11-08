@@ -131,7 +131,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
   static const _opcionales = [
     'Código',
     'Orden de trabajo',
-    'Prioridad',
+    // 'Prioridad', // Aparcada para el futuro.
     'Próximo',
     'Cada cuánto',
     'Horas restantes',
@@ -141,7 +141,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Duración',
     'Repuestos',
   ];
-  static const _porDefecto = {'Código', 'Prioridad', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Orden de trabajo'};
+  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Orden de trabajo'};
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
@@ -233,7 +233,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
             filas: ps.length,
             onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
             pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
-            resaltar: (i) => ps[i].id == planDestacado.value ? ps[i].prioridad.color : null,
+            resaltar: (i) => ps[i].id == planDestacado.value ? P.morado : null,
             celdas: (i) {
               final p = ps[i];
               final nodo = nodos[p.activoId];
@@ -319,11 +319,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Tooltip(message: p.prioridad.descripcion, child: puntoTipo(p.prioridad.color)),
-                      ),
-                      const SizedBox(width: 10),
+                      // Futuro: punto del color de prioridad.
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,7 +434,7 @@ class _PlanFormState extends State<PlanForm> {
       etiqueta: store.activo(p.activoId)?.titulo ?? 'Activo',
       titulo: existe ? 'Editar mantenimiento' : 'Nuevo mantenimiento',
       tituloDesplazado: nombre.text,
-      bajoBotones: MenuPrioridadMantenimiento(p.prioridad, (t) => setState(() => p.prioridad = t)),
+      // Futuro: bajoBotones: MenuPrioridadMantenimiento(p.prioridad, (t) => setState(() => p.prioridad = t)),
       onGuardar: guardar,
       avisos: [
         if (errorNombre != null) ('Te falta el nombre', () {}),
