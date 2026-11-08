@@ -60,6 +60,22 @@ void abrirListaActivos() => _aLaLista.value++;
 /// Filtro de criticidad de la pestaña Mantenimientos de un activo: 0 = todos; 1.. = tipo.
 // Futuro: const _filtrosCriticidad = ['Todos', 'Normal', 'Alta', 'Muy alta'];
 
+Widget _flechaActivo(bool adelante, VoidCallback? pulsar) => IconButton(
+  tooltip: adelante ? 'Adelante' : 'Atrás',
+  constraints: const BoxConstraints.tightFor(width: 28, height: 32),
+  padding: EdgeInsets.zero,
+  visualDensity: VisualDensity.standard,
+  style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+  onPressed: pulsar,
+  icon: Icon(adelante ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded, size: 20),
+);
+
+Widget _raizActivos() => Row(mainAxisSize: MainAxisSize.min, children: [
+  Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
+  const SizedBox(width: 4),
+  const Text('Activos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+]);
+
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
   final ValueChanged<String>? onAbrir;
@@ -111,13 +127,10 @@ class _ActivosState extends State<Activos> {
           BarraVista(
             // Icono de Activos en grande delante del título.
             izquierda: [
-              widget.navegacion ?? Row(mainAxisSize: MainAxisSize.min, children: [
-                const IconButton(tooltip: 'Atrás', onPressed: null, icon: Icon(Icons.arrow_back_rounded, size: 20)),
-                const IconButton(tooltip: 'Adelante', onPressed: null, icon: Icon(Icons.arrow_forward_rounded, size: 20)),
-                Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
-                const SizedBox(width: 6),
-                const Text('Activos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-              ]),
+              widget.navegacion ?? SizedBox(height: 40, child: Row(mainAxisSize: MainAxisSize.min, children: [
+                _flechaActivo(false, null), _flechaActivo(true, null),
+                const SizedBox(width: 4), _raizActivos(),
+              ])),
             ],
             derecha: const [],
             principal: BotonPrimario(
@@ -400,28 +413,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        SizedBox(height: 40, child: Row(
           children: [
-            IconButton(
-              tooltip: 'Atrás',
-              constraints: const BoxConstraints.tightFor(width: 28, height: 32),
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.standard,
-              style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              onPressed: _posicion > 0 ? () => _recorrer(-1) : null,
-              icon: const Icon(Icons.arrow_back_rounded, size: 20),
-            ),
-            IconButton(
-              tooltip: 'Adelante',
-              constraints: const BoxConstraints.tightFor(width: 28, height: 32),
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.standard,
-              style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              onPressed: _posicion + 1 < _historial.length
-                  ? () => _recorrer(1)
-                  : null,
-              icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-            ),
+            _flechaActivo(false, _posicion > 0 ? () => _recorrer(-1) : null),
+            _flechaActivo(true, _posicion + 1 < _historial.length ? () => _recorrer(1) : null),
             const SizedBox(width: 4),
             Expanded(
               child: SingleChildScrollView(
@@ -437,11 +432,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       }),
                       style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32),
                         foregroundColor: P.textoSuave, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
-                        const SizedBox(width: 4),
-                        const Text('Activos', style: TextStyle(fontSize: 18)),
-                      ]),
+                      child: _raizActivos(),
                     ),
                     Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('/', style: TextStyle(color: P.textoSuave))),
                     for (var i = 0; i < ruta.length; i++) ...[
@@ -506,7 +497,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               ),
             ),
           ],
-        ),
+        )),
         if (descripcion.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 60),
@@ -659,14 +650,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     }
     if (_historial[_posicion] == null) {
       nuevoEnActivo = (c) => abrirActivoForm(c);
-      return Activos(onAbrir: _abrir, navegacion: Row(mainAxisSize: MainAxisSize.min, children: [
-        const IconButton(tooltip: 'Atrás', onPressed: null, icon: Icon(Icons.arrow_back_rounded, size: 20)),
-        IconButton(tooltip: 'Adelante', onPressed: _posicion + 1 < _historial.length ? () => _recorrer(1) : null,
-          icon: const Icon(Icons.arrow_forward_rounded, size: 20)),
-        Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
-        const SizedBox(width: 6),
-        const Text('Activos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-      ]));
+      return Activos(onAbrir: _abrir, navegacion: SizedBox(height: 40, child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _flechaActivo(false, null),
+        _flechaActivo(true, _posicion + 1 < _historial.length ? () => _recorrer(1) : null),
+        const SizedBox(width: 4), _raizActivos(),
+      ])));
     }
     elegido = a.id;
 
