@@ -1644,7 +1644,8 @@ class _TareaFormState extends State<TareaForm> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      etiqueta(industrial ? 'Activo o componente' : m('Cliente')),
+                      SizedBox(height: MediaQuery.textScalerOf(context).scale(24),
+                        child: etiqueta(industrial ? 'Activo o componente' : m('Cliente'))),
                       if (industrial)
                         SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
                       else
@@ -1671,7 +1672,8 @@ class _TareaFormState extends State<TareaForm> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      SizedBox(height: MediaQuery.textScalerOf(context).scale(24), child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: etiqueta(m('Trabajadores'))),
                           if (aptos > 0)
@@ -1688,7 +1690,7 @@ class _TareaFormState extends State<TareaForm> {
                               ),
                             ),
                         ],
-                      ),
+                      )),
                       SelectorTrabajadores(t, () => setState(() {})),
                     ],
                   ),
@@ -2066,6 +2068,8 @@ class SelectorActivo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BotonMenu<String>(
     tooltip: 'Asignar a un activo o componente',
+    resaltarHover: false,
+    relleno: EdgeInsets.zero,
     seleccionado: valor ?? '',
     opciones: [
       ('', const Text('Sin activo')),
