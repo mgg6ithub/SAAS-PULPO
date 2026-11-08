@@ -109,4 +109,32 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('completar una OT reduce su fila antes de retirarla', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    store.activos = [Activo(id: 'a', nombre: 'Máquina')];
+    final ot = Tarea(id: 'ot', activoId: 'a', nombre: 'Orden animada', plantilla: false,
+      periodicidad: Periodicidad.unica, tipoMantenimiento: TipoMantenimiento.preventivo, proximo: hoy());
+    store.tareas = [ot];
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ListenableBuilder(
+      listenable: store, builder: (_, _) => ActivoDetalle(activoId: 'a', onVolver: () {}),
+    ))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Órdenes de trabajo').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pendiente').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Completada').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(ot.estado, EstadoTrabajo.pendiente);
+    expect(find.text('Orden animada'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(ot.estado, EstadoTrabajo.realizado);
+    expect(find.text('Orden animada'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

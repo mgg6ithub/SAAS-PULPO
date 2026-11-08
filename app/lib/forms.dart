@@ -2188,12 +2188,15 @@ class SelectorCliente extends StatelessWidget {
 /// «Realizado» lo marca como hecho (entra en el histórico y, si se repite, calcula la siguiente fecha).
 class SelectorEstado extends StatelessWidget {
   final Tarea t;
-  const SelectorEstado(this.t, {super.key});
+  final Future<void> Function()? antesCompletar;
+  const SelectorEstado(this.t, {super.key, this.antesCompletar});
 
-  void _elegir(BuildContext context, EstadoTrabajo e) {
+  Future<void> _elegir(BuildContext context, EstadoTrabajo e) async {
     if (e == t.estado) return;
     if (e == EstadoTrabajo.realizado) {
+      await antesCompletar?.call();
       store.marcarHecha(t);
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,

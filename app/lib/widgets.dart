@@ -1218,6 +1218,7 @@ class Col {
 class Tabla extends StatefulWidget {
   final List<Col> columnas;
   final int filas;
+  final Widget Function(int i, Widget fila)? envolverFila;
   final List<Widget> Function(int i) celdas;
   final void Function(int i)? onTap;
   final Widget? pie;
@@ -1234,6 +1235,7 @@ class Tabla extends StatefulWidget {
     this.pie,
     this.seleccionCabecera,
     this.resaltar,
+    this.envolverFila,
   });
 
   @override
@@ -1582,7 +1584,8 @@ class _TablaState extends State<Tabla> {
                         ),
                       ),
                     );
-                    return borde == null ? fila : Padding(padding: const EdgeInsets.all(3), child: fila);
+                    final contenido = borde == null ? fila : Padding(padding: const EdgeInsets.all(3), child: fila);
+                    return widget.envolverFila?.call(i, contenido) ?? contenido;
                   },
                 ),
               ),

@@ -38,6 +38,26 @@ class TablaTrabajos extends StatefulWidget {
 }
 
 class _TablaTrabajosState extends State<TablaTrabajos> {
+  final _completando = ValueNotifier<Set<String>>({});
+
+  Future<void> _animarCompletada(String id) async {
+    _completando.value = {..._completando.value, id};
+    await Future<void>.delayed(const Duration(milliseconds: 280));
+  }
+
+  @override
+  void didUpdateWidget(covariant TablaTrabajos oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final ids = widget.trabajos.map((t) => t.id).toSet();
+    _completando.value = _completando.value.intersection(ids);
+  }
+
+  @override
+  void dispose() {
+    _completando.dispose();
+    super.dispose();
+  }
+
   bool seleccionando = false;
   final seleccion = <String>{};
 
@@ -237,10 +257,12 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4),
             if (medio && widget.conCliente) Col(m('Cliente'), flex: 3),
-            if (ancho) const Col('Periodicidad', flex: 2),
-            const Col('Fecha y hora', flex: 3),
-            if (medio) const Col('Asignado a', ancho: 96),
             if (industrial) const Col('Criticidad', ancho: 170),
+            if (industrial && medio) const Col('Asignado a', ancho: 96),
+            if (!industrial && ancho) const Col('Periodicidad', flex: 2),
+            const Col('Fecha y hora', flex: 3),
+            if (!industrial && medio) const Col('Asignado a', ancho: 96),
+            if (industrial && ancho) const Col('Periodicidad', flex: 2),
             const Col('Estado', ancho: 140, derecha: true),
             if (industrial && medio)
               Col(
@@ -257,6 +279,22 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               const Col('Sub', ancho: 60, ayuda: 'Subtrabajos'),
           ],
           filas: ts.length,
+          envolverFila: industrial ? (i, fila) => ValueListenableBuilder<Set<String>>(
+            key: ValueKey(ts[i].id),
+            valueListenable: _completando,
+            child: fila,
+            builder: (context, saliendo, child) => TweenAnimationBuilder<double>(
+              tween: Tween(begin: 1, end: saliendo.contains(ts[i].id) ? 0 : 1),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeInOutCubic,
+              child: child,
+              builder: (context, valor, child) => IgnorePointer(
+                ignoring: saliendo.contains(ts[i].id),
+                child: ClipRect(child: Align(heightFactor: valor, alignment: Alignment.topCenter,
+                  child: Opacity(opacity: valor, child: child))),
+              ),
+            ),
+          ) : null,
           onTap: (i) {
             if (seleccionando) {
               setState(() => seleccion.contains(ts[i].id) ? seleccion.remove(ts[i].id) : seleccion.add(ts[i].id));
@@ -316,7 +354,21 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                           Flexible(child: celdaTexto(c.nombre)),
                         ],
                       ),
-              if (ancho) celdaTexto(t.periodicidad.etiqueta),
+              if (industrial)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
+                ),
+              if (industrial && medio)
+                t.esPlantilla
+                    ? const SizedBox()
+                    : SelectorTrabajadores(
+                        t,
+                        () => store.guardarTarea(t),
+                        compacto: true,
+                        ofrecerSubtrabajos: !industrial,
+                      ),
+              if (!industrial && ancho) celdaTexto(t.periodicidad.etiqueta),
               t.proximo == null
                   ? celdaTexto('', suave: true)
                   : Column(
@@ -338,7 +390,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         ),
                       ],
                     ),
-              if (medio)
+              if (!industrial && medio)
                 t.esPlantilla
                     ? const SizedBox()
                     : SelectorTrabajadores(
@@ -347,12 +399,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         compacto: true,
                         ofrecerSubtrabajos: !industrial,
                       ),
-              if (industrial)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
-                ),
-              t.esPlantilla ? pillEstado(t) : SelectorEstado(t),
+              if (industrial && ancho) celdaTexto(t.periodicidad.etiqueta),
+              t.esPlantilla ? pillEstado(t) : SelectorEstado(t, antesCompletar: industrial ? () => _animarCompletada(t.id) : null),
               if (industrial && medio)
                 Tooltip(
                   message: t.automatizaciones.isEmpty
