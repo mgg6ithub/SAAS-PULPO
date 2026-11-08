@@ -2261,6 +2261,7 @@ class SelectorTrabajadores extends StatelessWidget {
 
   /// En listas y bloques: solo las caras y el doble chevron.
   final bool compacto;
+  final bool reducido;
   final String textoSinAsignar;
 
   /// Con subtrabajos, ofrece asignar a todos ellos lo mismo que a este trabajo.
@@ -2270,6 +2271,7 @@ class SelectorTrabajadores extends StatelessWidget {
     this.onCambio, {
     super.key,
     this.compacto = false,
+    this.reducido = false,
     this.textoSinAsignar = 'Sin asignar',
     this.ofrecerSubtrabajos = false,
   });
@@ -2333,7 +2335,29 @@ class SelectorTrabajadores extends StatelessWidget {
           child: Text('Equipos · próximamente', style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
         ),
       ],
-      builder: (context, menu, _) => _CajaMenu(
+      builder: (context, menu, _) => reducido
+          ? SizedBox(
+              width: 145, height: 26,
+              child: TextButton(
+                onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: P.textoSuave,
+                  backgroundColor: P.cabeceraTabla,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+                ),
+                child: Row(children: [
+                  Expanded(child: Text(elegidos.isEmpty ? textoSinAsignar : elegidos.map((w) => w.nombre).join(', '),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12.5))),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.unfold_more_rounded, size: 14),
+                ]),
+              ),
+            )
+          : _CajaMenu(
         abierto: menu.isOpen,
         compacta: compacto,
         onTap: () => menu.isOpen ? menu.close() : menu.open(),

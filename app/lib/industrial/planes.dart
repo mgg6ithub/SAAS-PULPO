@@ -304,7 +304,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                           SelectorTrabajadores(otPendienteDe, () {
                             store.guardarTarea(otPendienteDe);
                             if (mounted) setState(() {});
-                          }, textoSinAsignar: 'Sin técnico'),
+                          }, textoSinAsignar: 'Sin técnico', reducido: true),
                         ],
                       ),
                     );
