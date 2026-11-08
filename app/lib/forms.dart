@@ -2099,12 +2099,7 @@ class SelectorActivo extends StatelessWidget {
       message: a.titulo,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: a.padreId == null ? 300 : 190),
-        child: Directionality(textDirection: TextDirection.ltr, child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconoActivo(a.icono, size: 22, color: P.textoSuave),
-            const SizedBox(width: 8),
-            Flexible(child: Column(
+        child: Directionality(textDirection: TextDirection.ltr, child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2113,8 +2108,6 @@ class SelectorActivo extends StatelessWidget {
             if (a.nombre.trim().isNotEmpty && a.tag.isNotEmpty)
               Text(a.tag, maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
-          ],
-        )),
           ],
         )),
       ),
@@ -2128,12 +2121,14 @@ class SelectorActivo extends StatelessWidget {
       final componentes = hijos[a.id] ?? [];
       if (componentes.isEmpty || ancestros.contains(a.id)) {
         return MenuItemButton(
+          leadingIcon: IconoActivo(a.icono, size: 22, color: P.textoSuave),
           onPressed: () => elegir(a.id),
           trailingIcon: valor == a.id ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
           child: texto(a),
         );
       }
       return SubmenuButton(
+        leadingIcon: IconoActivo(a.icono, size: 22, color: P.textoSuave),
         menuStyle: estilo.copyWith(maximumSize: const WidgetStatePropertyAll(Size(270, 420))),
         menuChildren: [
           if (filtro) MenuItemButton(onPressed: () => elegir(a.id), child: const Text('Este activo y sus componentes')),

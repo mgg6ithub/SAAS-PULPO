@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/industrial/activo.dart';
+import 'package:pulpo/industrial/iconos.dart';
 import 'package:pulpo/store.dart';
 
 void main() {
@@ -12,12 +13,17 @@ void main() {
       Activo(id: 'c', padreId: 'b', nombre: 'Válvula'),
     ];
     String? elegido;
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(
-      child: SizedBox(width: 320, child: SelectorActivo(null, (id) => elegido = id)),
-    ))));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(child: SizedBox(width: 320, child: SelectorActivo(null, (id) => elegido = id))),
+        ),
+      ),
+    );
     await tester.tap(find.text('Elegir activo'));
     await tester.pumpAndSettle();
     expect(find.text('Camión'), findsOneWidget);
+    expect(tester.widget<SubmenuButton>(find.widgetWithText(SubmenuButton, 'Camión')).leadingIcon, isA<IconoActivo>());
     expect(find.text('Bomba'), findsNothing);
     await tester.tap(find.text('Camión'));
     await tester.pumpAndSettle();
@@ -26,6 +32,10 @@ void main() {
     expect(find.text('Válvula'), findsNothing);
     await tester.tap(find.text('Bomba'));
     await tester.pumpAndSettle();
+    expect(
+      tester.widget<MenuItemButton>(find.widgetWithText(MenuItemButton, 'Válvula')).leadingIcon,
+      isA<IconoActivo>(),
+    );
     await tester.tap(find.text('Válvula'));
     await tester.pumpAndSettle();
     expect(elegido, 'c');
@@ -36,10 +46,16 @@ void main() {
   testWidgets('filtro abre hacia la izquierda y permite elegir la rama completa', (tester) async {
     store.activos = [Activo(id: 'a', nombre: 'Camión'), Activo(id: 'b', padreId: 'a', nombre: 'Bomba')];
     String? elegido;
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Align(
-      alignment: Alignment.centerRight,
-      child: SizedBox(width: 260, child: SelectorActivo(null, (id) => elegido = id, filtro: true)),
-    ))));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(width: 260, child: SelectorActivo(null, (id) => elegido = id, filtro: true)),
+          ),
+        ),
+      ),
+    );
     await tester.tap(find.text('Activos'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Camión'));
