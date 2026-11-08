@@ -257,13 +257,13 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4),
-            if (medio && widget.conCliente) Col(m('Cliente'), flex: 3),
+            if (medio && widget.conCliente) Col(m('Cliente'), flex: industrial ? 4 : 3),
             if (industrial) const Col('Criticidad', ancho: 170),
             if (industrial && medio) const Col('Asignado a', ancho: 96),
             if (!industrial && ancho) const Col('Periodicidad', flex: 2),
-            const Col('Fecha y hora', flex: 3),
+            if (industrial && ancho) const Col('Fecha y hora', ancho: 160) else const Col('Fecha y hora', flex: 3),
             if (!industrial && medio) const Col('Asignado a', ancho: 96),
-            if (industrial && ancho) const Col('Periodicidad', flex: 2),
+            if (industrial && ancho) const Col('Periodicidad', ancho: 120),
             const Col('Estado', ancho: 140, derecha: true),
             if (industrial && medio)
               Col(
