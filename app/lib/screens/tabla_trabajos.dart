@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../industrial/tipo_mantenimiento.dart';
+import '../industrial/gravedad.dart' show iconoAsignacion;
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos;
 import '../models.dart';
@@ -272,6 +273,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (seleccionando) CirculoSeleccion(seleccion.contains(t.id)),
               Row(
                 children: [
+                  if (industrial) ...[iconoAsignacion(t), const SizedBox(width: 8)],
                   if (!industrial) ...[BarraTipo(t.tipo, alto: 28, color: t.colorBloque), const SizedBox(width: 10)],
                   Flexible(
                     child: Column(

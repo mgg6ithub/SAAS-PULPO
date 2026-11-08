@@ -76,45 +76,59 @@ class _HistoricosState extends State<Historicos> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          BarraVista(
-            izquierda: [TituloVista(widget.incrustada ? 'Histórico' : 'Históricos')],
-            derecha: [
-              if (widget.activoId == null)
-                _Filtro<String>(
-                  todos: 'Todos los activos',
-                  valor: activoId,
-                  opciones: [for (final a in activos) (a.id, a.titulo)],
-                  onChanged: (v) => setState(() => activoId = v),
-                ),
-              _Filtro<String>(
-                todos: 'Todos los técnicos',
-                valor: tecnicoId,
-                opciones: [for (final w in tecnicos) (w.id, w.nombre)],
-                onChanged: (v) => setState(() => tecnicoId = v),
+          TituloVista(widget.incrustada ? 'Histórico' : 'Históricos'),
+          const SizedBox(height: huecoVista),
+          SegunTamano(
+            clave: (box) => box.maxWidth > 1500,
+            builder: (context, box) => SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12, runSpacing: 8,
+                children: [
+                  Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    if (box.maxWidth > 1500)
+                      Pestanas(
+                        opciones: [for (final p in _periodos) p.$1],
+                        seleccion: periodo,
+                        compactas: true,
+                        onChanged: (i) => setState(() => periodo = i),
+                      )
+                    else
+                      _Filtro<int>(
+                        todos: _periodos.last.$1,
+                        valor: periodo == _periodos.length - 1 ? null : periodo,
+                        opciones: [for (final (i, p) in _periodos.indexed.take(_periodos.length - 1)) (i, p.$1)],
+                        onChanged: (v) => setState(() => periodo = v ?? _periodos.length - 1),
+                      ),
+                    Pestanas(
+                      opciones: ['Todos', for (final t in TipoMantenimiento.values)
+                        '${t.etiqueta} · ${base.where((r) => r.$2.tipoMantenimiento == t).length}'],
+                      colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                      seleccion: tipo == null ? 0 : tipo!.index + 1,
+                      compactas: true,
+                      onChanged: (i) => setState(() => tipo = i == 0 ? null : TipoMantenimiento.values[i - 1]),
+                    ),
+                  ]),
+                  Wrap(spacing: 12, runSpacing: 8, children: [
+                    if (widget.activoId == null)
+                      _Filtro<String>(
+                        todos: 'Todos los activos', valor: activoId,
+                        opciones: [for (final a in activos) (a.id, a.titulo)],
+                        onChanged: (v) => setState(() => activoId = v),
+                      ),
+                    _Filtro<String>(
+                      todos: 'Todos los técnicos', valor: tecnicoId,
+                      opciones: [for (final w in tecnicos) (w.id, w.nombre)],
+                      onChanged: (v) => setState(() => tecnicoId = v),
+                    ),
+                  ]),
+                ],
               ),
-              _Filtro<int>(
-                todos: _periodos.last.$1,
-                valor: periodo == _periodos.length - 1 ? null : periodo,
-                opciones: [for (final (i, p) in _periodos.indexed.take(_periodos.length - 1)) (i, p.$1)],
-                onChanged: (v) => setState(() => periodo = v ?? _periodos.length - 1),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: huecoVista),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final x in TipoMantenimiento.values)
-                _ChipCuenta(
-                  x,
-                  base.where((r) => r.$2.tipoMantenimiento == x).length,
-                  sel: tipo == x,
-                  onTap: () => setState(() => tipo = tipo == x ? null : x),
-                ),
-            ],
-          ),
-          const SizedBox(height: 14),
           Expanded(
             child: lista.isEmpty
                 ? Vacio(
@@ -208,50 +222,6 @@ class _TablaRealizadas extends StatelessWidget {
         pie: pieTabla(lista.length, lista.length == 1 ? 'orden de trabajo realizada' : 'órdenes de trabajo realizadas'),
       );
     },
-  );
-}
-
-/// Cuántas OT realizadas hay de un tipo, con su color; pulsar filtra por él (y otra vez lo quita).
-class _ChipCuenta extends StatelessWidget {
-  final TipoMantenimiento tipo;
-  final int n;
-  final bool sel;
-  final VoidCallback onTap;
-  const _ChipCuenta(this.tipo, this.n, {required this.sel, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(20),
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: sel ? tipo.color.withValues(alpha: .1) : P.superficie,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: sel ? tipo.color : P.borde),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          puntoTipo(tipo.color),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              tipo.etiqueta,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: sel ? tipo.color : P.texto),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '$n',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: sel ? tipo.color : P.texto),
-          ),
-        ],
-      ),
-    ),
   );
 }
 

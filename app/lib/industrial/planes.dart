@@ -8,7 +8,6 @@ import '../widgets.dart';
 import 'gravedad.dart';
 import 'activo.dart';
 import 'plan.dart';
-import 'tipo_mantenimiento.dart';
 
 /// Próximo de un mantenimiento: el puesto a mano o, si va por horas, estimado con el contador y el ritmo de uso
 /// de su activo o componente.
@@ -320,7 +319,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(padding: const EdgeInsets.only(top: 6),
-                        child: puntoTipo(p.color == null ? P.morado : Color(p.color!))),
+                        child: iconoAsignacion(otPendienteDe)),
                       const SizedBox(width: 10),
                       Flexible(
                         child: Column(
@@ -455,8 +454,6 @@ class _PlanFormState extends State<PlanForm> {
         Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
           campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
-          etiqueta('Color'),
-          SelectorColorTarea.valor(p.color, (c) => setState(() => p.color = c)),
         ]),
         Bloque(
           'Cada cuánto',

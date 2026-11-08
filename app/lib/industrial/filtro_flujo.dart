@@ -58,7 +58,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
                               if (i > 0) ...[
                                 Icon([Icons.list, if (incluirSinOrden) Marca.iconoTrabajo, Icons.radio_button_unchecked_rounded,
                                   Icons.check_circle_outline_rounded][i], size: 18,
-                                  color: seleccion == i ? P.morado : P.textoSuave),
+                                  color: i == etiquetas.length - 1 ? P.verde : seleccion == i ? P.morado : P.textoSuave),
                                 const SizedBox(width: 6),
                               ],
                               Text(etiquetas[i], style: estilo.copyWith(color: seleccion == i ? P.morado : P.textoSuave)),

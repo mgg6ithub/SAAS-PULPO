@@ -781,8 +781,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               if (siguiente != null) ...[
                                 WidgetSpan(alignment: PlaceholderAlignment.middle,
                                   child: Padding(padding: const EdgeInsets.only(right: 5),
-                                    child: Container(width: 7, height: 7, decoration: BoxDecoration(
-                                      color: siguiente.color == null ? P.morado : Color(siguiente.color!), shape: BoxShape.circle)))),
+                                    child: Builder(builder: (_) {
+                                      final ordenes = ordenesPendientesDePlanes([siguiente!]);
+                                      return iconoAsignacion(ordenes[siguiente.id] ?? ordenes['${siguiente.activoId}|${siguiente.nombre}']);
+                                    }))),
                                 TextSpan(text: '${siguiente.nombre} · ${fecha(proximo!)}',
                                   style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                               ],

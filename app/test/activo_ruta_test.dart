@@ -4,6 +4,8 @@ import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
 import 'package:pulpo/store.dart';
 import 'package:pulpo/industrial/plan.dart';
+import 'package:pulpo/industrial/historicos.dart';
+import 'package:pulpo/widgets.dart';
 import 'package:pulpo/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -94,4 +96,17 @@ void main() {
     expect(find.text('Plan 2'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  for (final ancho in [1600.0, 1000.0, 700.0, 420.0, 360.0]) {
+    testWidgets('histórico adapta los filtros a $ancho y conserva tres meses', (tester) async {
+      tester.view.physicalSize = Size(ancho, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Historicos(activoId: 'a'))));
+      await tester.pumpAndSettle();
+      expect(find.text('Últimos 3 meses'), findsOneWidget);
+      expect(find.byType(Pestanas), findsNWidgets(ancho > 1500 ? 2 : 1));
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
