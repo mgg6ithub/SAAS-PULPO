@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
 import 'package:pulpo/store.dart';
+import 'package:pulpo/industrial/plan.dart';
+import 'package:pulpo/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -47,5 +49,35 @@ void main() {
     await tester.pump();
     expect(scroll.offset, 0);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('filtra mantenimientos según la asignación de su OT pendiente', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    store.activos = [Activo(id: 'a', nombre: 'Máquina')];
+    store.planes = [
+      for (var i = 1; i <= 3; i++)
+        PlanMantenimiento(id: 'p$i', activoId: 'a', nombre: 'Plan $i'),
+    ];
+    store.tareas = [
+      Tarea(id: 'ot2', planId: 'p2', activoId: 'a', nombre: 'Plan 2', plantilla: false,
+        tipoMantenimiento: TipoMantenimiento.preventivo),
+      Tarea(id: 'ot3', planId: 'p3', activoId: 'a', nombre: 'Plan 3', plantilla: false,
+        trabajadorIds: ['tecnico'], tipoMantenimiento: TipoMantenimiento.preventivo),
+    ];
+    await tester.pumpWidget(MaterialApp(home: Scaffold(
+      body: ActivoDetalle(activoId: 'a', onVolver: () {}),
+    )));
+    await tester.pumpAndSettle();
+    for (final caso in [('Sin orden', 'Plan 1'), ('Sin técnico', 'Plan 2'), ('Con técnico', 'Plan 3')]) {
+      await tester.tap(find.text(caso.$1).first);
+      await tester.pumpAndSettle();
+      expect(find.text(caso.$2), findsOneWidget);
+      for (final nombre in ['Plan 1', 'Plan 2', 'Plan 3'].where((n) => n != caso.$2)) {
+        expect(find.text(nombre), findsNothing);
+      }
+      expect(tester.takeException(), isNull);
+    }
   });
 }

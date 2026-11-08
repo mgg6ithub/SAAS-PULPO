@@ -105,6 +105,16 @@ class BotonCrearOrden extends StatelessWidget {
 /// Mantenimiento que se abrió desde Inicio: su fila sale con el borde del color de su criticidad.
 final planDestacado = ValueNotifier<String?>(null);
 
+/// Misma asociación para la columna de OT y los filtros de asignación.
+Map<String, Tarea> ordenesPendientesDePlanes(Iterable<PlanMantenimiento> planes) {
+  final ids = planes.map((p) => p.activoId).toSet();
+  return {
+    for (final t in store.tareas)
+      if (!t.esPlantilla && t.activa && ids.contains(t.activoId) && otPendiente(t))
+        t.planId ?? '${t.activoId}|${t.nombre}': t,
+  };
+}
+
 class TablaPlanes extends StatefulWidget {
   final List<PlanMantenimiento> planes;
 
@@ -201,13 +211,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
       // Una pasada por activos y OT para toda la tabla: por fila, cada búsqueda recorría las listas enteras
       // y el scroll se notaba con muchos mantenimientos.
       final nodos = {for (final a in store.activos) a.id: a};
-      final ids = {for (final p in ps) p.activoId};
-      // OT pendiente de cada mantenimiento: por su enlace; las antiguas, sin enlace, por activo y nombre.
-      final ots = <String, Tarea>{
-        for (final t in store.tareas)
-          if (!t.esPlantilla && t.activa && ids.contains(t.activoId) && otPendiente(t))
-            t.planId ?? '${t.activoId}|${t.nombre}': t,
-      };
+      final ots = ordenesPendientesDePlanes(ps);
       final proximos = {for (final p in ps) p.id: proximoPlan(p)};
       final vistas = [
         for (final c in _opcionales)
@@ -281,32 +285,27 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     }
                     final f = otPendienteDe.proximo;
                     final vencida = f != null && diasHasta(f) < 0;
-                    final tecnico = otPendienteDe.trabajadorIds.isEmpty
-                        ? null
-                        : store.trabajador(otPendienteDe.trabajadorIds.first)?.nombre;
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () => abrirTareaForm(context, otPendienteDe),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Pill(
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => abrirTareaForm(context, otPendienteDe),
+                            child: Pill(
                               [vencida ? 'Vencida' : 'Pendiente', if (f != null) fecha(f)].join(' '),
                               vencida ? P.rojo : P.morado,
                               punto: true,
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              tecnico ?? 'Sin técnico',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 3),
+                          SelectorTrabajadores(otPendienteDe, () {
+                            store.guardarTarea(otPendienteDe);
+                            if (mounted) setState(() {});
+                          }, textoSinAsignar: 'Sin técnico'),
+                        ],
                       ),
                     );
                   default:

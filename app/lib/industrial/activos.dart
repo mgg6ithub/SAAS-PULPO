@@ -507,6 +507,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
     );
   }
 
+  int _estadoOrden = 0;
+
   int get pestana => _pestana;
   set pestana(int v) => _pestana = v;
 
@@ -548,12 +550,24 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         ),
       );
     }
+    if (_estadoOrden != 0) {
+      final ots = ordenesPendientesDePlanes(planes);
+      planes = planes.where((p) {
+        final ot = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
+        return switch (_estadoOrden) {
+          1 => ot == null,
+          2 => ot != null && ot.trabajadorIds.isEmpty,
+          3 => ot != null && ot.trabajadorIds.isNotEmpty,
+          _ => true,
+        };
+      }).toList();
+    }
     if (criticidad != 0)
       planes = planes.where((p) => p.prioridad.index == criticidad - 1).toList();
     if (planes.isEmpty) {
       return Vacio(
         icono: Icons.filter_alt_off_outlined,
-        texto: 'Ningún mantenimiento con esta prioridad',
+        texto: 'Ningún mantenimiento con estos filtros',
       );
     }
     final proximos = {
@@ -752,7 +766,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   child: Padding(padding: const EdgeInsets.only(right: 5),
                                     child: Container(width: 7, height: 7,
                                       decoration: BoxDecoration(color: siguiente.prioridad.color, shape: BoxShape.circle)))),
-                                TextSpan(text: '${siguiente.nombre} · ${fecha(proximo!)}'),
+                                TextSpan(text: '${siguiente.nombre} · ${fecha(proximo!)}',
+                                  style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                               ],
                             ]),
                             style: TextStyle(fontSize: 13.5, color: P.textoSuave),
@@ -797,6 +812,16 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               onChanged: (i) => setState(() => vista = i),
                             ),
                             if (vista == 0)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Pestanas(
+                                    opciones: const ['Todos', 'Sin orden', 'Sin técnico', 'Con técnico'],
+                                    seleccion: _estadoOrden,
+                                    compactas: true,
+                                    onChanged: (i) => setState(() => _estadoOrden = i),
+                                  ),
+                                  const SizedBox(height: 8),
                               Pestanas(
                                 opciones: _filtrosCriticidad,
                                 colores: [
@@ -808,6 +833,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 compactas: true,
                                 onChanged: (i) =>
                                     setState(() => criticidad = i),
+                              ),
+                                ],
                               ),
                           ],
                         ),

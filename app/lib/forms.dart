@@ -2261,6 +2261,7 @@ class SelectorTrabajadores extends StatelessWidget {
 
   /// En listas y bloques: solo las caras y el doble chevron.
   final bool compacto;
+  final String textoSinAsignar;
 
   /// Con subtrabajos, ofrece asignar a todos ellos lo mismo que a este trabajo.
   final bool ofrecerSubtrabajos;
@@ -2269,6 +2270,7 @@ class SelectorTrabajadores extends StatelessWidget {
     this.onCambio, {
     super.key,
     this.compacto = false,
+    this.textoSinAsignar = 'Sin asignar',
     this.ofrecerSubtrabajos = false,
   });
 
@@ -2337,11 +2339,11 @@ class SelectorTrabajadores extends StatelessWidget {
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
         child: compacto
             ? Tooltip(
-                message: elegidos.isEmpty ? 'Sin asignar' : elegidos.map((w) => w.nombreCompleto).join(', '),
+                message: elegidos.isEmpty ? textoSinAsignar : elegidos.map((w) => w.nombreCompleto).join(', '),
                 child: AvataresTrabajadores(t.trabajadorIds, size: 22),
               )
             : elegidos.isEmpty
-            ? Text('Sin asignar', style: TextStyle(color: P.textoSuave))
+            ? Text(textoSinAsignar, style: TextStyle(color: P.textoSuave))
             : Row(
                 children: [
                   AvataresTrabajadores(t.trabajadorIds, size: 24),
