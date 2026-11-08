@@ -6,6 +6,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../screens/informes.dart' show InformesDelTrabajo;
 import 'gravedad.dart';
+import 'iconos.dart';
 import 'planes.dart' show raizActivo;
 import 'tipo_mantenimiento.dart';
 
@@ -165,11 +166,11 @@ class _TablaRealizadas extends StatelessWidget {
     clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
     builder: (context, box) {
       final medio = box.maxWidth > 600;
-      return Tabla(
+      return Align(alignment: Alignment.topCenter, child: Tabla(
         columnas: [
           const Col('Fecha', ancho: 120),
           const Col('Orden de trabajo', flex: 3),
-          if (medio) const Col('Activo', flex: 3),
+          if (medio) const Col('Activo', flex: 5),
           if (medio) const Col('Ejecutado por', flex: 2),
           if (medio) const Col('Tipo', ancho: 190),
           const Col('Resultado', ancho: 170),
@@ -177,6 +178,9 @@ class _TablaRealizadas extends StatelessWidget {
         filas: lista.length,
         celdas: (i) {
           final (d, t) = lista[i];
+          final activo = store.activo(t.activoId);
+          final ejecutores = t.ejecutadoPor != null ? [t.ejecutadoPor!] : t.trabajadorIds;
+          final nombres = [for (final id in ejecutores) ?store.trabajador(id)?.nombre];
           return [
             celdaTexto(fecha(d), suave: true),
             Row(
@@ -188,17 +192,21 @@ class _TablaRealizadas extends StatelessWidget {
                 Expanded(child: celdaTexto(t.nombre.isEmpty ? t.tipo : t.nombre, negrita: true)),
               ],
             ),
-            if (medio) celdaTexto(_activo(t.activoId), suave: true),
-            if (medio)
-              celdaTexto(
-                // Quien la cerró (lo guarda la base); en las antiguas, los asignados.
-                t.ejecutadoPor != null
-                    ? store.trabajador(t.ejecutadoPor!)?.nombre ?? '—'
-                    : t.trabajadorIds.isEmpty
-                    ? '—'
-                    : [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombre].join(', '),
-                suave: true,
-              ),
+            if (medio) Row(children: [
+              if (activo != null) ...[
+                IconoActivo(activo.icono, size: 22, color: P.textoSuave),
+                const SizedBox(width: 8),
+              ],
+              Expanded(child: Tooltip(message: _activo(t.activoId),
+                child: celdaTexto(_activo(t.activoId), suave: true))),
+            ]),
+            if (medio) Row(children: [
+              if (nombres.isNotEmpty) ...[
+                AvataresTrabajadores(ejecutores, size: 22),
+                const SizedBox(width: 8),
+              ],
+              Expanded(child: celdaTexto(nombres.isEmpty ? '—' : nombres.join(', '), suave: true)),
+            ]),
             if (medio)
               Align(
                 alignment: Alignment.centerLeft,
@@ -210,7 +218,9 @@ class _TablaRealizadas extends StatelessWidget {
               child: Builder(
                 builder: (_) {
                   final (texto, color) = resultadoOt(t);
-                  return Pill(texto, color, punto: true);
+                  return texto == 'Hecha'
+                      ? Pill('Completado', P.verde, icono: Icons.check_circle_outline_rounded)
+                      : Pill(texto, color, punto: true);
                 },
               ),
             ),
@@ -219,7 +229,7 @@ class _TablaRealizadas extends StatelessWidget {
         // Lo hecho no se edita aquí: se ve la orden con su parte.
         onTap: (i) => verOrdenHecha(context, lista[i].$2),
         pie: pieTabla(lista.length, lista.length == 1 ? 'orden de trabajo realizada' : 'órdenes de trabajo realizadas'),
-      );
+      ));
     },
   );
 }
