@@ -32,7 +32,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
       child: ClipPath(
         clipper: const _ContornoFlujo(),
         child: CustomPaint(
-          foregroundPainter: _BordesFlujo(anchos, P.borde),
+          foregroundPainter: _BordesFlujo(anchos, Color.alphaBlend(P.textoSuave.withValues(alpha: .4), P.borde)),
           child: SizedBox(
             width: anchos.reduce((a, b) => a + b), height: alto,
             child: Stack(children: [
@@ -48,7 +48,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
                     child: ClipPath(
                       clipper: _FaseClipper(i),
                       child: Material(
-                        color: seleccion == i ? P.morado.withValues(alpha: .15) : P.cabeceraTabla,
+                        color: P.cabeceraTabla,
                         child: InkWell(
                           onTap: () => onChanged(i), hoverColor: P.hover,
                           child: Padding(
