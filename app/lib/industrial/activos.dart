@@ -661,7 +661,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         .toList();
     final componentes = store.hijosDe(a.id);
     final planes = planesRama(a.id);
-    final proximo = proximoDe(a.id);
+    PlanMantenimiento? siguiente;
+    DateTime? proximo;
+    for (final plan in planes.where((p) => p.activa)) {
+      final fechaPlan = proximoPlan(plan);
+      if (fechaPlan != null && (proximo == null || fechaPlan.isBefore(proximo))) {
+        siguiente = plan;
+        proximo = fechaPlan;
+      }
+    }
     return Padding(
       padding: margenPagina,
       child: Column(
@@ -734,11 +742,20 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         runSpacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          _dato(
-                            'Próximo',
-                            proximo == null
-                                ? 'Sin estimar'
-                                : '${relativo(proximo)} · ${fecha(proximo)}',
+                          Text.rich(
+                            TextSpan(children: [
+                              TextSpan(text: proximo == null
+                                  ? 'Próximo sin estimar'
+                                  : 'Próximo ${relativo(proximo).toLowerCase()}: '),
+                              if (siguiente != null) ...[
+                                WidgetSpan(alignment: PlaceholderAlignment.middle,
+                                  child: Padding(padding: const EdgeInsets.only(right: 5),
+                                    child: Container(width: 7, height: 7,
+                                      decoration: BoxDecoration(color: siguiente.prioridad.color, shape: BoxShape.circle)))),
+                                TextSpan(text: '${siguiente.nombre} · ${fecha(proximo!)}'),
+                              ],
+                            ]),
+                            style: TextStyle(fontSize: 13.5, color: P.textoSuave),
                           ),
                           _dato('Contador', horas(horasHoy(a))),
                           _dato(

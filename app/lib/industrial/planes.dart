@@ -120,16 +120,16 @@ class _TablaPlanesState extends State<TablaPlanes> {
   /// Columnas opcionales, en su orden, y las que se ven (se recuerdan mientras dure la sesión).
   static const _opcionales = [
     'Código',
-    'Componente',
+    'Orden de trabajo',
     'Prioridad',
+    'Próximo',
     'Cada cuánto',
     'Horas restantes',
-    'Próximo',
+    'Componente',
     'Último hecho',
     'Categoría',
     'Duración',
     'Repuestos',
-    'Orden de trabajo',
   ];
   static const _porDefecto = {'Código', 'Prioridad', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Orden de trabajo'};
   static final _visibles = {..._porDefecto};
