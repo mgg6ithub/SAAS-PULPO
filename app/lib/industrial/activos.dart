@@ -378,12 +378,13 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       ruta.insert(0, nodo);
       nodo = store.activo(nodo.padreId);
     }
+    final principal = ruta.first;
     final descripcion = a.descripcion.trim().isNotEmpty
         ? a.descripcion.trim()
-        : [
-            a.fabricante,
-            a.modelo,
-          ].where((x) => x.trim().isNotEmpty).join(' · ');
+        : principal.descripcion.trim().isNotEmpty
+        ? principal.descripcion.trim()
+        : [principal.fabricante, principal.modelo]
+            .where((x) => x.trim().isNotEmpty).join(' · ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -481,7 +482,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         ),
         if (descripcion.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 88, top: 4),
+            padding: const EdgeInsets.only(left: 60),
             child: Text(
               descripcion,
               maxLines: 2,
