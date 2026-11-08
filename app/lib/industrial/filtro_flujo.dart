@@ -6,17 +6,18 @@ import '../theme.dart';
 /// Filtro continuo: Todos y las tres fases de preparación de la OT.
 class FiltroFlujoMantenimiento extends StatelessWidget {
   final int seleccion;
+  final bool incluirSinOrden;
   final ValueChanged<int> onChanged;
-  const FiltroFlujoMantenimiento({super.key, required this.seleccion, required this.onChanged});
+  const FiltroFlujoMantenimiento({super.key, required this.seleccion, required this.onChanged, this.incluirSinOrden = true});
 
   @override
   Widget build(BuildContext context) {
-    const etiquetas = ['Todos', 'Sin orden', 'Sin asignar', 'Asignados'];
-    const ayudas = [
-      'Todos los mantenimientos.',
-      'Mantenimientos sin una orden de trabajo pendiente.',
-      'Mantenimientos con una orden de trabajo pendiente sin técnico asignado.',
-      'Mantenimientos con una orden de trabajo pendiente y técnico asignado.',
+    final etiquetas = ['Todos', if (incluirSinOrden) 'Sin orden', 'Sin asignar', 'Asignados'];
+    final ayudas = [
+      incluirSinOrden ? 'Todos los mantenimientos.' : 'Todas las órdenes de trabajo pendientes.',
+      if (incluirSinOrden) 'Mantenimientos sin una orden de trabajo pendiente.',
+      incluirSinOrden ? 'Mantenimientos con una orden de trabajo pendiente sin técnico asignado.' : 'Órdenes de trabajo pendientes sin técnico asignado.',
+      incluirSinOrden ? 'Mantenimientos con una orden de trabajo pendiente y técnico asignado.' : 'Órdenes de trabajo pendientes con técnico asignado.',
     ];
     const estilo = TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600);
     final anchos = etiquetas.asMap().entries.map((e) {
@@ -36,7 +37,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
           child: SizedBox(
             width: anchos.reduce((a, b) => a + b), height: alto,
             child: Stack(children: [
-              for (var i = 0; i < 4; i++)
+              for (var i = 0; i < etiquetas.length; i++)
                 Positioned(
                   left: anchos.take(i).fold<double>(0, (a, b) => a + b) - (i > 1 ? 12 : 0),
                   top: 0, bottom: 0, width: anchos[i] + (i > 1 ? 12 : 0),
@@ -55,7 +56,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
                             padding: EdgeInsets.only(left: i > 1 ? 12 : 0, right: i > 0 ? 12 : 0),
                             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                               if (i > 0) ...[
-                                Icon([Icons.list, Marca.iconoTrabajo, Icons.radio_button_unchecked_rounded,
+                                Icon([Icons.list, if (incluirSinOrden) Marca.iconoTrabajo, Icons.radio_button_unchecked_rounded,
                                   Icons.check_circle_outline_rounded][i], size: 18,
                                   color: seleccion == i ? P.morado : P.textoSuave),
                                 const SizedBox(width: 6),
@@ -114,7 +115,7 @@ class _BordesFlujo extends CustomPainter {
     final pintura = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1;
     canvas.drawPath(_contorno(size), pintura);
     var x = 0.0;
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < anchos.length - 1; i++) {
       x += anchos[i];
       final divisor = Path();
       if (i == 0) {

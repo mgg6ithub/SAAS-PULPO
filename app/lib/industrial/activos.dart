@@ -726,8 +726,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             ],
           ),
           const SizedBox(height: 18),
-          // Selector sencillo, como el de criticidad.
-          Pestanas(
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12, runSpacing: 8,
+              children: [
+                Pestanas(
             opciones: const [
               'Resumen',
               'Datos',
@@ -738,6 +744,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             onChanged: (i) => setState(() {
               pestana = i;
             }),
+          ),
+                if (pestana == 2)
+                  FiltroFlujoMantenimiento(
+                    incluirSinOrden: false,
+                    seleccion: _asignacionOt,
+                    onChanged: (i) => setState(() => _asignacionOt = i),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -865,17 +880,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   2 => Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Pestanas(
-                          opciones: const ['Todos', 'Sin asignar', 'Asignados'],
-                          iconos: const [null, Icons.radio_button_unchecked_rounded, Icons.check_circle_outline_rounded],
-                          seleccion: _asignacionOt,
-                          compactas: true,
-                          onChanged: (i) => setState(() => _asignacionOt = i),
-                        ),
-                      ),
-                      const SizedBox(height: huecoVista),
                       Expanded(child: Builder(builder: (context) {
                         final filtradas = ots.where(otPendiente).where((ot) => switch (_asignacionOt) {
                           1 => ot.trabajadorIds.isEmpty,
