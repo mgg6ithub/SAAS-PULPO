@@ -62,8 +62,10 @@ void main() {
     ];
     store.tareas = [
       Tarea(id: 'ot2', planId: 'p2', activoId: 'a', nombre: 'Plan 2', plantilla: false,
+        proximo: hoy().add(const Duration(days: 2)),
         tipoMantenimiento: TipoMantenimiento.preventivo),
       Tarea(id: 'ot3', planId: 'p3', activoId: 'a', nombre: 'Plan 3', plantilla: false,
+        proximo: hoy(),
         trabajadorIds: ['tecnico'], tipoMantenimiento: TipoMantenimiento.preventivo),
     ];
     await tester.pumpWidget(MaterialApp(home: Scaffold(
@@ -81,6 +83,7 @@ void main() {
     }
     await tester.tap(find.text('Órdenes de trabajo').first);
     await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('Plan 3')).dy, lessThan(tester.getTopLeft(find.text('Plan 2')).dy));
     await tester.tap(find.text('Sin asignar').first);
     await tester.pumpAndSettle();
     expect(find.text('Plan 2'), findsOneWidget);

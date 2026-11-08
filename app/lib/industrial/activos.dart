@@ -881,7 +881,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                           1 => ot.trabajadorIds.isEmpty,
                           2 => ot.trabajadorIds.isNotEmpty,
                           _ => true,
-                        }).toList();
+                        }).toList()..sort((a, b) {
+                          if (a.proximo == null) return b.proximo == null ? 0 : 1;
+                          if (b.proximo == null) return -1;
+                          return a.proximo!.compareTo(b.proximo!);
+                        });
                         return filtradas.isEmpty
                             ? Vacio(
                                 icono: Icons.assignment_outlined,
