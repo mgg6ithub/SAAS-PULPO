@@ -1,3 +1,5 @@
+import 'plan.dart';
+
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
@@ -52,6 +54,44 @@ class MenuTipoMantenimiento extends StatelessWidget {
           puntoTipo(valor.color),
           const SizedBox(width: 8),
           Text('Tipo', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+          const SizedBox(width: 6),
+          Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 4),
+          Icon(CupertinoIcons.chevron_up_chevron_down, size: 14, color: P.textoSuave),
+        ],
+      ),
+    ),
+  );
+}
+
+class MenuPrioridadMantenimiento extends StatelessWidget {
+  final PrioridadMantenimiento valor;
+  final ValueChanged<PrioridadMantenimiento> onChanged;
+  const MenuPrioridadMantenimiento(this.valor, this.onChanged, {super.key});
+
+  @override
+  Widget build(BuildContext context) => BotonMenu<PrioridadMantenimiento>(
+    tooltip: valor.descripcion,
+    seleccionado: valor,
+    onSelected: onChanged,
+    opciones: [
+      for (final x in PrioridadMantenimiento.values)
+        (
+          x,
+          Tooltip(
+            message: x.descripcion,
+            child: Row(children: [puntoTipo(x.color), const SizedBox(width: 10), Text(x.etiqueta)]),
+          ),
+        ),
+    ],
+    child: SizedBox(
+      height: 22,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          puntoTipo(valor.color),
+          const SizedBox(width: 8),
+          Text('Prioridad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
           const SizedBox(width: 6),
           Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(width: 4),

@@ -1,10 +1,25 @@
+import 'package:flutter/material.dart' show Color;
+import '../theme.dart';
 import '../models.dart';
 
 /// Mantenimiento periódico de un activo o componente de Pultec: cada cuántos días u horas toca, de qué
 /// tipo es, qué categoría de técnico puede hacerlo, con qué repuestos y cómo. De él salen las OT.
+enum PrioridadMantenimiento {
+  normal('Normal', 'Se realiza según la planificación.'),
+  alta('Alta', 'Priorizarlo: retrasarlo aumenta el riesgo de avería o parada.'),
+  critica('Crítica', 'No debe aplazarse por seguridad, cumplimiento o continuidad de producción.');
+
+  final String etiqueta, descripcion;
+  const PrioridadMantenimiento(this.etiqueta, this.descripcion);
+  Color get color => switch (this) {
+    normal => P.verde, alta => P.ambar, critica => P.rojo,
+  };
+}
+
 class PlanMantenimiento {
   String id, activoId, nombre, descripcion, categoria, repuestos, procedimiento;
-  TipoMantenimiento tipo;
+  PrioridadMantenimiento prioridad;
+  TipoMantenimiento get tipo => TipoMantenimiento.preventivo;
 
   /// Cada cuántos días o cada cuántas horas de uso (lo que llegue antes); null = sin ese límite.
   int? cadaDias, cadaHoras;
@@ -24,7 +39,8 @@ class PlanMantenimiento {
     required this.activoId,
     this.nombre = '',
     this.descripcion = '',
-    this.tipo = TipoMantenimiento.preventivo,
+    TipoMantenimiento tipo = TipoMantenimiento.preventivo,
+    PrioridadMantenimiento? prioridad,
     this.cadaDias,
     this.cadaHoras,
     this.categoria = '',
@@ -40,7 +56,7 @@ class PlanMantenimiento {
     this.preparar = '',
     this.subcontratado = false,
     this.empresaExterna = '',
-  });
+  }) : prioridad = prioridad ?? PrioridadMantenimiento.values[tipo.index];
 
   /// "Cada 90 días · cada 500 h", o lo que haya.
   String get cada => [
@@ -74,7 +90,8 @@ class PlanMantenimiento {
     'activoId': activoId,
     'nombre': nombre,
     'descripcion': descripcion,
-    'tipo': tipo.index,
+    'tipo': 0,
+    'prioridad': prioridad.index,
     'cadaDias': cadaDias,
     'cadaHoras': cadaHoras,
     'categoria': categoria,
@@ -97,7 +114,7 @@ class PlanMantenimiento {
     activoId: j['activoId'] as String,
     nombre: j['nombre'] as String? ?? '',
     descripcion: j['descripcion'] as String? ?? '',
-    tipo: TipoMantenimiento.values[j['tipo'] as int? ?? 0],
+    prioridad: PrioridadMantenimiento.values[j['prioridad'] as int? ?? j['tipo'] as int? ?? 0],
     cadaDias: j['cadaDias'] as int?,
     cadaHoras: j['cadaHoras'] as int?,
     categoria: j['categoria'] as String? ?? '',

@@ -57,7 +57,7 @@ void reiniciarVistaActivos() {
 void abrirListaActivos() => _aLaLista.value++;
 
 /// Filtro de criticidad de la pestaña Mantenimientos de un activo: 0 = todos; 1.. = tipo.
-const _filtrosCriticidad = ['Todos', 'Preventivo', 'No crítico', 'Crítico'];
+const _filtrosCriticidad = ['Todos', 'Normal', 'Alta', 'Crítica'];
 
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
 class Activos extends StatefulWidget {
@@ -549,11 +549,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       );
     }
     if (criticidad != 0)
-      planes = planes.where((p) => p.tipo.index == criticidad - 1).toList();
+      planes = planes.where((p) => p.prioridad.index == criticidad - 1).toList();
     if (planes.isEmpty) {
       return Vacio(
         icono: Icons.filter_alt_off_outlined,
-        texto: 'Ningún mantenimiento con esta criticidad',
+        texto: 'Ningún mantenimiento con esta prioridad',
       );
     }
     final proximos = {
@@ -784,7 +784,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 opciones: _filtrosCriticidad,
                                 colores: [
                                   null,
-                                  for (final t in TipoMantenimiento.values)
+                                  for (final t in PrioridadMantenimiento.values)
                                     t.color,
                                 ],
                                 seleccion: criticidad,

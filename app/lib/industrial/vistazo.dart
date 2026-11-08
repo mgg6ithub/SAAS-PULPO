@@ -457,7 +457,7 @@ class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
                                       Icon(Icons.subdirectory_arrow_right_rounded, size: 20, color: P.textoSuave),
                                       const SizedBox(width: 4),
                                       if (a != null) ...[
-                                        IconoActivo(a.icono, size: 24, color: p.tipo.color),
+                                        IconoActivo(a.icono, size: 24, color: p.prioridad.color),
                                         const SizedBox(width: 8),
                                       ],
                                       Flexible(
@@ -535,7 +535,7 @@ class AvisosPreparacion extends StatelessWidget {
         children: [
           for (final (p, d) in avisos)
             FilaLista(
-              lider: puntoTipo(p.tipo.color),
+              lider: puntoTipo(p.prioridad.color),
               titulo: '${p.nombre} · ${store.activo(p.activoId)?.titulo ?? ''}',
               subtitulo: [
                 'Previsto ${fecha(d)}',

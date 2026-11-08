@@ -121,7 +121,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
   static const _opcionales = [
     'Código',
     'Componente',
-    'Criticidad',
+    'Prioridad',
     'Cada cuánto',
     'Horas restantes',
     'Próximo',
@@ -131,13 +131,13 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Repuestos',
     'Orden de trabajo',
   ];
-  static const _porDefecto = {'Código', 'Criticidad', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Orden de trabajo'};
+  static const _porDefecto = {'Código', 'Prioridad', 'Cada cuánto', 'Horas restantes', 'Próximo', 'Orden de trabajo'};
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
     'Código': Col('Código', ancho: 130),
     'Componente': Col('Componente', flex: 2),
-    'Criticidad': Col('Criticidad', ancho: 150),
+    'Prioridad': Col('Prioridad', ancho: 150),
     'Cada cuánto': Col('Cada cuánto', ancho: 120),
     'Horas restantes': Col('Horas restantes', ancho: 120, derecha: true),
     'Próximo': Col('Próximo', ancho: 140),
@@ -229,7 +229,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
             filas: ps.length,
             onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
             pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
-            resaltar: (i) => ps[i].id == planDestacado.value ? ps[i].tipo.color : null,
+            resaltar: (i) => ps[i].id == planDestacado.value ? ps[i].prioridad.color : null,
             celdas: (i) {
               final p = ps[i];
               final nodo = nodos[p.activoId];
@@ -241,8 +241,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
                   case 'Componente':
                     return celdaTexto(nodo?.nombre ?? '—', suave: true);
-                  case 'Criticidad':
-                    return PillTipo(p.tipo);
+                  case 'Prioridad':
+                    return Tooltip(message: p.prioridad.descripcion, child: Pill(p.prioridad.etiqueta, p.prioridad.color, punto: true));
                   case 'Cada cuánto':
                     return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);
                   case 'Horas restantes':
@@ -322,7 +322,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
-                        child: Tooltip(message: p.tipo.etiqueta, child: puntoTipo(p.tipo.color)),
+                        child: Tooltip(message: p.prioridad.descripcion, child: puntoTipo(p.prioridad.color)),
                       ),
                       const SizedBox(width: 10),
                       Flexible(
@@ -439,7 +439,7 @@ class _PlanFormState extends State<PlanForm> {
       etiqueta: store.activo(p.activoId)?.titulo ?? 'Activo',
       titulo: existe ? 'Editar mantenimiento' : 'Nuevo mantenimiento',
       tituloDesplazado: nombre.text,
-      bajoBotones: MenuTipoMantenimiento(p.tipo, (t) => setState(() => p.tipo = t)),
+      bajoBotones: MenuPrioridadMantenimiento(p.prioridad, (t) => setState(() => p.prioridad = t)),
       onGuardar: guardar,
       avisos: [
         if (errorNombre != null) ('Te falta el nombre', () {}),
