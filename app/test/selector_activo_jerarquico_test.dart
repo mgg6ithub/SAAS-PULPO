@@ -40,7 +40,7 @@ void main() {
       alignment: Alignment.centerRight,
       child: SizedBox(width: 260, child: SelectorActivo(null, (id) => elegido = id, filtro: true)),
     ))));
-    await tester.tap(find.text('Todos los activos'));
+    await tester.tap(find.text('Activos'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Camión'));
     await tester.pumpAndSettle();

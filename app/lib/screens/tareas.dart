@@ -237,7 +237,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                   )),
                   if (industrial) ...[
                     const SizedBox(width: 12),
-                    SizedBox(width: 260, child: SelectorActivo(_activoFiltro,
+                    ConstrainedBox(constraints: const BoxConstraints(maxWidth: 210), child: SelectorActivo(_activoFiltro,
                       (id) => setState(() => _activoFiltro = id), filtro: true)),
                   ],
                 ]),

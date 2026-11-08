@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 
 import 'geo.dart';
 import 'industrial/activo.dart';
+import 'industrial/iconos.dart';
 import 'informes.dart';
 import 'marca.dart';
 import 'models.dart';
@@ -1656,7 +1657,13 @@ class _TareaFormState extends State<TareaForm> {
                                   constraints: const BoxConstraints(minHeight: 46),
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   decoration: BoxDecoration(border: Border.all(color: P.borde), borderRadius: BorderRadius.circular(8)),
-                                  child: Text(store.activo(t.activoId)?.titulo ?? 'Sin activo', maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  child: Row(children: [
+                                    if (store.activo(t.activoId) case final activo?) ...[
+                                      IconoActivo(activo.icono, size: 22, color: P.textoSuave),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Expanded(child: Text(store.activo(t.activoId)?.titulo ?? 'Sin activo', maxLines: 2, overflow: TextOverflow.ellipsis)),
+                                  ]),
                                 ),
                               )
                       else
@@ -2092,7 +2099,12 @@ class SelectorActivo extends StatelessWidget {
       message: a.titulo,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: a.padreId == null ? 300 : 190),
-        child: Directionality(textDirection: TextDirection.ltr, child: Column(
+        child: Directionality(textDirection: TextDirection.ltr, child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconoActivo(a.icono, size: 22, color: P.textoSuave),
+            const SizedBox(width: 8),
+            Flexible(child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2101,6 +2113,8 @@ class SelectorActivo extends StatelessWidget {
             if (a.nombre.trim().isNotEmpty && a.tag.isNotEmpty)
               Text(a.tag, maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
+          ],
+        )),
           ],
         )),
       ),
@@ -2139,13 +2153,36 @@ class SelectorActivo extends StatelessWidget {
       ],
       builder: (context, menu, _) => Tooltip(
         message: filtro ? 'Filtrar por activo o componente' : 'Asignar a un activo o componente',
-        child: _CajaMenu(
+        child: filtro ? TextButton(
+          onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 10),
+            foregroundColor: valor == null ? P.textoSuave : P.morado,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: BorderSide(color: P.borde),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Directionality(textDirection: TextDirection.ltr, child: Row(mainAxisSize: MainAxisSize.min, children: [
+            IconoActivo(store.activo(valor)?.icono ?? 'brazo', size: 18, color: P.textoSuave),
+            const SizedBox(width: 6),
+            Flexible(child: Text(store.activo(valor)?.nombre.isNotEmpty == true ? store.activo(valor)!.nombre : valor == null ? 'Activos' : store.activo(valor)?.tag ?? 'Activos',
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+            const SizedBox(width: 4),
+            const Icon(Icons.expand_more_rounded, size: 16),
+          ])),
+        ) : _CajaMenu(
           abierto: menu.isOpen,
           compacta: compacto,
           onTap: () => menu.isOpen ? menu.close() : menu.open(),
-          child: Text(store.activo(valor)?.titulo ?? (filtro ? 'Todos los activos' : 'Elegir activo'),
-            maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: valor == null ? P.textoSuave : P.texto)),
+          child: Row(children: [
+            if (store.activo(valor) case final activo?) ...[
+              IconoActivo(activo.icono, size: 22, color: P.textoSuave),
+              const SizedBox(width: 8),
+            ],
+            Expanded(child: Text(store.activo(valor)?.titulo ?? 'Elegir activo',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: valor == null ? P.textoSuave : P.texto))),
+          ]),
         ),
       ),
     ));

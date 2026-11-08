@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../industrial/tipo_mantenimiento.dart';
+import '../industrial/iconos.dart';
 import '../industrial/gravedad.dart' show iconoAsignacion;
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos;
@@ -335,7 +336,13 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (medio && widget.conCliente)
                 industrial && !t.esPlantilla
                     ? Tooltip(message: store.activo(t.activoId)?.titulo ?? 'Sin activo',
-                        child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true))
+                        child: Row(children: [
+                          if (store.activo(t.activoId) case final activo?) ...[
+                            IconoActivo(activo.icono, size: 22, color: P.textoSuave),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true)),
+                        ]))
                     : t.esPlantilla
                     ? Etiqueta('Plantilla', P.morado)
                     : t.padreId == null
