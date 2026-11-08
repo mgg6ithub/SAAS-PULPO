@@ -334,10 +334,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
               if (medio && widget.conCliente)
                 industrial && !t.esPlantilla
-                    ? SelectorActivo(t.activoId, (id) {
-                        t.activoId = id;
-                        store.guardarTarea(t);
-                      }, compacto: true)
+                    ? Tooltip(message: store.activo(t.activoId)?.titulo ?? 'Sin activo',
+                        child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true))
                     : t.esPlantilla
                     ? Etiqueta('Plantilla', P.morado)
                     : t.padreId == null

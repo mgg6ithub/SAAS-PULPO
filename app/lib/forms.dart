@@ -1647,7 +1647,18 @@ class _TareaFormState extends State<TareaForm> {
                       SizedBox(height: MediaQuery.textScalerOf(context).scale(32),
                         child: etiqueta(industrial ? 'Activo o componente' : m('Cliente'))),
                       if (industrial)
-                        SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
+                        nueva
+                            ? SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
+                            : Tooltip(
+                                message: 'El activo de una orden ya creada no se puede cambiar.',
+                                child: Container(
+                                  width: double.infinity,
+                                  constraints: const BoxConstraints(minHeight: 46),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(border: Border.all(color: P.borde), borderRadius: BorderRadius.circular(8)),
+                                  child: Text(store.activo(t.activoId)?.titulo ?? 'Sin activo', maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ),
+                              )
                       else
                       // Un subtrabajo comparte el cliente de su trabajo.
                       if (t.padreId != null)

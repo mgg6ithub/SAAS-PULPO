@@ -127,7 +127,7 @@ class TrabajadorDetalle extends StatelessWidget {
             Expanded(child: principal),
             SizedBox(
               width: 440,
-              child: TrabajadorForm(key: ValueKey(w.id), original: w, incrustada: true),
+              child: industrial ? _FichaTecnico(w) : TrabajadorForm(key: ValueKey(w.id), original: w, incrustada: true),
             ),
           ],
         );
@@ -137,6 +137,34 @@ class TrabajadorDetalle extends StatelessWidget {
 
   /// Por día y hora; lo que no tiene fecha, al final.
   static DateTime _orden(Tarea t) => (t.proximo ?? DateTime(2100)).add(Duration(minutes: t.inicioMin ?? 0));
+}
+
+/// Consulta de los datos del técnico; la edición se abre de forma explícita.
+class _FichaTecnico extends StatelessWidget {
+  final Trabajador w;
+  const _FichaTecnico(this.w);
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    padding: margenPagina,
+    child: Tarjeta(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Expanded(child: TituloVista('Ficha del técnico')),
+        TextButton(onPressed: () => abrirTrabajadorForm(context, w), child: const Text('Editar')),
+      ]),
+      const SizedBox(height: 16),
+      for (final dato in [
+        ('Nombre', w.nombreCompleto), ('Teléfono', w.telefono), ('Email', w.email),
+        ('Especialidades', w.competencias.join(' · ')), ('Títulos', w.titulos),
+        ('Información', w.info), ('Salida', w.salida),
+      ]) Padding(padding: const EdgeInsets.only(bottom: 14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(dato.$1, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+          const SizedBox(height: 4),
+          SelectableText(dato.$2.isEmpty ? '—' : dato.$2),
+        ],
+      )),
+    ])),
+  );
 }
 
 /// «Tiene acceso» si la ficha ya está ligada a una cuenta; si no, el botón para invitarlo (DEV-020).
@@ -444,21 +472,21 @@ class _OrdenesTecnicoState extends State<_OrdenesTecnico> {
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
     final vencidas = pendientes.where((t) => t.proximo != null && diasHasta(t.proximo!) < 0).length;
     final hechas30 = suyas.where((t) => t.ultimo != null && diasHasta(t.ultimo!) >= -30).length;
-    final conIncidencia = suyas.where((t) => (t.resultado ?? 0) > 0).length;
+    final conIncidencia = suyas.where(incidenciaAbierta).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Rejilla(
           columnas: 4,
           children: [
-            Tarjeta(child: Cifra('Pendientes', pendientes.length, punto: P.morado)),
+            Tarjeta(child: Cifra('Pendientes', pendientes.length, nota: 'actuales', punto: P.morado)),
             Tarjeta(
-              child: Cifra('Vencidas', vencidas, punto: P.rojo, color: vencidas > 0 ? P.rojo : null),
+              child: Cifra('Vencidas', vencidas, nota: 'actuales', punto: P.rojo, color: vencidas > 0 ? P.rojo : null),
             ),
             Tarjeta(
-              child: Cifra('Hechas', hechas30, nota: 'últimos 30 días', punto: P.verde),
+              child: Cifra('Hechas en 30 días', hechas30, nota: 'últimos 30 días', punto: P.verde),
             ),
-            Tarjeta(child: Cifra('Con incidencia', conIncidencia, punto: P.ambar)),
+            Tarjeta(child: Cifra('Con incidencia', conIncidencia, nota: 'actuales', punto: P.ambar)),
           ],
         ),
         const SizedBox(height: 16),
