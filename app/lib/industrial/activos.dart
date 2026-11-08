@@ -410,8 +410,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               icon: const Icon(Icons.arrow_forward_rounded, size: 20),
             ),
             const SizedBox(width: 4),
-            IconoActivo(a.icono, size: 24, color: P.textoSuave),
-            const SizedBox(width: 4),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -454,7 +452,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                     .colorScheme
                                     .onSurface,
                               ),
-                              child: Text(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconoActivo(activo.icono, size: 24, color: P.textoSuave),
+                                  const SizedBox(width: 4),
+                                  Text(
                                 texto.isEmpty ? 'Activo' : texto,
                                 style: TextStyle(
                                   fontSize: 18,
@@ -462,6 +465,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                       ? FontWeight.w600
                                       : FontWeight.w400,
                                 ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
