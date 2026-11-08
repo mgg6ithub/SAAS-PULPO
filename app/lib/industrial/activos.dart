@@ -391,11 +391,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           children: [
             IconButton(
               tooltip: 'Atrás',
+              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+              padding: EdgeInsets.zero,
               onPressed: _posicion > 0 ? () => _recorrer(-1) : null,
               icon: const Icon(Icons.arrow_back_rounded, size: 20),
             ),
             IconButton(
               tooltip: 'Adelante',
+              constraints: const BoxConstraints.tightFor(width: 36, height: 40),
+              padding: EdgeInsets.zero,
               onPressed: _posicion + 1 < _historial.length
                   ? () => _recorrer(1)
                   : null,
@@ -407,7 +411,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                reverse: true,
+                reverse: false,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -465,7 +469,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         ),
         if (descripcion.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 120, top: 4),
+            padding: const EdgeInsets.only(left: 112, top: 4),
             child: Text(
               descripcion,
               maxLines: 2,
