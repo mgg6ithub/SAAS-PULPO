@@ -2074,7 +2074,8 @@ class SelectorActivo extends StatelessWidget {
   final String? valor;
   final ValueChanged<String?> onChanged;
   final bool compacto;
-  const SelectorActivo(this.valor, this.onChanged, {super.key, this.compacto = false});
+  final bool filtro;
+  const SelectorActivo(this.valor, this.onChanged, {super.key, this.compacto = false, this.filtro = false});
 
   @override
   Widget build(BuildContext context) {
@@ -2091,7 +2092,7 @@ class SelectorActivo extends StatelessWidget {
       message: a.titulo,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: a.padreId == null ? 300 : 190),
-        child: Column(
+        child: Directionality(textDirection: TextDirection.ltr, child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2101,7 +2102,7 @@ class SelectorActivo extends StatelessWidget {
               Text(a.tag, maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
           ],
-        ),
+        )),
       ),
     );
     final estilo = MenuStyle(
@@ -2121,30 +2122,33 @@ class SelectorActivo extends StatelessWidget {
       return SubmenuButton(
         menuStyle: estilo.copyWith(maximumSize: const WidgetStatePropertyAll(Size(270, 420))),
         menuChildren: [
+          if (filtro) MenuItemButton(onPressed: () => elegir(a.id), child: const Text('Este activo y sus componentes')),
           for (final h in componentes) opcion(h, {...ancestros, a.id}),
         ],
         child: texto(a),
       );
     }
-    return MenuAnchor(
+    return Directionality(
+      textDirection: filtro ? TextDirection.rtl : Directionality.of(context),
+      child: MenuAnchor(
       controller: controller,
       style: estilo,
       menuChildren: [
-        MenuItemButton(onPressed: () => elegir(null), child: const Text('Sin activo')),
+        MenuItemButton(onPressed: () => elegir(null), child: Text(filtro ? 'Todos los activos' : 'Sin activo')),
         for (final a in hijos[null] ?? <Activo>[]) opcion(a, {}),
       ],
       builder: (context, menu, _) => Tooltip(
-        message: 'Asignar a un activo o componente',
+        message: filtro ? 'Filtrar por activo o componente' : 'Asignar a un activo o componente',
         child: _CajaMenu(
           abierto: menu.isOpen,
           compacta: compacto,
           onTap: () => menu.isOpen ? menu.close() : menu.open(),
-          child: Text(store.activo(valor)?.titulo ?? 'Elegir activo',
+          child: Text(store.activo(valor)?.titulo ?? (filtro ? 'Todos los activos' : 'Elegir activo'),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             style: TextStyle(color: valor == null ? P.textoSuave : P.texto)),
         ),
       ),
-    );
+    ));
   }
 }
 

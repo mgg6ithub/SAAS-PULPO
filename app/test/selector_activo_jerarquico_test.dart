@@ -32,4 +32,22 @@ void main() {
     expect(find.text('Válvula'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('filtro abre hacia la izquierda y permite elegir la rama completa', (tester) async {
+    store.activos = [Activo(id: 'a', nombre: 'Camión'), Activo(id: 'b', padreId: 'a', nombre: 'Bomba')];
+    String? elegido;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(width: 260, child: SelectorActivo(null, (id) => elegido = id, filtro: true)),
+    ))));
+    await tester.tap(find.text('Todos los activos'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Camión'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bomba'), findsOneWidget);
+    await tester.tap(find.text('Este activo y sus componentes'));
+    await tester.pumpAndSettle();
+    expect(elegido, 'a');
+    expect(tester.takeException(), isNull);
+  });
 }

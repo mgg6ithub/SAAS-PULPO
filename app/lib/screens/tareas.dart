@@ -61,6 +61,7 @@ class _TareasPaginaState extends State<TareasPagina> {
   String q = '';
   int pestana = 0; // 0 de clientes, 1 plantillas, 2 todas
   String? tipo;
+  String? _activoFiltro;
   bool lista = true;
 
   void _alCambiarFecha() => setState(() => pestana = 0);
@@ -88,11 +89,13 @@ class _TareasPaginaState extends State<TareasPagina> {
     final nTrabajos = store.tareas.length - store.plantillas.length;
     final fecha = filtroFechaTrabajos.value;
     final criticidad = filtroCriticidadTrabajos.value;
+    final rama = _activoFiltro == null ? null : store.ramaDe(_activoFiltro!);
     final filtradas =
         store.tareas.where((t) {
           if (pestana == 0 && t.esPlantilla) return false;
           if (pestana == 1 && !t.esPlantilla) return false;
           if (tipo != null && t.tipo != tipo) return false;
+          if (industrial && rama != null && !rama.contains(t.activoId)) return false;
           if (industrial && !t.esPlantilla && _hecha(t) != historicoTrabajos.value) return false;
           if (!pasaFechaTrabajo(t, fecha)) return false;
           if (criticidad != 0 && t.tipoMantenimiento?.index != criticidad - 1) return false;
@@ -165,7 +168,8 @@ class _TareasPaginaState extends State<TareasPagina> {
               // En el histórico no hacen falta los filtros de lo pendiente.
               if (!(industrial && historicoTrabajos.value)) ...[
                 const SizedBox(height: huecoVista),
-                SingleChildScrollView(
+                Row(children: [
+                  Expanded(child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: industrial
                       ? Row(
@@ -230,7 +234,13 @@ class _TareasPaginaState extends State<TareasPagina> {
                             _ChipNueva(() => _editarEtiqueta(null)),
                           ],
                         ),
-                ),
+                  )),
+                  if (industrial) ...[
+                    const SizedBox(width: 12),
+                    SizedBox(width: 260, child: SelectorActivo(_activoFiltro,
+                      (id) => setState(() => _activoFiltro = id), filtro: true)),
+                  ],
+                ]),
               ],
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
