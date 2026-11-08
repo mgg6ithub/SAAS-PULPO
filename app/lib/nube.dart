@@ -220,7 +220,7 @@ class Nube {
     await _recargar();
   }
 
-  /// Las fotos se suben primero; el servidor crea incidencia, OT y avisos juntos.
+  /// Las fotos se suben primero; el servidor registra la incidencia abierta y avisa al responsable, sin crear OT.
   Future<void> crearIncidencia(Incidencia i, String categoria, List<Uint8List> fotos) async {
     await _cola;
     final rutas = <String>[];

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 
 import '../forms.dart';
 import '../informes.dart';
-import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -72,29 +71,19 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
         activoId: activoId!,
         descripcion: descripcion.text.trim(),
         gravedad: gravedad,
-        estado: EstadoIncidencia.conOt,
+        estado: EstadoIncidencia.abierta,
       );
       final nube = store.nube;
       if (nube != null) {
         await nube.crearIncidencia(i, categoria, fotos);
       } else {
-        final ot = Tarea(
-          id: store.nuevoId(),
-          nombre: i.descripcion,
-          notas: i.descripcion,
-          activoId: activoId,
-          tipoMantenimiento: gravedad.tipo,
-          plantilla: false,
-          periodicidad: Periodicidad.unica,
-          proximo: hoy(),
-          competencias: categoria.isEmpty ? [] : [categoria],
-        );
-        i.trabajoId = ot.id;
         i.fotos = fotos.map(base64Encode).toList();
-        store.guardarTarea(ot);
         store.guardarIncidencia(i);
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incidencia enviada. El responsable decidirá si crea una orden.')));
+      }
     } catch (_) {
       if (mounted) {
         setState(() => ocupada = false);

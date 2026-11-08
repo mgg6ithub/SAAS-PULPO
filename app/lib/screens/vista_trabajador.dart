@@ -700,29 +700,39 @@ class _MisTrabajos extends StatelessWidget {
     if (pendientes.isEmpty) {
       return Vacio(icono: Icons.task_alt_rounded, titulo: 'Todo al día', texto: m('No tienes trabajos pendientes.'));
     }
-    // Atrasados primero; luego un bloque por día.
     final grupos = <String, List<Tarea>>{};
     for (final t in pendientes) {
       final n = t.proximo == null ? null : diasHasta(t.proximo!);
-      final clave = n == null
-          ? 'Sin fecha'
-          : n < 0
-          ? 'Atrasados'
-          : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
+      final clave = industrial
+          ? n == null ? 'Sin fecha' : n < 0 ? 'Atrasados' : n == 0 ? 'Para hoy' : 'Próximas órdenes'
+          : n == null ? 'Sin fecha' : n < 0 ? 'Atrasados' : '${relativo(t.proximo!)} · ${_diaLargo(t.proximo!)}';
       (grupos[clave] ??= []).add(t);
     }
     return ListView(
       children: [
         // Pultec: arriba, el día del técnico en cifras, como el Inicio del administrador.
         if (industrial) ...[_CifrasTecnico(w, pendientes), const SizedBox(height: 16)],
-        for (final g in grupos.entries) ...[
-          SeccionTarjeta(
-            titulo: g.key,
-            subtitulo: '${g.value.length}',
-            children: [for (final t in g.value) _FilaTrabajo(t, abrir, mostrarDia: g.key == 'Atrasados')],
-          ),
+        if (industrial && !grupos.containsKey('Para hoy')) ...[
+          const Tarjeta(child: Row(children: [
+            Icon(Icons.today_rounded), SizedBox(width: 12),
+            Expanded(child: Text('No tienes órdenes para hoy. Revisa las atrasadas o las próximas intervenciones.')),
+          ])),
           const SizedBox(height: huecoVista),
         ],
+        for (final clave in industrial ? ['Para hoy', 'Atrasados', 'Próximas órdenes', 'Sin fecha'] : grupos.keys)
+          if (grupos[clave] case final grupo?) ...[
+            if (industrial && (clave == 'Próximas órdenes' || clave == 'Sin fecha'))
+              Card(child: ExpansionTile(
+                title: Text('$clave · ${grupo.length}'),
+                children: [for (final t in grupo) _FilaTrabajo(t, abrir, mostrarDia: true)],
+              ))
+            else
+              SeccionTarjeta(
+                titulo: clave, subtitulo: '${grupo.length}',
+                children: [for (final t in grupo) _FilaTrabajo(t, abrir, mostrarDia: clave == 'Atrasados')],
+              ),
+            const SizedBox(height: huecoVista),
+          ],
       ],
     );
   }
