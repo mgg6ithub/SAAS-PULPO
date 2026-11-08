@@ -11,7 +11,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import 'geo.dart';
-import 'industrial/activos.dart' show arbolActivos;
+import 'industrial/activo.dart';
 import 'informes.dart';
 import 'marca.dart';
 import 'models.dart';
@@ -1644,7 +1644,7 @@ class _TareaFormState extends State<TareaForm> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: MediaQuery.textScalerOf(context).scale(24),
+                      SizedBox(height: MediaQuery.textScalerOf(context).scale(32),
                         child: etiqueta(industrial ? 'Activo o componente' : m('Cliente'))),
                       if (industrial)
                         SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
@@ -1672,7 +1672,7 @@ class _TareaFormState extends State<TareaForm> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: MediaQuery.textScalerOf(context).scale(24), child: Row(
+                      SizedBox(height: MediaQuery.textScalerOf(context).scale(32), child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: etiqueta(m('Trabajadores'))),
@@ -2066,46 +2066,69 @@ class SelectorActivo extends StatelessWidget {
   const SelectorActivo(this.valor, this.onChanged, {super.key, this.compacto = false});
 
   @override
-  Widget build(BuildContext context) => BotonMenu<String>(
-    tooltip: 'Asignar a un activo o componente',
-    resaltarHover: false,
-    relleno: EdgeInsets.zero,
-    seleccionado: valor ?? '',
-    opciones: [
-      ('', const Text('Sin activo')),
-      for (final (a, nivel) in arbolActivos())
-        (
-          a.id,
-          Padding(
-            padding: EdgeInsets.only(left: 12.0 * nivel.clamp(0, 4)),
-            child: Text(a.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
+  Widget build(BuildContext context) {
+    final controller = MenuController();
+    void elegir(String? id) {
+      controller.close();
+      onChanged(id);
+    }
+    final hijos = <String?, List<Activo>>{};
+    for (final a in store.activos) {
+      (hijos[a.padreId] ??= []).add(a);
+    }
+    Widget texto(Activo a) => ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 300),
+      child: Text(a.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
+    );
+    final estilo = MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      maximumSize: const WidgetStatePropertyAll(Size(380, 420)),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    );
+    Widget opcion(Activo a, Set<String> ancestros) {
+      final componentes = hijos[a.id] ?? [];
+      if (componentes.isEmpty || ancestros.contains(a.id)) {
+        return MenuItemButton(
+          onPressed: () => elegir(a.id),
+          trailingIcon: valor == a.id ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
+          child: texto(a),
+        );
+      }
+      return SubmenuButton(
+        menuStyle: estilo,
+        menuChildren: [
+          MenuItemButton(
+            onPressed: () => elegir(a.id),
+            leadingIcon: Icon(Icons.check_rounded, size: 18, color: valor == a.id ? P.morado : P.textoSuave),
+            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 300),
+              child: Text('Seleccionar ${a.titulo}', maxLines: 1, overflow: TextOverflow.ellipsis)),
           ),
-        ),
-    ],
-    onSelected: (id) => onChanged(id.isEmpty ? null : id),
-    child: Container(
-      height: compacto ? 36 : 46,
-      padding: EdgeInsets.symmetric(horizontal: compacto ? 6 : 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(P.radioControl),
-        border: compacto ? null : Border.all(color: P.borde),
-        color: compacto ? null : P.superficie,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              store.activo(valor)?.titulo ?? 'Elegir activo',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: valor == null ? P.textoSuave : P.texto),
-            ),
-          ),
-          Icon(Icons.unfold_more_rounded, size: 16, color: P.textoSuave),
+          const Divider(height: 8),
+          for (final h in componentes) opcion(h, {...ancestros, a.id}),
         ],
+        child: texto(a),
+      );
+    }
+    return MenuAnchor(
+      controller: controller,
+      style: estilo,
+      menuChildren: [
+        MenuItemButton(onPressed: () => elegir(null), child: const Text('Sin activo')),
+        for (final a in hijos[null] ?? <Activo>[]) opcion(a, {}),
+      ],
+      builder: (context, menu, _) => Tooltip(
+        message: 'Asignar a un activo o componente',
+        child: _CajaMenu(
+          abierto: menu.isOpen,
+          compacta: compacto,
+          onTap: () => menu.isOpen ? menu.close() : menu.open(),
+          child: Text(store.activo(valor)?.titulo ?? 'Elegir activo',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: valor == null ? P.textoSuave : P.texto)),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Menú de clientes: todos los clientes y, abajo, "Crear nuevo cliente" (abre la misma ventana
