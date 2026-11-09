@@ -1219,9 +1219,28 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
                 opciones: [
                   ('', const Text('Sin grupo')),
                   for (final g in [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre)))
-                    (g.id, Text(g.area.isEmpty ? g.nombre : '${g.nombre} · ${g.area}')),
+                    (g.id, textoGrupo(g)),
+                  // Sin salir de la ficha: se crea y se elige.
+                  (
+                    _nuevoGrupo,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 18, color: P.morado),
+                        const SizedBox(width: 6),
+                        Text('Nuevo grupo', style: TextStyle(color: P.morado, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
                 ],
-                onSelected: (v) => setState(() => w.grupoId = v.isEmpty ? null : v),
+                onSelected: (v) async {
+                  if (v == _nuevoGrupo) {
+                    final g = await crearGrupoRapido(context);
+                    if (g != null) setState(() => w.grupoId = g.id);
+                    return;
+                  }
+                  setState(() => w.grupoId = v.isEmpty ? null : v);
+                },
                 child: InputDecorator(
                   decoration: InputDecoration(
                     suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
@@ -2480,7 +2499,10 @@ class SelectorTrabajadores extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(g.nombre, style: TextStyle(fontWeight: t.grupoId == g.id ? FontWeight.w700 : FontWeight.w500)),
-                    if (g.area.isNotEmpty) Text(' · ${g.area}', style: TextStyle(color: P.textoSuave)),
+                    if (g.area.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Text(g.area, style: TextStyle(color: P.textoSuave)),
+                    ],
                   ],
                 ),
               ),
@@ -2538,8 +2560,14 @@ class SelectorTrabajadores extends StatelessWidget {
                   AvataresTrabajadores(t.trabajadorIds, size: 24),
                   const SizedBox(width: 10),
                   Flexible(
-                    child: Text(
-                      [?store.grupo(t.grupoId)?.nombre, elegidos.map((w) => w.nombre).join(', ')].join(' · '),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          if (store.grupo(t.grupoId) case final g?)
+                            TextSpan(text: '${g.nombre}  ', style: TextStyle(color: P.textoSuave, fontWeight: FontWeight.w500)),
+                          TextSpan(text: elegidos.map((w) => w.nombre).join(', ')),
+                        ],
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600),
@@ -3048,3 +3076,55 @@ class _MenuEstadoHoy extends StatelessWidget {
     ),
   );
 }
+
+const _nuevoGrupo = '__nuevo_grupo__';
+
+/// Nombre del grupo y, en gris, su área (sin separadores).
+Widget textoGrupo(GrupoTecnicos g) => Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    Text(g.nombre),
+    if (g.area.isNotEmpty) ...[const SizedBox(width: 8), Text(g.area, style: TextStyle(color: P.textoSuave))],
+  ],
+);
+
+/// Crea un grupo sin salir de donde estás (ficha del técnico, mantenimiento): pide el nombre, que no se repita.
+Future<GrupoTecnicos?> crearGrupoRapido(BuildContext context) async {
+  final texto = TextEditingController();
+  String? error;
+  final g = await showDialog<GrupoTecnicos>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) {
+        void crear() {
+          final n = texto.text.trim();
+          if (n.isEmpty) return setState(() => error = 'Ponle un nombre');
+          if (store.nombreGrupoUsado(n)) return setState(() => error = 'Ya hay un grupo con ese nombre');
+          final nuevo = GrupoTecnicos(id: store.nuevoId(), nombre: n);
+          store.guardarGrupo(nuevo);
+          Navigator.pop(context, nuevo);
+        }
+
+        return AlertDialog(
+          title: const Text('Nuevo grupo'),
+          content: SizedBox(
+            width: 360,
+            child: TextField(
+              controller: texto,
+              autofocus: true,
+              onSubmitted: (_) => crear(),
+              decoration: InputDecoration(hintText: 'Hidráulica A', errorText: error),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+            FilledButton(onPressed: crear, child: const Text('Crear')),
+          ],
+        );
+      },
+    ),
+  );
+  texto.dispose();
+  return g;
+}
+

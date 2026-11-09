@@ -315,8 +315,7 @@ class _NuevaCompetenciaState extends State<_NuevaCompetencia> {
 Future<void> abrirGrupos(BuildContext context) => _dialogo(
   context,
   'Grupos de técnicos',
-  'Agrupa a tus técnicos (p. ej. «Hidráulica A»). Una orden asignada a un grupo se reparte sola al técnico más libre. '
-      'Cada técnico elige su grupo en su ficha.',
+  'Agrupa a tus técnicos (p. ej. «Hidráulica A»). Una orden asignada a un grupo se reparte sola al técnico más libre.',
   (context) => [
     for (final g in [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre)))
       _FilaGrupo(g, key: ValueKey('${g.id}-${g.nombre}')),
@@ -335,59 +334,122 @@ class _FilaGrupo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final n = store.tecnicosDe(g.id).length;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+    final miembros = store.tecnicosDe(g.id);
+    final otros = store.trabajadores.where((w) => w.activo && w.grupoId != g.id).toList()
+      ..sort((a, b) => a.nombre.compareTo(b.nombre));
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+      decoration: BoxDecoration(
+        color: P.superficie,
+        borderRadius: BorderRadius.circular(P.radio),
+        border: Border.all(color: P.borde),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
-            child: _CampoNombre(g.nombre, (nuevo) {
-              if (store.nombreGrupoUsado(nuevo, salvo: g.id)) return _avisoNombreUsado(context, nuevo);
-              store.guardarGrupo(g..nombre = nuevo);
-            }),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: BotonMenu<String>(
-              relleno: EdgeInsets.zero,
-              tooltip: 'Área del grupo',
-              seleccionado: g.area,
-              opciones: [('', const Text('Sin área')), for (final c in competencias) (c, Text(c))],
-              onSelected: (a) => store.guardarGrupo(g..area = a),
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  isDense: true,
-                  suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
-                ),
-                child: Text(g.area.isEmpty ? 'Sin área' : g.area, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: _CampoNombre(g.nombre, (nuevo) {
+                  if (store.nombreGrupoUsado(nuevo, salvo: g.id)) return _avisoNombreUsado(context, nuevo);
+                  store.guardarGrupo(g..nombre = nuevo);
+                }),
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: BotonMenu<String>(
+                  relleno: EdgeInsets.zero,
+                  tooltip: 'Área del grupo',
+                  seleccionado: g.area,
+                  opciones: [('', const Text('Sin área')), for (final c in competencias) (c, Text(c))],
+                  onSelected: (a) => store.guardarGrupo(g..area = a),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      isDense: true,
+                      suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+                    ),
+                    child: Text(g.area.isEmpty ? 'Sin área' : g.area, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                child: IconButton(
+                  tooltip: 'Quitar grupo',
+                  onPressed: () async {
+                    if (await confirmar(
+                      context,
+                      '¿Quitar el grupo «${g.nombre}»? Sus técnicos se quedan sin grupo.',
+                      accion: 'Quitar',
+                    )) {
+                      store.borrarGrupo(g.id);
+                    }
+                  },
+                  icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
+                ),
+              ),
+            ],
           ),
-          SizedBox(
-            width: 92,
-            child: Text(
-              '$n ${n == 1 ? 'técnico' : 'técnicos'}',
-              textAlign: TextAlign.right,
-              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-            ),
-          ),
-          SizedBox(
-            width: 40,
-            child: IconButton(
-              tooltip: 'Quitar',
-              onPressed: () async {
-                if (await confirmar(
-                  context,
-                  '¿Quitar el grupo «${g.nombre}»? Sus técnicos se quedan sin grupo.',
-                  accion: 'Quitar',
-                )) {
-                  store.borrarGrupo(g.id);
-                }
-              },
-              icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
-            ),
+          const SizedBox(height: 10),
+          // Sus técnicos y, al final, el desplegable para meter más (los de otro grupo se cambian a este).
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final w in miembros)
+                InputChip(
+                  avatar: Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 20),
+                  label: Text(w.nombreCompleto),
+                  onDeleted: () => store.guardarTrabajador(w..grupoId = null),
+                  deleteButtonTooltipMessage: 'Sacar del grupo',
+                  backgroundColor: P.fondo,
+                  side: BorderSide(color: P.borde),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
+                ),
+              if (otros.isNotEmpty)
+                BotonMenu<String>(
+                  tooltip: 'Meter un técnico en el grupo',
+                  opciones: [
+                    for (final w in otros)
+                      (
+                        w.id,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 20),
+                            const SizedBox(width: 8),
+                            Text(w.nombreCompleto),
+                            if (store.grupo(w.grupoId) case final otro?) ...[
+                              const SizedBox(width: 8),
+                              Text(otro.nombre, style: TextStyle(color: P.textoSuave)),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
+                  onSelected: (id) {
+                    final w = store.trabajador(id);
+                    if (w != null) store.guardarTrabajador(w..grupoId = g.id);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 16, color: P.morado),
+                        const SizedBox(width: 4),
+                        Text('Técnico', style: TextStyle(color: P.morado, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                )
+              else if (miembros.isEmpty)
+                Text('Aún no hay técnicos', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+            ],
           ),
         ],
       ),

@@ -418,7 +418,7 @@ class _PlanFormState extends State<PlanForm> {
     if (prueba.cadaDias == null && prueba.cadaHoras == null) return null;
     final d = proximoPlan(prueba);
     if (d == null) return modo == 1 ? 'Sin estimación: falta el ritmo de uso del activo' : null;
-    return '≈ ${fecha(d)} · ${relativo(d)} (estimado)';
+    return '≈ ${fecha(d)}, ${relativo(d).toLowerCase()} (estimado)';
   }
 
   String? get errorNombre => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
@@ -698,12 +698,25 @@ class SelectorAsignacionPlan extends StatelessWidget {
               child: Row(
                 children: [
                   Text(x.nombre, style: TextStyle(fontWeight: grupoId == x.id ? FontWeight.w700 : FontWeight.w500)),
-                  if (x.area.isNotEmpty) Text(' · ${x.area}', style: TextStyle(color: P.textoSuave)),
+                  if (x.area.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(x.area, style: TextStyle(color: P.textoSuave)),
+                  ],
                 ],
               ),
             ),
           ),
         if (sueltos.isNotEmpty) ...[const Divider(height: 8), for (final t in sueltos) _tecnico(t)],
+        const Divider(height: 8),
+        // Crear un grupo aquí mismo y dejarlo elegido.
+        MenuItemButton(
+          leadingIcon: Icon(Icons.add_rounded, size: 20, color: P.morado),
+          onPressed: () async {
+            final nuevo = await crearGrupoRapido(context);
+            if (nuevo != null) onChanged(null, nuevo.id);
+          },
+          child: Text('Nuevo grupo', style: TextStyle(color: P.morado, fontWeight: FontWeight.w600)),
+        ),
       ],
       builder: (context, menu, _) => InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -714,7 +727,7 @@ class SelectorAsignacionPlan extends StatelessWidget {
             w != null
                 ? w.nombreCompleto
                 : g != null
-                ? '${g.nombre} (se reparte)'
+                ? '${g.nombre}, se reparte'
                 : 'Sin asignar',
             style: TextStyle(color: w == null && g == null ? P.textoSuave : P.texto),
           ),

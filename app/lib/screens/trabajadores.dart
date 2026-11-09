@@ -83,16 +83,18 @@ class _TrabajadoresState extends State<Trabajadores> {
                           onChanged: (i) => setState(() => estado = i),
                         ),
                         _FiltroCompetencia(competencia, (v) => setState(() => competencia = v)),
-                        // Pultec: crear y ordenar los grupos de técnicos.
-                        if (industrial)
-                          Enlace(
-                            store.grupos.isEmpty ? 'Crear grupos' : 'Grupos · ${store.grupos.length}',
-                            onTap: () => abrirGrupos(context),
-                          ),
                       ],
                       derecha: [
                         Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
                         SelectorVista(lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
+                        // Pultec: grupos de técnicos (crear, ver y meter técnicos).
+                        if (industrial)
+                          BotonAccion(
+                            'Grupo',
+                            icono: Icons.add_rounded,
+                            tooltip: 'Crear grupos y meter técnicos',
+                            onPressed: () => abrirGrupos(context),
+                          ),
                       ],
                       principal: BotonPrimario(
                         m('Nuevo trabajador'),
