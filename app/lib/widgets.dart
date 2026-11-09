@@ -1480,7 +1480,10 @@ class _TablaState extends State<Tabla> {
                                       ),
                                     ),
                                     // Asa para redimensionar (no en la última ni en las columnas sin título).
-                                    if (j < columnas.length - 1 && c.titulo.isNotEmpty)
+                                    // Tampoco antes de una última columna de solo icono (p. ej. el rayo): no se ensancha.
+                                    if (j < columnas.length - 1 &&
+                                        c.titulo.isNotEmpty &&
+                                        !(j == columnas.length - 2 && columnas.last.cabecera != null))
                                       _AsaColumna(
                                         onInicio: () {
                                           Tooltip.dismissAllToolTips();

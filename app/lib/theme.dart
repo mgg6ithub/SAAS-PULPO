@@ -48,6 +48,8 @@ class P {
   static const verde = Color(0xFF16A34A);
   static const rojo = Color(0xFFE5484D);
   static const ambar = Color(0xFFD97706);
+  /// Rayo de las automatizaciones (amarillo con brillo).
+  static const amarillo = Color(0xFFF5B800);
   static const azul = Color(0xFF2563EB);
   static const gris = Color(0xFF71717A);
 

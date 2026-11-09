@@ -242,9 +242,11 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   }
 
   Widget _tabla(List<Tarea> ts) => SegunTamano(
-    clave: (box) => (box.maxWidth > widget.umbralAncho, box.maxWidth > 600),
+    clave: (box) => (box.maxWidth > widget.umbralAncho, box.maxWidth > 600, box.maxWidth > 1100),
     builder: (context, box) {
       final ancho = box.maxWidth > widget.umbralAncho;
+      // Poco sitio (p. ej. media pantalla): columnas más estrechas y criticidad solo con su punto.
+      final apurado = box.maxWidth <= 1100;
       // Móvil: solo las columnas clave.
       final medio = box.maxWidth > 600;
       return Align(
@@ -258,22 +260,20 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4),
             if (medio && widget.conCliente) Col(m('Cliente'), flex: industrial ? 4 : 3),
-            if (industrial) const Col('Criticidad', ancho: 170),
-            if (industrial && medio) const Col('Asignado a', ancho: 96),
+            if (industrial)
+              apurado ? const Col('Crit.', ancho: 56, ayuda: 'Criticidad') : const Col('Criticidad', ancho: 170),
+            if (industrial && medio) Col('Asignado a', ancho: apurado ? 72 : 96),
             if (!industrial && ancho) const Col('Periodicidad', flex: 2),
             if (industrial && ancho) const Col('Fecha y hora', ancho: 160) else const Col('Fecha y hora', flex: 3),
             if (!industrial && medio) const Col('Asignado a', ancho: 96),
             if (industrial && ancho) const Col('Periodicidad', ancho: 120),
-            const Col('Estado', ancho: 140, derecha: true),
+            Col('Estado', ancho: industrial && apurado ? 116 : 140, derecha: true),
             if (industrial && medio)
-              Col(
+              const Col(
                 'Automatización',
-                ancho: 44,
+                ancho: 30,
                 derecha: true,
-                cabecera: Tooltip(
-                  message: 'Automatizaciones',
-                  child: Icon(Icons.bolt_rounded, size: 18, color: P.textoSuave),
-                ),
+                cabecera: Tooltip(message: 'Automatizaciones', child: _Rayo()),
               ),
             // Solo si algún trabajo de la lista tiene subtrabajos; al final y abreviada.
             if (!industrial && medio && ts.any((t) => store.hijas(t.id).isNotEmpty))
@@ -362,7 +362,14 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (industrial)
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
+                  child: t.tipoMantenimiento == null
+                      ? celdaTexto('—', suave: true)
+                      : apurado
+                      ? Tooltip(
+                          message: '${t.tipoMantenimiento!.etiqueta} · ${t.tipoMantenimiento!.descripcion}',
+                          child: puntoTipo(t.tipoMantenimiento!.color, tam: 10),
+                        )
+                      : PillTipo(t.tipoMantenimiento!),
                 ),
               if (industrial && medio)
                 t.esPlantilla
@@ -411,15 +418,13 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                   message: t.automatizaciones.isEmpty
                       ? 'Sin automatizaciones'
                       : '${t.automatizaciones.length} automatizaciones · ${t.automatizaciones.where((a) => a.activa).length} activas',
-                  child: Icon(
-                    t.automatizaciones.isEmpty
-                        ? Icons.remove_rounded
-                        : t.automatizaciones.any((a) => a.activa)
-                        ? Icons.bolt_rounded
-                        : Icons.pause_rounded,
-                    size: 18,
-                    color: P.textoSuave,
-                  ),
+                  child: t.automatizaciones.any((a) => a.activa)
+                      ? const _Rayo()
+                      : Icon(
+                          t.automatizaciones.isEmpty ? Icons.remove_rounded : Icons.pause_rounded,
+                          size: 16,
+                          color: P.textoSuave,
+                        ),
                 ),
               if (!industrial && medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
             ];
@@ -427,5 +432,18 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
         ),
       );
     },
+  );
+}
+
+/// Rayo de automatizaciones: amarillo con un brillo suave del mismo color.
+class _Rayo extends StatelessWidget {
+  const _Rayo();
+
+  @override
+  Widget build(BuildContext context) => Icon(
+    Icons.bolt_rounded,
+    size: 18,
+    color: P.amarillo,
+    shadows: [Shadow(color: P.amarillo.withValues(alpha: .55), blurRadius: 8)],
   );
 }
