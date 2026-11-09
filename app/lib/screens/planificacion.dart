@@ -50,8 +50,13 @@ class _PlanificacionState extends State<Planificacion> {
   // y guardar), el itinerario sigue exactamente donde estaba.
   static int? _vista;
   static DateTime? _dia;
-  int get vista => _vista ??=
-      (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? (industrial ? 1 : ajustes.vistaInicio)).clamp(0, 1);
+  // Pultec: solo el calendario (sin Plan).
+  int get vista => industrial
+      ? 1
+      : _vista ??= (int.tryParse(Uri.base.queryParameters['v'] ?? '') ?? (industrial ? 1 : ajustes.vistaInicio)).clamp(
+          0,
+          1,
+        );
   set vista(int v) => _vista = v;
   DateTime get dia => _dia ??= hoy();
   set dia(DateTime d) => _dia = d;
@@ -237,11 +242,13 @@ class _PlanificacionState extends State<Planificacion> {
                   ],
                 ],
               );
-              final vistas = Pestanas(
-                opciones: const ['Plan', 'Calendario'],
-                seleccion: vista,
-                onChanged: (i) => setState(() => vista = i),
-              );
+              final vistas = industrial
+                  ? const SizedBox.shrink()
+                  : Pestanas(
+                      opciones: const ['Plan', 'Calendario'],
+                      seleccion: vista,
+                      onChanged: (i) => setState(() => vista = i),
+                    );
               final acciones = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -695,7 +702,7 @@ class _BotonSinAsignar extends StatelessWidget {
         // Triángulo amarillo de aviso: hay trabajo sin técnico.
         const Icon(Icons.warning_amber_rounded, size: 18, color: P.ambar),
         // En móvil, solo el aviso y el número.
-        if (!esMovil(context)) ...const [SizedBox(width: 6), Text('Sin asignar')],
+        if (!esMovil(context)) ...const [SizedBox(width: 6), Text(industrial ? 'Sin fecha' : 'Sin asignar')],
         if (n > 0) ...[
           const SizedBox(width: 6),
           Container(

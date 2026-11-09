@@ -253,54 +253,69 @@ class _MesCalendario extends StatelessWidget {
   );
   Widget _celda(BuildContext context, DateTime d, int capacidad, double alto) {
     final lista = visitas[d] ?? [];
-    return Container(
-      decoration: BoxDecoration(
-        color: d.month != dia.month ? P.fondo : P.superficie,
-        border: Border(
-          top: BorderSide(color: P.borde),
-          right: BorderSide(color: P.borde),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: 34,
-            child: InkWell(
-              onTap: () => onDia(d),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(mainAxisSize: MainAxisSize.min, children: [_NumeroDia(d)]),
-              ),
-            ),
+    // Soltar aquí una orden de «Sin fecha» le pone este día.
+    return DragTarget<Tarea>(
+      onAcceptWithDetails: (e) => _ponerFecha(e.data, d),
+      builder: (context, candidatos, _) => Container(
+        decoration: BoxDecoration(
+          color: candidatos.isNotEmpty
+              ? P.moradoSuave
+              : d.month != dia.month
+              ? P.fondo
+              : P.superficie,
+          border: Border(
+            top: BorderSide(color: P.borde),
+            right: BorderSide(color: P.borde),
           ),
-          for (final v in lista.take(capacidad))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: SizedBox(
-                height: alto - 3,
-                child: _EventoCalendario(v, compacto: true, onDetalle: onDetalle),
-              ),
-            ),
-          if (lista.length > capacidad)
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             SizedBox(
-              height: 25,
+              height: 34,
               child: InkWell(
                 onTap: () => onDia(d),
-                child: Center(
-                  child: Text(
-                    '+${lista.length - capacidad} más',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: P.moradoOscuro),
-                  ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [_NumeroDia(d)]),
                 ),
               ),
             ),
-        ],
+            for (final v in lista.take(capacidad))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: SizedBox(
+                  height: alto - 3,
+                  child: _EventoCalendario(v, compacto: true, onDetalle: onDetalle),
+                ),
+              ),
+            if (lista.length > capacidad)
+              SizedBox(
+                height: 25,
+                child: InkWell(
+                  onTap: () => onDia(d),
+                  child: Center(
+                    child: Text(
+                      '+${lista.length - capacidad} más',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: P.moradoOscuro),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
+}
+
+/// Pone fecha (y, si se sabe, hora) a una orden arrastrada desde «Sin fecha»; sale de la lista.
+void _ponerFecha(Tarea t, DateTime d, {int? inicioMin}) {
+  final c = t.copia()..proximo = d;
+  if (inicioMin != null) c.inicioMin = inicioMin;
+  store.guardarTarea(c);
 }
 
 class _NumeroDia extends StatelessWidget {
@@ -429,15 +444,33 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
                                 top: 0,
                                 bottom: 0,
                                 width: columna,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.translucent,
-                                  onTapUp: (e) => abrirTareaForm(
-                                    context,
-                                    null,
-                                    fecha: dias[i],
-                                    horaMin: ((e.localPosition.dy / hora * 60) ~/ 15 * 15).clamp(0, 1425),
+                                // Soltar una orden de «Sin fecha» le pone este día y la hora donde cae.
+                                child: Builder(
+                                  builder: (columnaCtx) => DragTarget<Tarea>(
+                                    onAcceptWithDetails: (e) {
+                                      final y = (columnaCtx.findRenderObject() as RenderBox).globalToLocal(e.offset).dy;
+                                      _ponerFecha(
+                                        e.data,
+                                        dias[i],
+                                        inicioMin: ((y / hora * 60) ~/ 15 * 15).clamp(0, 1425),
+                                      );
+                                    },
+                                    builder: (context, candidatos, _) => GestureDetector(
+                                      behavior: HitTestBehavior.translucent,
+                                      onTapUp: (e) => abrirTareaForm(
+                                        context,
+                                        null,
+                                        fecha: dias[i],
+                                        horaMin: ((e.localPosition.dy / hora * 60) ~/ 15 * 15).clamp(0, 1425),
+                                      ),
+                                      child: ColoredBox(
+                                        color: candidatos.isEmpty
+                                            ? Colors.transparent
+                                            : P.moradoSuave.withValues(alpha: .5),
+                                        child: const SizedBox.expand(),
+                                      ),
+                                    ),
                                   ),
-                                  child: const SizedBox.expand(),
                                 ),
                               ),
                             for (var i = 0; i < 7; i++)

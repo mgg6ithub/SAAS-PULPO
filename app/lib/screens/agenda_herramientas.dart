@@ -347,8 +347,10 @@ class PanelSinAsignar extends StatelessWidget {
             (t) =>
                 !t.esPlantilla &&
                 t.activa &&
-                t.trabajadorIds.isEmpty &&
-                (t.proximo == null || diasHasta(t.proximo!) <= 30),
+                // Pultec: la lista es de órdenes sin fecha (sin técnico es otra cosa).
+                (industrial
+                    ? t.proximo == null
+                    : t.trabajadorIds.isEmpty && (t.proximo == null || diasHasta(t.proximo!) <= 30)),
           )
           .toList()
         ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
@@ -376,11 +378,13 @@ class PanelSinAsignar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      m('Trabajos sin asignar'),
+                      industrial ? 'Órdenes de trabajo sin fecha' : m('Trabajos sin asignar'),
                       style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                     Text(
-                      m('Pulsa un trabajo para asignarlo o arrástralo'),
+                      industrial
+                          ? 'Arrástrala a un día del calendario para darle fecha'
+                          : m('Pulsa un trabajo para asignarlo o arrástralo'),
                       style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                     ),
                   ],
@@ -406,7 +410,7 @@ class PanelSinAsignar extends StatelessWidget {
           Divider(height: 1, color: P.borde),
           Expanded(
             child: ts.isEmpty
-                ? const Vacio(icono: Icons.task_alt_rounded, texto: 'Todo tiene técnico')
+                ? Vacio(icono: Icons.task_alt_rounded, texto: industrial ? 'Todo tiene fecha' : 'Todo tiene técnico')
                 : ListView.separated(
                     itemCount: ts.length,
                     separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),

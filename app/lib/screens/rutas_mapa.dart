@@ -495,15 +495,26 @@ class _DialogoPlanificando extends StatefulWidget {
   State<_DialogoPlanificando> createState() => _DialogoPlanificandoState();
 }
 
-class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
+class _DialogoPlanificandoState extends State<_DialogoPlanificando> with SingleTickerProviderStateMixin {
   late final VideoPlayerController _video;
   late final Future<void> _videoListo;
+
+  /// Pultec: sin vídeo; el logo crece y encoge mientras organiza.
+  late final _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))
+    ..repeat(reverse: true);
 
   @override
   void initState() {
     super.initState();
     _video = VideoPlayerController.asset('assets/videos/pulpo-animacione.mp4');
-    _videoListo = _iniciarVideo();
+    if (industrial) {
+      _videoListo = Future<void>.value();
+      Future<void>.delayed(const Duration(seconds: 4), () {
+        if (mounted) Navigator.of(context).pop();
+      });
+    } else {
+      _videoListo = _iniciarVideo();
+    }
   }
 
   Future<void> _iniciarVideo() async {
@@ -522,6 +533,7 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
 
   @override
   void dispose() {
+    _latido.dispose();
     _video.dispose();
     super.dispose();
   }
@@ -538,21 +550,27 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              FutureBuilder<void>(
-                future: _videoListo,
-                builder: (context, snapshot) => ClipRRect(
-                  borderRadius: BorderRadius.circular(P.radioControl),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: altoVideo),
-                    child: snapshot.connectionState == ConnectionState.done && !snapshot.hasError
-                        ? AspectRatio(aspectRatio: _video.value.aspectRatio, child: VideoPlayer(_video))
-                        : AspectRatio(
-                            aspectRatio: 878 / 762,
-                            child: Center(child: CircularProgressIndicator(color: P.morado)),
-                          ),
+              if (industrial)
+                ScaleTransition(
+                  scale: Tween(begin: .8, end: 1.1).animate(CurvedAnimation(parent: _latido, curve: Curves.easeInOut)),
+                  child: const LogoPulpo(size: 120),
+                )
+              else
+                FutureBuilder<void>(
+                  future: _videoListo,
+                  builder: (context, snapshot) => ClipRRect(
+                    borderRadius: BorderRadius.circular(P.radioControl),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: altoVideo),
+                      child: snapshot.connectionState == ConnectionState.done && !snapshot.hasError
+                          ? AspectRatio(aspectRatio: _video.value.aspectRatio, child: VideoPlayer(_video))
+                          : AspectRatio(
+                              aspectRatio: 878 / 762,
+                              child: Center(child: CircularProgressIndicator(color: P.morado)),
+                            ),
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 14),
               Text(
                 m('El pulpo está planificando…'),
