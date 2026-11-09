@@ -910,7 +910,14 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
   Widget build(BuildContext context) {
     final v = widget.visita, t = widget.visita.tarea;
     final color = t.colorBloque;
-    final texto = '${v.inicio == null ? 'Sin hora' : hhmm(v.inicio!)} · ${t.nombre}';
+    final texto = industrial
+        // Pultec: sin «Sin hora ·»; lo que falta lo dice el triángulo.
+        ? (v.inicio == null ? t.nombre : '${hhmm(v.inicio!)}  ${t.nombre}')
+        : '${v.inicio == null ? 'Sin hora' : hhmm(v.inicio!)} · ${t.nombre}';
+    // Pultec: orden sin concretar. Sin técnico = rojo (nadie la recibe ni le llega el aviso); solo sin hora = ámbar.
+    final sinTecnico = industrial && !v.hecha && t.trabajadorIds.isEmpty;
+    final sinHora = industrial && !v.hecha && v.inicio == null;
+    final falta = [if (sinTecnico) 'Sin técnico', if (sinHora) 'Sin hora'];
     return OverlayPortal(
       controller: portal,
       overlayChildBuilder: (context) {
@@ -1061,7 +1068,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
         onExit: (_) => _salir(),
         child: Semantics(
           button: true,
-          label: '$texto. Abrir resumen',
+          label: '$texto${falta.isEmpty ? '' : ', ${falta.join(' y ').toLowerCase()}'}. Abrir resumen',
           child: Material(
             color: Color.alphaBlend(color.withValues(alpha: .11), P.superficie),
             borderRadius: BorderRadius.circular(6),
@@ -1078,17 +1085,33 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                   builder: (context, box) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.compacto ? texto : t.nombre,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          height: 1.1,
-                          fontSize: widget.compacto ? 11 : 12,
-                          color: P.texto,
-                          fontWeight: FontWeight.w600,
-                          decoration: v.hecha ? TextDecoration.lineThrough : null,
-                        ),
+                      Row(
+                        children: [
+                          if (falta.isNotEmpty) ...[
+                            // Sin Tooltip (cada uno crea una capa y con cientos de órdenes pesa): lo que falta se
+                            // lee en el resumen al pasar el ratón y en la etiqueta accesible.
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              size: widget.compacto ? 13 : 14,
+                              color: sinTecnico ? P.rojo : P.ambar,
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Expanded(
+                            child: Text(
+                              widget.compacto ? texto : t.nombre,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                height: 1.1,
+                                fontSize: widget.compacto ? 11 : 12,
+                                color: P.texto,
+                                fontWeight: FontWeight.w600,
+                                decoration: v.hecha ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       if (!widget.compacto && box.maxHeight >= 35 * MediaQuery.textScalerOf(context).scale(1))
                         Text(
