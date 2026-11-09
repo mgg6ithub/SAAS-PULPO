@@ -518,6 +518,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   int _estadoOrden = 0;
   int _asignacionOt = 0;
 
+  /// Órdenes de trabajo del activo: pendientes o, aparte, el histórico (como en Órdenes de trabajo).
+  bool _historicoOt = false;
+
   int get pestana => _pestana;
   set pestana(int v) => _pestana = v;
 
@@ -723,11 +726,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               spacing: 12, runSpacing: 8,
               children: [
                 Pestanas(
+            // El histórico va dentro de Órdenes de trabajo (Pendientes / Histórico), no en otra pestaña.
             opciones: const [
               'Resumen',
               'Datos',
               'Órdenes de trabajo',
-              'Histórico',
             ],
             seleccion: pestana,
             onChanged: (i) => setState(() {
@@ -735,10 +738,24 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
             }),
           ),
                 if (pestana == 2)
-                  FiltroFlujoMantenimiento(
-                    incluirSinOrden: false,
-                    seleccion: _asignacionOt,
-                    onChanged: (i) => setState(() => _asignacionOt = i),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Pestanas(
+                        opciones: const ['Pendientes', 'Histórico'],
+                        iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                        seleccion: _historicoOt ? 1 : 0,
+                        onChanged: (i) => setState(() => _historicoOt = i == 1),
+                      ),
+                      if (!_historicoOt)
+                        FiltroFlujoMantenimiento(
+                          incluirSinOrden: false,
+                          seleccion: _asignacionOt,
+                          onChanged: (i) => setState(() => _asignacionOt = i),
+                        ),
+                    ],
                   ),
               ],
             ),
@@ -752,7 +769,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                 children: [...anteriores, ?actual],
               ),
               child: KeyedSubtree(
-                key: ValueKey('$elegido-$pestana'),
+                key: ValueKey('$elegido-$pestana-$_historicoOt'),
                 child: switch (pestana) {
                   0 => Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -868,8 +885,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       onTerminar: () => setState(() => vuelta++),
                     ),
                   ),
-                  // Solo las pendientes: las hechas están en Histórico.
-                  2 => Column(
+                  // Pendientes; con «Histórico», las hechas (abajo).
+                  2 when !_historicoOt => Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(child: Builder(builder: (context) {
