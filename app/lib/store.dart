@@ -258,6 +258,9 @@ class Store extends ChangeNotifier {
 
   /// Pultec: avisos de avería de los activos.
   List<Incidencia> incidencias = [];
+
+  /// Pultec: grupos de técnicos.
+  List<GrupoTecnicos> grupos = [];
   SharedPreferences? _prefs;
 
   /// Con sesión iniciada, cada cambio se guarda en Supabase en vez de en el navegador.
@@ -297,6 +300,7 @@ class Store extends ChangeNotifier {
     activos = d.activos;
     planes = d.planes;
     incidencias = d.incidencias;
+    grupos = d.grupos;
     tipos = tiposParaMarca(d.tipos.isEmpty ? [...tiposBase] : d.tipos);
     // Pultec: las especialidades nuevas de la base también salen en empresas que ya tenían su lista.
     competencias = competenciasParaMarca(
@@ -330,6 +334,7 @@ class Store extends ChangeNotifier {
     activos = [];
     planes = [];
     incidencias = [];
+    grupos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     usoPlantillas = [];
@@ -349,6 +354,7 @@ class Store extends ChangeNotifier {
     activos = [];
     planes = [];
     incidencias = [];
+    grupos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     notifyListeners();
@@ -377,6 +383,7 @@ class Store extends ChangeNotifier {
       activos = [for (final x in j['activos'] as List? ?? []) Activo.fromJson(x)];
       planes = [for (final x in j['planes'] as List? ?? []) PlanMantenimiento.fromJson(x)];
       incidencias = [for (final x in j['incidencias'] as List? ?? []) Incidencia.fromJson(x)];
+      grupos = [for (final x in j['grupos'] as List? ?? []) GrupoTecnicos.fromJson(x)];
       if (j['tipos'] case final List l when l.isNotEmpty) tipos = [for (final x in l) TipoInfo.fromJson(x)];
       if (j['competencias'] case final List l when l.isNotEmpty) competencias = List<String>.from(l);
       // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
@@ -419,6 +426,7 @@ class Store extends ChangeNotifier {
         if (activos.isNotEmpty) 'activos': [for (final x in activos) x.toJson()],
         if (planes.isNotEmpty) 'planes': [for (final x in planes) x.toJson()],
         if (incidencias.isNotEmpty) 'incidencias': [for (final x in incidencias) x.toJson()],
+        if (grupos.isNotEmpty) 'grupos': [for (final x in grupos) x.toJson()],
         'competencias': competencias,
       }),
     );
@@ -645,6 +653,62 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
+  // ── Grupos de técnicos (Pultec) ──
+  GrupoTecnicos? grupo(String? id) => id == null ? null : grupos.where((g) => g.id == id).firstOrNull;
+
+  List<Trabajador> tecnicosDe(String grupoId) =>
+      trabajadores.where((w) => w.activo && w.grupoId == grupoId).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
+
+  /// ¿Ya hay otro grupo con ese nombre? (no se repiten, sin distinguir mayúsculas).
+  bool nombreGrupoUsado(String nombre, {String? salvo}) =>
+      grupos.any((g) => g.id != salvo && g.nombre.trim().toLowerCase() == nombre.trim().toLowerCase());
+
+  void guardarGrupo(GrupoTecnicos g) {
+    _poner(grupos, g, (x) => x.id == g.id);
+    _cambio();
+  }
+
+  void borrarGrupo(String id) {
+    grupos.removeWhere((g) => g.id == id);
+    for (final w in trabajadores.where((w) => w.grupoId == id)) {
+      w.grupoId = null;
+    }
+    for (final t in [...tareas, ...subtareas].where((t) => t.grupoId == id)) {
+      t.grupoId = null;
+    }
+    for (final p in planes.where((p) => p.grupoId == id)) {
+      p.grupoId = null;
+    }
+    _cambio();
+  }
+
+  /// Técnico del grupo más libre para [t]: el que menos OT abiertas tiene ese día y, a igualdad, en total.
+  /// Igual que la base (`private.tecnico_del_grupo`). Hoy, los ausentes no cuentan.
+  Trabajador? tecnicoMasLibre(String grupoId, DateTime? dia) {
+    final d = dia ?? hoy();
+    final ws = tecnicosDe(grupoId).where((w) => !(DateUtils.isSameDay(d, hoy()) && w.estadoHoy == EstadoHoy.ausente));
+    int abiertas(Trabajador w, {bool soloDia = false}) => tareas
+        .where((t) => t.activa && !t.esPlantilla && t.trabajadorIds.contains(w.id) &&
+            t.estado != EstadoTrabajo.realizado && (!soloDia || (t.proximo != null && DateUtils.isSameDay(t.proximo, d))))
+        .length;
+    final lista = ws.toList()
+      ..sort((a, b) {
+        final c = abiertas(a, soloDia: true).compareTo(abiertas(b, soloDia: true));
+        if (c != 0) return c;
+        final c2 = abiertas(a).compareTo(abiertas(b));
+        return c2 != 0 ? c2 : a.id.compareTo(b.id);
+      });
+    return lista.firstOrNull;
+  }
+
+  /// Asigna [t] a un grupo: queda apuntado y se reparte al técnico más libre (si hay alguno).
+  void asignarAGrupo(Tarea t, String grupoId) {
+    final w = tecnicoMasLibre(grupoId, t.proximo);
+    t
+      ..grupoId = grupoId
+      ..trabajadorIds = [?w?.id];
+  }
+
   // ── Trabajadores ──
   Trabajador? trabajador(String id) {
     for (final w in trabajadores) {
@@ -660,6 +724,9 @@ class Store extends ChangeNotifier {
 
   void borrarTrabajador(String id) {
     trabajadores.removeWhere((w) => w.id == id);
+    for (final p in planes.where((p) => p.trabajadorId == id)) {
+      p.trabajadorId = null;
+    }
     for (final t in tareas) {
       t.trabajadorIds.remove(id);
     }
@@ -1242,6 +1309,7 @@ class Store extends ChangeNotifier {
     activos = [];
     planes = [];
     incidencias = [];
+    grupos = [];
     tareas = industrial ? plantillasIndustriales() : [
       Tarea(
         id: 'p1',

@@ -1208,6 +1208,29 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
             ),
           ),
           const SizedBox(height: 12),
+          // Pultec: grupo de técnicos (se crean en Técnicos → Grupos).
+          if (industrial) ...[
+            etiqueta('Grupo'),
+            conMargen(
+              BotonMenu<String>(
+                relleno: EdgeInsets.zero,
+                tooltip: store.grupos.isEmpty ? 'Crea grupos en Técnicos → Grupos' : 'Grupo de técnicos',
+                seleccionado: w.grupoId ?? '',
+                opciones: [
+                  ('', const Text('Sin grupo')),
+                  for (final g in [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre)))
+                    (g.id, Text(g.area.isEmpty ? g.nombre : '${g.nombre} · ${g.area}')),
+                ],
+                onSelected: (v) => setState(() => w.grupoId = v.isEmpty ? null : v),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+                  ),
+                  child: Text(store.grupo(w.grupoId)?.nombre ?? 'Sin grupo'),
+                ),
+              ),
+            ),
+          ],
           campo(
             industrial ? 'Habilitaciones y formación' : 'Títulos y carnés',
             titulos,
@@ -2383,6 +2406,36 @@ class SelectorTrabajadores extends StatelessWidget {
     this.avisoVacio = false,
   });
 
+  /// Un técnico del menú: casilla, avatar y si es apto. Elegirlo a mano fuera del grupo de la OT la saca del grupo.
+  Widget _filaTecnico(Trabajador w) => MenuItemButton(
+    closeOnActivate: false,
+    leadingIcon: Icon(
+      t.trabajadorIds.contains(w.id) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+      size: 20,
+      color: t.trabajadorIds.contains(w.id) ? P.morado : P.textoSuave,
+    ),
+    trailingIcon: store.esApto(w, t)
+        ? const Pill('Apto', P.verde, punto: true)
+        : Pill('Le falta: ${store.faltan(w, t).join(', ')}', P.gris),
+    onPressed: t.trabajadorIds.contains(w.id) || store.puedeRecibir(w, t)
+        ? () {
+            t.trabajadorIds.contains(w.id) ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id);
+            if (w.grupoId != t.grupoId) t.grupoId = null;
+            onCambio();
+          }
+        : null,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 180),
+      child: Row(
+        children: [
+          Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
+          const SizedBox(width: 8),
+          Opacity(opacity: store.esApto(w, t) ? 1 : .55, child: Text(w.nombreCompleto)),
+        ],
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final ws = store.trabajadores.where((w) => w.activo).toList()
@@ -2396,35 +2449,48 @@ class SelectorTrabajadores extends StatelessWidget {
         shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
       ),
       menuChildren: [
-        if (ws.isEmpty) MenuItemButton(child: Text(m('Aún no tienes trabajadores'))),
-        for (final w in ws)
-          MenuItemButton(
-            closeOnActivate: false,
-            leadingIcon: Icon(
-              t.trabajadorIds.contains(w.id) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-              size: 20,
-              color: t.trabajadorIds.contains(w.id) ? P.morado : P.textoSuave,
-            ),
-            trailingIcon: store.esApto(w, t)
-                ? const Pill('Apto', P.verde, punto: true)
-                : Pill('Le falta: ${store.faltan(w, t).join(', ')}', P.gris),
-            onPressed: t.trabajadorIds.contains(w.id) || store.puedeRecibir(w, t)
-                ? () {
-                    t.trabajadorIds.contains(w.id) ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id);
+        if (ws.isEmpty)
+          MenuItemButton(child: Text(m('Aún no tienes trabajadores')))
+        // Pultec con grupos: primero los grupos (cada uno abre sus técnicos), luego los técnicos sin grupo.
+        else if (industrial && store.grupos.isNotEmpty) ...[
+          for (final g in [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre)))
+            SubmenuButton(
+              menuStyle: MenuStyle(backgroundColor: WidgetStatePropertyAll(P.superficie)),
+              menuChildren: [
+                MenuItemButton(
+                  leadingIcon: Icon(
+                    t.grupoId == g.id ? Icons.check_circle_rounded : Icons.groups_outlined,
+                    size: 20,
+                    color: t.grupoId == g.id ? P.morado : P.textoSuave,
+                  ),
+                  onPressed: () {
+                    store.asignarAGrupo(t, g.id);
                     onCambio();
-                  }
-                : null,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 180),
-              child: Row(
-                children: [
-                  Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
-                  const SizedBox(width: 8),
-                  Opacity(opacity: store.esApto(w, t) ? 1 : .55, child: Text(w.nombreCompleto)),
-                ],
+                  },
+                  child: const Text('Repartir en el grupo'),
+                ),
+                const Divider(height: 8),
+                if (ws.every((w) => w.grupoId != g.id))
+                  MenuItemButton(onPressed: null, child: Text('Sin técnicos', style: TextStyle(color: P.textoSuave)))
+                else
+                  for (final w in ws.where((w) => w.grupoId == g.id)) _filaTecnico(w),
+              ],
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 180),
+                child: Row(
+                  children: [
+                    Text(g.nombre, style: TextStyle(fontWeight: t.grupoId == g.id ? FontWeight.w700 : FontWeight.w500)),
+                    if (g.area.isNotEmpty) Text(' · ${g.area}', style: TextStyle(color: P.textoSuave)),
+                  ],
+                ),
               ),
             ),
-          ),
+          if (ws.any((w) => store.grupo(w.grupoId) == null)) ...[
+            const Divider(height: 8),
+            for (final w in ws.where((w) => store.grupo(w.grupoId) == null)) _filaTecnico(w),
+          ],
+        ] else
+          for (final w in ws) _filaTecnico(w),
         if (!industrial &&
             ofrecerSubtrabajos &&
             store.descendientes(t.id).isNotEmpty &&
@@ -2466,14 +2532,14 @@ class SelectorTrabajadores extends StatelessWidget {
                 child: AvataresTrabajadores(t.trabajadorIds, size: 22),
               )
             : elegidos.isEmpty
-            ? Text(textoSinAsignar, style: TextStyle(color: P.textoSuave))
+            ? Text(store.grupo(t.grupoId)?.nombre ?? textoSinAsignar, style: TextStyle(color: P.textoSuave))
             : Row(
                 children: [
                   AvataresTrabajadores(t.trabajadorIds, size: 24),
                   const SizedBox(width: 10),
                   Flexible(
                     child: Text(
-                      elegidos.map((w) => w.nombre).join(', '),
+                      [?store.grupo(t.grupoId)?.nombre, elegidos.map((w) => w.nombre).join(', ')].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600),

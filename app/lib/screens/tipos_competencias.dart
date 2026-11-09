@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
+import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -300,6 +301,132 @@ class _NuevaCompetenciaState extends State<_NuevaCompetencia> {
           controller: texto,
           onSubmitted: (_) => _anadir(),
           decoration: const InputDecoration(isDense: true, hintText: 'Nueva competencia'),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Enlace('Añadir', onTap: _anadir),
+    ],
+  );
+}
+
+// ── Grupos de técnicos (Pultec) ──
+
+/// Grupos de técnicos: nombre (no se repite) y área. Una OT asignada a un grupo se reparte al técnico más libre.
+Future<void> abrirGrupos(BuildContext context) => _dialogo(
+  context,
+  'Grupos de técnicos',
+  'Agrupa a tus técnicos (p. ej. «Hidráulica A»). Una orden asignada a un grupo se reparte sola al técnico más libre. '
+      'Cada técnico elige su grupo en su ficha.',
+  (context) => [
+    for (final g in [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre)))
+      _FilaGrupo(g, key: ValueKey('${g.id}-${g.nombre}')),
+    const SizedBox(height: 8),
+    const _NuevoGrupo(),
+  ],
+);
+
+void _avisoNombreUsado(BuildContext context, String nombre) => ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(width: 360, content: Text('Ya hay un grupo llamado «$nombre»')),
+);
+
+class _FilaGrupo extends StatelessWidget {
+  final GrupoTecnicos g;
+  const _FilaGrupo(this.g, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final n = store.tecnicosDe(g.id).length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: _CampoNombre(g.nombre, (nuevo) {
+              if (store.nombreGrupoUsado(nuevo, salvo: g.id)) return _avisoNombreUsado(context, nuevo);
+              store.guardarGrupo(g..nombre = nuevo);
+            }),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: BotonMenu<String>(
+              relleno: EdgeInsets.zero,
+              tooltip: 'Área del grupo',
+              seleccionado: g.area,
+              opciones: [('', const Text('Sin área')), for (final c in competencias) (c, Text(c))],
+              onSelected: (a) => store.guardarGrupo(g..area = a),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  isDense: true,
+                  suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+                ),
+                child: Text(g.area.isEmpty ? 'Sin área' : g.area, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 92,
+            child: Text(
+              '$n ${n == 1 ? 'técnico' : 'técnicos'}',
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              tooltip: 'Quitar',
+              onPressed: () async {
+                if (await confirmar(
+                  context,
+                  '¿Quitar el grupo «${g.nombre}»? Sus técnicos se quedan sin grupo.',
+                  accion: 'Quitar',
+                )) {
+                  store.borrarGrupo(g.id);
+                }
+              },
+              icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NuevoGrupo extends StatefulWidget {
+  const _NuevoGrupo();
+
+  @override
+  State<_NuevoGrupo> createState() => _NuevoGrupoState();
+}
+
+class _NuevoGrupoState extends State<_NuevoGrupo> {
+  final texto = TextEditingController();
+
+  void _anadir() {
+    final n = texto.text.trim();
+    if (n.isEmpty) return;
+    if (store.nombreGrupoUsado(n)) return _avisoNombreUsado(context, n);
+    store.guardarGrupo(GrupoTecnicos(id: store.nuevoId(), nombre: n));
+    texto.clear();
+  }
+
+  @override
+  void dispose() {
+    texto.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: TextField(
+          controller: texto,
+          onSubmitted: (_) => _anadir(),
+          decoration: const InputDecoration(isDense: true, hintText: 'Nuevo grupo, p. ej. Hidráulica A'),
         ),
       ),
       const SizedBox(width: 8),

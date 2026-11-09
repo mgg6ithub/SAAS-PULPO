@@ -449,6 +449,19 @@ class _PlanFormState extends State<PlanForm> {
       ..preparar = preparar.text.trim()
       ..empresaExterna = p.subcontratado ? empresaExterna.text.trim() : '';
     store.guardarPlan(p);
+    // Su OT pendiente aún sin técnico recibe la asignación nueva (las siguientes ya las asigna la base).
+    final ot = store.tareas.where((t) => t.planId == p.id && t.activa && otPendiente(t)).firstOrNull;
+    if (ot != null && ot.trabajadorIds.isEmpty && (p.trabajadorId != null || p.grupoId != null)) {
+      final c = ot.copia();
+      if (p.trabajadorId != null) {
+        c
+          ..trabajadorIds = [p.trabajadorId!]
+          ..grupoId = null;
+      } else {
+        store.asignarAGrupo(c, p.grupoId!);
+      }
+      store.guardarTarea(c);
+    }
     Navigator.pop(context);
   }
 
@@ -535,7 +548,19 @@ class _PlanFormState extends State<PlanForm> {
             ),
           ],
         ),
-        Bloque('Quién y cuánto', descripcion: 'Solo los técnicos de esta categoría pueden recibir la OT.', [
+        Bloque('Quién y cuánto', descripcion: 'A quién va su orden de trabajo (un técnico o un grupo) y cuánto dura.', [
+          etiqueta('Asignar a'),
+          conMargen(
+            SelectorAsignacionPlan(
+              trabajadorId: p.trabajadorId,
+              grupoId: p.grupoId,
+              onChanged: (w, g) => setState(() {
+                p.trabajadorId = w;
+                p.grupoId = g;
+              }),
+            ),
+          ),
+          const SizedBox(height: 12),
           dos(
             conMargen(
               Column(
@@ -606,3 +631,96 @@ class _PlanFormState extends State<PlanForm> {
     );
   }
 }
+
+/// «Asignar a» del mantenimiento, con la misma forma que el desplegable de técnicos: primero los grupos (cada uno
+/// abre «Repartir en el grupo» y sus técnicos), luego los técnicos sin grupo. Uno solo, o nadie.
+class SelectorAsignacionPlan extends StatelessWidget {
+  final String? trabajadorId, grupoId;
+  final void Function(String? trabajadorId, String? grupoId) onChanged;
+  const SelectorAsignacionPlan({super.key, this.trabajadorId, this.grupoId, required this.onChanged});
+
+  Widget _marca(bool si) => Icon(
+    si ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+    size: 20,
+    color: si ? P.morado : P.textoSuave,
+  );
+
+  Widget _tecnico(Trabajador w) => MenuItemButton(
+    leadingIcon: _marca(trabajadorId == w.id),
+    onPressed: () => onChanged(w.id, null),
+    child: Row(
+      children: [
+        Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
+        const SizedBox(width: 8),
+        Text(w.nombreCompleto),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final ws = store.trabajadores.where((w) => w.activo).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
+    final grupos = [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre));
+    final sueltos = ws.where((w) => store.grupo(w.grupoId) == null).toList();
+    final g = store.grupo(grupoId);
+    final w = trabajadorId == null ? null : store.trabajador(trabajadorId!);
+    return MenuAnchor(
+      alignmentOffset: const Offset(0, 4),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(P.superficie),
+        maximumSize: const WidgetStatePropertyAll(Size(420, 420)),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+      ),
+      menuChildren: [
+        MenuItemButton(
+          leadingIcon: _marca(w == null && g == null),
+          onPressed: () => onChanged(null, null),
+          child: const Text('Sin asignar'),
+        ),
+        if (grupos.isNotEmpty) const Divider(height: 8),
+        for (final x in grupos)
+          SubmenuButton(
+            menuStyle: MenuStyle(backgroundColor: WidgetStatePropertyAll(P.superficie)),
+            menuChildren: [
+              MenuItemButton(
+                leadingIcon: _marca(grupoId == x.id),
+                onPressed: () => onChanged(null, x.id),
+                child: const Text('Repartir en el grupo'),
+              ),
+              const Divider(height: 8),
+              if (store.tecnicosDe(x.id).isEmpty)
+                MenuItemButton(onPressed: null, child: Text('Sin técnicos', style: TextStyle(color: P.textoSuave)))
+              else
+                for (final t in store.tecnicosDe(x.id)) _tecnico(t),
+            ],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 180),
+              child: Row(
+                children: [
+                  Text(x.nombre, style: TextStyle(fontWeight: grupoId == x.id ? FontWeight.w700 : FontWeight.w500)),
+                  if (x.area.isNotEmpty) Text(' · ${x.area}', style: TextStyle(color: P.textoSuave)),
+                ],
+              ),
+            ),
+          ),
+        if (sueltos.isNotEmpty) ...[const Divider(height: 8), for (final t in sueltos) _tecnico(t)],
+      ],
+      builder: (context, menu, _) => InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => menu.isOpen ? menu.close() : menu.open(),
+        child: InputDecorator(
+          decoration: InputDecoration(suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave)),
+          child: Text(
+            w != null
+                ? w.nombreCompleto
+                : g != null
+                ? '${g.nombre} (se reparte)'
+                : 'Sin asignar',
+            style: TextStyle(color: w == null && g == null ? P.textoSuave : P.texto),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

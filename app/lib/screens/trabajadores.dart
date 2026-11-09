@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'tipos_competencias.dart' show abrirGrupos;
 import '../marca.dart';
 
 class Trabajadores extends StatefulWidget {
@@ -82,6 +83,12 @@ class _TrabajadoresState extends State<Trabajadores> {
                           onChanged: (i) => setState(() => estado = i),
                         ),
                         _FiltroCompetencia(competencia, (v) => setState(() => competencia = v)),
+                        // Pultec: crear y ordenar los grupos de técnicos.
+                        if (industrial)
+                          Enlace(
+                            store.grupos.isEmpty ? 'Crear grupos' : 'Grupos · ${store.grupos.length}',
+                            onTap: () => abrirGrupos(context),
+                          ),
                       ],
                       derecha: [
                         Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),

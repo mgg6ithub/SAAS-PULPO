@@ -35,6 +35,9 @@ class PlanMantenimiento {
   String avisoCorreos, preparar, empresaExterna;
   bool subcontratado;
 
+  /// A quién va su OT: un técnico fijo o un grupo (se reparte); ninguno = sin asignar.
+  String? trabajadorId, grupoId;
+
   PlanMantenimiento({
     required this.id,
     required this.activoId,
@@ -58,6 +61,8 @@ class PlanMantenimiento {
     this.preparar = '',
     this.subcontratado = false,
     this.empresaExterna = '',
+    this.trabajadorId,
+    this.grupoId,
   }) : prioridad = prioridad ?? PrioridadMantenimiento.values[tipo.index];
 
   /// "Cada 90 días · cada 500 h", o lo que haya.
@@ -77,6 +82,7 @@ class PlanMantenimiento {
     descripcion: descripcion,
     activoId: activoId,
     planId: this.id,
+    grupoId: grupoId,
     // Sin cliente sería plantilla: una OT de un activo es un trabajo de verdad.
     plantilla: false,
     tipoMantenimiento: tipo,
@@ -111,6 +117,8 @@ class PlanMantenimiento {
     'preparar': preparar,
     'subcontratado': subcontratado,
     'empresaExterna': empresaExterna,
+    'trabajadorId': trabajadorId,
+    'grupoId': grupoId,
   };
 
   factory PlanMantenimiento.fromJson(Map<String, dynamic> j) => PlanMantenimiento(
@@ -135,6 +143,8 @@ class PlanMantenimiento {
     preparar: j['preparar'] as String? ?? '',
     subcontratado: j['subcontratado'] as bool? ?? false,
     empresaExterna: j['empresaExterna'] as String? ?? '',
+    trabajadorId: j['trabajadorId'] as String?,
+    grupoId: j['grupoId'] as String?,
   );
 
   PlanMantenimiento copia() => PlanMantenimiento.fromJson(toJson());

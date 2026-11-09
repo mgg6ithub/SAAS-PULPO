@@ -699,6 +699,7 @@ class Nube {
       if (industrial) _todo('activos'),
       if (industrial) _todo('planes_mantenimiento'),
       if (industrial) _todo('incidencias'),
+      if (industrial) _todo('grupos'),
     ]);
     final precioDe = {for (final x in r[11]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
@@ -787,6 +788,10 @@ class Nube {
         if (industrial)
           for (final x in r[14]) _incidencia(x),
       ],
+      grupos: [
+        if (industrial)
+          for (final x in r[15]) GrupoTecnicos(id: x['id'], nombre: x['nombre'], area: x['area'] ?? ''),
+      ],
     );
   }
 
@@ -846,6 +851,8 @@ class Nube {
 
   static const _orden = [
     'clientes',
+    // Antes que los técnicos, que apuntan a su grupo.
+    if (industrial) 'grupos',
     'trabajadores',
     'etiquetas',
     'tipos_trabajo',
@@ -1065,6 +1072,7 @@ class Nube {
 
   static const _clave = {
     'clientes': 'id',
+    'grupos': 'id',
     'trabajadores': 'id',
     'etiquetas': 'id',
     'tipos_trabajo': 'id',
@@ -1116,7 +1124,13 @@ class Nube {
     final ids = {for (final t in trabajos) t.id};
     final equipos = {for (final x in s.equipos) x.id};
     final activos = {for (final x in s.activos) x.id};
+    final grupos = {for (final g in s.grupos) g.id};
     final r = <String, Map<String, Map<String, dynamic>>>{for (final t in _orden) t: {}};
+    if (industrial) {
+      for (final g in s.grupos) {
+        r['grupos']![_u(g.id)] = {'id': _u(g.id), 'empresa_id': e, 'nombre': g.nombre, 'area': g.area};
+      }
+    }
     if (industrial) {
       // Padres antes que hijos: se suben por tandas y un componente no puede llegar antes que su activo.
       final porNivel = <Activo>[];
@@ -1182,6 +1196,8 @@ class Nube {
           'ultimo_horas': p.ultimoHoras,
           'proximo': _dia(p.proximo),
           'activa': p.activa,
+          'grupo_id': grupos.contains(p.grupoId) ? _u(p.grupoId!) : null,
+          'trabajador_id': trabajadores.contains(p.trabajadorId) ? _u(p.trabajadorId!) : null,
         };
       }
     }
@@ -1226,6 +1242,7 @@ class Nube {
         'salida_lat': w.salidaLat,
         'salida_lng': w.salidaLng,
         'color': w.color,
+        if (industrial) 'grupo_id': grupos.contains(w.grupoId) ? _u(w.grupoId!) : null,
       };
     }
     for (final x in s.etiquetas) {
@@ -1285,6 +1302,7 @@ class Nube {
         if (industrial) 'activo_id': activos.contains(t.activoId) ? _u(t.activoId!) : null,
         // Solo si los hay: los rellena la base (OT automáticas, al cerrar) y no hay que pisarlos con null.
         if (industrial && t.planId != null) 'plan_id': _u(t.planId!),
+        if (industrial) 'grupo_id': grupos.contains(t.grupoId) ? _u(t.grupoId!) : null,
         if (industrial && t.ejecutadoPor != null) 'ejecutado_por': _u(t.ejecutadoPor!),
         // El resultado lo pone el parte (en la base); aquí solo se manda si ya se sabe, para no pisarlo.
         if (industrial && t.resultado != null) 'resultado': t.resultado,
@@ -1381,6 +1399,7 @@ class DatosNube {
   final List<Activo> activos;
   final List<PlanMantenimiento> planes;
   final List<Incidencia> incidencias;
+  final List<GrupoTecnicos> grupos;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
@@ -1394,6 +1413,7 @@ class DatosNube {
     this.activos = const [],
     this.planes = const [],
     this.incidencias = const [],
+    this.grupos = const [],
   });
 }
 
@@ -1441,6 +1461,7 @@ Trabajador _trabajador(Map x) => Trabajador(
   salidaLat: (x['salida_lat'] as num?)?.toDouble(),
   salidaLng: (x['salida_lng'] as num?)?.toDouble(),
   color: (x['color'] as num).toInt(),
+  grupoId: x['grupo_id'] as String?,
 );
 
 Activo _activo(Map x) => Activo(
@@ -1474,6 +1495,8 @@ Activo _activo(Map x) => Activo(
 );
 
 PlanMantenimiento _plan(Map x) => PlanMantenimiento(
+  grupoId: x['grupo_id'] as String?,
+  trabajadorId: x['trabajador_id'] as String?,
   color: (x['color'] as num?)?.toInt(),
   id: x['id'],
   activoId: x['activo_id'],
@@ -1532,6 +1555,7 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       equipoId: x['equipo_id'],
       activoId: x['activo_id'],
       planId: x['plan_id'],
+      grupoId: x['grupo_id'] as String?,
       ejecutadoPor: x['ejecutado_por'],
       resultado: (x['resultado'] as num?)?.toInt(),
       resultadoResuelto: x['resultado_resuelto'] as bool? ?? false,

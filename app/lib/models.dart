@@ -250,8 +250,21 @@ class Cliente {
   Cliente copia() => Cliente.fromJson(toJson());
 }
 
+/// Pultec: grupo de técnicos (p. ej. «Hidráulica A»), con su área. El nombre no se repite en la empresa.
+class GrupoTecnicos {
+  String id, nombre, area;
+  GrupoTecnicos({required this.id, this.nombre = '', this.area = ''});
+
+  Map<String, dynamic> toJson() => {'id': id, 'nombre': nombre, 'area': area};
+  factory GrupoTecnicos.fromJson(Map<String, dynamic> j) =>
+      GrupoTecnicos(id: _s(j, 'id'), nombre: _s(j, 'nombre'), area: _s(j, 'area'));
+}
+
 class Trabajador {
   String id, nombre, apellidos, telefono, email, info, titulos;
+
+  /// Pultec: grupo al que pertenece (null = ninguno).
+  String? grupoId;
 
   /// Foto en PNG base64 (vacío = sin foto).
   String foto;
@@ -280,6 +293,7 @@ class Trabajador {
     this.salida = '',
     this.salidaLat,
     this.salidaLng,
+    this.grupoId,
   }) : competencias = competencias ?? [];
 
   String get nombreCompleto => '$nombre $apellidos'.trim();
@@ -300,6 +314,7 @@ class Trabajador {
     'salida': salida,
     'salidaLat': salidaLat,
     'salidaLng': salidaLng,
+    'grupoId': grupoId,
   };
 
   factory Trabajador.fromJson(Map<String, dynamic> j) => Trabajador(
@@ -318,6 +333,7 @@ class Trabajador {
     salida: _s(j, 'salida'),
     salidaLat: (j['salidaLat'] as num?)?.toDouble(),
     salidaLng: (j['salidaLng'] as num?)?.toDouble(),
+    grupoId: j['grupoId'] as String?,
   );
 
   Trabajador copia() => Trabajador.fromJson(toJson());
@@ -342,6 +358,9 @@ class Tarea {
 
   /// OT industrial: mantenimiento del que sale y técnico que la cerró (lo pone la base al cerrarla).
   String? planId, ejecutadoPor;
+
+  /// OT industrial: grupo al que se asignó (se reparte a uno de sus técnicos).
+  String? grupoId;
 
   /// OT industrial: cómo acabó según el parte (0 bien, 1 con incidencia, 2 no se pudo hacer; null = sin parte)
   /// y si su incidencia ya está solucionada.
@@ -393,6 +412,7 @@ class Tarea {
     this.activoId,
     this.planId,
     this.ejecutadoPor,
+    this.grupoId,
     this.resultado,
     this.resultadoResuelto = false,
     bool? plantilla,
@@ -466,6 +486,7 @@ class Tarea {
     if (tipoMantenimiento != null) 'tipoMantenimiento': tipoMantenimiento!.index,
     if (activoId != null) 'activoId': activoId,
     if (planId != null) 'planId': planId,
+    if (grupoId != null) 'grupoId': grupoId,
     if (ejecutadoPor != null) 'ejecutadoPor': ejecutadoPor,
     if (resultado != null) 'resultado': resultado,
     if (resultadoResuelto) 'resultadoResuelto': true,
@@ -510,6 +531,7 @@ class Tarea {
     tipoMantenimiento: j['tipoMantenimiento'] == null ? null : TipoMantenimiento.values[j['tipoMantenimiento'] as int],
     activoId: j['activoId'] as String?,
     planId: j['planId'] as String?,
+    grupoId: j['grupoId'] as String?,
     ejecutadoPor: j['ejecutadoPor'] as String?,
     resultado: j['resultado'] as int?,
     resultadoResuelto: j['resultadoResuelto'] as bool? ?? false,
