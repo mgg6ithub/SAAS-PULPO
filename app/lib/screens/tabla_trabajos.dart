@@ -361,7 +361,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       ),
               if (industrial)
                 Align(
-                  alignment: Alignment.centerLeft,
+                  // Solo el punto (poco sitio): centrado en su columna.
+                  alignment: apurado ? Alignment.center : Alignment.centerLeft,
                   child: t.tipoMantenimiento == null
                       ? celdaTexto('—', suave: true)
                       : apurado

@@ -334,7 +334,7 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
     final plan = store.planes.where((p) => p.id == t.planId).firstOrNull;
     final color = (t.tipoMantenimiento ?? TipoMantenimiento.preventivo).color;
     final hecha = t.estado == EstadoTrabajo.realizado;
-    final avisos = [if (t.proximo == null) 'Sin fecha', if (t.trabajadorIds.isEmpty) 'Sin técnico'];
+    final avisos = [if (t.inicioMin == null) 'Sin hora', if (t.trabajadorIds.isEmpty) 'Sin técnico'];
     return Padding(
       padding: margenPagina,
       child: Column(

@@ -1717,7 +1717,7 @@ class _TareaFormState extends State<TareaForm> {
                             ),
                         ],
                       )),
-                      SelectorTrabajadores(t, () => setState(() {})),
+                      SelectorTrabajadores(t, () => setState(() {}), avisoVacio: industrial),
                     ],
                   ),
                 ),
@@ -2052,7 +2052,16 @@ class _CajaMenu extends StatelessWidget {
 
   /// Para listas y bloques: más baja y con menos relleno.
   final bool compacta;
-  const _CajaMenu({required this.child, required this.onTap, required this.abierto, this.compacta = false});
+
+  /// Borde ámbar: falta algo que conviene rellenar (Pultec: sin técnico).
+  final bool aviso;
+  const _CajaMenu({
+    required this.child,
+    required this.onTap,
+    required this.abierto,
+    this.compacta = false,
+    this.aviso = false,
+  });
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -2070,7 +2079,10 @@ class _CajaMenu extends StatelessWidget {
           : BoxDecoration(
               color: P.superficie,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: abierto ? P.morado : P.borde, width: abierto ? 1.6 : 1),
+              border: Border.all(
+                color: abierto ? P.morado : (aviso ? P.ambar : P.borde),
+                width: abierto ? 1.6 : (aviso ? 1.4 : 1),
+              ),
             ),
       child: Row(
         mainAxisSize: compacta ? MainAxisSize.min : MainAxisSize.max,
@@ -2357,6 +2369,9 @@ class SelectorTrabajadores extends StatelessWidget {
 
   /// Con subtrabajos, ofrece asignar a todos ellos lo mismo que a este trabajo.
   final bool ofrecerSubtrabajos;
+
+  /// Borde ámbar mientras no haya nadie (en la orden de Pultec).
+  final bool avisoVacio;
   const SelectorTrabajadores(
     this.t,
     this.onCambio, {
@@ -2365,6 +2380,7 @@ class SelectorTrabajadores extends StatelessWidget {
     this.reducido = false,
     this.textoSinAsignar = 'Sin asignar',
     this.ofrecerSubtrabajos = false,
+    this.avisoVacio = false,
   });
 
   @override
@@ -2442,6 +2458,7 @@ class SelectorTrabajadores extends StatelessWidget {
           : _CajaMenu(
         abierto: menu.isOpen,
         compacta: compacto,
+        aviso: avisoVacio && elegidos.isEmpty,
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
         child: compacto
             ? Tooltip(
@@ -2503,6 +2520,7 @@ class _SelectorCuandoState extends State<SelectorCuando> {
     VoidCallback onTap, {
     bool destacado = false,
     bool conError = false,
+    bool aviso = false,
   }) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -2519,6 +2537,8 @@ class _SelectorCuandoState extends State<SelectorCuando> {
             // En rojo el campo que falta para poder guardar.
             border: conError
                 ? Border.all(color: P.rojo, width: 1.5)
+                : aviso
+                ? Border.all(color: P.ambar, width: 1.4)
                 : Border.all(color: destacado ? P.morado.withValues(alpha: .45) : P.borde),
           ),
           child: Row(
@@ -2633,6 +2653,8 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                       if (m != null) cambiar(() => t.inicioMin = m);
                     },
                     conError: hayError && t.inicioMin == null,
+                    // Pultec: sin hora se avisa en ámbar (no impide guardar).
+                    aviso: industrial && t.inicioMin == null,
                   ),
                 )
               else ...[
