@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -183,8 +184,7 @@ class Informes extends ChangeNotifier {
   Future<List<Informe>> delTecnico(String id) async {
     final nube = store.nube;
     if (nube != null) return nube.historialTecnico(id);
-    return _local.where((i) => i.trabajadorId == id).toList()
-      ..sort((a, b) => b.cuando.compareTo(a.cuando));
+    return _local.where((i) => i.trabajadorId == id).toList()..sort((a, b) => b.cuando.compareTo(a.cuando));
   }
 
   /// Informes del trabajo, el más reciente primero (null = cargando).
@@ -333,86 +333,268 @@ Future<void> descargarInformePdf(Informe i, Tarea t) async {
   await descargar(await informePdf(i, t), '$nombre.pdf', 'application/pdf');
 }
 
-/// El informe en PDF: datos del trabajo, resultado, notas y fotos.
+/// El informe en PDF, como plantilla profesional: cabecera con el logo y la empresa, número y fecha; bloques
+/// con la orden y el activo; ejecución con el resultado en color; trabajo, material, fotos y firmas; pie con página.
 Future<Uint8List> informePdf(Informe i, Tarea t) async {
   final cliente = store.cliente(t.clienteId);
   final w = store.trabajadores.where((x) => x.id == i.trabajadorId).firstOrNull;
   final fotos = await Future.wait(i.fotos.map(bytesFoto));
   final firma = i.firma == null ? null : await bytesFoto(i.firma!);
-  final doc = pw.Document();
-  final morado = PdfColor.fromInt(P.morado.toARGB32());
+  Uint8List? logo;
+  try {
+    logo = (await rootBundle.load(industrial ? 'assets/ipultec.png' : 'assets/pulpo.png')).buffer.asUint8List();
+  } catch (_) {}
+  final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+  final raiz = industrial ? raizActivo(t.activoId) : null;
+  final componente = industrial ? store.activo(t.activoId) : null;
+  final empresa = store.nube?.nombre ?? '';
+  final numero = 'OT-${t.id.replaceAll('-', '').toUpperCase().substring(0, min(8, t.id.replaceAll('-', '').length))}';
+
+  final doc = pw.Document(title: 'Parte ${t.nombre}', author: empresa.isEmpty ? Marca.nombre : empresa);
+  final marca = PdfColor.fromInt(P.morado.toARGB32());
+  final marcaSuave = PdfColor.fromInt(Color.alphaBlend(P.morado.withValues(alpha: .08), Colors.white).toARGB32());
+  final tinta = PdfColor.fromInt(0xFF111827);
   final suave = PdfColor.fromInt(0xFF6B7280);
-  pw.Widget dato(String etiqueta, String valor) => pw.Padding(
-    padding: const pw.EdgeInsets.only(bottom: 6),
-    child: pw.Row(
+  final borde = PdfColor.fromInt(0xFFE5E7EB);
+  final base = [P.verde, P.ambar, P.rojo][i.resultado.clamp(0, 2)];
+  final colorResultado = PdfColor.fromInt(base.toARGB32());
+  // El PDF no mezcla la transparencia: el fondo claro se calcula ya mezclado con el blanco.
+  final fondoResultado = PdfColor.fromInt(Color.alphaBlend(base.withValues(alpha: .12), Colors.white).toARGB32());
+
+  pw.Widget etiqueta(String texto) => pw.Text(
+    texto.toUpperCase(),
+    style: pw.TextStyle(fontSize: 7.5, color: suave, fontWeight: pw.FontWeight.bold, letterSpacing: .8),
+  );
+
+  pw.Widget dato(String nombre, String valor) => pw.Padding(
+    padding: const pw.EdgeInsets.only(bottom: 7),
+    child: pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.SizedBox(
-          width: 90,
-          child: pw.Text(etiqueta, style: pw.TextStyle(color: suave, fontSize: 10)),
-        ),
-        pw.Expanded(child: pw.Text(valor, style: const pw.TextStyle(fontSize: 10.5))),
+        pw.Text(nombre, style: pw.TextStyle(fontSize: 8.5, color: suave)),
+        pw.SizedBox(height: 1.5),
+        pw.Text(valor.isEmpty ? '-' : valor, style: pw.TextStyle(fontSize: 10.5, color: tinta)),
       ],
     ),
   );
+
+  pw.Widget tarjeta(String titulo, List<pw.Widget> hijos) => pw.Container(
+    padding: const pw.EdgeInsets.fromLTRB(14, 12, 14, 6),
+    decoration: pw.BoxDecoration(
+      border: pw.Border.all(color: borde, width: .8),
+      borderRadius: pw.BorderRadius.circular(6),
+    ),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [etiqueta(titulo), pw.SizedBox(height: 8), ...hijos],
+    ),
+  );
+
+  pw.Widget seccion(String titulo, String texto) => pw.Padding(
+    padding: const pw.EdgeInsets.only(top: 14),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        etiqueta(titulo),
+        pw.SizedBox(height: 6),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFF9FAFB), borderRadius: pw.BorderRadius.circular(6)),
+          child: pw.Text(texto, style: pw.TextStyle(fontSize: 10.5, color: tinta, lineSpacing: 2.5)),
+        ),
+      ],
+    ),
+  );
+
+  pw.Widget firmaBloque(String titulo, String nombre, {Uint8List? imagen}) => pw.Expanded(
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        etiqueta(titulo),
+        pw.SizedBox(
+          height: 70,
+          child: imagen == null
+              ? pw.SizedBox()
+              : pw.Align(
+                  alignment: pw.Alignment.bottomLeft,
+                  child: pw.Image(pw.MemoryImage(imagen), height: 64, fit: pw.BoxFit.contain),
+                ),
+        ),
+        pw.Container(height: .8, color: tinta),
+        pw.SizedBox(height: 4),
+        pw.Text(nombre.isEmpty ? ' ' : nombre, style: pw.TextStyle(fontSize: 9.5, color: suave)),
+      ],
+    ),
+  );
+
   doc.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(40),
-      build: (_) => [
-        pw.Text(
-          (store.nube?.nombre ?? '').toUpperCase(),
-          style: pw.TextStyle(color: morado, fontSize: 9, fontWeight: pw.FontWeight.bold, letterSpacing: 1),
-        ),
-        pw.SizedBox(height: 4),
-        pw.Text(m('Parte de trabajo'), style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 18),
-        dato(m('Trabajo'), t.nombre),
-        // Pultec: de qué activo (y componente) es la orden, en vez de cliente y dirección.
-        if (industrial) ...[
-          dato('Activo', raizActivo(t.activoId)?.titulo ?? '-'),
-          if (store.activo(t.activoId) case final c? when c.padreId != null) dato('Componente', c.titulo),
-          if (t.tipoMantenimiento != null) dato('Criticidad', t.tipoMantenimiento!.etiqueta),
-        ] else ...[
-          if (cliente != null) dato(m('Cliente'), cliente.nombre),
-          dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '-')),
-        ],
-        dato('Fecha', '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}'),
-        if (w != null) dato('Técnico', w.nombreCompleto),
-        dato('Resultado', resultadosInforme[i.resultado]),
-        if (i.minutos != null) dato('Tiempo', duracionTexto(i.minutos!)),
-        pw.SizedBox(height: 14),
-        pw.Text('Qué se ha hecho', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 6),
-        pw.Text(i.notas, style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 2)),
-        if (i.material.isNotEmpty) ...[
-          pw.SizedBox(height: 14),
-          pw.Text('Material', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 6),
-          pw.Text(i.material, style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 2)),
-        ],
-        if (fotos.isNotEmpty) ...[
+      margin: const pw.EdgeInsets.fromLTRB(40, 36, 40, 36),
+      // Cabecera: logo y marca a la izquierda; empresa, número y fecha a la derecha; raya del color de la marca.
+      header: (context) => pw.Column(
+        children: [
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              if (logo != null) ...[pw.Image(pw.MemoryImage(logo), width: 34, height: 34), pw.SizedBox(width: 10)],
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    Marca.nombre,
+                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: marca),
+                  ),
+                  if (empresa.isNotEmpty) pw.Text(empresa, style: pw.TextStyle(fontSize: 9.5, color: suave)),
+                ],
+              ),
+              pw.Spacer(),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    industrial ? 'Parte de orden de trabajo' : m('Parte de trabajo'),
+                    style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: tinta),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(numero, style: pw.TextStyle(fontSize: 9, color: suave)),
+                  pw.Text(
+                    '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
+                    style: pw.TextStyle(fontSize: 9, color: suave),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          pw.Container(height: 2, color: marca),
           pw.SizedBox(height: 18),
-          pw.Text('Fotos', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+        ],
+      ),
+      footer: (context) => pw.Padding(
+        padding: const pw.EdgeInsets.only(top: 12),
+        child: pw.Row(
+          children: [
+            pw.Text(
+              'Generado con ${Marca.nombre} el ${fecha(DateTime.now())}',
+              style: pw.TextStyle(fontSize: 8, color: suave),
+            ),
+            pw.Spacer(),
+            pw.Text(
+              'Página ${context.pageNumber} de ${context.pagesCount}',
+              style: pw.TextStyle(fontSize: 8, color: suave),
+            ),
+          ],
+        ),
+      ),
+      build: (_) => [
+        // Título de la orden y su descripción, con el resultado a la derecha.
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    t.nombre,
+                    style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: tinta),
+                  ),
+                  if (t.descripcion.isNotEmpty) ...[
+                    pw.SizedBox(height: 4),
+                    pw.Text(t.descripcion, style: pw.TextStyle(fontSize: 11, color: suave)),
+                  ],
+                ],
+              ),
+            ),
+            pw.SizedBox(width: 16),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: pw.BoxDecoration(
+                color: fondoResultado,
+                borderRadius: pw.BorderRadius.circular(20),
+              ),
+              child: pw.Text(
+                resultadosInforme[i.resultado],
+                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: colorResultado),
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 18),
+        // Dos tarjetas: la orden y dónde se hizo.
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: tarjeta(industrial ? 'Orden de trabajo' : m('Trabajo'), [
+                dato('Número', numero),
+                if (industrial && t.tipoMantenimiento != null) dato('Criticidad', t.tipoMantenimiento!.etiqueta),
+                if (plan != null) dato('Mantenimiento', [plan.nombre, if (plan.cada.isNotEmpty) plan.cada].join(', ')),
+                if (t.proximo != null || t.ultimo != null) dato('Fecha prevista', fecha(t.proximo ?? t.ultimo)),
+              ]),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(
+              child: industrial
+                  ? tarjeta('Activo', [
+                      dato('Activo', raiz?.titulo ?? '-'),
+                      if (componente != null && componente.id != raiz?.id) dato('Componente', componente.titulo),
+                      if (t.ubicacion.isNotEmpty) dato('Ubicación', t.ubicacion),
+                    ])
+                  : tarjeta(m('Cliente'), [
+                      dato(m('Cliente'), cliente?.nombre ?? '-'),
+                      dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '-')),
+                    ]),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 12),
+        // Ejecución en una franja suave del color de la marca.
+        pw.Container(
+          padding: const pw.EdgeInsets.fromLTRB(14, 12, 14, 6),
+          decoration: pw.BoxDecoration(color: marcaSuave, borderRadius: pw.BorderRadius.circular(6)),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                child: dato('Realizado el', '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}'),
+              ),
+              pw.Expanded(child: dato('Técnico', w?.nombreCompleto ?? '-')),
+              pw.Expanded(child: dato('Tiempo', i.minutos == null ? '-' : duracionTexto(i.minutos!))),
+            ],
+          ),
+        ),
+        seccion('Trabajo realizado', i.notas.isEmpty ? 'Sin observaciones.' : i.notas),
+        if (i.material.isNotEmpty) seccion('Material y repuestos', i.material),
+        if (fotos.isNotEmpty) ...[
+          pw.SizedBox(height: 14),
+          etiqueta('Fotos'),
           pw.SizedBox(height: 8),
           pw.Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final f in fotos) pw.Image(pw.MemoryImage(f), width: 246, height: 184, fit: pw.BoxFit.cover),
+              for (final f in fotos)
+                pw.ClipRRect(
+                  horizontalRadius: 6,
+                  verticalRadius: 6,
+                  child: pw.Image(pw.MemoryImage(f), width: 253, height: 180, fit: pw.BoxFit.cover),
+                ),
             ],
           ),
         ],
-        if (firma != null) ...[
-          pw.SizedBox(height: 18),
-          pw.Text(
-            industrial ? 'Firma del responsable' : m('Conforme, el cliente'),
-            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 6),
-          pw.Image(pw.MemoryImage(firma), width: 200, height: 80, fit: pw.BoxFit.contain),
-          if (i.firmante.isNotEmpty) pw.Text(i.firmante, style: const pw.TextStyle(fontSize: 10.5)),
-        ],
+        pw.SizedBox(height: 28),
+        // Firmas: el técnico que lo hizo y quien lo da por bueno.
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            firmaBloque('Técnico', w?.nombreCompleto ?? ''),
+            pw.SizedBox(width: 40),
+            firmaBloque(industrial ? 'Firma del responsable' : m('Conforme, el cliente'), i.firmante, imagen: firma),
+          ],
+        ),
       ],
     ),
   );
