@@ -420,7 +420,8 @@ class PanelSinAsignar extends StatelessWidget {
                       final vencida = t.proximo != null && diasHasta(t.proximo!) < 0;
                       // Se puede pulsar (ficha rápida) o arrastrar a un día y hora del calendario (Semana).
                       final fila = InkWell(
-                        onTap: () => abrirFichaRapida(context, t),
+                        // Pultec: se abre la orden para completarla (activo, técnico…); luego se arrastra a un día.
+                        onTap: () => industrial ? abrirTareaForm(context, t) : abrirFichaRapida(context, t),
                         hoverColor: P.hoverFila,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),

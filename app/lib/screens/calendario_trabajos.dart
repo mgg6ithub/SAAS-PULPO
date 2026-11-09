@@ -1185,8 +1185,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Icon(Icons.person_outline_rounded, size: 17, color: P.textoSuave),
-                  const SizedBox(width: 6),
+                  // Sin icono delante: el selector ya lleva el suyo.
                   Flexible(child: SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true)),
                 ],
               ),
@@ -1261,7 +1260,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
         Flexible(
           child: Text(plan.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
         ),
-        const Text(' · ', style: TextStyle(fontSize: 13)),
+        const SizedBox(width: 8),
         if (plan.cadaHoras != null)
           Text(plan.cada, style: const TextStyle(fontSize: 13))
         else
@@ -1285,7 +1284,8 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
       children: [
         Icon(Icons.schedule_rounded, size: 17, color: P.textoSuave),
         const SizedBox(width: 10),
-        Text('${fecha(v.dia)} · ', style: const TextStyle(fontSize: 13)),
+        Text(fecha(v.dia), style: const TextStyle(fontSize: 13)),
+        const SizedBox(width: 8),
         InkWell(
           borderRadius: BorderRadius.circular(6),
           onTap: () async {
@@ -1299,7 +1299,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
           },
           child: _chip(v.inicio == null ? 'Poner hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'),
         ),
-        const Text(' · ', style: TextStyle(fontSize: 13)),
+        const SizedBox(width: 8),
         BotonMenu<int>(
           tooltip: 'Duración',
           seleccionado: t.duracionMin,

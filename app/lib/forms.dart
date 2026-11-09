@@ -1463,7 +1463,8 @@ class _TareaFormState extends State<TareaForm> {
         padreId: widget.padre?.id,
         tipo: widget.padre?.tipo ?? 'Otro',
         plantilla: widget.plantilla,
-        proximo: widget.fecha ?? widget.padre?.proximo ?? hoy(),
+        // Pultec: sin fecha si no se da una (sale en «Sin fecha» de la Planificación para arrastrarla a un día).
+        proximo: widget.fecha ?? widget.padre?.proximo ?? (industrial ? null : hoy()),
         periodicidad: widget.plantilla ? Periodicidad.mensual : Periodicidad.unica,
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
@@ -1501,7 +1502,8 @@ class _TareaFormState extends State<TareaForm> {
   String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
 
   String? get errorHorario {
-    if (!intentoGuardar || t.esPlantilla) return null;
+    // Pultec: ni día ni hora obligatorios (se avisa en ámbar y se concreta en la Planificación).
+    if (!intentoGuardar || t.esPlantilla || industrial) return null;
     if (t.inicioMin == null) return 'Pon una hora';
     if (t.ventanaDesdeMin != null || t.ventanaHastaMin != null) {
       if (!t.conFranja) return 'Pon una hora';
@@ -1694,7 +1696,8 @@ class _TareaFormState extends State<TareaForm> {
                       SizedBox(height: MediaQuery.textScalerOf(context).scale(32),
                         child: etiqueta(industrial ? 'Activo o componente' : m('Cliente'))),
                       if (industrial)
-                        nueva
+                        // Se elige al crearla o si aún no tiene (p. ej. creada sin activo desde Órdenes de trabajo).
+                        nueva || widget.original?.activoId == null
                             ? SelectorActivo(t.activoId, (id) => setState(() => t.activoId = id))
                             : Tooltip(
                                 message: 'El activo de una orden ya creada no se puede cambiar.',
