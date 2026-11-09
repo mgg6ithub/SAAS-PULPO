@@ -449,7 +449,7 @@ class _PrimerosPasos extends StatelessWidget {
                   {for (final t in store.tareas.where((t) => !t.esPlantilla)) ...t.competencias}.toList(),
                 ),
               )
-            : (Icons.calendar_month_outlined, 'Itinerario', 'Organizar', Seccion.planificacion, _semanaDelTrabajo),
+            : (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), 'Organizar', Seccion.planificacion, _semanaDelTrabajo),
         null,
       ),
     ];
@@ -662,7 +662,7 @@ class _Pendientes extends StatelessWidget {
         FilaLista(
           lider: _punto(P.rojo),
           titulo: '${vencidas.length} ${vencidas.length == 1 ? 'mantenimiento vencido' : 'mantenimientos vencidos'}',
-          derecha: _cat('Itinerario'),
+          derecha: _cat((industrial ? 'Planificación' : 'Itinerario')),
           onTap: () => onIr(Seccion.planificacion),
         ),
       if (sinTrabajador.isNotEmpty)

@@ -754,7 +754,7 @@ class _BarraState extends State<_Barra> {
   Widget _menu(int vencidas) {
     final items = [
       (Icons.home_outlined, 'Inicio', Seccion.inicio, 0),
-      (Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, vencidas),
+      (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), Seccion.planificacion, vencidas),
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
@@ -878,7 +878,7 @@ class _BarraInferior extends StatelessWidget {
         .length;
     final items = [
       (Icons.home_outlined, 'Inicio', Seccion.inicio, 0),
-      (Icons.calendar_month_outlined, 'Itinerario', Seccion.planificacion, vencidas),
+      (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), Seccion.planificacion, vencidas),
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
