@@ -17,6 +17,7 @@ import 'vista_dias.dart' show lunesDe, diasSemana;
 import '../marca.dart';
 import '../industrial/iconos.dart';
 import '../industrial/tipo_mantenimiento.dart';
+import '../industrial/plan.dart';
 
 enum ModoCalendario { mes, semana, dia }
 
@@ -385,6 +386,15 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
       final columna = (ancho - margen) / 7;
       final dias = [for (var i = 0; i < 7; i++) masDias(widget.desde, i)];
       final grupos = [for (final d in dias) distribuirVisitas(widget.visitas[d] ?? [], minimoMin: 24)];
+      // Las órdenes sin hora no caben en la rejilla: van en una franja bajo los días (hasta 3 por día).
+      final sinHora = [
+        for (final d in dias)
+          [
+            for (final v in widget.visitas[d] ?? <VisitaCalendario>[])
+              if (v.inicio == null) v,
+          ],
+      ];
+      final filasSinHora = sinHora.fold(0, (m, l) => max(m, l.length)).clamp(0, 3);
       return Scrollbar(
         controller: horizontal,
         thumbVisibility: ancho > box.maxWidth,
@@ -424,6 +434,58 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
                     ],
                   ),
                 ),
+                if (filasSinHora > 0)
+                  Container(
+                    height: filasSinHora * 27.0 + 6,
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: P.borde)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: margen,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 6, top: 8),
+                            child: Text('Sin hora', style: TextStyle(fontSize: 11, color: P.textoSuave)),
+                          ),
+                        ),
+                        for (var i = 0; i < 7; i++)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(3, 3, 3, 0),
+                              child: Column(
+                                children: [
+                                  for (final (j, v) in sinHora[i].indexed)
+                                    if (j < 3)
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 3),
+                                        child: SizedBox(
+                                          height: 24,
+                                          child: j == 2 && sinHora[i].length > 3
+                                              ? InkWell(
+                                                  onTap: () => widget.onDia(dias[i]),
+                                                  child: Center(
+                                                    child: Text(
+                                                      '+${sinHora[i].length - 2} más',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: P.moradoOscuro,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                              : _EventoCalendario(v, compacto: true, onDetalle: widget.onDetalle),
+                                        ),
+                                      ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: Scrollbar(
                     controller: vertical,
@@ -699,8 +761,9 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                                   left: f.sinHora ? 6 : v.inicio! / 60 * hora + 2,
                                   top: 7,
                                   height: alto - 14,
+                                  // Sin hora: al principio de la fila y del ancho de lo que dura, no todo el día.
                                   width: f.sinHora
-                                      ? max(40, 24 * hora - 12)
+                                      ? max(hora * 1.5, v.tarea.duracionMin / 60 * hora - 4)
                                       : max(hora / 2 - 4, (v.fin! - v.inicio!) / 60 * hora - 4),
                                   child: _EventoCalendario(v, onDetalle: widget.onDetalle),
                                 ),
@@ -1060,116 +1123,160 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
       a = store.activo(a.padreId!);
     }
     final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: a == null
-                    ? Icon(Icons.assignment_outlined, size: 28, color: color)
-                    : IconoActivo(a.icono, size: 28, color: color),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      a?.titulo ?? 'Sin activo',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(t.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, height: 1.2)),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Cerrar resumen',
-                visualDensity: VisualDensity.compact,
-                onPressed: _cerrar,
-                icon: const Icon(CupertinoIcons.xmark, size: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
+    // Al tocar algo del resumen (menús, reloj) se queda abierto aunque el ratón salga hacia el menú.
+    return Listener(
+      onPointerDown: (_) => fijo = true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (t.tipoMantenimiento != null) PillTipo(t.tipoMantenimiento!),
-                Pill(v.hecha ? 'Completada' : 'Pendiente', v.hecha ? P.verde : P.textoSuave, punto: true),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: a == null
+                      ? Icon(Icons.assignment_outlined, size: 28, color: color)
+                      : IconoActivo(a.icono, size: 28, color: color),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        a?.titulo ?? 'Sin activo',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(t.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, height: 1.2)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cerrar resumen',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _cerrar,
+                  icon: const Icon(CupertinoIcons.xmark, size: 16),
+                ),
               ],
             ),
-          ),
-          const SizedBox(height: 14),
-          if (componente != null && componente.id != a?.id) _dato(Icons.account_tree_outlined, componente.titulo),
-          if (plan != null)
-            _dato(Icons.content_paste_rounded, [plan.nombre, if (plan.cada.isNotEmpty) plan.cada].join(' · ')),
-          _datoHora(v, t),
-          _dato(
-            Icons.person_outline_rounded,
-            t.trabajadorIds.isEmpty
-                ? 'Sin técnico'
-                : t.trabajadorIds
-                      .map((id) => store.trabajador(id)?.nombreCompleto ?? 'Técnico no disponible')
-                      .join(', '),
-          ),
-          if (t.notas.isNotEmpty)
+            const SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.only(bottom: 12, right: 8),
-              child: Text(
-                t.notas,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+              padding: const EdgeInsets.only(right: 8),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (t.tipoMantenimiento != null) PillTipo(t.tipoMantenimiento!),
+                  Pill(v.hecha ? 'Completada' : 'Pendiente', v.hecha ? P.verde : P.textoSuave, punto: true),
+                ],
               ),
             ),
-          Divider(height: 1, color: P.borde),
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton(
-                  onPressed: () {
-                    _cerrar();
-                    widget.onDetalle(t.id);
-                  },
-                  child: const Text('Ver orden'),
+            const SizedBox(height: 14),
+            if (componente != null && componente.id != a?.id) _dato(Icons.account_tree_outlined, componente.titulo),
+            if (plan != null) _datoPlan(plan),
+            _datoHora(v, t),
+            // Técnico, asignable desde aquí.
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.person_outline_rounded, size: 17, color: P.textoSuave),
+                  const SizedBox(width: 6),
+                  Flexible(child: SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true)),
+                ],
+              ),
+            ),
+            if (t.notas.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12, right: 8),
+                child: Text(
+                  t.notas,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12.5, color: P.textoSuave),
                 ),
-                OutlinedButton(
-                  onPressed: () {
-                    _cerrar();
-                    abrirTareaForm(context, t);
-                  },
-                  child: const Text('Editar'),
-                ),
-                if (!v.hecha && DateUtils.isSameDay(v.dia, hoy()))
-                  TextButton(
+              ),
+            Divider(height: 1, color: P.borde),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  // Lo demás, en la propia orden.
+                  FilledButton(
                     onPressed: () {
                       _cerrar();
-                      store.marcarHecha(t);
+                      widget.onDetalle(t.id);
                     },
-                    child: const Text('Completar'),
+                    child: const Text('Editar'),
                   ),
-              ],
+                  if (!v.hecha && DateUtils.isSameDay(v.dia, hoy()))
+                    TextButton(
+                      onPressed: () {
+                        _cerrar();
+                        store.marcarHecha(t);
+                      },
+                      child: const Text('Completar'),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  /// Botón pequeño morado de lo que se cambia desde el resumen (hora, duración, periodicidad).
+  Widget _chip(String texto) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(color: P.moradoSuave, borderRadius: BorderRadius.circular(6)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          texto,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.moradoOscuro),
+        ),
+        const SizedBox(width: 2),
+        Icon(Icons.unfold_more_rounded, size: 14, color: P.moradoOscuro),
+      ],
+    ),
+  );
+
+  /// Mantenimiento y, si va por días, cada cuánto (se cambia aquí).
+  Widget _datoPlan(PlanMantenimiento plan) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      children: [
+        Icon(Icons.content_paste_rounded, size: 17, color: P.textoSuave),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(plan.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+        ),
+        const Text(' · ', style: TextStyle(fontSize: 13)),
+        if (plan.cadaHoras != null)
+          Text(plan.cada, style: const TextStyle(fontSize: 13))
+        else
+          BotonMenu<int>(
+            tooltip: 'Cada cuánto',
+            seleccionado: plan.cadaDias,
+            onSelected: (d) => store.guardarPlan(plan..cadaDias = d),
+            opciones: [
+              for (final d in const [7, 14, 30, 60, 90, 180, 365]) (d, Text('Cada $d días')),
+            ],
+            child: _chip(plan.cadaDias == null ? 'Sin periodicidad' : 'cada ${plan.cadaDias} días'),
+          ),
+      ],
+    ),
+  );
 
   /// Fecha y, pulsable, la hora: se cambia aquí mismo sin abrir la orden.
   Widget _datoHora(VisitaCalendario v, Tarea t) => Padding(
@@ -1190,23 +1297,18 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
             );
             if (h != null) store.guardarTarea(t.copia()..inicioMin = h.hour * 60 + h.minute);
           },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(color: P.moradoSuave, borderRadius: BorderRadius.circular(6)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  v.inicio == null ? 'Poner hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.moradoOscuro),
-                ),
-                const SizedBox(width: 2),
-                Icon(Icons.unfold_more_rounded, size: 14, color: P.moradoOscuro),
-              ],
-            ),
-          ),
+          child: _chip(v.inicio == null ? 'Poner hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'),
         ),
-        Flexible(child: Text(' · ${t.duracionMin} min', style: const TextStyle(fontSize: 13))),
+        const Text(' · ', style: TextStyle(fontSize: 13)),
+        BotonMenu<int>(
+          tooltip: 'Duración',
+          seleccionado: t.duracionMin,
+          onSelected: (m) => store.guardarTarea(t.copia()..duracionMin = m),
+          opciones: [
+            for (final m in const [15, 30, 45, 60, 90, 120, 180, 240, 480]) (m, Text(duracion(m))),
+          ],
+          child: _chip(duracion(t.duracionMin)),
+        ),
       ],
     ),
   );
