@@ -253,7 +253,8 @@ class _PlanificacionState extends State<Planificacion> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // "Sin asignar" solo aparece cuando hay algo sin técnico (o con su panel abierto).
-                  if (vista == 1 && (sinAsignar || PanelSinAsignar.pendientes().isNotEmpty)) ...[
+                  // Pultec: «Sin fecha» aparcado de momento (toda orden nace con su día).
+                  if (vista == 1 && !industrial && (sinAsignar || PanelSinAsignar.pendientes().isNotEmpty)) ...[
                     SizedBox(
                       height: 40,
                       child: _BotonSinAsignar(

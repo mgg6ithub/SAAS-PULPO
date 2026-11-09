@@ -21,6 +21,9 @@ import '../industrial/plan.dart';
 
 enum ModoCalendario { mes, semana, dia }
 
+/// Pultec: avisos de lo que le falta a una orden (sin técnico, sin hora), aparcados de momento.
+const _avisosFalta = false;
+
 class CalendarioTrabajos extends StatefulWidget {
   final DateTime dia;
   final ModoCalendario modo;
@@ -916,8 +919,10 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
         : '${v.inicio == null ? 'Sin hora' : hhmm(v.inicio!)} · ${t.nombre}';
     // Pultec: orden sin concretar. Sin técnico = rojo (nadie la recibe ni le llega el aviso); solo sin hora = ámbar.
     final sinTecnico = industrial && !v.hecha && t.trabajadorIds.isEmpty;
-    final sinHora = industrial && !v.hecha && v.inicio == null;
-    final falta = [if (sinTecnico) 'Sin técnico', if (sinHora) 'Sin hora'];
+    // final sinHora = industrial && !v.hecha && v.inicio == null;
+    // Triángulos de lo que falta, aparcados para más adelante (en esta versión basta con el día).
+    // final falta = [if (sinTecnico) 'Sin técnico', if (sinHora) 'Sin hora'];
+    final falta = <String>[];
     return OverlayPortal(
       controller: portal,
       overlayChildBuilder: (context) {
@@ -1211,7 +1216,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                   // Sin icono delante: el selector ya lleva el suyo.
                   Flexible(child: SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true)),
                   // El mismo triángulo rojo que en el calendario, al final de lo que falta.
-                  if (!v.hecha && t.trabajadorIds.isEmpty) ...[
+                  if (_avisosFalta && !v.hecha && t.trabajadorIds.isEmpty) ...[
                     const SizedBox(width: 8),
                     const Tooltip(
                       message: 'Sin técnico: nadie la recibe',
@@ -1341,7 +1346,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
           child: _chip(duracion(t.duracionMin)),
         ),
         // Sin hora: el triángulo ámbar del calendario, al final de la fila.
-        if (!v.hecha && v.inicio == null) ...[
+        if (_avisosFalta && !v.hecha && v.inicio == null) ...[
           const SizedBox(width: 8),
           const Tooltip(
             message: 'Sin hora',

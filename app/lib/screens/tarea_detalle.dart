@@ -334,7 +334,9 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
     final plan = store.planes.where((p) => p.id == t.planId).firstOrNull;
     final color = (t.tipoMantenimiento ?? TipoMantenimiento.preventivo).color;
     final hecha = t.estado == EstadoTrabajo.realizado;
-    final avisos = [if (t.inicioMin == null) 'Sin hora', if (t.trabajadorIds.isEmpty) 'Sin técnico'];
+    // Avisos «Sin hora» / «Sin técnico», aparcados: en esta versión basta con el día.
+    // final avisos = [if (t.inicioMin == null) 'Sin hora', if (t.trabajadorIds.isEmpty) 'Sin técnico'];
+    const avisos = <String>[];
     return Padding(
       padding: margenPagina,
       child: Column(

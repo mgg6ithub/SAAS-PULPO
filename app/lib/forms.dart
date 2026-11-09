@@ -1463,8 +1463,7 @@ class _TareaFormState extends State<TareaForm> {
         padreId: widget.padre?.id,
         tipo: widget.padre?.tipo ?? 'Otro',
         plantilla: widget.plantilla,
-        // Pultec: sin fecha si no se da una (sale en «Sin fecha» de la Planificación para arrastrarla a un día).
-        proximo: widget.fecha ?? widget.padre?.proximo ?? (industrial ? null : hoy()),
+        proximo: widget.fecha ?? widget.padre?.proximo ?? hoy(),
         periodicidad: widget.plantilla ? Periodicidad.mensual : Periodicidad.unica,
         inicioMin: widget.horaMin,
         trabajadorIds: [?widget.trabajadorId],
@@ -1502,8 +1501,9 @@ class _TareaFormState extends State<TareaForm> {
   String? get error => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
 
   String? get errorHorario {
-    // Pultec: ni día ni hora obligatorios (se avisa en ámbar y se concreta en la Planificación).
-    if (!intentoGuardar || t.esPlantilla || industrial) return null;
+    if (!intentoGuardar || t.esPlantilla) return null;
+    // Pultec: solo el día es obligatorio; sin hora entra a las 8:00 (se cambia luego en el calendario).
+    if (industrial) return t.proximo == null ? 'Pon un día' : null;
     if (t.inicioMin == null) return 'Pon una hora';
     if (t.ventanaDesdeMin != null || t.ventanaHastaMin != null) {
       if (!t.conFranja) return 'Pon una hora';
@@ -1564,6 +1564,7 @@ class _TareaFormState extends State<TareaForm> {
     if (industrial && !t.esPlantilla) {
       t.competencias = [];
       t.periodicidad = Periodicidad.unica;
+      if (t.inicioMin == null && !t.conFranja) t.inicioMin = 8 * 60;
     }
     store.guardarTarea(t);
     if (widget.incrustada) {
@@ -1762,7 +1763,7 @@ class _TareaFormState extends State<TareaForm> {
                             ),
                         ],
                       )),
-                      SelectorTrabajadores(t, () => setState(() {}), avisoVacio: industrial),
+                      SelectorTrabajadores(t, () => setState(() {})),
                     ],
                   ),
                 ),
@@ -2750,8 +2751,6 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                       if (m != null) cambiar(() => t.inicioMin = m);
                     },
                     conError: hayError && t.inicioMin == null,
-                    // Pultec: sin hora se avisa en ámbar (no impide guardar).
-                    aviso: industrial && t.inicioMin == null,
                   ),
                 )
               else ...[
