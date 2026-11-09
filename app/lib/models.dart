@@ -328,6 +328,9 @@ class Tarea {
   String id, nombre, tipo, marca, modelo, numeroSerie, ubicacion, notas;
   String? clienteId, plantillaId;
 
+  /// OT industrial: breve descripción de lo que hay que hacer (al salir de un mantenimiento, la suya).
+  String descripcion;
+
   /// Equipo del cliente sobre el que se hace (ascensor, caldera…); null = sin equipo.
   String? equipoId;
 
@@ -402,6 +405,7 @@ class Tarea {
     this.numeroSerie = '',
     this.ubicacion = '',
     this.notas = '',
+    this.descripcion = '',
     this.instalacion,
     this.ultimo,
     this.proximo,
@@ -475,6 +479,7 @@ class Tarea {
     'numeroSerie': numeroSerie,
     'ubicacion': ubicacion,
     'notas': notas,
+    'descripcion': descripcion,
     'instalacion': _f(instalacion),
     'ultimo': _f(ultimo),
     'proximo': _f(proximo),
@@ -518,6 +523,7 @@ class Tarea {
     numeroSerie: _s(j, 'numeroSerie'),
     ubicacion: _s(j, 'ubicacion'),
     notas: _s(j, 'notas'),
+    descripcion: _s(j, 'descripcion'),
     instalacion: _d(j, 'instalacion'),
     ultimo: _d(j, 'ultimo'),
     proximo: _d(j, 'proximo'),

@@ -1447,6 +1447,7 @@ class _TareaFormState extends State<TareaForm> {
 
   late final ubicacion = TextEditingController(text: t.ubicacion);
   late final notas = TextEditingController(text: t.notas);
+  late final descripcion = TextEditingController(text: t.descripcion);
   late final precio = TextEditingController(
     text: t.precio == 0 ? '' : t.precio.toStringAsFixed(2).replaceAll('.', ',').replaceAll(',00', ''),
   );
@@ -1514,6 +1515,7 @@ class _TareaFormState extends State<TareaForm> {
       ..numeroSerie = serie.text.trim()
       ..ubicacion = ubicacion.text.trim()
       ..notas = notas.text.trim()
+      ..descripcion = descripcion.text.trim()
       ..precio = double.tryParse(precio.text.trim().replaceAll(',', '.')) ?? 0;
     if (industrial && !t.esPlantilla) {
       t.competencias = [];
@@ -1600,6 +1602,8 @@ class _TareaFormState extends State<TareaForm> {
                 obligatorio: true,
               ),
             ),
+            if (industrial && !t.esPlantilla)
+              campo('Descripción', descripcion, hint: 'Qué hay que hacer en esta orden', lineas: 2),
             // Tipo: plantillas (tarea nueva) o tipos (plantilla).
             if (t.esPlantilla) ...[
               etiqueta('Tipo'),

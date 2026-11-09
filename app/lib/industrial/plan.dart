@@ -74,6 +74,7 @@ class PlanMantenimiento {
   Tarea ot(String id) => Tarea(
     id: id,
     nombre: nombre,
+    descripcion: descripcion,
     activoId: activoId,
     planId: this.id,
     // Sin cliente sería plantilla: una OT de un activo es un trabajo de verdad.

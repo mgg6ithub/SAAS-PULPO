@@ -11,6 +11,8 @@ import 'informes.dart';
 import 'tabla_trabajos.dart';
 import 'tarea_automatizaciones.dart';
 import '../marca.dart';
+import '../industrial/iconos.dart';
+import '../industrial/tipo_mantenimiento.dart';
 
 /// Ficha de un trabajo con pestañas, como la de un cliente: Resumen (cifras, subtrabajos e histórico)
 /// y Datos (el formulario del trabajo, editable directamente).
@@ -40,6 +42,7 @@ class _TareaDetalleState extends State<TareaDetalle> {
       WidgetsBinding.instance.addPostFrameCallback((_) => widget.onVolver());
       return const SizedBox();
     }
+    if (industrial) return _OrdenDeTrabajo(t, onVolver: widget.onVolver);
     final cliente = store.cliente(t.clienteId);
     final padre = store.tarea(t.padreId);
 
@@ -307,4 +310,117 @@ class _Historico extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Pultec: la OT en una sola vista. Arriba, de dónde sale (activo → mantenimiento → orden); debajo, sus datos,
+/// editables directamente (sin pestañas ni «Editar»).
+class _OrdenDeTrabajo extends StatefulWidget {
+  final Tarea t;
+  final VoidCallback onVolver;
+  const _OrdenDeTrabajo(this.t, {required this.onVolver});
+
+  @override
+  State<_OrdenDeTrabajo> createState() => _OrdenDeTrabajoState();
+}
+
+class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
+  /// Sube al pulsar «Cancelar»: el formulario se rehace con lo guardado y se pierde lo escrito.
+  int version = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.t;
+    final activo = store.activo(t.activoId);
+    final plan = store.planes.where((p) => p.id == t.planId).firstOrNull;
+    final color = (t.tipoMantenimiento ?? TipoMantenimiento.preventivo).color;
+    return Padding(
+      padding: margenPagina,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Cabecera(
+            lider: IconButton(
+              tooltip: 'Volver a Órdenes de trabajo',
+              onPressed: widget.onVolver,
+              icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
+            ),
+            titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
+            subtitulo: t.descripcion.isEmpty ? null : t.descripcion,
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _Eslabon(
+                'Activo',
+                activo?.titulo ?? 'Sin activo',
+                lider: activo == null ? null : IconoActivo(activo.icono, size: 18, color: P.textoSuave),
+              ),
+              const _Flecha(),
+              _Eslabon('Mantenimiento', plan?.nombre ?? 'Sin mantenimiento', lider: puntoTipo(color)),
+              const _Flecha(),
+              _Eslabon('Orden de trabajo', t.nombre.isEmpty ? 'Sin nombre' : t.nombre, actual: true),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: TareaForm(
+              key: ValueKey('${t.id}-$version'),
+              original: t,
+              incrustada: true,
+              onTerminar: () => setState(() => version++),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Un paso de la cadena activo → mantenimiento → orden: etiqueta pequeña y nombre.
+class _Eslabon extends StatelessWidget {
+  final String etiqueta, nombre;
+  final Widget? lider;
+  final bool actual;
+  const _Eslabon(this.etiqueta, this.nombre, {this.lider, this.actual = false});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(maxWidth: 320),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: actual ? P.moradoSuave : P.superficie,
+      borderRadius: BorderRadius.circular(P.radioControl),
+      border: Border.all(color: actual ? P.morado.withValues(alpha: .35) : P.borde),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (lider != null) ...[lider!, const SizedBox(width: 10)],
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(etiqueta, style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
+              Text(
+                nombre,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: actual ? P.moradoOscuro : P.texto),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _Flecha extends StatelessWidget {
+  const _Flecha();
+
+  @override
+  Widget build(BuildContext context) => Icon(Icons.arrow_forward_rounded, size: 16, color: P.textoSuave);
 }
