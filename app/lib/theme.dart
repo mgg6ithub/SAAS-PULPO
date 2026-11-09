@@ -106,6 +106,20 @@ const paleta = <Color>[
 
 Color colorPaleta(int i) => paleta[i % paleta.length];
 
+/// Colores de las máquinas en «Uso de activos»: bien distintos entre sí (sin el rojo/verde/ámbar de la criticidad).
+const paletaActivos = <Color>[
+  Color(0xFF4F46E5),
+  Color(0xFF0D9488),
+  Color(0xFFC026D3),
+  Color(0xFF0284C7),
+  Color(0xFFD97706),
+  Color(0xFF7C3AED),
+  Color(0xFF65A30D),
+  Color(0xFFDB2777),
+  Color(0xFF0891B2),
+  Color(0xFF9A3412),
+];
+
 /// Iconos que se pueden elegir para un tipo de trabajo. El tipo guarda la clave (texto), no el icono:
 /// así se guarda en la base y los iconos siguen siendo constantes.
 const iconosTipo = <String, IconData>{

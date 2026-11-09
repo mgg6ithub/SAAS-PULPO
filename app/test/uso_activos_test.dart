@@ -81,13 +81,15 @@ void main() {
     final start = tester.getCenter(find.byType(Draggable<String>));
     await tester.dragFrom(start, day - start);
     await tester.pumpAndSettle();
-    expect(find.text('CAM-01 · 1 turno'), findsOneWidget);
+    // En el día: la máquina con su color; claro con 1 turno, lleno y «×2» con 2.
+    expect(find.text('CAM-01'), findsOneWidget);
+    expect(find.text('×2'), findsNothing);
     expect(activo.turnos.values.single, 1);
-    await tester.tap(find.text('CAM-01 · 1 turno'));
+    await tester.tap(find.text('CAM-01'));
     await tester.pumpAndSettle();
-    expect(find.text('CAM-01 · 2 turnos'), findsOneWidget);
+    expect(find.text('×2'), findsOneWidget);
     expect(activo.turnos.values.single, 2);
-    await tester.tap(find.text('CAM-01 · 2 turnos'));
+    await tester.tap(find.text('CAM-01'));
     await tester.pumpAndSettle();
     expect(activo.turnos, isEmpty);
     expect(tester.takeException(), isNull);

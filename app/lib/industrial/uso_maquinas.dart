@@ -33,6 +33,18 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       store.hijosDe(null).where((a) => a.activo && a.usoPlanificado).toList()
         ..sort((a, b) => a.titulo.compareTo(b.titulo));
 
+  /// Color de cada máquina según su orden en la lista (estable mientras no cambien las máquinas).
+  Color _colorDe(int i) => paletaActivos[i % paletaActivos.length];
+
+  /// Horas planificadas de la máquina en el mes que se ve.
+  double _horasMes(Activo a) {
+    var t = 0;
+    for (var d = DateTime(mes.year, mes.month); d.month == mes.month; d = masDias(d, 1)) {
+      t += turnosDe(a, d);
+    }
+    return t * a.horasTurno;
+  }
+
   void _poner(Activo a, DateTime d, int n) {
     final antes = horasHoy(a);
     setState(() => ponerTurnos(a, d, n));
@@ -96,38 +108,59 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            'Arrastra un activo a un día: 1 turno. Tócalo: 2 turnos. Otra vez: quitar.',
-            style: TextStyle(fontSize: 13, color: P.textoSuave),
+          const Consejo(
+            'Arrastra una máquina a un día: 1 turno. Tócala: 2 turnos. Otra vez: quitar. '
+            'Recalcula sus mantenimientos por horas.',
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
-            children: [
-              Pill('1 turno', P.azul, icono: Icons.looks_one_outlined),
-              Pill('2 turnos', P.morado, icono: Icons.looks_two_outlined),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Las máquinas «flotando» arriba, para arrastrarlas a los días.
+          const SizedBox(height: 12),
           if (activos.isEmpty)
             Text(
               'Ninguna máquina tiene el uso «Planificado por turnos». Elígelo en Datos → Contador y uso.',
               style: TextStyle(fontSize: 13, color: P.textoSuave),
             )
           else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final a in activos)
-                  Draggable<String>(
-                    data: a.id,
-                    feedback: Material(color: Colors.transparent, child: _Ficha(a, elevada: true)),
-                    childWhenDragging: Opacity(opacity: .4, child: _Ficha(a)),
-                    child: MouseRegion(cursor: SystemMouseCursors.grab, child: _Ficha(a)),
+                // Las máquinas, cada una con su color, para arrastrarlas a los días.
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final (i, a) in activos.indexed)
+                        Draggable<String>(
+                          data: a.id,
+                          feedback: Material(
+                            color: Colors.transparent,
+                            child: _Ficha(a, _colorDe(i), _horasMes(a), elevada: true),
+                          ),
+                          childWhenDragging: Opacity(opacity: .4, child: _Ficha(a, _colorDe(i), _horasMes(a))),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.grab,
+                            child: _Ficha(a, _colorDe(i), _horasMes(a)),
+                          ),
+                        ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 16),
+                // Leyenda: claro = 1 turno, lleno = 2 turnos.
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _Muestra(P.textoSuave, 1),
+                      const SizedBox(width: 6),
+                      Text('1 turno', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+                      const SizedBox(width: 14),
+                      _Muestra(P.textoSuave, 2),
+                      const SizedBox(width: 6),
+                      Text('2 turnos', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+                    ],
+                  ),
+                ),
               ],
             ),
           const SizedBox(height: 12),
@@ -185,11 +218,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Los cambios posteriores a la última lectura recalculan las horas estimadas y los mantenimientos por horas. Los turnos anteriores quedan como registro; no cambian una lectura real.',
-            style: TextStyle(fontSize: 12, color: P.textoSuave),
-          ),
         ],
       ),
     );
@@ -198,6 +226,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   Widget _dia(DateTime d, List<Activo> activos) {
     final delMes = d.month == mes.month;
     final esHoy = DateUtils.isSameDay(d, hoy());
+    final finde = d.weekday >= 6;
     return DragTarget<String>(
       onAcceptWithDetails: (det) {
         final a = store.activo(det.data);
@@ -205,56 +234,48 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       },
       builder: (context, encima, _) => Container(
         decoration: BoxDecoration(
-          color: encima.isNotEmpty ? P.morado.withValues(alpha: .08) : (delMes ? P.superficie : P.fondo),
+          color: encima.isNotEmpty
+              ? P.morado.withValues(alpha: .08)
+              : !delMes
+              ? P.fondo
+              : finde
+              ? Color.alphaBlend(P.fondo.withValues(alpha: .6), P.superficie)
+              : P.superficie,
           border: Border(
             right: BorderSide(color: P.borde),
             bottom: BorderSide(color: P.borde),
           ),
         ),
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${d.day}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: esHoy ? FontWeight.w800 : FontWeight.w500,
-                color: esHoy ? P.morado : (delMes ? P.texto : P.textoSuave),
+            // Hoy, en un círculo del color de la marca.
+            Container(
+              width: 22,
+              height: 22,
+              alignment: Alignment.center,
+              decoration: esHoy ? BoxDecoration(color: P.morado, shape: BoxShape.circle) : null,
+              child: Text(
+                '${d.day}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: esHoy ? FontWeight.w700 : FontWeight.w500,
+                  color: esHoy ? Colors.white : (delMes ? P.texto : P.textoSuave),
+                ),
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Expanded(
               child: SingleChildScrollView(
-                child: Wrap(
-                  spacing: 3,
-                  runSpacing: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (final a in activos)
+                    for (final (i, a) in activos.indexed)
                       if (turnosDe(a, d) case final n when n > 0)
-                        Tooltip(
-                          message:
-                              '${a.titulo}: $n ${n == 1 ? 'turno' : 'turnos'} · ${n * a.horasTurno} h · tocar para cambiar',
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(6),
-                            onTap: () => _poner(a, d, n == 1 ? 2 : 0),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: (n == 2 ? P.morado : P.azul).withValues(alpha: .12),
-                                border: Border.all(color: (n == 2 ? P.morado : P.azul).withValues(alpha: .45)),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${a.tag.isEmpty ? a.nombre : a.tag} · $n ${n == 1 ? 'turno' : 'turnos'}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: n == 2 ? P.morado : P.azul,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: _Turno(a, _colorDe(i), n, onTap: () => _poner(a, d, n == 1 ? 2 : 0)),
                         ),
                   ],
                 ),
@@ -267,37 +288,119 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   }
 }
 
-/// Una máquina para arrastrar: su icono y su nombre.
+/// Una máquina en un día: su color, claro con 1 turno y lleno con 2.
+class _Turno extends StatelessWidget {
+  final Activo a;
+  final Color color;
+  final int n;
+  final VoidCallback onTap;
+  const _Turno(this.a, this.color, this.n, {required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final lleno = n >= 2;
+    final tinta = lleno ? Colors.white : color;
+    return Tooltip(
+      message:
+          '${a.titulo}: $n ${n == 1 ? 'turno' : 'turnos'}, ${(n * a.horasTurno).toStringAsFixed(0)} h. Toca para cambiar',
+      child: Material(
+        color: lleno ? color : color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onTap,
+          child: Container(
+            height: 22,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: Border(left: BorderSide(color: color, width: 3)),
+            ),
+            child: Row(
+              children: [
+                IconoActivo(a.icono, size: 13, color: tinta),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    a.tag.isEmpty ? a.nombre : a.tag,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: tinta),
+                  ),
+                ),
+                if (lleno)
+                  Text(
+                    '×2',
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: tinta),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Muestra de la leyenda: claro (1 turno) o lleno (2 turnos).
+class _Muestra extends StatelessWidget {
+  final Color color;
+  final int n;
+  const _Muestra(this.color, this.n);
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 18,
+    height: 12,
+    decoration: BoxDecoration(
+      color: n >= 2 ? color : color.withValues(alpha: .15),
+      borderRadius: BorderRadius.circular(3),
+      border: Border(left: BorderSide(color: color, width: 3)),
+    ),
+  );
+}
+
+/// Una máquina para arrastrar: su color, icono, nombre y las horas planificadas del mes.
 class _Ficha extends StatelessWidget {
   final Activo a;
+  final Color color;
+  final double horasMes;
   final bool elevada;
-  const _Ficha(this.a, {this.elevada = false});
+  const _Ficha(this.a, this.color, this.horasMes, {this.elevada = false});
 
   @override
   Widget build(BuildContext context) => Container(
     constraints: BoxConstraints(maxWidth: (MediaQuery.sizeOf(context).width - 34).clamp(0, 440)),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
     decoration: BoxDecoration(
-      color: P.superficie,
+      color: Color.alphaBlend(color.withValues(alpha: .06), P.superficie),
       borderRadius: BorderRadius.circular(P.radioControl),
-      border: Border.all(color: elevada ? P.morado : P.borde),
+      border: Border.all(color: elevada ? color : color.withValues(alpha: .35)),
       boxShadow: elevada ? [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 12)] : null,
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconoActivo(a.icono, size: 18, color: P.textoSuave),
+        IconoActivo(a.icono, size: 18, color: color),
         const SizedBox(width: 8),
         Flexible(
-          child: Text(
-            a.titulo,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                a.titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              Text(
+                '${a.horasTurno.toStringAsFixed(0)} h por turno, ${horasMes.toStringAsFixed(0)} h este mes',
+                style: TextStyle(fontSize: 11.5, color: P.textoSuave),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 6),
-        Text('${a.horasTurno.toStringAsFixed(0)} h/turno', style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
       ],
     ),
   );
