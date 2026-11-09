@@ -22,7 +22,8 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
     final anchos = etiquetas.asMap().entries.map((e) {
       final texto = TextPainter(text: TextSpan(text: e.value, style: estilo),
         textDirection: Directionality.of(context), textScaler: MediaQuery.textScalerOf(context))..layout();
-      final ancho = texto.width + (e.key == 0 ? 28 : 66);
+      // «Todos» también acaba en punta de flecha (+12), como las demás fases.
+      final ancho = texto.width + (e.key == 0 ? 40 : 66);
       texto.dispose();
       return ancho;
     }).toList();
@@ -38,8 +39,8 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
             child: Stack(children: [
               for (var i = 0; i < etiquetas.length; i++)
                 Positioned(
-                  left: anchos.take(i).fold<double>(0, (a, b) => a + b) - (i > 1 ? 12 : 0),
-                  top: 0, bottom: 0, width: anchos[i] + (i > 1 ? 12 : 0),
+                  left: anchos.take(i).fold<double>(0, (a, b) => a + b) - (i > 0 ? 12 : 0),
+                  top: 0, bottom: 0, width: anchos[i] + (i > 0 ? 12 : 0),
                   child: Tooltip(
                     message: ayudas[i],
                     preferBelow: true,
@@ -52,7 +53,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
                         child: InkWell(
                           onTap: () => onChanged(i), hoverColor: P.hover,
                           child: Padding(
-                            padding: EdgeInsets.only(left: i > 1 ? 12 : 0, right: i > 0 ? 12 : 0),
+                            padding: EdgeInsets.only(left: i > 0 ? 12 : 0, right: 12),
                             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                               if (i > 0) ...[
                                 Icon([Icons.list, if (incluirSinOrden) Icons.content_paste_rounded, Icons.radio_button_unchecked_rounded,
@@ -96,10 +97,9 @@ class _FaseClipper extends CustomClipper<Path> {
   const _FaseClipper(this.fase);
   @override
   Path getClip(Size s) {
-    if (fase == 0) return Path()..addRect(Offset.zero & s);
     return Path()..moveTo(0, 0)..lineTo(s.width - 12, 0)..lineTo(s.width, s.height / 2)
       ..lineTo(s.width - 12, s.height)..lineTo(0, s.height)
-      ..lineTo(fase > 1 ? 12 : 0, s.height / 2)..close();
+      ..lineTo(fase > 0 ? 12 : 0, s.height / 2)..close();
   }
   @override
   bool shouldReclip(_FaseClipper oldClipper) => oldClipper.fase != fase;
@@ -117,11 +117,7 @@ class _BordesFlujo extends CustomPainter {
     for (var i = 0; i < anchos.length - 1; i++) {
       x += anchos[i];
       final divisor = Path();
-      if (i == 0) {
-        divisor..moveTo(x, 0)..lineTo(x, size.height);
-      } else {
-        divisor..moveTo(x - 12, 0)..lineTo(x, size.height / 2)..lineTo(x - 12, size.height);
-      }
+      divisor..moveTo(x - 12, 0)..lineTo(x, size.height / 2)..lineTo(x - 12, size.height);
       canvas.drawPath(divisor, pintura);
     }
   }
