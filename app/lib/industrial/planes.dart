@@ -549,33 +549,20 @@ class _PlanFormState extends State<PlanForm> {
           ],
         ),
         Bloque('Quién y cuánto', descripcion: 'A quién va su orden de trabajo (un técnico o un grupo) y cuánto dura.', [
-          etiqueta('Asignar a'),
-          conMargen(
-            SelectorAsignacionPlan(
-              trabajadorId: p.trabajadorId,
-              grupoId: p.grupoId,
-              onChanged: (w, g) => setState(() {
-                p.trabajadorId = w;
-                p.grupoId = g;
-              }),
-            ),
-          ),
-          const SizedBox(height: 12),
+          // Asignar a y duración en una fila (sin categoría: el grupo ya dice quién lo hace).
           dos(
             conMargen(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  etiqueta('Categoría de técnico'),
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: p.categoria,
-                    items: [
-                      const DropdownMenuItem(value: '', child: Text('Cualquiera')),
-                      for (final c in {...competencias, if (p.categoria.isNotEmpty) p.categoria})
-                        DropdownMenuItem(value: c, child: Text(c)),
-                    ],
-                    onChanged: (c) => setState(() => p.categoria = c!),
+                  etiqueta('Asignar a'),
+                  SelectorAsignacionPlan(
+                    trabajadorId: p.trabajadorId,
+                    grupoId: p.grupoId,
+                    onChanged: (w, g) => setState(() {
+                      p.trabajadorId = w;
+                      p.grupoId = g;
+                    }),
                   ),
                 ],
               ),
@@ -689,7 +676,10 @@ class SelectorAsignacionPlan extends StatelessWidget {
               ),
               const Divider(height: 8),
               if (store.tecnicosDe(x.id).isEmpty)
-                MenuItemButton(onPressed: null, child: Text('Sin técnicos', style: TextStyle(color: P.textoSuave)))
+                MenuItemButton(
+                  onPressed: null,
+                  child: Text('Sin técnicos', style: TextStyle(color: P.textoSuave)),
+                )
               else
                 for (final t in store.tecnicosDe(x.id)) _tecnico(t),
             ],
@@ -715,7 +705,10 @@ class SelectorAsignacionPlan extends StatelessWidget {
             final nuevo = await crearGrupoRapido(context);
             if (nuevo != null) onChanged(null, nuevo.id);
           },
-          child: Text('Nuevo grupo', style: TextStyle(color: P.morado, fontWeight: FontWeight.w600)),
+          child: Text(
+            'Nuevo grupo',
+            style: TextStyle(color: P.morado, fontWeight: FontWeight.w600),
+          ),
         ),
       ],
       builder: (context, menu, _) => InkWell(
@@ -736,4 +729,3 @@ class SelectorAsignacionPlan extends StatelessWidget {
     );
   }
 }
-
