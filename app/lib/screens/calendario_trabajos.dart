@@ -255,7 +255,8 @@ class _MesCalendario extends StatelessWidget {
     final lista = visitas[d] ?? [];
     // Soltar aquí una orden de «Sin fecha» le pone este día.
     return DragTarget<Tarea>(
-      onAcceptWithDetails: (e) => _ponerFecha(e.data, d),
+      // En el mes no hay hora donde cae: la primera libre de ese día.
+      onAcceptWithDetails: (e) => _ponerFecha(e.data, d, inicioMin: primerHueco(d, e.data.duracionMin, sin: e.data.id)),
       builder: (context, candidatos, _) => Container(
         decoration: BoxDecoration(
           color: candidatos.isNotEmpty
@@ -316,6 +317,21 @@ void _ponerFecha(Tarea t, DateTime d, {int? inicioMin}) {
   final c = t.copia()..proximo = d;
   if (inicioMin != null) c.inicioMin = inicioMin;
   store.guardarTarea(c);
+}
+
+/// Primera hora libre (cada 15 min, de 8:00 a 20:00) en que cabe [duracion] sin pisar otra orden ese día;
+/// hoy, desde la próxima hora en punto. null si no cabe.
+int? primerHueco(DateTime dia, int duracion, {String? sin}) {
+  final ocupado = [
+    for (final v in visitasCalendario(store.tareas, dia, dia, (_, _) => true)[DateUtils.dateOnly(dia)] ?? [])
+      if (v.tarea.id != sin && v.inicio != null) (v.inicio!, v.fin!),
+  ];
+  var desde = 8 * 60;
+  if (DateUtils.isSameDay(dia, hoy())) desde = max(desde, (DateTime.now().hour + 1) * 60);
+  for (var s = desde; s + duracion <= 20 * 60; s += 15) {
+    if (ocupado.every((o) => s + duracion <= o.$1 || s >= o.$2)) return s;
+  }
+  return null;
 }
 
 class _NumeroDia extends StatelessWidget {
@@ -1098,10 +1114,7 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
           if (componente != null && componente.id != a?.id) _dato(Icons.account_tree_outlined, componente.titulo),
           if (plan != null)
             _dato(Icons.content_paste_rounded, [plan.nombre, if (plan.cada.isNotEmpty) plan.cada].join(' · ')),
-          _dato(
-            Icons.schedule_rounded,
-            '${fecha(v.dia)} · ${v.inicio == null ? 'Sin hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}'} · ${t.duracionMin} min',
-          ),
+          _datoHora(v, t),
           _dato(
             Icons.person_outline_rounded,
             t.trabajadorIds.isEmpty
@@ -1157,6 +1170,46 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
       ),
     );
   }
+
+  /// Fecha y, pulsable, la hora: se cambia aquí mismo sin abrir la orden.
+  Widget _datoHora(VisitaCalendario v, Tarea t) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      children: [
+        Icon(Icons.schedule_rounded, size: 17, color: P.textoSuave),
+        const SizedBox(width: 10),
+        Text('${fecha(v.dia)} · ', style: const TextStyle(fontSize: 13)),
+        InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: () async {
+            fijo = true; // que no se cierre al salir el ratón hacia el reloj
+            final actual = t.inicioMin ?? primerHueco(v.dia, t.duracionMin, sin: t.id) ?? 9 * 60;
+            final h = await showTimePicker(
+              context: context,
+              initialTime: TimeOfDay(hour: actual ~/ 60, minute: actual % 60),
+            );
+            if (h != null) store.guardarTarea(t.copia()..inicioMin = h.hour * 60 + h.minute);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: P.moradoSuave, borderRadius: BorderRadius.circular(6)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  v.inicio == null ? 'Poner hora' : '${hhmm(v.inicio!)} – ${hhmm(v.fin!)}',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.moradoOscuro),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.unfold_more_rounded, size: 14, color: P.moradoOscuro),
+              ],
+            ),
+          ),
+        ),
+        Flexible(child: Text(' · ${t.duracionMin} min', style: const TextStyle(fontSize: 13))),
+      ],
+    ),
+  );
 
   Widget _dato(IconData icono, String texto) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
