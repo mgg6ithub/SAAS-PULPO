@@ -742,19 +742,21 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                     spacing: 12,
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
+                    // Pendientes / Histórico siempre el último (a la derecha del todo): no se mueve al cambiar;
+                    // el filtro de asignación, solo en Pendientes, va a su izquierda.
                     children: [
-                      Pestanas(
-                        opciones: const ['Pendientes', 'Histórico'],
-                        iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
-                        seleccion: _historicoOt ? 1 : 0,
-                        onChanged: (i) => setState(() => _historicoOt = i == 1),
-                      ),
                       if (!_historicoOt)
                         FiltroFlujoMantenimiento(
                           incluirSinOrden: false,
                           seleccion: _asignacionOt,
                           onChanged: (i) => setState(() => _asignacionOt = i),
                         ),
+                      Pestanas(
+                        opciones: const ['Pendientes', 'Histórico'],
+                        iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                        seleccion: _historicoOt ? 1 : 0,
+                        onChanged: (i) => setState(() => _historicoOt = i == 1),
+                      ),
                     ],
                   ),
               ],

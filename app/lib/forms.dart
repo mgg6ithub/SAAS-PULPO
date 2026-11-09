@@ -2163,8 +2163,9 @@ class SelectorActivo extends StatelessWidget {
     }
     Widget texto(Activo a) => Tooltip(
       message: a.titulo,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: a.padreId == null ? 300 : 190),
+      // Ancho fijo: todas las filas iguales y las flechas de los componentes alineadas a la derecha.
+      child: SizedBox(
+        width: a.padreId == null ? 240 : 180,
         child: Directionality(textDirection: TextDirection.ltr, child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2189,22 +2190,43 @@ class SelectorActivo extends StatelessWidget {
         return MenuItemButton(
           leadingIcon: IconoActivo(a.icono, size: 22, color: P.textoSuave),
           onPressed: () => elegir(a.id),
-          trailingIcon: valor == a.id ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
+          // Hueco del check y de la flecha también en las hojas, para que todas las filas midan igual.
+          trailingIcon: Padding(
+            padding: const EdgeInsets.only(right: 48),
+            child: Icon(Icons.check_rounded, size: 18, color: valor == a.id ? P.morado : Colors.transparent),
+          ),
           child: texto(a),
         );
       }
-      return SubmenuButton(
-        leadingIcon: IconoActivo(a.icono, size: 22, color: P.textoSuave),
-        menuStyle: estilo.copyWith(maximumSize: const WidgetStatePropertyAll(Size(270, 420))),
-        menuChildren: [
-          if (filtro) MenuItemButton(onPressed: () => elegir(a.id), child: const Text('Este activo y sus componentes')),
-          for (final h in componentes) opcion(h, {...ancestros, a.id}),
+      // Con componentes: pulsar el activo lo elige (con su check); la flecha de la derecha abre sus componentes.
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // El botón del menú se estira por dentro: aquí, en una fila, mide lo que pide su contenido.
+          IntrinsicWidth(
+            child: MenuItemButton(
+              leadingIcon: IconoActivo(a.icono, size: 22, color: valor == a.id ? P.morado : P.textoSuave),
+              onPressed: () => elegir(a.id),
+              trailingIcon: Icon(Icons.check_rounded, size: 18, color: valor == a.id ? P.morado : Colors.transparent),
+              child: texto(a),
+            ),
+          ),
+          // La flecha (con su hueco) abre los componentes; ancho fijo, como la columna de las hojas.
+          SizedBox(
+            width: 60,
+            child: SubmenuButton(
+              menuStyle: estilo.copyWith(maximumSize: const WidgetStatePropertyAll(Size(300, 420))),
+              menuChildren: [for (final h in componentes) opcion(h, {...ancestros, a.id})],
+              child: Tooltip(message: 'Componentes de ${a.titulo}', child: const SizedBox(height: 36)),
+            ),
+          ),
         ],
-        child: texto(a),
       );
     }
+    // Igual en el filtro del técnico y en el formulario: icono a la izquierda y flecha a la derecha (si no cabe a la
+    // derecha, el submenú se abre hacia la izquierda solo).
     return Directionality(
-      textDirection: filtro ? TextDirection.rtl : Directionality.of(context),
+      textDirection: Directionality.of(context),
       child: MenuAnchor(
       controller: controller,
       style: estilo,
