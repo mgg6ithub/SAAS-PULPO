@@ -333,35 +333,64 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
     final activo = store.activo(t.activoId);
     final plan = store.planes.where((p) => p.id == t.planId).firstOrNull;
     final color = (t.tipoMantenimiento ?? TipoMantenimiento.preventivo).color;
+    final hecha = t.estado == EstadoTrabajo.realizado;
+    final avisos = [if (t.proximo == null) 'Sin fecha', if (t.trabajadorIds.isEmpty) 'Sin técnico'];
     return Padding(
       padding: margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Cabecera(
-            lider: IconButton(
-              tooltip: 'Volver a Órdenes de trabajo',
-              onPressed: widget.onVolver,
-              icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
+            lider: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Volver a Órdenes de trabajo',
+                  onPressed: widget.onVolver,
+                  icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
+                ),
+                const SizedBox(width: 4),
+                // Círculo vacío o con check: completada o no.
+                Tooltip(
+                  message: hecha ? 'Completada' : 'Sin completar',
+                  child: Icon(
+                    hecha ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    size: 24,
+                    color: hecha ? P.verde : P.textoSuave,
+                  ),
+                ),
+              ],
             ),
             titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
             subtitulo: t.descripcion.isEmpty ? null : t.descripcion,
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _Eslabon(
-                'Activo',
-                activo?.titulo ?? 'Sin activo',
-                lider: activo == null ? null : IconoActivo(activo.icono, size: 18, color: P.textoSuave),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _Eslabon(
+                      'Activo',
+                      activo?.titulo ?? 'Sin activo',
+                      lider: activo == null ? null : IconoActivo(activo.icono, size: 18, color: P.textoSuave),
+                    ),
+                    const _Flecha(),
+                    _Eslabon('Mantenimiento', plan?.nombre ?? 'Sin mantenimiento', lider: puntoTipo(color)),
+                    const _Flecha(),
+                    _Eslabon('Orden de trabajo', t.nombre.isEmpty ? 'Sin nombre' : t.nombre, actual: true),
+                  ],
+                ),
               ),
-              const _Flecha(),
-              _Eslabon('Mantenimiento', plan?.nombre ?? 'Sin mantenimiento', lider: puntoTipo(color)),
-              const _Flecha(),
-              _Eslabon('Orden de trabajo', t.nombre.isEmpty ? 'Sin nombre' : t.nombre, actual: true),
+              // Lo que le falta a la orden, a la derecha del todo.
+              if (!hecha && avisos.isNotEmpty) ...[
+                const SizedBox(width: 12),
+                Wrap(spacing: 8, runSpacing: 8, children: [for (final a in avisos) _Aviso(a)]),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -412,6 +441,33 @@ class _Eslabon extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Exclamación ámbar con lo que falta («Sin fecha», «Sin técnico»).
+class _Aviso extends StatelessWidget {
+  final String texto;
+  const _Aviso(this.texto);
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: P.ambar.withValues(alpha: .1),
+      borderRadius: BorderRadius.circular(99),
+      border: Border.all(color: P.ambar.withValues(alpha: .3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.error_outline_rounded, size: 16, color: P.ambar),
+        const SizedBox(width: 6),
+        Text(
+          texto,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.ambar),
         ),
       ],
     ),

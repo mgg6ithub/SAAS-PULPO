@@ -1700,7 +1700,10 @@ class _TareaFormState extends State<TareaForm> {
                           Expanded(child: etiqueta(m('Trabajadores'))),
                           if (aptos > 0)
                             Flexible(
-                              child: Padding(
+                              // A la derecha del todo, alineado con el borde del campo.
+                              child: Align(
+                                alignment: Alignment.topRight,
+                                child: Padding(
                                 padding: const EdgeInsets.only(bottom: 4),
                                 child: Enlace(
                                   'El más adecuado',
@@ -1709,6 +1712,7 @@ class _TareaFormState extends State<TareaForm> {
                                     if (m != null) t.trabajadorIds = [m.id];
                                   }),
                                 ),
+                              ),
                               ),
                             ),
                         ],
