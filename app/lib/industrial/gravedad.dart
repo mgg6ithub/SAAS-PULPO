@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../marca.dart';
 
 import '../theme.dart';
 import '../models.dart';
@@ -36,7 +35,7 @@ bool incidenciaAbierta(Tarea t) => !t.esPlantilla && (t.resultado ?? 0) > 0 && !
 /// Estado de preparación de una OT, sin confundirlo con su tipo de mantenimiento.
 Widget iconoAsignacion(Tarea? ot) => Tooltip(
   message: ot == null ? 'Sin orden' : ot.trabajadorIds.isEmpty ? 'Sin asignar' : 'Asignado',
-  child: Icon(ot == null ? Marca.iconoTrabajo : ot.trabajadorIds.isEmpty
+  child: Icon(ot == null ? Icons.content_paste_rounded : ot.trabajadorIds.isEmpty
       ? Icons.radio_button_unchecked_rounded : Icons.check_circle_outline_rounded,
     size: 18, color: ot != null && ot.trabajadorIds.isNotEmpty ? P.verde : P.textoSuave),
 );

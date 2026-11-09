@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show listEquals;
-import '../marca.dart';
 import '../theme.dart';
 
 /// Filtro continuo: Todos y las tres fases de preparación de la OT.
@@ -56,7 +55,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
                             padding: EdgeInsets.only(left: i > 1 ? 12 : 0, right: i > 0 ? 12 : 0),
                             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                               if (i > 0) ...[
-                                Icon([Icons.list, if (incluirSinOrden) Marca.iconoTrabajo, Icons.radio_button_unchecked_rounded,
+                                Icon([Icons.list, if (incluirSinOrden) Icons.content_paste_rounded, Icons.radio_button_unchecked_rounded,
                                   Icons.check_circle_outline_rounded][i], size: 18,
                                   color: i == etiquetas.length - 1 ? P.verde : seleccion == i ? P.morado : P.textoSuave),
                                 const SizedBox(width: 6),
