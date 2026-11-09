@@ -1210,6 +1210,14 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
                 children: [
                   // Sin icono delante: el selector ya lleva el suyo.
                   Flexible(child: SelectorTrabajadores(t, () => store.guardarTarea(t), compacto: true)),
+                  // El mismo triángulo rojo que en el calendario, al final de lo que falta.
+                  if (!v.hecha && t.trabajadorIds.isEmpty) ...[
+                    const SizedBox(width: 8),
+                    const Tooltip(
+                      message: 'Sin técnico: nadie la recibe',
+                      child: Icon(Icons.warning_amber_rounded, size: 18, color: P.rojo),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1332,6 +1340,14 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
           ],
           child: _chip(duracion(t.duracionMin)),
         ),
+        // Sin hora: el triángulo ámbar del calendario, al final de la fila.
+        if (!v.hecha && v.inicio == null) ...[
+          const SizedBox(width: 8),
+          const Tooltip(
+            message: 'Sin hora',
+            child: Icon(Icons.warning_amber_rounded, size: 18, color: P.ambar),
+          ),
+        ],
       ],
     ),
   );
