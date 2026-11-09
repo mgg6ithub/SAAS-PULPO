@@ -59,7 +59,7 @@ void main() {
     addTearDown(tester.view.reset);
     store.activos = [Activo(id: 'a', nombre: 'Máquina')];
     store.planes = [
-      for (var i = 1; i <= 3; i++)
+      for (var i = 2; i <= 3; i++)
         PlanMantenimiento(id: 'p$i', activoId: 'a', nombre: 'Plan $i'),
     ];
     store.tareas = [
@@ -74,11 +74,13 @@ void main() {
       body: ActivoDetalle(activoId: 'a', onVolver: () {}),
     )));
     await tester.pumpAndSettle();
-    for (final caso in [('Sin orden', 'Plan 1'), ('Sin asignar', 'Plan 2'), ('Asignados', 'Plan 3')]) {
+    // Todo mantenimiento tiene su OT (la crea la base): ya no hay «Sin orden».
+    expect(find.text('Sin orden'), findsNothing);
+    for (final caso in [('Sin asignar', 'Plan 2'), ('Asignados', 'Plan 3')]) {
       await tester.tap(find.text(caso.$1).first);
       await tester.pumpAndSettle();
       expect(find.text(caso.$2), findsOneWidget);
-      for (final nombre in ['Plan 1', 'Plan 2', 'Plan 3'].where((n) => n != caso.$2)) {
+      for (final nombre in ['Plan 2', 'Plan 3'].where((n) => n != caso.$2)) {
         expect(find.text(nombre), findsNothing);
       }
       expect(tester.takeException(), isNull);

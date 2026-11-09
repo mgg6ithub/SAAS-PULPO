@@ -564,9 +564,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       planes = planes.where((p) {
         final ot = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
         return switch (_estadoOrden) {
-          1 => ot == null,
-          2 => ot != null && ot.trabajadorIds.isEmpty,
-          3 => ot != null && ot.trabajadorIds.isNotEmpty,
+          // Todo mantenimiento tiene su OT (se crea sola): solo sin asignar / asignados.
+          1 => ot == null || ot.trabajadorIds.isEmpty,
+          2 => ot != null && ot.trabajadorIds.isNotEmpty,
           _ => true,
         };
       }).toList();
@@ -577,9 +577,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       return Vacio(
         icono: Icons.filter_alt_off_outlined,
         texto: switch (_estadoOrden) {
-          1 => 'No tienes mantenimientos sin una orden de trabajo pendiente.',
-          2 => 'No tienes mantenimientos con una orden de trabajo pendiente sin técnico asignado.',
-          3 => 'No tienes mantenimientos con una orden de trabajo pendiente asignada a un técnico.',
+          1 => 'No tienes mantenimientos con una orden de trabajo pendiente sin técnico asignado.',
+          2 => 'No tienes mantenimientos con una orden de trabajo pendiente asignada a un técnico.',
           _ => 'No tienes mantenimientos con estos filtros.',
         },
       );
@@ -822,6 +821,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             ),
                             if (vista == 0)
                               FiltroFlujoMantenimiento(
+                                incluirSinOrden: false,
                                 seleccion: _estadoOrden,
                                 onChanged: (i) => setState(() => _estadoOrden = i),
                               ),

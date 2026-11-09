@@ -12,8 +12,6 @@ import 'iconos.dart';
 import 'gravedad.dart';
 import 'incidencia.dart';
 import 'mantenimientos.dart' show abrirIncidenciaForm;
-import 'activos.dart' show destacarMantenimiento;
-import 'plan.dart';
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
@@ -298,20 +296,28 @@ class IncidenciasAbiertas extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Consejo('Solucionada retira el aviso sin completar la orden. Crear orden prepara otra intervención; el trabajo original conserva su resultado.'),
+          const Consejo(
+            'Solucionada retira el aviso sin completar la orden. Crear orden prepara otra intervención; el trabajo original conserva su resultado.',
+          ),
           const SizedBox(height: 10),
           Tarjeta(
             padding: EdgeInsets.zero,
             child: Column(
               children: [
                 for (final aviso in avisos) ...[
-                  Material(color: P.superficie, child: ListTile(
-                    leading: Icon(Icons.report_outlined, color: aviso.gravedad.color),
-                    title: Text(aviso.descripcion, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text('${store.activo(aviso.activoId)?.titulo ?? 'Activo'} · Pendiente de revisión'),
-                    onTap: () => abrirIncidenciaForm(context, original: aviso),
-                    trailing: TextButton(onPressed: () => abrirIncidenciaForm(context, original: aviso), child: const Text('Revisar')),
-                  )),
+                  Material(
+                    color: P.superficie,
+                    child: ListTile(
+                      leading: Icon(Icons.report_outlined, color: aviso.gravedad.color),
+                      title: Text(aviso.descripcion, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      subtitle: Text('${store.activo(aviso.activoId)?.titulo ?? 'Activo'} · Pendiente de revisión'),
+                      onTap: () => abrirIncidenciaForm(context, original: aviso),
+                      trailing: TextButton(
+                        onPressed: () => abrirIncidenciaForm(context, original: aviso),
+                        child: const Text('Revisar'),
+                      ),
+                    ),
+                  ),
                   Divider(height: 1, color: P.borde),
                 ],
                 for (final (i, t) in lista.indexed) ...[
@@ -357,7 +363,11 @@ class IncidenciasAbiertas extends StatelessWidget {
                                 message: 'Retira el aviso; no completa la orden ni reinicia el mantenimiento.',
                                 child: TextButton(
                                   onPressed: () async {
-                                    if (!await confirmar(context, '¿Dar el aviso por solucionado? La orden conserva su resultado y el mantenimiento no se reinicia.')) return;
+                                    if (!await confirmar(
+                                      context,
+                                      '¿Dar el aviso por solucionado? La orden conserva su resultado y el mantenimiento no se reinicia.',
+                                    ))
+                                      return;
                                     t.resultadoResuelto = true;
                                     store.guardarTarea(t);
                                   },
@@ -378,157 +388,6 @@ class IncidenciasAbiertas extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Inicio de Pultec: mantenimientos que aún no tienen orden de trabajo pendiente (los que la tienen ya
-/// salen arriba, como órdenes). Lista sencilla, del más cercano al más lejano: 4 y «Ver todos» la despliega aquí
-/// mismo. Al tocar uno se abre su activo, donde se crea la orden o se asigna el técnico.
-class MantenimientosSinAsignar extends StatefulWidget {
-  final ValueChanged<String> onAbrir;
-  const MantenimientosSinAsignar({super.key, required this.onAbrir});
-
-  @override
-  State<MantenimientosSinAsignar> createState() => _MantenimientosSinAsignarState();
-}
-
-class _MantenimientosSinAsignarState extends State<MantenimientosSinAsignar> {
-  static const _primeros = 4;
-  bool todos = false;
-
-  @override
-  Widget build(BuildContext context) {
-    // Una pasada por las OT pendientes: por su enlace al mantenimiento; las antiguas, por activo y nombre.
-    final ots = <String, Tarea>{
-      for (final t in [...store.tareas, ...store.subtareas])
-        if (!t.esPlantilla && otPendiente(t)) t.planId ?? '${t.activoId}|${t.nombre}': t,
-    };
-    final items = <(PlanMantenimiento, DateTime?, String)>[];
-    for (final p in store.planes.where((p) => p.activa)) {
-      final ot = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
-      // Con orden de trabajo ya es trabajo (sale arriba); aquí solo lo que aún no tiene orden.
-      if (ot != null) continue;
-      items.add((p, proximoPlan(p), 'Sin orden de trabajo'));
-    }
-    if (items.isEmpty) return const SizedBox.shrink();
-    items.sort((a, b) => (a.$2 ?? DateTime(9999)).compareTo(b.$2 ?? DateTime(9999)));
-    final vistos = todos ? items : items.take(_primeros).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Título como los de las otras secciones de Inicio.
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                'Mantenimientos sin orden de trabajo',
-                style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Cuántos hay en total, aunque se vean solo los primeros.
-            Text(
-              '${items.length}',
-              style: TextStyle(color: P.textoSuave, fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            if (items.length > _primeros)
-              Enlace(todos ? 'Ver menos' : 'Ver todos (${items.length})', onTap: () => setState(() => todos = !todos)),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Tarjeta(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (final (i, (p, d, _)) in vistos.indexed) ...[
-                if (i > 0) Divider(height: 1, color: P.borde),
-                // Primero el mantenimiento; una flecha curva lleva a su activo; debajo, cuándo toca.
-                Builder(
-                  builder: (context) {
-                    final a = _raiz(p.activoId);
-                    return InkWell(
-                      onTap: () {
-                        destacarMantenimiento(p.id);
-                        widget.onAbrir(a?.id ?? p.activoId);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    p.nombre,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 17,
-                                      letterSpacing: -.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.subdirectory_arrow_right_rounded, size: 20, color: P.textoSuave),
-                                      const SizedBox(width: 4),
-                                      if (a != null) ...[
-                                        IconoActivo(a.icono, size: 24, color: p.prioridad.color),
-                                        const SizedBox(width: 8),
-                                      ],
-                                      Flexible(
-                                        child: Text(
-                                          a == null ? 'Sin activo' : a.titulo,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(color: P.textoSuave, fontSize: 14.5),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 24),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          d == null ? 'Sin fecha' : '${relativo(d)} · ${fecha(d)}',
-                                          style: TextStyle(
-                                            color: d != null && diasHasta(d) < 0 ? P.rojo : P.textoSuave,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 14),
-                                        BotonCrearOrden(
-                                          () => abrirTareaForm(
-                                            context,
-                                            null,
-                                            borrador: p.ot(store.nuevoId())..proximo = d ?? hoy(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(Icons.chevron_right_rounded, size: 20, color: P.textoSuave),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

@@ -47,7 +47,10 @@ double horasHoy(Activo a) {
 /// Cuándo toca un mantenimiento: su fecha o, por horas, la estimada con el uso de su activo principal
 /// (planificado: el primer día del calendario en que se alcanzan las horas; null si no llega a planificarse).
 DateTime? proximoPlan(PlanMantenimiento p) {
-  if (p.proximo != null || p.cadaHoras == null) return p.proximo;
+  if (p.proximo != null) return p.proximo;
+  // Por días sin próximo: desde el último (o desde hoy). La base estima igual (`private.proximo_estimado`).
+  if (p.cadaDias != null) return masDias(p.ultimo ?? hoy(), p.cadaDias!);
+  if (p.cadaHoras == null) return null;
   final a = store.activo(p.activoId);
   if (a == null) return null;
   final r = raizActivo(a.id) ?? a;
@@ -245,7 +248,10 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   case 'Componente':
                     return celdaTexto(nodo?.nombre ?? '—', suave: true);
                   case 'Prioridad':
-                    return Tooltip(message: p.prioridad.descripcion, child: Pill(p.prioridad.etiqueta, p.prioridad.color, punto: true));
+                    return Tooltip(
+                      message: p.prioridad.descripcion,
+                      child: Pill(p.prioridad.etiqueta, p.prioridad.color, punto: true),
+                    );
                   case 'Cada cuánto':
                     return celdaTexto(p.cada.isEmpty ? (p.proximo == null ? '—' : 'Una vez') : p.cada, suave: true);
                   case 'Horas restantes':
@@ -273,15 +279,9 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   case 'Repuestos':
                     return celdaTexto(p.repuestos.isEmpty ? '—' : p.repuestos, suave: true);
                   case 'Orden de trabajo':
-                    // El técnico es de la orden, no del mantenimiento. Sin orden: al tocar, se crea.
-                    if (otPendienteDe == null) {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: BotonCrearOrden(
-                          () => abrirTareaForm(context, null, borrador: p.ot(store.nuevoId())..proximo = d ?? hoy()),
-                        ),
-                      );
-                    }
+                    // El técnico es de la orden, no del mantenimiento. La orden la crea la base sola al guardar
+                    // el mantenimiento: si aún no ha llegado, se espera.
+                    if (otPendienteDe == null) return celdaTexto('Creando orden…', suave: true);
                     final f = otPendienteDe.proximo;
                     final vencida = f != null && diasHasta(f) < 0;
                     return Padding(
@@ -300,10 +300,15 @@ class _TablaPlanesState extends State<TablaPlanes> {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          SelectorTrabajadores(otPendienteDe, () {
-                            store.guardarTarea(otPendienteDe);
-                            if (mounted) setState(() {});
-                          }, textoSinAsignar: 'Sin técnico', reducido: true),
+                          SelectorTrabajadores(
+                            otPendienteDe,
+                            () {
+                              store.guardarTarea(otPendienteDe);
+                              if (mounted) setState(() {});
+                            },
+                            textoSinAsignar: 'Sin técnico',
+                            reducido: true,
+                          ),
                         ],
                       ),
                     );
@@ -318,8 +323,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(padding: const EdgeInsets.only(top: 6),
-                        child: iconoAsignacion(otPendienteDe)),
+                      Padding(padding: const EdgeInsets.only(top: 6), child: iconoAsignacion(otPendienteDe)),
                       const SizedBox(width: 10),
                       Flexible(
                         child: Column(
@@ -369,7 +373,8 @@ class _PlanFormState extends State<PlanForm> {
   late final nombre = TextEditingController(text: p.nombre)..addListener(() => setState(() {}));
   late final dias = TextEditingController(text: p.cadaDias?.toString() ?? '')..addListener(_alCambiarDias);
   late final horasC = TextEditingController(text: p.cadaHoras?.toString() ?? '')..addListener(() => setState(() {}));
-  late final contador = TextEditingController(text: p.ultimoHoras == null ? '' : '${p.ultimoHoras}');
+  late final contador = TextEditingController(text: p.ultimoHoras == null ? '' : '${p.ultimoHoras}')
+    ..addListener(() => setState(() {}));
   late final descripcion = TextEditingController(text: p.descripcion);
   late final repuestos = TextEditingController(text: p.repuestos);
   late final procedimiento = TextEditingController(text: p.procedimiento);
@@ -398,6 +403,24 @@ class _PlanFormState extends State<PlanForm> {
     if (p.ultimo != null && n != null) p.proximo = masDias(p.ultimo!, n);
   });
 
+  double? _horasActivo() {
+    final a = store.activo(p.activoId);
+    return a == null ? null : horasHoy(a);
+  }
+
+  /// Cuándo tocará con lo que hay escrito ahora: «≈ 07/02/2027 · en 90 días (estimado)», en tono neutro.
+  String? get estimacion {
+    if (modo == 2) return null;
+    final prueba = p.copia()
+      ..cadaDias = modo == 0 ? _entero(dias) : null
+      ..cadaHoras = modo == 1 ? _entero(horasC) : null
+      ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.')) ?? (modo == 1 ? _horasActivo() : null);
+    if (prueba.cadaDias == null && prueba.cadaHoras == null) return null;
+    final d = proximoPlan(prueba);
+    if (d == null) return modo == 1 ? 'Sin estimación: falta el ritmo de uso del activo' : null;
+    return '≈ ${fecha(d)} · ${relativo(d)} (estimado)';
+  }
+
   String? get errorNombre => intentoGuardar && nombre.text.trim().isEmpty ? 'Ponle un nombre' : null;
   String? get errorCada =>
       intentoGuardar &&
@@ -417,7 +440,8 @@ class _PlanFormState extends State<PlanForm> {
       ..descripcion = descripcion.text.trim()
       ..cadaDias = modo == 0 ? _entero(dias) : null
       ..cadaHoras = modo == 1 ? _entero(horasC) : null
-      ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.'))
+      // Por horas sin contador en el último: cuenta desde las horas de hoy (si no, tocaría ya).
+      ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.')) ?? (modo == 1 ? _horasActivo() : null)
       ..repuestos = repuestos.text.trim()
       ..procedimiento = procedimiento.text.trim()
       ..avisoDias = _entero(avisoDias)
@@ -487,6 +511,11 @@ class _PlanFormState extends State<PlanForm> {
                 _ => CampoFecha('Fecha', p.proximo, (d) => setState(() => p.proximo = d)),
               },
             ),
+            if (estimacion case final e?)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(e, style: TextStyle(fontSize: 13, color: P.textoSuave)),
+              ),
             const SizedBox(height: 16),
             dos(
               CampoFecha('Último hecho', p.ultimo, (d) {
