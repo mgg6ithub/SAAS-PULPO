@@ -240,7 +240,21 @@ const competenciasResidenciales = <String>[
 ];
 
 const competenciasBase = industrial
-    ? <String>['Mecánica', 'Hidráulica', 'Neumática', 'Automatización', 'Soldadura']
+    // Las 5 generales y, después, las de una planta como Dominion (secado térmico, bombeo, camiones cisterna).
+    ? <String>[
+        'Mecánica',
+        'Hidráulica',
+        'Neumática',
+        'Automatización',
+        'Soldadura',
+        'Eléctrica',
+        'Bombas y bombeo',
+        'Calderas y quemadores',
+        'Vehículos pesados',
+        'Instrumentación',
+        'Lubricación',
+        'Calderería',
+      ]
     : competenciasResidenciales;
 
 /// Las especialidades industriales se presentan sin el catálogo residencial antiguo.

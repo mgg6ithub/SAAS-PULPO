@@ -298,7 +298,12 @@ class Store extends ChangeNotifier {
     planes = d.planes;
     incidencias = d.incidencias;
     tipos = tiposParaMarca(d.tipos.isEmpty ? [...tiposBase] : d.tipos);
-    competencias = competenciasParaMarca(d.competencias.isEmpty ? [...competenciasBase] : d.competencias);
+    // Pultec: las especialidades nuevas de la base también salen en empresas que ya tenían su lista.
+    competencias = competenciasParaMarca(
+      d.competencias.isEmpty
+          ? [...competenciasBase]
+          : [...d.competencias, if (industrial) ...competenciasBase.where((c) => !d.competencias.contains(c))],
+    );
   }
 
   /// Lo que otra persona ha cambiado en la base (en vivo). No se vuelve a guardar: ya está allí.
