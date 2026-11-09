@@ -76,6 +76,8 @@ class _TrabajadoresState extends State<Trabajadores> {
                         else TituloVista(m('Trabajadores')),
                         Pestanas(
                           opciones: const ['Todos', 'Disponibles', 'Ocupados', 'Ausentes'],
+                          // El punto con el color de cada estado (como en la columna Hoy).
+                          colores: [null, for (final e in EstadoHoy.values) e.color],
                           seleccion: estado,
                           onChanged: (i) => setState(() => estado = i),
                         ),
