@@ -171,7 +171,10 @@ class HoverCard extends StatefulWidget {
   final VoidCallback? onTap;
   final EdgeInsets padding;
   final double? width;
-  const HoverCard({super.key, required this.child, this.onTap, this.padding = const EdgeInsets.all(16), this.width});
+  /// Seleccionada (p. ej. la cifra que filtra la lista): borde morado fijo.
+  final bool marcado;
+  const HoverCard({super.key, required this.child, this.onTap, this.padding = const EdgeInsets.all(16), this.width,
+    this.marcado = false});
 
   @override
   State<HoverCard> createState() => _HoverCardState();
@@ -198,7 +201,7 @@ class _HoverCardState extends State<HoverCard> {
           decoration: BoxDecoration(
             color: P.superficie,
             borderRadius: BorderRadius.circular(P.radio),
-            border: Border.all(color: activo ? P.morado.withValues(alpha: .45) : P.borde),
+            border: Border.all(color: widget.marcado ? P.morado : activo ? P.morado.withValues(alpha: .45) : P.borde),
           ),
           child: widget.child,
         ),

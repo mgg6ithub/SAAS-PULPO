@@ -615,12 +615,14 @@ class _FilaTrabajo extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       opacity: hecha ? .5 : 1,
       child: FilaLista(
-        lider: industrial ? _IconoActivo(t.activoId) : TipoIcono(t.tipo, size: 36),
+        lider: industrial
+            ? _IconoActivo(t.activoId, color: (t.tipoMantenimiento ?? TipoMantenimiento.preventivo).color)
+            : TipoIcono(t.tipo, size: 36),
         titulo: t.nombre,
         subtitulo: [
           if (industrial) dondeEs(t.activoId) else if (cliente != null) cliente.nombre,
-          if (mostrarDia && t.proximo != null) relativo(t.proximo!),
-        ].join(' · '),
+          if (mostrarDia && t.proximo != null) relativo(t.proximo!).toLowerCase(),
+        ].where((x) => x.isNotEmpty).join(', '),
         derecha: industrial && esMovil(context)
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -729,6 +731,8 @@ class _PanelTecnico extends StatefulWidget {
 
 class _PanelTecnicoState extends State<_PanelTecnico> {
   int vista = 0, fecha = 0;
+  /// Otros días (atrasadas y próximas) plegados bajo lo de hoy.
+  bool otrosDias = false;
   int? estado, resultado;
   TipoMantenimiento? tipo;
   String? activoId;
@@ -834,7 +838,10 @@ Text('$etiqueta: ${t.nombre}')
       (i.tecnicoId == null && (store.nube?.esTrabajador ?? false))).toList()
       ..sort((a, b) => b.creada.compareTo(a.creada));
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _CifrasTecnico(widget.w, pendientes),
+      _CifrasTecnico(widget.w, pendientes, filtro: vista == 0 ? fecha : 0, onFiltro: (f) => setState(() {
+        if (vista != 0) _vista(0);
+        fecha = fecha == f ? 0 : f;
+      })),
       const SizedBox(height: 14),
       BarraVista(izquierda: [Pestanas(opciones: ['Pendientes · ${pendientes.length}', 'Incidencias · ${avisos.length}', 'Histórico'],
         seleccion: vista, onChanged: (n) { estado = null; _vista(n); })], derecha: [_filtros()]),
@@ -866,13 +873,30 @@ Text('$etiqueta: ${t.nombre}')
     final lista = pendientes.where((t) => _coincide(t.nombre, t.activoId, t.tipoMantenimiento, t.proximo)
       && (estado == null || (estado == 0 ? t.estado == EstadoTrabajo.pendiente : t.estado == EstadoTrabajo.enCurso))).toList();
     if (lista.isEmpty) return _vacio('No tienes órdenes pendientes con estos filtros');
-    return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Tarjeta(padding: EdgeInsets.zero, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _FilaTrabajo(lista[n], widget.abrir, mostrarDia: true),
-        Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(lista[n].tipoMantenimiento ?? TipoMantenimiento.preventivo)),
-      ])),
-    ));
+    // Con un filtro de fecha (o al pulsar una cifra) se ve la lista tal cual; sin él, solo lo de hoy
+    // y el resto de días plegado debajo.
+    final filas = <Object>[...lista];
+    if (fecha == 0) {
+      final deHoy = lista.where((t) => t.proximo != null && diasHasta(t.proximo!) == 0).toList();
+      final otros = lista.where((t) => !deHoy.contains(t)).toList();
+      filas
+        ..clear()
+        ..addAll(deHoy.isEmpty ? ['vacio'] : deHoy);
+      if (otros.isNotEmpty) filas..add(otros.length)..addAll(otrosDias ? otros : const []);
+    }
+    return ListView.builder(itemCount: filas.length, itemBuilder: (_, n) => switch (filas[n]) {
+      final Tarea t => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Tarjeta(padding: EdgeInsets.zero, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _FilaTrabajo(t, widget.abrir, mostrarDia: true),
+          Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo)),
+        ])),
+      ),
+      final int total => _Plegable('Otros días', total, abierto: otrosDias,
+        onTap: () => setState(() => otrosDias = !otrosDias)),
+      _ => Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(child: Text('Hoy no tienes órdenes.',
+        style: TextStyle(color: P.textoSuave, fontSize: 15)))),
+    });
   }
 
   Widget _listaIncidencias(List<Incidencia> avisos) {
@@ -920,16 +944,18 @@ Text('$etiqueta: ${t.nombre}')
   });
 }
 
-/// Icono del activo de la OT en un círculo del color de su estado de mantenimiento.
+/// Icono del activo en un círculo: del color pedido (el tipo de la OT, igual que su píldora)
+/// o, si no se pide, del estado de mantenimiento del activo.
 class _IconoActivo extends StatelessWidget {
   final String? activoId;
   final double size;
-  const _IconoActivo(this.activoId, {this.size = 36});
+  final Color? color;
+  const _IconoActivo(this.activoId, {this.size = 36, this.color});
 
   @override
   Widget build(BuildContext context) {
     final a = store.activo(activoId);
-    final color = a == null ? P.textoSuave : colorEstado(gravedadDe(a.id));
+    final color = this.color ?? (a == null ? P.textoSuave : colorEstado(gravedadDe(a.id)));
     return Container(
       width: size,
       height: size,
@@ -942,18 +968,21 @@ class _IconoActivo extends StatelessWidget {
 }
 
 /// Saludo y tres cifras del técnico (hoy, atrasadas, esta semana), con el icono en su color.
+/// Cada cifra filtra la lista por su fecha; pulsarla otra vez quita el filtro.
 class _CifrasTecnico extends StatelessWidget {
   final Trabajador w;
   final List<Tarea> pendientes;
-  const _CifrasTecnico(this.w, this.pendientes);
+  final int filtro;
+  final ValueChanged<int> onFiltro;
+  const _CifrasTecnico(this.w, this.pendientes, {required this.filtro, required this.onFiltro});
 
   @override
   Widget build(BuildContext context) {
     int cuenta(bool Function(int) f) => pendientes.where((t) => t.proximo != null && f(diasHasta(t.proximo!))).length;
     final cifras = [
-      (Icons.today_rounded, 'Para hoy', cuenta((d) => d == 0), P.morado),
-      (Icons.warning_amber_rounded, 'Atrasadas', cuenta((d) => d < 0), P.rojo),
-      (Icons.date_range_rounded, 'Esta semana', cuenta((d) => d >= 0 && d <= 7), P.teal),
+      (Icons.today_rounded, 'Para hoy', cuenta((d) => d == 0), P.morado, 1),
+      (Icons.warning_amber_rounded, 'Atrasadas', cuenta((d) => d < 0), P.rojo, 2),
+      (Icons.date_range_rounded, 'Esta semana', cuenta((d) => d >= 0 && d <= 7), P.teal, 3),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -970,10 +999,12 @@ class _CifrasTecnico extends StatelessWidget {
         const SizedBox(height: 14),
         Row(
           children: [
-            for (final (i, (icono, texto, n, color)) in cifras.indexed) ...[
+            for (final (i, (icono, texto, n, color, f)) in cifras.indexed) ...[
               if (i > 0) const SizedBox(width: 12),
               Expanded(
-                child: Tarjeta(
+                child: HoverCard(
+                  marcado: filtro == f,
+                  onTap: () => onFiltro(f),
                   child: Row(
                     children: [
                       Container(
@@ -1007,6 +1038,37 @@ class _CifrasTecnico extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Cabecera plegable de la lista: título, cuántas hay en gris y flecha que gira al abrir.
+class _Plegable extends StatelessWidget {
+  final String titulo;
+  final int total;
+  final bool abierto;
+  final VoidCallback onTap;
+  const _Plegable(this.titulo, this.total, {required this.abierto, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 6, bottom: 8),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(P.radio),
+        hoverColor: P.hoverFila,
+        child: SizedBox(height: 40, child: Row(children: [
+          const SizedBox(width: 8),
+          AnimatedRotation(turns: abierto ? .25 : 0, duration: const Duration(milliseconds: 200), curve: Curves.easeOutCubic,
+            child: Icon(Icons.chevron_right_rounded, size: 20, color: P.textoSuave)),
+          const SizedBox(width: 6),
+          Text(titulo, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 8),
+          Text('$total', style: TextStyle(fontSize: 14, color: P.textoSuave)),
+        ])),
+      ),
+    ),
+  );
 }
 
 // ── Semana ───────────────────────────────────────────────
