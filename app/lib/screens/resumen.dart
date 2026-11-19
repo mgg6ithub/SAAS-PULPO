@@ -174,6 +174,8 @@ class Resumen extends StatelessWidget {
                           _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
                           const SizedBox(height: 16),
                           _CargaTrabajadores(onTrabajador: onTrabajador),
+                          const SizedBox(height: 16),
+                          _EstaSemana(onIr: onIr),
                         ];
                         // Las dos columnas acaban a la misma altura: la carga del equipo se estira hasta el final de
                         // las órdenes (o las órdenes hasta el final de la derecha), sin huecos abajo.
@@ -188,7 +190,7 @@ class Resumen extends StatelessWidget {
                                       flex: 2,
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: [lado[0], lado[1], Expanded(child: lado[2])],
+                                        children: [...lado.take(4), Expanded(child: lado[4])],
                                       ),
                                     ),
                                   ],
@@ -901,6 +903,79 @@ class _CargaTrabajadores extends StatelessWidget {
                 ),
               ),
             ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+/// Pultec, Inicio: órdenes de cada día de hoy a dentro de 6 días, con una barrita; al pulsar, a la Planificación.
+/// Va la última de la columna derecha y se estira hasta el final de las órdenes (sin hueco vacío abajo).
+class _EstaSemana extends StatelessWidget {
+  final ValueChanged<Seccion> onIr;
+  const _EstaSemana({required this.onIr});
+
+  static const _dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  @override
+  Widget build(BuildContext context) {
+    final h = hoy();
+    final dias = [for (var i = 0; i < 7; i++) masDias(h, i)];
+    final cuenta = {for (final d in dias) d: 0};
+    for (final t in store.tareas) {
+      if (t.esPlantilla || t.proximo == null) continue;
+      final d = DateUtils.dateOnly(t.proximo!);
+      if (cuenta.containsKey(d)) cuenta[d] = cuenta[d]! + 1;
+    }
+    final maximo = max(1, cuenta.values.fold(0, max));
+    return SeccionTarjeta(
+      titulo: 'Esta semana',
+      icono: Icons.calendar_today_outlined,
+      subtitulo: m('Trabajos programados cada día'),
+      sinFilas: true,
+      children: [
+        for (final (i, d) in dias.indexed)
+          InkWell(
+            onTap: () => onIr(Seccion.planificacion),
+            hoverColor: P.hoverFila,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(text: i == 0 ? 'Hoy' : i == 1 ? 'Mañana' : _dias[d.weekday - 1]),
+                          TextSpan(
+                            text: '  ${d.day}',
+                            style: TextStyle(color: P.textoSuave, fontWeight: FontWeight.w400),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, fontWeight: i == 0 ? FontWeight.w700 : FontWeight.w500),
+                    ),
+                  ),
+                  Expanded(child: _barra(cuenta[d]! / maximo, i == 0 ? P.morado : P.morado.withValues(alpha: .45))),
+                  SizedBox(
+                    width: 34,
+                    child: Text(
+                      '${cuenta[d]}',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cuenta[d] == 0 ? P.textoSuave : P.texto,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 8),
       ],
     );

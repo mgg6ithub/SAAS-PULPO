@@ -137,7 +137,7 @@ class OrdenesPorCriticidad extends StatefulWidget {
 }
 
 class _OrdenesPorCriticidadState extends State<OrdenesPorCriticidad> {
-  static const _maximo = 4;
+  static const _maximo = 6;
 
   /// Criticidad elegida en la leyenda: filtra aquí mismo, sin ir a Órdenes de trabajo (null = todas).
   TipoMantenimiento? filtro;
