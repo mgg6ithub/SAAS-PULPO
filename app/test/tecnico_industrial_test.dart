@@ -60,7 +60,9 @@ void main() {
         expect(find.text('Cambiar aceite'), findsOneWidget);
         expect(find.text('Revisar cuadro'), findsNothing);
         expect(find.text('Asignada a otro'), findsNothing);
-        await tester.tap(find.byType(BotonPrimario));
+        // En escritorio, «Nueva incidencia» está en la barra lateral; en el móvil, el botón de arriba.
+        final boton = find.byType(BotonPrimario);
+        await tester.tap(boton.evaluate().isEmpty ? find.text('Nueva incidencia') : boton);
         await tester.pumpAndSettle();
         await tester.tap(find.text('Guardar').last);
         await tester.pumpAndSettle();

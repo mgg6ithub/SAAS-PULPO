@@ -85,7 +85,8 @@ void main() {
     addTearDown(() => rolTrabajador.value = null);
     await tester.pumpWidget(const MaterialApp(home: ShellTrabajador()));
     await tester.pumpAndSettle();
-    final salir = find.widgetWithText(BotonAccion, 'Cerrar sesión');
+    // En escritorio está en la barra lateral del técnico.
+    final salir = find.text('Cerrar sesión');
     expect(salir, findsOneWidget);
     await tester.tap(salir);
     await tester.pumpAndSettle();

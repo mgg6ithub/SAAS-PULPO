@@ -163,5 +163,9 @@ void main() {
       expect(store.activo(activo.id)!.horas, 2958, reason: 'contador apuntado por el técnico');
       await _salir(n);
     });
-  }, timeout: const Timeout(Duration(minutes: 4)));
+  },
+    timeout: const Timeout(Duration(minutes: 4)),
+    // Solo con las cuentas que crea tool/probar_flujo_pultec.py: en la suite normal no hay Supabase.
+    skip: _env['SB_ADMIN'] == null,
+  );
 }

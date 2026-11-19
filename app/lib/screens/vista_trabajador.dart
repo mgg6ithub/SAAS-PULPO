@@ -1407,7 +1407,7 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
   Widget _vacio(String texto) => Vacio(icono: Icons.filter_alt_off_outlined,
     titulo: texto, texto: 'Prueba a cambiar los filtros o la búsqueda.');
 
-  String _cuando(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} · ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  String _cuando(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}, ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
   void _verIncidencia(Incidencia i) => abrirPanel(context, VentanaFormulario(
     etiqueta: 'Mis incidencias', titulo: 'Incidencia enviada', soloLectura: true, onGuardar: () {},
@@ -1524,7 +1524,7 @@ Text('$etiqueta: ${t.nombre}')
       return Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(padding: EdgeInsets.zero,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           FilaLista(lider: _IconoActivo(i.activoId), titulo: i.descripcion,
-            subtitulo: '${_cuando(i.creada)} · ${dondeEs(i.activoId)}',
+            subtitulo: '${_cuando(i.creada)}\n${dondeEs(i.activoId)}',
             derecha: Pill(i.estado.etiqueta, i.estado.color), onTap: () => _verIncidencia(i)),
           Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: Text(
             'Orden de origen: ${store.tarea(i.origenTrabajoId ?? '')?.nombre ?? 'Sin orden asociada'}'
@@ -1553,7 +1553,7 @@ Text('$etiqueta: ${t.nombre}')
       return Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(padding: EdgeInsets.zero,
         child: FilaLista(lider: Icon(i.resultado == 0 ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
           color: coloresResultado[i.resultado]), titulo: t?.nombre ?? 'Orden no disponible',
-          subtitulo: '${_cuando(i.cuando)} · $texto\n${dondeEs(t?.activoId)}',
+          subtitulo: '${_cuando(i.cuando)}   $texto\n${dondeEs(t?.activoId)}',
           onTap: t == null ? null : () => verInforme(context, i, t)),
       ));
     });
@@ -1855,7 +1855,11 @@ class _DetalleTrabajo extends StatelessWidget {
           children: [
             _dato(m('Cliente'), industrial ? dondeEs(t.activoId) : cliente?.nombre ?? '—'),
             _dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '—')),
-            _dato('Cuándo', [if (t.proximo != null) relativo(t.proximo!), t.horario ?? 'Sin hora'].join(' · ')),
+            // Hecha: el día en que se hizo (ya no tiene próxima).
+            _dato('Cuándo', [
+              if (t.proximo != null) relativo(t.proximo!) else if (t.ultimo != null) fecha(t.ultimo!),
+              t.horario ?? 'Sin hora',
+            ].join(', ')),
             if (maquina.isNotEmpty) _dato('Máquina', maquina),
             if (t.notas.isNotEmpty) _dato('Notas', t.notas),
             if (t.competencias.isNotEmpty)

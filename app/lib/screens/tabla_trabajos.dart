@@ -300,7 +300,15 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               widget.onAbrir(ts[i].id);
             }
           },
-          pie: pieTabla(ts.length, ts.length == 1 ? widget.nombre : '${widget.nombre}s'),
+          // «orden de trabajo» → «órdenes de trabajo» (no «orden de trabajos»).
+          pie: pieTabla(
+            ts.length,
+            ts.length == 1
+                ? widget.nombre
+                : widget.nombre.startsWith('orden ')
+                ? 'órdenes ${widget.nombre.substring(6)}'
+                : '${widget.nombre}s',
+          ),
           celdas: (i) {
             final t = ts[i];
             final c = store.cliente(t.clienteId);

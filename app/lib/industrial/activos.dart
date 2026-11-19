@@ -790,7 +790,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                       final ordenes = ordenesPendientesDePlanes([siguiente!]);
                                       return iconoAsignacion(ordenes[siguiente.id] ?? ordenes['${siguiente.activoId}|${siguiente.nombre}']);
                                     }))),
-                                TextSpan(text: '${siguiente.nombre} · ${fecha(proximo!)}',
+                                TextSpan(text: '${siguiente.nombre}, ${fecha(proximo!)}',
                                   style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                               ],
                             ]),
@@ -1208,7 +1208,7 @@ class _ActivoFormState extends State<ActivoForm> {
       tituloDesplazado: [
         tag.text,
         nombre.text,
-      ].where((x) => x.isNotEmpty).join(' · '),
+      ].where((x) => x.isNotEmpty).join(' - '),
       onGuardar: guardar,
       avisos: [
         if (error != null)
