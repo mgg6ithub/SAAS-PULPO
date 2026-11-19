@@ -148,10 +148,10 @@ class OrdenesPorCriticidad extends StatelessWidget {
       return otPendiente(t) && pasaFechaTrabajo(t, periodo);
     }).toList()..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
     final columnas = [
-      // TEMPORAL: correctivo crítico vacío, para ver cómo queda una columna sin órdenes.
+      // TEMPORAL: solo preventivos, para ver cómo quedan las columnas sin órdenes.
       for (final t in TipoMantenimiento.values)
         _columna(t, [
-          if (t != TipoMantenimiento.correctivoCritico)
+          if (t == TipoMantenimiento.preventivo)
             for (final o in todas) if (o.tipoMantenimiento == t) o,
         ]),
     ];
