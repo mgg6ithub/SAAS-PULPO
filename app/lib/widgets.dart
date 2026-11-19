@@ -1905,7 +1905,10 @@ class NavegadorFecha extends StatelessWidget {
 class SelectorVista extends StatelessWidget {
   final bool lista;
   final ValueChanged<bool> onChanged;
-  const SelectorVista({super.key, required this.lista, required this.onChanged});
+
+  /// Bloques a la izquierda (solo Técnicos); en el resto de vistas, la lista va primero.
+  final bool bloquesPrimero;
+  const SelectorVista({super.key, required this.lista, required this.onChanged, this.bloquesPrimero = false});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1916,9 +1919,9 @@ class SelectorVista extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final (v, i, tip) in [
-          // Bloques primero (a la izquierda) y la lista a la derecha.
-          (false, Icons.grid_view_rounded, 'Bloques'),
+          if (bloquesPrimero) (false, Icons.grid_view_rounded, 'Bloques'),
           (true, Icons.view_list_rounded, 'Lista'),
+          if (!bloquesPrimero) (false, Icons.grid_view_rounded, 'Bloques'),
         ])
           Tooltip(
             message: tip,

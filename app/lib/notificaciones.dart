@@ -342,106 +342,119 @@ class _NotificacionesState extends State<Notificaciones> {
             ],
           ),
         ),
-        if (pestana == 0 && sinLeer > 0)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 6, 4),
-            child: Row(
-              children: [
-                Text('$sinLeer sin leer', style: TextStyle(fontSize: 13, color: P.textoSuave)),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    setState(() => leidos.addAll(avisos.map((a) => a.id)));
-                    _guardar();
-                  },
-                  child: const Text('Marcar todo leído'),
-                ),
-              ],
-            ),
-          ),
         Divider(height: 1, color: P.borde),
-        if (pestana == 1)
-          ..._historial()
-        else if (avisos.isEmpty)
-          _vacio('Todo al día. Aquí verás lo que hagan los técnicos y lo urgente.')
-        else
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(8),
-              itemCount: avisos.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 6),
-              itemBuilder: (_, i) => _tarjeta(avisos[i]),
-            ),
+        // Las dos pestañas, una encima de otra: el panel mide lo que la más alta y no cambia de tamaño al pasar.
+        Flexible(
+          child: IndexedStack(
+            index: pestana,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (sinLeer > 0)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 6, 0),
+                      child: Row(
+                        children: [
+                          Text('$sinLeer sin leer', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () {
+                              setState(() => leidos.addAll(avisos.map((a) => a.id)));
+                              _guardar();
+                            },
+                            child: const Text('Marcar todo leído'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (avisos.isEmpty)
+                    _vacio('Todo al día. Aquí verás lo que hagan los técnicos y lo urgente.')
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.all(8),
+                        itemCount: avisos.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 6),
+                        itemBuilder: (_, i) => _tarjeta(avisos[i]),
+                      ),
+                    ),
+                ],
+              ),
+              _historial(),
+            ],
           ),
+        ),
       ],
     ),
   );
 
   Widget _vacio(String texto) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
-    child: Text(texto, textAlign: TextAlign.center, style: TextStyle(color: P.textoSuave, fontSize: 14)),
+    child: Text(
+      texto,
+      textAlign: TextAlign.center,
+      style: TextStyle(color: P.textoSuave, fontSize: 14),
+    ),
   );
 
   /// Lo borrado en esta sesión, lo último primero; cada uno con «Deshacer» mientras no se haya deshecho.
-  List<Widget> _historial() {
+  Widget _historial() {
     final acciones = store.acciones;
-    if (acciones.isEmpty) return [_vacio('Aquí verás lo que borres mientras uses la app, para poder deshacerlo.')];
-    return [
-      Flexible(
-        child: ListView.separated(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(8),
-          itemCount: acciones.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 6),
-          itemBuilder: (_, i) {
-            final a = acciones[i];
-            final min = DateTime.now().difference(a.cuando).inMinutes;
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(P.radioControl),
-                border: Border(left: BorderSide(color: a.deshecha ? P.borde : P.rojo, width: 3)),
-              ),
-              padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          a.texto,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: a.deshecha ? P.textoSuave : P.texto,
-                            height: 1.3,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          min < 1 ? 'Ahora' : (min < 60 ? 'Hace $min min' : hhmm(a.cuando.hour * 60 + a.cuando.minute)),
-                          style: TextStyle(fontSize: 12, color: P.textoSuave),
-                        ),
-                      ],
+    if (acciones.isEmpty) return _vacio('Aquí verás lo que borres mientras uses la app, para poder deshacerlo.');
+    return ListView.separated(
+      shrinkWrap: true,
+      padding: const EdgeInsets.all(8),
+      itemCount: acciones.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 6),
+      itemBuilder: (_, i) {
+        final a = acciones[i];
+        final min = DateTime.now().difference(a.cuando).inMinutes;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(P.radioControl),
+            border: Border(left: BorderSide(color: a.deshecha ? P.borde : P.rojo, width: 3)),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      a.texto,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: a.deshecha ? P.textoSuave : P.texto,
+                        height: 1.3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  a.deshecha
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('Deshecho', style: TextStyle(fontSize: 13, color: P.textoSuave)),
-                        )
-                      : TextButton(onPressed: () => store.deshacer(a), child: const Text('Deshacer')),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      min < 1 ? 'Ahora' : (min < 60 ? 'Hace $min min' : hhmm(a.cuando.hour * 60 + a.cuando.minute)),
+                      style: TextStyle(fontSize: 12, color: P.textoSuave),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
-        ),
-      ),
-    ];
+              const SizedBox(width: 8),
+              a.deshecha
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('Deshecho', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+                    )
+                  : TextButton(onPressed: () => store.deshacer(a), child: const Text('Deshacer')),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// Bloque de un aviso: barrita de su color a la izquierda, qué pasó, dónde y cuándo. Sin leer, con fondo suave.

@@ -80,7 +80,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ],
                       derecha: [
                         Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
-                        SelectorVista(lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
+                        SelectorVista(bloquesPrimero: true, lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
                         // Pultec: grupos de técnicos (crear, ver y meter técnicos).
                         // Quién entra en la empresa con su cuenta: invitar con un enlace o quitar el acceso.
                         if (store.nube != null)
