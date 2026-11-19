@@ -728,7 +728,7 @@ class _Pendientes extends StatelessWidget {
       if (sinTrabajador.isNotEmpty)
         FilaLista(
           lider: _punto(P.morado),
-          titulo: m('${sinTrabajador.length} sin trabajador esta semana'),
+          titulo: '${sinTrabajador.length} sin asignar esta semana',
           derecha: _cat(m('Trabajos')),
           onTap: () => onIr(Seccion.tareas),
         ),
@@ -793,7 +793,6 @@ class _Pendientes extends StatelessWidget {
     ];
     return SeccionTarjeta(
       titulo: 'Acciones pendientes',
-      icono: P.mejorada ? Icons.assignment_outlined : null,
       accion: filas.isEmpty ? null : Pill('${filas.length}', P.rojo),
       children: filas.isEmpty
           ? [
@@ -843,7 +842,6 @@ class _CargaTrabajadores extends StatelessWidget {
     final maximo = max(1, ws.isEmpty ? 1 : carga(ws.first));
     return SeccionTarjeta(
       titulo: 'Carga del equipo',
-      icono: P.mejorada ? Icons.groups_outlined : null,
       subtitulo: m('Trabajos asignados en los próximos 7 días'),
       sinFilas: true,
       children: [
@@ -930,7 +928,6 @@ class _EstaSemana extends StatelessWidget {
     final maximo = max(1, cuenta.values.fold(0, max));
     return SeccionTarjeta(
       titulo: 'Esta semana',
-      icono: Icons.calendar_today_outlined,
       subtitulo: m('Trabajos programados cada día'),
       sinFilas: true,
       children: [
@@ -1427,7 +1424,7 @@ class _Kpis extends StatelessWidget {
     final items = [
       (Icons.today_rounded, 'Para hoy', hoy, P.morado, 'en agenda'),
       industrial
-          ? (Icons.person_off_outlined, 'Sin técnico', semana, P.teal, 'órdenes por asignar')
+          ? (Icons.person_off_outlined, 'Sin asignar', semana, P.teal, 'órdenes por asignar')
           : (Icons.date_range_rounded, 'Esta semana', semana, P.teal, 'próximos 7 días'),
       (
         Icons.warning_amber_rounded,
@@ -1513,7 +1510,7 @@ class _Kpis extends StatelessWidget {
 }
 
 /// Cifra de Inicio en la vista mejorada: icono en un cuadro de su color a la izquierda, etiqueta, número
-/// grande y nota; fondo con un leve tinte de su color, sombra y la barra de color abajo. Se marca al pasar.
+/// grande y nota; fondo blanco liso (sin degradado ni barra de color). Se marca al pasar.
 class _KpiMejorada extends StatefulWidget {
   final IconData icono;
   final String etiqueta, nota;
@@ -1553,11 +1550,7 @@ class _KpiMejoradaState extends State<_KpiMejorada> {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [P.superficie, Color.lerp(P.superficie, c, ajustes.oscuro ? .1 : .05)!],
-            ),
+            color: P.superficie,
             border: Border.all(
               color: widget.elegida ? c : (hover ? c.withValues(alpha: .4) : P.borde),
               width: widget.elegida ? 2 : 1,
@@ -1573,10 +1566,10 @@ class _KpiMejoradaState extends State<_KpiMejorada> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(color: c.withValues(alpha: .12), borderRadius: BorderRadius.circular(12)),
-                      child: Icon(widget.icono, size: 26, color: c),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(color: c.withValues(alpha: .1), borderRadius: BorderRadius.circular(10)),
+                      child: Icon(widget.icono, size: 22, color: c),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -1618,7 +1611,6 @@ class _KpiMejoradaState extends State<_KpiMejorada> {
                   ],
                 ),
               ),
-              Container(height: 4, color: c),
             ],
           ),
         ),

@@ -339,10 +339,15 @@ class _FilaOrden extends StatelessWidget {
                   children: [
                     dato(
                       Icons.calendar_today_outlined,
-                      o.proximo == null ? 'Sin fecha' : '${relativo(o.proximo!)}, ${fecha(o.proximo!)}',
+                      // Lo atrasado, dicho tal cual («Atrasada 20 días»); lo demás, cuándo toca y su fecha.
+                      o.proximo == null
+                          ? 'Sin fecha'
+                          : vencida
+                          ? 'Atrasada ${-diasHasta(o.proximo!)} ${-diasHasta(o.proximo!) == 1 ? 'día' : 'días'}'
+                          : '${relativo(o.proximo!)}, ${fecha(o.proximo!)}',
                       color: vencida ? P.rojo : null,
                     ),
-                    dato(Icons.person_outline_rounded, tecnico ?? 'Sin técnico'),
+                    dato(Icons.person_outline_rounded, tecnico ?? 'Sin asignar'),
                   ],
                 ),
               ],
