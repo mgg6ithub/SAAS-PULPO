@@ -6,6 +6,7 @@ import 'finanzas.dart';
 import 'forms.dart';
 import 'marca.dart';
 import 'models.dart';
+import 'notificaciones.dart';
 import 'industrial/activos.dart';
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
@@ -181,11 +182,31 @@ class _ShellState extends State<Shell> {
         ),
       ),
     );
+    // Avisos en tiempo real (OT hechas, incidencias, lo que nadie tiene), abajo a la derecha.
+    final avisos = Notificaciones(
+      onTarea: (id) => setState(() => tareaId = id),
+      onActivo: (id) => setState(() => clienteId = id),
+      onSinTecnico: () {
+        filtroFechaTrabajos.value = industrial ? 2 : 0;
+        historicoTrabajos.value = false;
+        ir(Seccion.tareas);
+      },
+    );
     return Focus(
       autofocus: true,
       child: Scaffold(
         backgroundColor: P.fondo,
-        body: movil
+        body: Stack(
+          children: [
+            Positioned.fill(child: _cuerpo(movil, compacta, pagina)),
+            Positioned(right: movil ? 12 : 24, bottom: movil ? 84 : 24, child: avisos),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _cuerpo(bool movil, bool compacta, Widget pagina) => movil
             ? Column(
                 children: [
                   pagina,
@@ -227,10 +248,7 @@ class _ShellState extends State<Shell> {
                   else
                     pagina,
                 ],
-              ),
-      ),
-    );
-  }
+              );
 
   Widget _detalle() => clienteId != null
       // Pultec: desde Inicio se abre la ficha del activo.
