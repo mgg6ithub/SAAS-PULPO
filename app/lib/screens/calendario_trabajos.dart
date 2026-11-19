@@ -1076,13 +1076,51 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
           button: true,
           label: '$texto${falta.isEmpty ? '' : ', ${falta.join(' y ').toLowerCase()}'}. Abrir resumen',
           child: Material(
-            color: Color.alphaBlend(color.withValues(alpha: .11), P.superficie),
+            // En el mes (compacto), sin relleno: punto de color, hora en gris y nombre, como una agenda limpia.
+            color: widget.compacto ? Colors.transparent : Color.alphaBlend(color.withValues(alpha: .11), P.superficie),
             borderRadius: BorderRadius.circular(6),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => _abrir(fijar: true),
-              hoverColor: color.withValues(alpha: .15),
-              child: Container(
+              hoverColor: color.withValues(alpha: widget.compacto ? .10 : .15),
+              child: widget.compacto
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  if (v.inicio != null)
+                                    TextSpan(
+                                      text: '${hhmm(v.inicio!)}  ',
+                                      style: TextStyle(color: P.textoSuave, fontWeight: FontWeight.w500),
+                                    ),
+                                  TextSpan(text: t.nombre),
+                                ],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                height: 1.1,
+                                fontSize: 11.5,
+                                color: v.hecha ? P.textoSuave : P.texto,
+                                fontWeight: FontWeight.w600,
+                                decoration: v.hecha ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Container(
                 decoration: BoxDecoration(
                   border: Border(left: BorderSide(color: color, width: 3)),
                 ),

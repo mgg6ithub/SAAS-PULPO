@@ -203,7 +203,29 @@ class _ShellState extends State<Shell> {
                     listenable: Listenable.merge([store, ajustes.cambioBarra]),
                     builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir, crear: _crear),
                   ),
-                  pagina,
+                  // Vista mejorada: el contenido, en un panel redondeado que flota sobre el gris de la barra.
+                  if (P.panelContenido)
+                    Expanded(
+                      child: ColoredBox(
+                        color: P.barra,
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 8, 8),
+                          child: DecoratedBox(
+                            position: DecorationPosition.foreground,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(P.radio),
+                              border: Border.all(color: P.bordeBarra),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(P.radio),
+                              child: ColoredBox(color: P.fondo, child: Row(children: [pagina])),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    pagina,
                 ],
               ),
       ),
@@ -574,9 +596,12 @@ class _BarraState extends State<_Barra> {
         _escala = modo.$2;
         return ClipRect(
           child: Container(
+            // Con el contenido en panel, la barra no lleva borde: la separa el propio panel.
             decoration: BoxDecoration(
               color: P.barra,
-              border: ajustes.barraDerecha
+              border: P.panelContenido && !widget.compacta
+                  ? null
+                  : ajustes.barraDerecha
                   ? Border(left: BorderSide(color: P.bordeBarra))
                   : Border(right: BorderSide(color: P.bordeBarra)),
             ),
@@ -773,7 +798,11 @@ class _BarraState extends State<_Barra> {
           right: 0,
           height: _altoItem,
           child: DecoratedBox(
-            decoration: BoxDecoration(color: P.seleccionBarra, borderRadius: BorderRadius.circular(P.radioControl)),
+            decoration: BoxDecoration(
+              color: P.seleccionBarra,
+              borderRadius: BorderRadius.circular(P.radioControl),
+              boxShadow: P.sombraSeleccionBarra,
+            ),
           ),
         ),
         Column(children: [for (final (icono, texto, s, aviso) in items) _item(icono, texto, s, aviso: aviso)]),

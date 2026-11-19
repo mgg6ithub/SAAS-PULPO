@@ -20,28 +20,44 @@ class P {
   static Color get morado => industrial && mejorada ? moradoVivo : Marca.color;
 
   /// Morado vivo de la vista mejorada (el del pulpo del logo, algo más luminoso).
-  static const moradoVivo = Color(0xFF6C3CF0);
+  static const moradoVivo = Color(0xFF5B3BE6);
   static Color get moradoOscuro => Color.lerp(morado, _o ? Colors.white : Colors.black, _o ? .5 : .22)!;
   static Color get moradoSuave => Color.lerp(_o ? superficie : Colors.white, morado, _o ? .22 : .09)!;
 
   /// Fondo del contenido: lavanda muy leve (el "tint" de la landing); las tarjetas, blancas encima.
   static Color get fondo => mejorada
-      ? (_o ? const Color(0xFF0E0D16) : const Color(0xFFF3F2F9))
+      ? (_o ? const Color(0xFF121119) : const Color(0xFFF8F8FA))
       : _o ? _n(0xFF0F0E16, 0xFF0D1015) : _n(0xFFF7F6FB, 0xFFF5F7FA);
-  static Color get superficie => _o ? _n(0xFF18171F, 0xFF161A20) : Colors.white;
+  static Color get superficie => _o ? (mejorada ? const Color(0xFF1A1922) : _n(0xFF18171F, 0xFF161A20)) : Colors.white;
 
   /// Barra lateral: blanca con su borde, como la navegación de la landing.
   /// Clara en las dos vistas; en la mejorada, con la opción elegida en morado vivo de fondo suave.
-  static Color get barra => _o ? _n(0xFF14131B, 0xFF13161C) : Colors.white;
+  /// En la mejorada, gris tintado (no blanco) y el contenido va encima como un panel ([panelContenido]).
+  static Color get barra => mejorada
+      ? (_o ? const Color(0xFF0B0A10) : const Color(0xFFEDECF2))
+      : _o ? _n(0xFF14131B, 0xFF13161C) : Colors.white;
+
+  /// Vista mejorada en escritorio: el contenido va en un panel redondeado sobre la barra lateral.
+  static bool get panelContenido => mejorada;
 
   /// Textos, iconos, fondos al pasar y borde de la barra lateral.
   static Color get textoBarra => texto;
   static Color get textoBarraSuave => textoSuave;
-  static Color get hoverBarra => mejorada ? morado.withValues(alpha: _o ? .12 : .06) : hover.withValues(alpha: .7);
-  static Color get seleccionBarra => mejorada ? morado.withValues(alpha: _o ? .22 : .12) : moradoSuave;
+  static Color get hoverBarra => mejorada
+      ? (_o ? Colors.white.withValues(alpha: .05) : const Color(0x0A14121F))
+      : hover.withValues(alpha: .7);
+
+  /// Opción elegida de la barra: en la mejorada, pastilla blanca con sombra mínima (sobre el gris tintado).
+  static Color get seleccionBarra => mejorada ? (_o ? Colors.white.withValues(alpha: .08) : Colors.white) : moradoSuave;
+  static List<BoxShadow>? get sombraSeleccionBarra => mejorada && !_o
+      ? const [
+          BoxShadow(color: Color(0x1414121F), blurRadius: 2, offset: Offset(0, 1)),
+          BoxShadow(color: Color(0x0814121F), blurRadius: 6, offset: Offset(0, 2)),
+        ]
+      : null;
   static Color get iconoBarraElegido => morado;
-  static Color get textoBarraElegido => mejorada ? (_o ? Color.lerp(morado, Colors.white, .45)! : morado) : moradoOscuro;
-  static Color get bordeBarra => borde;
+  static Color get textoBarraElegido => mejorada ? texto : moradoOscuro;
+  static Color get bordeBarra => mejorada ? (_o ? const Color(0xFF1F1E28) : const Color(0xFFE0DFE8)) : borde;
 
   /// Botón «Crear» de la barra: el acento (morado vivo en la mejorada).
   static Color get crear => morado;
@@ -50,10 +66,10 @@ class P {
   static List<BoxShadow>? get sombra => !mejorada
       ? null
       : _o
-      ? const [BoxShadow(color: Color(0x66000000), blurRadius: 16, offset: Offset(0, 6))]
+      ? const [BoxShadow(color: Color(0x40000000), blurRadius: 3, offset: Offset(0, 1))]
       : const [
-          BoxShadow(color: Color(0x0F0F172A), blurRadius: 18, offset: Offset(0, 6)),
-          BoxShadow(color: Color(0x0A0F172A), blurRadius: 3, offset: Offset(0, 1)),
+          BoxShadow(color: Color(0x0A14121F), blurRadius: 2, offset: Offset(0, 1)),
+          BoxShadow(color: Color(0x0614121F), blurRadius: 10, offset: Offset(0, 4)),
         ];
   static Color get columna => _o ? _n(0xFF15141C, 0xFF14171D) : _n(0xFFF7F6FB, 0xFFF5F7FA);
 
@@ -65,10 +81,10 @@ class P {
 
   /// Cabecera de tabla.
   static Color get cabeceraTabla => mejorada && !_o
-      ? const Color(0xFFF7F6FC)
+      ? const Color(0xFFFAFAFB)
       : _o ? _n(0xFF1C1B24, 0xFF1A1E25) : _n(0xFFFBFAFD, 0xFFFAFBFC);
   static Color get borde => mejorada && !_o
-      ? const Color(0xFFE6E4F0)
+      ? const Color(0xFFE8E7EE)
       : _o ? _n(0xFF2B2A35, 0xFF2A303A) : _n(0xFFE7E4F0, 0xFFE3E7EE);
   static Color get texto => _o ? _n(0xFFEDEDF2, 0xFFECEFF3) : _n(0xFF14121F, 0xFF121821);
   static Color get textoSuave => _o ? _n(0xFF9D9BAD, 0xFF98A1AE) : _n(0xFF5D5A6E, 0xFF5A6474);
@@ -90,8 +106,8 @@ class P {
   static const gris = Color(0xFF71717A);
 
   /// Radios: tarjetas como los cuadraditos de la landing, controles algo menos.
-  static const radio = 14.0;
-  static const radioControl = 10.0;
+  static const radio = 12.0;
+  static const radioControl = 8.0;
 }
 
 /// Margen de todas las páginas: igual en todas y estrecho, para aprovechar el ancho de un portátil.

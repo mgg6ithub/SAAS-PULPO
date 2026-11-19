@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import 'ajustes.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -50,12 +51,17 @@ class Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = solido ? Colors.white : color;
+    // Texto algo más oscuro que el color (más legible y menos «chillón»); en oscuro, algo más claro.
+    final fg = solido
+        ? Colors.white
+        : Color.lerp(color, ajustes.oscuro ? Colors.white : Colors.black, ajustes.oscuro ? .25 : .18)!;
+    // Insignia rectangular con borde fino (no cápsula), como en los paneles profesionales.
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: solido ? 7 : 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: solido ? 3 : 2),
       decoration: BoxDecoration(
-        color: solido ? color : color.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(solido ? 6 : 99),
+        color: solido ? color : color.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(6),
+        border: solido ? null : Border.all(color: color.withValues(alpha: .22)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -64,7 +70,7 @@ class Pill extends StatelessWidget {
             Container(
               width: 6,
               height: 6,
-              decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: solido ? fg : color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 6),
           ],
@@ -93,8 +99,12 @@ class Etiqueta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(20)),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    decoration: BoxDecoration(
+      color: P.superficie,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: P.borde),
+    ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
