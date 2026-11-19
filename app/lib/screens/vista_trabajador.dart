@@ -2007,6 +2007,15 @@ class _FormularioInformeState extends State<FormularioInforme> {
           ..horas = h
           ..fechaLectura = hoy();
         store.guardarActivo(raiz!);
+        // Una cuenta de técnico no sube activos con la sincronización: la lectura va por su función.
+        if (store.nube?.esTrabajador ?? false) {
+          try {
+            await store.nube!.apuntarContador(raiz!.id, h);
+          } catch (e) {
+            debugPrint('Pultec: no se pudo apuntar el contador: $e');
+            aviso('No se pudo guardar la lectura del contador.');
+          }
+        }
       }
       if (resultado == 2) store.guardarTarea(widget.t);
     }

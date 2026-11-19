@@ -213,6 +213,12 @@ class Nube {
       .order('created_at', ascending: false)
       .limit(30);
 
+  /// Técnico: apunta la lectura del contador de un activo (no puede editar activos con la sincronización).
+  Future<void> apuntarContador(String activoId, double horas) async {
+    await _cola;
+    await _db.rpc('apuntar_contador', params: {'p_activo': _u(activoId), 'p_horas': horas});
+  }
+
   /// Técnico: guarda su foto y su teléfono (el resto de su ficha solo lo cambia la oficina).
   Future<void> guardarMiPerfil(String foto, String telefono) async {
     await _cola;

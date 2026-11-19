@@ -285,7 +285,8 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ? Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)
                       : const Pill('Inactivo', P.gris, punto: true),
                   const SizedBox(width: 6),
-                  Pill(m('$asignadas trabajos'), P.gris),
+                  // Si la tarjeta es estrecha, el número de órdenes se corta en vez de salirse.
+                  Flexible(child: Pill(m('$asignadas trabajos'), P.gris)),
                 ],
               ),
               const SizedBox(height: 14),

@@ -81,6 +81,10 @@ void main() {
     expect(find.text('Revisión 0'), findsOneWidget);
     expect(find.text('Revisión -1'), findsOneWidget);
     expect(find.textContaining('Próximas órdenes'), findsNothing);
+    // Lo de otros días va plegado debajo de lo atrasado y lo de hoy.
+    expect(find.text('Revisión 3'), findsNothing);
+    await tester.tap(find.text('Otros días'));
+    await tester.pumpAndSettle();
     expect(find.text('Revisión 3').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

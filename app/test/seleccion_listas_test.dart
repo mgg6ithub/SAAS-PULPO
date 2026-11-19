@@ -26,6 +26,11 @@ void main() {
       };
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: pantalla)));
       await tester.pumpAndSettle();
+      // Técnicos abre en bloques: la prueba es de la lista.
+      if (nombre == 'Trabajadores') {
+        await tester.tap(find.byIcon(Icons.view_list_rounded));
+        await tester.pumpAndSettle();
+      }
       final marca = nombre == 'Tareas' ? find.byType(BarraTipo).first : find.byType(Avatar).first;
       final izquierda = tester.getTopLeft(marca).dx;
       expect(find.byType(CirculoSeleccion), findsNothing);

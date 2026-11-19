@@ -43,6 +43,9 @@ void main() {
 
   testWidgets('pendientes es una lista sin desplegable y filtra por tipo', (tester) async {
     await montar(tester);
+    // Orden 2 es de dentro de dos días: está en «Otros días», plegado.
+    await tester.tap(find.text('Otros días'));
+    await tester.pumpAndSettle();
     expect(find.text('Orden 2'), findsOneWidget);
     expect(find.byType(ExpansionTile), findsNothing);
     await tester.tap(find.text('Filtros'));
@@ -69,7 +72,8 @@ void main() {
       Incidencia(id: 'ajena', activoId: 'a', tecnicoId: 'otro', descripcion: 'Aviso de otro técnico'),
     ];
     await montar(tester);
-    await tester.tap(find.text('Incidencias · 1'));
+    // En escritorio, el apartado está en la barra lateral con su número al lado.
+    await tester.tap(find.text('Incidencias'));
     await tester.pumpAndSettle();
     expect(find.text('Fuga detectada'), findsOneWidget);
     expect(find.text('Aviso de otro técnico'), findsNothing);

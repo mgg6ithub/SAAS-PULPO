@@ -1,0 +1,167 @@
+// Flujo completo de Pultec contra el Supabase REAL (no corre solo: `python3 tool/probar_flujo_pultec.py`, que crea
+// las cuentas de prueba y lo borra todo al acabar):
+//   administrador → «Activo test» con dos mantenimientos realistas → la base crea sus OT y las asigna →
+//   invita al técnico → el técnico entra, ve sus OT, cierra una con su parte y apunta el contador →
+//   el administrador la ve hecha, el mantenimiento reiniciado y la siguiente OT creada; el técnico, en su histórico.
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pulpo/industrial/activo.dart';
+import 'package:pulpo/industrial/plan.dart';
+import 'package:pulpo/informes.dart';
+import 'package:pulpo/models.dart';
+import 'package:pulpo/nube.dart';
+import 'package:pulpo/store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+final _env = Platform.environment;
+const _clave = 'prueba-123456';
+
+/// Entra con la cuenta y carga su empresa en el `store` global (como la app).
+Future<Nube> _entrar(String correo, {String? invitacion}) async {
+  SharedPreferences.setMockInitialValues({'pulpo_invitacion': ?invitacion});
+  await Supabase.instance.client.auth.signInWithPassword(email: correo, password: _clave);
+  final n = await Nube.abrir();
+  await store.cargarDesdeNube(n);
+  return n;
+}
+
+Future<void> _salir(Nube n) async {
+  await n.guardado;
+  await Nube.cerrarSesion();
+}
+
+/// OT abiertas (pendientes o en curso) de un mantenimiento.
+List<Tarea> _abiertas(String planId) => store.tareas
+    .where((t) => t.planId == planId && t.activa && t.estado != EstadoTrabajo.realizado)
+    .toList();
+
+void main() {
+  testWidgets('Pultec de punta a punta: activo, mantenimientos, OT, técnico y cierre', (tester) async {
+    await tester.runAsync(() async {
+      HttpOverrides.global = null;
+      SharedPreferences.setMockInitialValues({});
+      await Supabase.initialize(
+        url: supabaseUrl,
+        publishableKey: supabasePublicable,
+        authOptions: FlutterAuthClientOptions(localStorage: const EmptyLocalStorage(), detectSessionInUri: false),
+      );
+      final db = Supabase.instance.client;
+      final h = hoy();
+
+      // ── 1. Administrador: técnico, «Activo test» y dos mantenimientos ──
+      var n = await _entrar(_env['SB_ADMIN']!);
+      expect(n.esTrabajador, isFalse);
+      final tecnico = Trabajador(
+        id: store.nuevoId(),
+        nombre: 'Técnico',
+        apellidos: 'Test',
+        email: _env['SB_TECNICO']!,
+        competencias: ['Mecánica'],
+      );
+      store.guardarTrabajador(tecnico);
+      // Compresor con 2.950 h y 8 h de uso al día: le faltan 50 h para la revisión de 3.000 h (7 días).
+      final activo = Activo(
+        id: store.nuevoId(),
+        nombre: 'Activo test',
+        tag: 'AT-01',
+        icono: 'compresor',
+        horas: 2950,
+        horasUso: 8,
+        fechaLectura: h,
+      );
+      store.guardarActivo(activo);
+      final revision = PlanMantenimiento(
+        id: store.nuevoId(),
+        activoId: activo.id,
+        nombre: 'Revisión 3.000 h',
+        cadaHoras: 3000,
+        ultimoHoras: 0,
+        duracionMin: 120,
+        categoria: 'Mecánica',
+        trabajadorId: tecnico.id,
+      );
+      // Engrase cada 30 días, el último hace 30: toca hoy.
+      final engrase = PlanMantenimiento(
+        id: store.nuevoId(),
+        activoId: activo.id,
+        nombre: 'Engrase mensual',
+        cadaDias: 30,
+        ultimo: masDias(h, -30),
+        duracionMin: 30,
+        categoria: 'Mecánica',
+        trabajadorId: tecnico.id,
+      );
+      store.guardarPlan(revision);
+      store.guardarPlan(engrase);
+      await n.guardado;
+      expect(Nube.error.value, isNull, reason: 'se guarda sin errores');
+
+      // La base crea una OT por mantenimiento, con su fecha estimada y el técnico del mantenimiento.
+      await store.cargarDesdeNube(n);
+      final otRevision = _abiertas(revision.id);
+      final otEngrase = _abiertas(engrase.id);
+      expect(otRevision, hasLength(1), reason: 'OT automática de la revisión');
+      expect(otEngrase, hasLength(1), reason: 'OT automática del engrase');
+      expect(otRevision.single.proximo, masDias(h, 7), reason: '50 h a 8 h/día → dentro de 7 días');
+      expect(otEngrase.single.proximo, h, reason: 'último hace 30 días → hoy');
+      for (final t in [...otRevision, ...otEngrase]) {
+        expect(t.trabajadorIds, [tecnico.id], reason: 'asignada al técnico del mantenimiento');
+        expect(t.activoId, activo.id);
+        expect(t.tipoMantenimiento, TipoMantenimiento.preventivo);
+      }
+
+      final codigo = await n.crearInvitacion(rol: 'trabajador', trabajadorId: tecnico.id);
+      await _salir(n);
+
+      // ── 2. Técnico: entra con la invitación, ve sus OT y cierra la de hoy ──
+      n = await _entrar(_env['SB_TECNICO']!, invitacion: codigo);
+      expect(n.esTrabajador, isTrue, reason: 'entra como técnico');
+      final mias = store.tareas.where((t) => t.trabajadorIds.contains(tecnico.id) && !t.esPlantilla).toList();
+      expect(mias.map((t) => t.nombre).toSet(), {'Revisión 3.000 h', 'Engrase mensual'});
+      final ot = store.tarea(otEngrase.single.id)!;
+      // Lo mismo que hace el parte (FormularioInforme) al cerrar la OT.
+      expect(
+        await informes.crear(
+          Informe(trabajoId: ot.id, trabajadorId: tecnico.id, resultado: 0, notas: 'Engrasados los rodamientos'),
+        ),
+        isTrue,
+      );
+      ot
+        ..resultado = 0
+        ..resultadoResuelto = false;
+      final raiz = store.activo(activo.id)!
+        ..horas = 2958
+        ..fechaLectura = h;
+      store.guardarActivo(raiz);
+      await n.apuntarContador(activo.id, 2958);
+      store.marcarHecha(ot);
+      await n.guardado;
+      expect(Nube.error.value, isNull, reason: 'el técnico guarda el cierre sin errores');
+      final historial = await informes.delTecnico(tecnico.id);
+      expect(historial.map((i) => i.notas), contains('Engrasados los rodamientos'), reason: 'su histórico');
+      await _salir(n);
+
+      // ── 3. Administrador: OT hecha, mantenimiento reiniciado y la siguiente OT ──
+      n = await _entrar(_env['SB_ADMIN']!);
+      final cerrada = store.tarea(otEngrase.single.id)!;
+      expect(cerrada.estado, EstadoTrabajo.realizado, reason: 'el admin la ve hecha');
+      final plan = store.planes.firstWhere((p) => p.id == engrase.id);
+      expect(plan.ultimo, h, reason: 'el engrase se reinicia hoy');
+      expect(plan.proximo, masDias(h, 30), reason: 'el próximo engrase, dentro de 30 días');
+      final siguiente = _abiertas(engrase.id);
+      expect(siguiente, hasLength(1), reason: 'la base crea la siguiente OT del engrase');
+      expect(siguiente.single.proximo, masDias(h, 30));
+      expect(siguiente.single.trabajadorIds, [tecnico.id]);
+      expect(_abiertas(revision.id).single.id, otRevision.single.id, reason: 'la revisión no se toca');
+      final partes = await db.from('informes').select('resultado, notas').eq('trabajo_id', cerrada.id);
+      expect(partes, [
+        {'resultado': 0, 'notas': 'Engrasados los rodamientos'},
+      ], reason: 'el admin ve el parte');
+      // La lectura del contador que apuntó el técnico llega al activo.
+      expect(store.activo(activo.id)!.horas, 2958, reason: 'contador apuntado por el técnico');
+      await _salir(n);
+    });
+  }, timeout: const Timeout(Duration(minutes: 4)));
+}
