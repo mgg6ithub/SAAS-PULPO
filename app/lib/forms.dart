@@ -28,6 +28,10 @@ import 'widgets.dart';
 /// Dónde va la ventana: 0 flotando en el centro, -1 acoplada a la izquierda, 1 a la derecha.
 int _lado = 0;
 
+/// Formularios en pantalla con su barra de Guardar abajo: mientras haya alguno, la campana de notificaciones
+/// sube para no taparla.
+final formulariosAbiertos = ValueNotifier<int>(0);
+
 /// Nombre de la ruta de las ventanas de [abrirPanel] (el atajo N la reconoce para cerrarla).
 const rutaPanel = 'panel';
 
@@ -126,7 +130,14 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     });
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => formulariosAbiertos.value++);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => formulariosAbiertos.value--);
     scroll.dispose();
     super.dispose();
   }

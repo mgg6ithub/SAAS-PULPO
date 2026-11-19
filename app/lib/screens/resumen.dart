@@ -162,6 +162,7 @@ class Resumen extends StatelessWidget {
                       IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
                       () {
                         final ordenes = OrdenesPorCriticidad(
+                          enColumnas: dosCol,
                           onAbrir: onTarea ?? (_) {},
                           onVerMas: (f) {
                             filtroFechaTrabajos.value = periodoInicio.value;
@@ -184,7 +185,8 @@ class Resumen extends StatelessWidget {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    Expanded(flex: 3, child: ordenes),
+                                    // Las órdenes, lo principal: más anchas que lo de al lado.
+                                    Expanded(flex: 5, child: ordenes),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       flex: 2,

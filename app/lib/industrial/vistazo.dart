@@ -127,20 +127,15 @@ class VistazoActivos extends StatelessWidget {
 /// número; al pulsar, Órdenes de trabajo con esa criticidad) y las primeras órdenes pendientes de todas,
 /// por fecha. Cada fila: icono del activo en el color de su criticidad, el activo en una etiqueta gris, la
 /// orden, su fecha y su técnico, y la píldora del tipo. Respeta la cifra elegida arriba ([periodoInicio]).
-class OrdenesPorCriticidad extends StatefulWidget {
+class OrdenesPorCriticidad extends StatelessWidget {
   final ValueChanged<String> onAbrir;
   final ValueChanged<int> onVerMas;
-  const OrdenesPorCriticidad({super.key, required this.onAbrir, required this.onVerMas});
 
-  @override
-  State<OrdenesPorCriticidad> createState() => _OrdenesPorCriticidadState();
-}
+  /// Tres columnas (preventivo, correctivo no crítico y crítico) una al lado de otra; si no, una debajo de otra.
+  final bool enColumnas;
+  const OrdenesPorCriticidad({super.key, required this.onAbrir, required this.onVerMas, this.enColumnas = true});
 
-class _OrdenesPorCriticidadState extends State<OrdenesPorCriticidad> {
   static const _maximo = 6;
-
-  /// Criticidad elegida en la leyenda: filtra aquí mismo, sin ir a Órdenes de trabajo (null = todas).
-  TipoMantenimiento? filtro;
 
   @override
   Widget build(BuildContext context) =>
@@ -152,7 +147,9 @@ class _OrdenesPorCriticidadState extends State<OrdenesPorCriticidad> {
       if (periodo == 4) return pasaFechaTrabajo(t, 4);
       return otPendiente(t) && pasaFechaTrabajo(t, periodo);
     }).toList()..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
-    final ots = filtro == null ? todas : [for (final o in todas) if (o.tipoMantenimiento == filtro) o];
+    final columnas = [
+      for (final t in TipoMantenimiento.values) _columna(t, [for (final o in todas) if (o.tipoMantenimiento == t) o]),
+    ];
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
       decoration: BoxDecoration(
@@ -164,87 +161,48 @@ class _OrdenesPorCriticidadState extends State<OrdenesPorCriticidad> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Título y, debajo, las tres criticidades (filtran aquí mismo). El «Ver todas (N)» va abajo.
           Text(
             'Órdenes de trabajo',
             style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
           ),
-          const SizedBox(height: 8),
-          Transform.translate(
-            // Sin el aire interior de la primera pastilla, alineada con el título.
-            offset: const Offset(-10, 0),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [for (final t in TipoMantenimiento.values) _criticidad(t, todas)],
-            ),
-          ),
           const SizedBox(height: 14),
-          if (ots.isEmpty)
-            SizedBox(
+          if (todas.isEmpty)
+            const SizedBox(
               height: 150,
               child: Vacio(
                 desplazable: false,
                 icono: Icons.event_available_outlined,
-                texto: filtro == null
-                    ? 'Ninguna orden de trabajo pendiente'
-                    : 'Ninguna orden de trabajo ${filtro!.etiqueta.toLowerCase()} pendiente',
+                texto: 'Ninguna orden de trabajo pendiente',
               ),
             )
+          else if (enColumnas)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final (i, c) in columnas.indexed) ...[if (i > 0) const SizedBox(width: 16), Expanded(child: c)],
+              ],
+            )
           else
-            for (final o in ots.take(_maximo)) ...[_FilaOrden(o, onAbrir: widget.onAbrir), const SizedBox(height: 8)],
-          if (ots.length > _maximo)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                // Lleva a Órdenes de trabajo con la criticidad elegida aquí.
-                onTap: () => widget.onVerMas(filtro == null ? 0 : filtro!.index + 1),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Ver todas (${ots.length})',
-                        style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(Icons.arrow_forward_rounded, size: 17, color: P.morado),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            for (final (i, c) in columnas.indexed) ...[if (i > 0) const SizedBox(height: 20), c],
         ],
       ),
     );
   }
 
-  /// Una criticidad de la leyenda con su número. Al pulsarla, solo se ven las suyas; otra vez, todas.
-  Widget _criticidad(TipoMantenimiento t, List<Tarea> todas) {
-    final elegida = filtro == t;
-    final apagada = filtro != null && !elegida;
-    return Tooltip(
-      message: t.descripcion,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(99),
-          hoverColor: t.color.withValues(alpha: .08),
-          onTap: () => setState(() => filtro = elegida ? null : t),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: elegida ? t.color.withValues(alpha: .12) : Colors.transparent,
-              borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: elegida ? t.color.withValues(alpha: .5) : Colors.transparent),
-            ),
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 180),
-              opacity: apagada ? .45 : 1,
+  /// Una criticidad: su nombre con el número (al pulsarlo, Órdenes de trabajo con esa criticidad), sus primeras
+  /// órdenes y «Ver todas» si hay más.
+  Widget _columna(TipoMantenimiento t, List<Tarea> ots) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Align(
+        alignment: Alignment.centerLeft,
+        child: Tooltip(
+          message: t.descripcion,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => onVerMas(t.index + 1),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -252,18 +210,42 @@ class _OrdenesPorCriticidadState extends State<OrdenesPorCriticidad> {
                   const SizedBox(width: 8),
                   Text(t.etiqueta, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.color)),
                   const SizedBox(width: 8),
-                  Text(
-                    '${todas.where((o) => o.tipoMantenimiento == t).length}',
-                    style: TextStyle(fontSize: 14, color: P.textoSuave),
-                  ),
+                  Text('${ots.length}', style: TextStyle(fontSize: 14, color: P.textoSuave)),
                 ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
+      const SizedBox(height: 10),
+      if (ots.isEmpty)
+        Text('Ninguna pendiente', style: TextStyle(color: P.textoSuave, fontSize: 13))
+      else
+        for (final o in ots.take(_maximo)) ...[_FilaOrden(o, onAbrir: onAbrir), const SizedBox(height: 8)],
+      if (ots.length > _maximo)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => onVerMas(t.index + 1),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Ver todas (${ots.length})',
+                    style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.arrow_forward_rounded, size: 17, color: P.morado),
+                ],
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 }
 
 /// Una orden en [OrdenesPorCriticidad]: tarjeta interior con borde fino que se marca al pasar.
@@ -353,8 +335,6 @@ class _FilaOrden extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          PillTipo(tipo),
         ],
       ),
     );

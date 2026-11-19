@@ -206,7 +206,18 @@ class _ShellState extends State<Shell> {
               bottom: movil ? 84 : 24,
               child: const Center(child: AvisoDeshacer()),
             ),
-            Positioned(right: movil ? 12 : 24, bottom: movil ? 84 : 24, child: avisos),
+            // Sube si hay un formulario abierto, para no tapar su Guardar.
+            ValueListenableBuilder(
+              valueListenable: formulariosAbiertos,
+              builder: (_, n, child) => AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                right: movil ? 12 : 24,
+                bottom: (movil ? 84 : 24) + (n > 0 ? 64 : 0),
+                child: child!,
+              ),
+              child: avisos,
+            ),
           ],
         ),
       ),
