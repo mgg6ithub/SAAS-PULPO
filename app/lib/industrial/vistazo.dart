@@ -155,16 +155,10 @@ class OrdenesPorCriticidad extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Órdenes de trabajo por criticidad',
-                  style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
-                ),
-              ),
-              Enlace('Ver todas', onTap: () => onVerMas(0)),
-            ],
+          // Solo «Órdenes de trabajo»: el «Ver todas (N)» va abajo, sin repetirlo aquí.
+          Text(
+            'Órdenes de trabajo',
+            style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
           ),
           const SizedBox(height: 10),
           Wrap(

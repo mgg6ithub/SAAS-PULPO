@@ -59,9 +59,13 @@ class Resumen extends StatelessWidget {
 
     // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
     return SegunTamano(
-      clave: (box) => (P.mejorada, min(1080.0, box.maxWidth - margenPagina.horizontal) > 760),
+      clave: (box) => (P.mejorada, min(1080.0, box.maxWidth - margenPagina.horizontal) > 760, _columnasKpi(box), box.maxWidth > 1180),
       builder: (context, box) {
         final dosCol = min(1080.0, box.maxWidth - margenPagina.horizontal) > 760;
+        // Vista mejorada (a todo el ancho): cifras en 4, 2 o 1 columnas según quepan sin cortar el texto, y las
+        // órdenes con lo pendiente al lado solo si hay sitio de verdad; si no, una debajo de otra.
+        final kpis = _columnasKpi(box);
+        final alLado = P.mejorada ? box.maxWidth > 1180 : dosCol;
         // En pareja, las dos tarjetas miden lo mismo: lo que pida la más alta, sin huecos fijos.
         Widget par(Widget a, Widget b) => dosCol
             ? IntrinsicHeight(
@@ -77,9 +81,9 @@ class Resumen extends StatelessWidget {
             : Column(children: [a, const SizedBox(height: 16), b]);
 
         // Vista mejorada: a todo el ancho (sin columna central ni huecos a los lados), con algo más de margen.
-        final lado = P.mejorada ? margenPagina.left + 12 : margenPagina.left;
+        final margen = P.mejorada ? margenPagina.left + 12 : margenPagina.left;
         return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(lado, margenPagina.top + 16, lado, margenPagina.bottom),
+          padding: EdgeInsets.fromLTRB(margen, margenPagina.top + 16, margen, margenPagina.bottom),
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: P.mejorada ? double.infinity : 1080),
@@ -139,6 +143,7 @@ class Resumen extends StatelessWidget {
                             ? activas.where((t) => t.estado == EstadoTrabajo.realizado).length
                             : hechas30,
                         dosCol: dosCol,
+                        columnas: kpis,
                         // Abre Órdenes de trabajo con ese filtro (Para hoy, Sin técnico, Vencidos, Hechos).
                         onTap: (f) {
                           // Pultec: «Completados» abre el histórico; el resto, lo pendiente con su filtro.
@@ -170,7 +175,7 @@ class Resumen extends StatelessWidget {
                           const SizedBox(height: 16),
                           _CargaTrabajadores(onTrabajador: onTrabajador),
                         ];
-                        return dosCol
+                        return alLado
                             ? Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -229,6 +234,13 @@ class Resumen extends StatelessWidget {
       },
     );
   }
+}
+
+/// Columnas de las cifras de Inicio en la vista mejorada: cada tarjeta necesita unos 270 px para no cortar
+/// «Completados» ni su nota.
+int _columnasKpi(BoxConstraints box) {
+  final ancho = box.maxWidth - margenPagina.horizontal - 24;
+  return ancho >= 4 * 270 + 48 ? 4 : (ancho >= 2 * 250 + 16 ? 2 : 1);
 }
 
 const _dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -1304,6 +1316,9 @@ class _IconoSaludo extends CustomPainter {
 class _Kpis extends StatelessWidget {
   final int hoy, semana, vencidas, hechas;
   final bool dosCol;
+
+  /// Columnas de las cifras en la vista mejorada (4, 2 o 1, según el ancho).
+  final int columnas;
   final ValueChanged<int> onTap;
 
   /// Cifra marcada (Pultec: filtra las órdenes de debajo); 0 = ninguna.
@@ -1316,6 +1331,7 @@ class _Kpis extends StatelessWidget {
     required this.vencidas,
     required this.hechas,
     required this.dosCol,
+    this.columnas = 4,
   });
 
   @override
@@ -1338,7 +1354,7 @@ class _Kpis extends StatelessWidget {
     ];
     if (P.mejorada) {
       return Rejilla(
-        columnas: dosCol ? 4 : 2,
+        columnas: columnas,
         children: [
           for (final (i, (icono, etiqueta, valor, color, nota)) in items.indexed)
             _KpiMejorada(
