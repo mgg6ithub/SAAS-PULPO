@@ -44,8 +44,8 @@ PopupMenuItem<String> _opcion(String valor, String texto, {Color? color}) => Pop
   child: Text(texto, style: TextStyle(color: color ?? P.texto, fontSize: 13.5)),
 );
 
-/// Menú del usuario (abajo de la barra, como en ChatGPT): quién eres, Ajustes (con tu cuenta dentro) y
-/// cerrar sesión. Sin sesión (modo de pruebas), abre los Ajustes.
+/// Menú del usuario (abajo de la barra, como en ChatGPT): quién eres y cerrar sesión (los Ajustes van en la
+/// barra, con el engranaje). Sin sesión (modo de pruebas), abre los Ajustes.
 Future<void> abrirMenuUsuario(BuildContext context) async {
   if (store.nube == null) return abrirAjustes(context);
   final elegido = await showMenu<String>(
@@ -69,14 +69,11 @@ Future<void> abrirMenuUsuario(BuildContext context) async {
         ),
       ),
       const PopupMenuDivider(),
-      _opcion('ajustes', 'Ajustes'),
       _opcion('salir', 'Cerrar sesión', color: P.rojo),
     ],
   );
   if (!context.mounted) return;
   switch (elegido) {
-    case 'ajustes':
-      await abrirAjustes(context);
     case 'salir':
       await Nube.cerrarSesion();
   }
@@ -230,7 +227,7 @@ class BotonUsuario extends StatelessWidget {
     // En la barra oscura de la vista mejorada, el avatar en el acento (la tinta no se vería).
     final avatar = Avatar(inicialesCuenta(), P.mejorada ? P.morado : P.tinta, size: 28 * escala, cuadrado: true);
     return Tooltip(
-      message: store.nube == null ? 'Ajustes' : 'Tu cuenta y ajustes',
+      message: store.nube == null ? 'Ajustes' : 'Tu cuenta',
       child: InkWell(
         borderRadius: BorderRadius.circular(P.radioControl),
         mouseCursor: SystemMouseCursors.click,

@@ -11,6 +11,7 @@ import 'industrial/activos.dart';
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
 import 'screens/clientes.dart';
+import 'screens/ajustes_dialogo.dart';
 import 'screens/mi_cuenta.dart';
 import 'screens/planificacion.dart';
 import 'screens/resumen.dart';
@@ -713,6 +714,11 @@ class _BarraState extends State<_Barra> {
                     compacta: iconos,
                     escala: escala,
                     onTap: () => abrirSimulaciones(context),
+                  ),
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) =>
+                        _fila(Icons.settings_outlined, 'Ajustes generales', () => abrirAjustes(context)),
                   ),
                   const SizedBox(height: 8),
                   Divider(height: 1, color: P.bordeBarra),
