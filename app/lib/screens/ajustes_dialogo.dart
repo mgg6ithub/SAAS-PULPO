@@ -11,8 +11,9 @@ import 'importar_exportar.dart';
 import 'tipos_competencias.dart';
 import '../marca.dart';
 
-/// Ajustes de la app, agrupados en tarjetas como los ajustes de iOS: apariencia, letra, agenda,
-/// barra lateral y datos.
+/// Ajustes de la app, agrupados en tarjetas como los ajustes de iOS: cuenta, tema, letra, empresa y datos.
+/// Simplificados (2026-11-19): sin color (siempre el morado de Pultec), sin tema del sistema, sin vista de
+/// agenda ni lado de la barra lateral.
 Future<void> abrirAjustes(BuildContext context) => showDialog(
   context: context,
   builder: (_) => Dialog(
@@ -74,45 +75,11 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
               _Grupo('Apariencia', [
                 _Fila(
                   titulo: 'Tema',
-                  subtitulo: 'Claro, oscuro o el del sistema',
+                  subtitulo: 'Claro u oscuro',
                   child: Pestanas(
-                    opciones: const ['Claro', 'Oscuro', 'Sistema'],
-                    seleccion: switch (ajustes.tema) {
-                      ThemeMode.light => 0,
-                      ThemeMode.dark => 1,
-                      ThemeMode.system => 2,
-                    },
-                    onChanged: (i) => ajustes.ponerTema([ThemeMode.light, ThemeMode.dark, ThemeMode.system][i]),
-                  ),
-                ),
-                _Fila(
-                  titulo: 'Color',
-                  subtitulo: acentos[ajustes.acento].nombre,
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final (i, a) in acentos.indexed)
-                        Tooltip(
-                          message: a.nombre,
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => ajustes.ponerAcento(i),
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: a.color,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: i == ajustes.acento ? P.texto : Colors.transparent, width: 2),
-                              ),
-                              child: i == ajustes.acento
-                                  ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                                  : null,
-                            ),
-                          ),
-                        ),
-                    ],
+                    opciones: const ['Claro', 'Oscuro'],
+                    seleccion: ajustes.tema == ThemeMode.dark ? 1 : 0,
+                    onChanged: (i) => ajustes.ponerTema(i == 1 ? ThemeMode.dark : ThemeMode.light),
                   ),
                 ),
               ]),
@@ -133,28 +100,6 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
                     opciones: const ['Geist', 'Inter', 'Atkinson'],
                     seleccion: ajustes.fuente,
                     onChanged: ajustes.ponerFuente,
-                  ),
-                ),
-              ]),
-              _Grupo('Agenda', [
-                _Fila(
-                  titulo: 'Vista al abrir',
-                  subtitulo: 'Con la que se abre el itinerario',
-                  child: Pestanas(
-                    opciones: [m('Pulpo'), 'Calendario'],
-                    seleccion: ajustes.vistaInicio,
-                    onChanged: ajustes.ponerVistaInicio,
-                  ),
-                ),
-              ]),
-              _Grupo('Barra lateral', [
-                _Fila(
-                  titulo: 'Lado',
-                  subtitulo: 'Dónde va la barra lateral',
-                  child: Pestanas(
-                    opciones: const ['Izquierda', 'Derecha'],
-                    seleccion: ajustes.barraDerecha ? 1 : 0,
-                    onChanged: (i) => ajustes.ponerBarraDerecha(i == 1),
                   ),
                 ),
               ]),
@@ -248,7 +193,9 @@ class _Fila extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    // El control (Editar, Abrir, pestañas) arriba a la derecha, a la altura del título.
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
@@ -261,9 +208,12 @@ class _Fila extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         // Con letra grande, el control se encoge en vez de salirse.
-        Flexible(
+        Expanded(
           flex: 2,
-          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight, child: child),
+          child: Align(
+            alignment: Alignment.topRight,
+            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.topRight, child: child),
+          ),
         ),
       ],
     ),

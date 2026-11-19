@@ -15,11 +15,9 @@ class P {
   /// Vista mejorada (Simulaciones): barra lateral oscura, fondo gris azulado y tarjetas con sombra.
   static bool get mejorada => ajustes.mejorada;
 
-  /// Color de acento (por defecto el morado del logo; se cambia en Ajustes). En la vista mejorada de Pultec,
-  /// el azul de la marca algo más vivo, como el de la maqueta.
-  static Color get morado => industrial && mejorada && ajustes.acento == 0
-      ? moradoVivo
-      : acentos[ajustes.acento.clamp(0, acentos.length - 1)].color;
+  /// Color de acento: fijo (ya no se elige en Ajustes). En la vista mejorada de Pultec, el morado vivo del logo;
+  /// si no, el de la marca.
+  static Color get morado => industrial && mejorada ? moradoVivo : Marca.color;
 
   /// Morado vivo de la vista mejorada (el del pulpo del logo, algo más luminoso).
   static const moradoVivo = Color(0xFF6C3CF0);

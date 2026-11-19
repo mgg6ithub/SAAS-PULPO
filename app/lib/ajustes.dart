@@ -60,7 +60,9 @@ class Ajustes extends ChangeNotifier {
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     tema = ThemeMode.values[_prefs!.getInt('ajustes_tema') ?? ThemeMode.light.index];
-    barraDerecha = _prefs!.getBool('ajustes_barra_derecha') ?? false;
+    // Ya no hay tema «Sistema» ni lado de la barra en Ajustes: quien los tuviera vuelve a claro e izquierda.
+    if (tema == ThemeMode.system) tema = ThemeMode.light;
+    barraDerecha = false;
     tamanoLetra = _prefs!.getInt('ajustes_tamano_letra') ?? 0;
     fuente = _prefs!.getInt('ajustes_fuente') ?? 0;
     vistaInicio = _prefs!.getInt('ajustes_vista_itinerario') ?? 0;
