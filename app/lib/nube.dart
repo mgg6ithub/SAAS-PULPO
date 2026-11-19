@@ -213,6 +213,12 @@ class Nube {
       .order('created_at', ascending: false)
       .limit(30);
 
+  /// Técnico: guarda su foto y su teléfono (el resto de su ficha solo lo cambia la oficina).
+  Future<void> guardarMiPerfil(String foto, String telefono) async {
+    await _cola;
+    await _db.rpc('guardar_mi_perfil', params: {'p_empresa': empresaId, 'p_foto': foto, 'p_telefono': telefono});
+  }
+
   /// Asigna la OT libre al técnico y la inicia bajo bloqueo en el servidor.
   Future<void> empezarOt(String trabajoId) async {
     await _cola;

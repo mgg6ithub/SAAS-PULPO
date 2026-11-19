@@ -6,7 +6,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
+import '../ajustes.dart';
 import '../forms.dart';
+import '../industrial/activo.dart';
 import '../informes.dart';
 import '../marca.dart';
 import '../industrial/activos.dart' show colorEstado, gravedadDe;
@@ -150,12 +152,48 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
   String? tareaId;
   DateTime semana = _lunes(hoy());
 
+  /// Pultec: qué se ve (0 órdenes, 1 incidencias, 2 histórico) y si está la ventana previa de máquinas,
+  /// que sale cada vez que el técnico entra.
+  int vista = 0;
+  bool eligiendo = industrial;
+
   Trabajador? get _yo {
     final id = rolTrabajador.value;
     return store.trabajador(id ?? '') ?? store.trabajadores.where((w) => w.activo).firstOrNull;
   }
 
   void _abrir(Tarea t) => setState(() => tareaId = t.id);
+
+  Future<void> _salir() async {
+    if (store.nube != null) await Nube.cerrarSesion();
+    rolTrabajador.value = null;
+  }
+
+  /// Se puede volver a la vista de administrador (no en una cuenta de técnico).
+  bool get _puedeAdmin => !(store.nube?.esTrabajador ?? false);
+
+  /// Menú del técnico en el móvil: su perfil, la vista de administrador y cerrar sesión.
+  Widget _menuCuenta(Trabajador w) => BotonMenu<int>(
+    tooltip: 'Tu cuenta',
+    child: FotoTecnico(w, size: 30),
+    onSelected: (i) {
+      if (i == 0) {
+        abrirPerfilTecnico(context, w);
+      } else if (i == 1) {
+        rolTrabajador.value = null;
+      } else {
+        _salir();
+      }
+    },
+    opciones: [
+      for (final (i, icono, texto) in [
+        (0, Icons.person_outline_rounded, 'Mi perfil'),
+        if (_puedeAdmin) (1, Icons.swap_horiz_rounded, 'Vista de administrador'),
+        (2, Icons.logout_rounded, 'Cerrar sesión'),
+      ])
+        (i, Row(children: [Icon(icono, size: 18, color: P.textoSuave), const SizedBox(width: 10), Text(texto)])),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -164,8 +202,103 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
       final w = _yo;
       final movil = esMovil(context);
       final tarea = tareaId == null ? null : store.tareas.where((t) => t.id == tareaId).firstOrNull;
+      // Pultec: máquinas con órdenes del técnico. Con una o ninguna no hace falta elegir.
+      final maquinas = w == null || !industrial ? const <(Activo, int)>[] : _maquinasDe(w);
+      final elegir = industrial && eligiendo && tarea == null && maquinas.length > 1;
+      final escritorio = industrial && !movil && w != null;
+      Widget? contenido;
+      if (w != null) {
+        contenido = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (tarea != null || !escritorio) ...[
+              BarraVista(
+                izquierda: tarea == null
+                    ? [
+                        const LogoPulpo(size: 30),
+                        if (!movil && !industrial)
+                          Pestanas(
+                            opciones: _pestanas,
+                            seleccion: pestana,
+                            onChanged: (i) => setState(() => pestana = i),
+                          ),
+                      ]
+                    : [
+                        BotonAccion(
+                          'Volver',
+                          icono: CupertinoIcons.chevron_left,
+                          onPressed: () => setState(() => tareaId = null),
+                        ),
+                      ],
+                principal: industrial && tarea == null && !elegir
+                    ? BotonPrimario(
+                        'Nueva incidencia',
+                        icono: Icons.add_rounded,
+                        onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
+                      )
+                    : null,
+                derecha: industrial
+                    ? [if (tarea == null) _menuCuenta(w)]
+                    : [
+                        BotonAccion('Cerrar sesión', icono: Icons.logout_rounded, onPressed: _salir),
+                        if (_puedeAdmin)
+                          BotonAccion(
+                            'Vista de administrador',
+                            icono: Icons.swap_horiz_rounded,
+                            tooltip: 'Salir de la vista de ${w.nombre}',
+                            onPressed: () => rolTrabajador.value = null,
+                          ),
+                      ],
+              ),
+              const SizedBox(height: huecoVista),
+            ],
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: KeyedSubtree(
+                  key: ValueKey(tarea?.id ?? (elegir ? 'maquinas' : pestana)),
+                  child: tarea != null
+                      ? _DetalleTrabajo(tarea, w)
+                      : elegir
+                      ? ElegirMaquinas(
+                          w,
+                          maquinas,
+                          inicial: _maquinasElegidas[w.id] ?? const {},
+                          onListo: (sel) => setState(() {
+                            _maquinasElegidas[w.id] = sel;
+                            eligiendo = false;
+                          }),
+                        )
+                      : industrial
+                      ? _PanelTecnico(
+                          w,
+                          _abrir,
+                          vista: vista,
+                          onVista: (n) => setState(() => vista = n),
+                          pestanas: !escritorio,
+                          maquinas: maquinas.length > 1 ? (_maquinasElegidas[w.id] ?? const {}) : const {},
+                          onMaquinas: maquinas.length > 1 ? () => setState(() => eligiendo = true) : null,
+                        )
+                      : switch (pestana) {
+                          0 => _Hoy(w, _abrir),
+                          1 => _Semana(w, semana, _abrir, (d) => setState(() => semana = d)),
+                          _ => _MisTrabajos(w, _abrir),
+                        },
+                ),
+              ),
+            ),
+          ],
+        );
+        contenido = Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: escritorio ? 980 : 760),
+            child: Padding(padding: escritorio ? const EdgeInsets.fromLTRB(28, 22, 28, 12) : margenPagina, child: contenido),
+          ),
+        );
+      }
       return Scaffold(
-        backgroundColor: P.fondo,
+        backgroundColor: escritorio ? P.barra : P.fondo,
         bottomNavigationBar: !industrial && movil && w != null && tarea == null
             ? _BarraInferior(pestana, (i) => setState(() => pestana = i))
             : null,
@@ -175,83 +308,523 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                 titulo: m('Sin trabajadores'),
                 texto: m('Crea un trabajador desde la vista de administrador.'),
               )
-            : Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: Padding(
-                    padding: margenPagina,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BarraVista(
-                          izquierda: tarea == null
-                              ? [
-                                  const LogoPulpo(size: 30),
-                                  if (!movil && !industrial)
-                                    Pestanas(
-                                      opciones: _pestanas,
-                                      seleccion: pestana,
-                                      onChanged: (i) => setState(() => pestana = i),
-                                    ),
-                                ]
-                              : [
-                                  BotonAccion(
-                                    'Volver',
-                                    icono: CupertinoIcons.chevron_left,
-                                    onPressed: () => setState(() => tareaId = null),
-                                  ),
-                                ],
-                          principal: industrial && tarea == null
-                              ? BotonPrimario(
-                                  'Nueva incidencia',
-                                  icono: Icons.add_rounded,
-                                  onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
-                                )
-                              : null,
-                          derecha: [
-                            BotonAccion(
-                              'Cerrar sesión',
-                              icono: Icons.logout_rounded,
-                              onPressed: () async {
-                                if (store.nube != null) await Nube.cerrarSesion();
-                                rolTrabajador.value = null;
-                              },
-                            ),
-                            if (!(store.nube?.esTrabajador ?? false))
-                              BotonAccion(
-                                'Vista de administrador',
-                                icono: Icons.swap_horiz_rounded,
-                                tooltip: 'Salir de la vista de ${w.nombre}',
-                                onPressed: () => rolTrabajador.value = null,
-                              ),
-                          ],
+            : escritorio
+            // Escritorio: la misma estructura que la del administrador (barra lateral y el contenido en un panel).
+            ? Row(
+                children: [
+                  _BarraTecnico(
+                    w: w,
+                    vista: elegir ? -1 : vista,
+                    cuentas: _cuentas(w),
+                    onVista: (n) => setState(() {
+                      vista = n;
+                      tareaId = null;
+                      eligiendo = false;
+                    }),
+                    onIncidencia: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
+                    onPerfil: () => abrirPerfilTecnico(context, w),
+                    onAdmin: _puedeAdmin ? () => rolTrabajador.value = null : null,
+                    onSalir: _salir,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 8, 8),
+                      child: DecoratedBox(
+                        position: DecorationPosition.foreground,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(P.radio),
+                          border: Border.all(color: P.bordeBarra),
                         ),
-                        const SizedBox(height: huecoVista),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(P.radio),
+                          child: ColoredBox(color: P.fondo, child: contenido!),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : contenido!,
+      );
+    },
+  );
+
+  /// Cuántas hay en cada apartado de la barra: órdenes pendientes (en sus máquinas) e incidencias.
+  List<int> _cuentas(Trabajador w) {
+    final sel = _maquinasElegidas[w.id] ?? const {};
+    final pendientes = _misTrabajos(w)
+        .where((t) => t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy()) && _enMaquinas(t.activoId, sel))
+        .length;
+    final avisos = store.incidencias
+        .where((i) => i.tecnicoId == w.id || (i.tecnicoId == null && (store.nube?.esTrabajador ?? false)))
+        .length;
+    return [pendientes, avisos];
+  }
+}
+
+/// Máquinas elegidas por cada técnico al entrar (vacío = todas). Se recuerdan mientras la app está abierta.
+final _maquinasElegidas = <String, Set<String>>{};
+
+/// La «máquina» de un activo: él mismo si es raíz o cuelga de una raíz; si es un componente más abajo,
+/// su antepasado que cuelga de la raíz (p. ej. el cilindro → el equipo hidráulico).
+String _maquinaDe(String id) {
+  var a = store.activo(id);
+  if (a == null) return id;
+  while (a!.padreId != null) {
+    final p = store.activo(a.padreId!);
+    if (p == null || p.padreId == null) break;
+    a = p;
+  }
+  return a.id;
+}
+
+/// La orden o incidencia entra con las máquinas elegidas (sin activo o sin elegir nada, siempre).
+bool _enMaquinas(String? activoId, Set<String> sel) =>
+    sel.isEmpty || activoId == null || sel.contains(_maquinaDe(activoId));
+
+/// Máquinas con órdenes pendientes del técnico y cuántas tiene en cada una (las de más órdenes primero).
+List<(Activo, int)> _maquinasDe(Trabajador w) {
+  final n = <String, int>{};
+  for (final t in _misTrabajos(w)) {
+    if (t.activoId == null || t.estado == EstadoTrabajo.realizado || t.hechaEl(hoy())) continue;
+    final id = _maquinaDe(t.activoId!);
+    n[id] = (n[id] ?? 0) + 1;
+  }
+  return [
+    for (final e in n.entries)
+      if (store.activo(e.key) case final a?) (a, e.value),
+  ]..sort((a, b) => b.$2 != a.$2 ? b.$2 - a.$2 : a.$1.nombre.compareTo(b.$1.nombre));
+}
+
+/// Foto del técnico en un círculo o, si no tiene, sus iniciales en su color.
+class FotoTecnico extends StatelessWidget {
+  final Trabajador w;
+  final double size;
+  const FotoTecnico(this.w, {super.key, this.size = 32});
+
+  @override
+  Widget build(BuildContext context) => w.foto.isEmpty
+      ? Avatar(inicialesDe(w.nombreCompleto), w.color == 0 ? Marca.color : Color(w.color), size: size)
+      : ClipOval(child: FotoGuardada(w.foto, width: size, height: size));
+}
+
+/// Barra lateral del técnico en escritorio: igual que la del administrador, pero con solo sus apartados.
+class _BarraTecnico extends StatelessWidget {
+  final Trabajador w;
+  final int vista;
+  final List<int> cuentas;
+  final ValueChanged<int> onVista;
+  final VoidCallback onIncidencia, onPerfil, onSalir;
+  final VoidCallback? onAdmin;
+  const _BarraTecnico({
+    required this.w,
+    required this.vista,
+    required this.cuentas,
+    required this.onVista,
+    required this.onIncidencia,
+    required this.onPerfil,
+    required this.onSalir,
+    this.onAdmin,
+  });
+
+  Widget _fila(IconData icono, String texto, VoidCallback onTap) => InkWell(
+    borderRadius: BorderRadius.circular(P.radioControl),
+    hoverColor: P.hoverBarra,
+    mouseCursor: SystemMouseCursors.click,
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Icon(icono, size: 19, color: P.textoBarraSuave),
+          const SizedBox(width: 12),
+          Expanded(child: Text(texto, style: TextStyle(fontSize: 14.5, color: P.textoBarra))),
+        ],
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (Icons.assignment_outlined, 'Mis órdenes', cuentas[0]),
+      (Icons.report_gmailerrorred_rounded, 'Incidencias', cuentas[1]),
+      (Icons.history_rounded, 'Histórico', 0),
+    ];
+    return Container(
+      width: 248,
+      color: P.barra,
+      padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const SizedBox(width: 2),
+                const LogoPulpo(size: 32),
+                const SizedBox(width: 10),
+                Text(
+                  Marca.nombre,
+                  style: TextStyle(
+                    fontFamily: P.titulos,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.6,
+                    color: P.textoBarra,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 42,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: P.morado,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                ),
+                onPressed: onIncidencia,
+                icon: const Icon(Icons.add_rounded, size: 19),
+                label: const Text('Nueva incidencia', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            for (final (i, (icono, texto, n)) in items.indexed)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(P.radioControl),
+                  splashFactory: NoSplash.splashFactory,
+                  hoverColor: P.hoverBarra,
+                  mouseCursor: SystemMouseCursors.click,
+                  onTap: () => onVista(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: vista == i ? P.seleccionBarra : Colors.transparent,
+                      borderRadius: BorderRadius.circular(P.radioControl),
+                      boxShadow: vista == i ? P.sombraSeleccionBarra : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(icono, size: 20, color: vista == i ? P.iconoBarraElegido : P.textoBarraSuave),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child: KeyedSubtree(
-                              key: ValueKey(tarea?.id ?? pestana),
-                              child: tarea != null
-                                  ? _DetalleTrabajo(tarea, w)
-                                  : industrial
-                                  ? _PanelTecnico(w, _abrir)
-                                  : switch (pestana) {
-                                      0 => _Hoy(w, _abrir),
-                                      1 => _Semana(w, semana, _abrir, (d) => setState(() => semana = d)),
-                                      _ => _MisTrabajos(w, _abrir),
-                                    },
+                          child: Text(
+                            texto,
+                            style: TextStyle(
+                              fontFamily: P.titulos,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: vista == i ? P.textoBarraElegido : P.textoBarra,
                             ),
                           ),
                         ),
+                        if (n > 0) Text('$n', style: TextStyle(fontSize: 13, color: P.textoBarraSuave)),
                       ],
                     ),
                   ),
                 ),
               ),
-      );
-    },
+            const Spacer(),
+            if (onAdmin != null) _fila(Icons.swap_horiz_rounded, 'Vista de administrador', onAdmin!),
+            _fila(Icons.logout_rounded, 'Cerrar sesión', onSalir),
+            const SizedBox(height: 8),
+            Divider(height: 1, color: P.bordeBarra),
+            const SizedBox(height: 8),
+            // Su perfil: foto, nombre y, al pulsar, la ventana para cambiar su foto y sus ajustes.
+            Tooltip(
+              message: 'Mi perfil',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(P.radioControl),
+                hoverColor: P.hoverBarra,
+                mouseCursor: SystemMouseCursors.click,
+                onTap: onPerfil,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      FotoTecnico(w, size: 34),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              w.nombreCompleto,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: P.textoBarra),
+                            ),
+                            Text('Mi perfil', style: TextStyle(fontSize: 12, color: P.textoBarraSuave)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ventana previa al entrar: el técnico marca en qué máquinas va a trabajar y solo ve sus órdenes.
+class ElegirMaquinas extends StatefulWidget {
+  final Trabajador w;
+  final List<(Activo, int)> maquinas;
+  final Set<String> inicial;
+  final ValueChanged<Set<String>> onListo;
+  const ElegirMaquinas(this.w, this.maquinas, {super.key, required this.inicial, required this.onListo});
+
+  @override
+  State<ElegirMaquinas> createState() => _ElegirMaquinasState();
+}
+
+class _ElegirMaquinasState extends State<ElegirMaquinas> {
+  late final sel = {...widget.inicial};
+
+  @override
+  Widget build(BuildContext context) {
+    final todas = sel.length == widget.maquinas.length;
+    final ordenes = sel.isEmpty
+        ? widget.maquinas.fold(0, (n, m) => n + m.$2)
+        : widget.maquinas.where((m) => sel.contains(m.$1.id)).fold(0, (n, m) => n + m.$2);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(_diaLargo(hoy()), style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(
+          'Hola, ${widget.w.nombre}',
+          style: TextStyle(fontFamily: P.titulos, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -.8),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '¿En qué máquinas vas a trabajar?',
+          style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w600, color: P.texto),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Solo verás las órdenes de las que marques. Puedes cambiarlo cuando quieras.',
+          style: TextStyle(fontSize: 14, color: P.textoSuave),
+        ),
+        const SizedBox(height: 18),
+        // Los botones van justo debajo de las máquinas; con muchas, la rejilla se desplaza.
+        Flexible(
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 260,
+              mainAxisExtent: 118,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: widget.maquinas.length,
+            itemBuilder: (_, i) {
+              final (a, n) = widget.maquinas[i];
+              final marcada = sel.contains(a.id);
+              return _TarjetaMaquina(
+                a,
+                n,
+                marcada: marcada,
+                onTap: () => setState(() => marcada ? sel.remove(a.id) : sel.add(a.id)),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            BotonAccion(
+              todas ? 'Quitar todas' : 'Marcar todas',
+              icono: todas ? Icons.remove_done_rounded : Icons.done_all_rounded,
+              onPressed: () => setState(() {
+                if (todas) {
+                  sel.clear();
+                } else {
+                  sel.addAll(widget.maquinas.map((m) => m.$1.id));
+                }
+              }),
+            ),
+            const Spacer(),
+            SizedBox(
+              height: 44,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: P.morado,
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                ),
+                onPressed: () => widget.onListo({...sel}),
+                child: Text(
+                  sel.isEmpty ? 'Ver todas mis órdenes ($ordenes)' : 'Empezar con $ordenes órdenes',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+/// Máquina en la ventana previa: icono, nombre, etiqueta y cuántas órdenes tiene el técnico en ella.
+/// Marcada: borde y fondo morado suave y el check arriba a la derecha.
+class _TarjetaMaquina extends StatefulWidget {
+  final Activo a;
+  final int n;
+  final bool marcada;
+  final VoidCallback onTap;
+  const _TarjetaMaquina(this.a, this.n, {required this.marcada, required this.onTap});
+
+  @override
+  State<_TarjetaMaquina> createState() => _TarjetaMaquinaState();
+}
+
+class _TarjetaMaquinaState extends State<_TarjetaMaquina> {
+  bool hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.marcada;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => hover = true),
+      onExit: (_) => setState(() => hover = false),
+      child: Semantics(
+        button: true,
+        selected: m,
+        label: '${widget.a.nombre}, ${widget.n} órdenes',
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: m ? P.moradoSuave : P.superficie,
+              borderRadius: BorderRadius.circular(P.radio),
+              border: Border.all(
+                color: m ? P.morado : (hover ? P.morado.withValues(alpha: .4) : P.borde),
+                width: m ? 1.5 : 1,
+              ),
+              boxShadow: P.sombra,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconoActivo(widget.a.icono, size: 26, color: m ? P.morado : P.textoSuave),
+                    const Spacer(),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 160),
+                      child: Icon(
+                        m ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                        key: ValueKey(m),
+                        size: 22,
+                        color: m ? P.morado : P.borde,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  widget.a.nombre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${widget.n} ${widget.n == 1 ? 'orden' : 'órdenes'}',
+                  style: TextStyle(fontSize: 13, color: P.textoSuave),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Perfil del propio técnico: su foto, su teléfono y cómo ve la app (tema y letra).
+Future<void> abrirPerfilTecnico(BuildContext context, Trabajador w) => abrirPanel(context, _PerfilTecnico(w));
+
+class _PerfilTecnico extends StatefulWidget {
+  final Trabajador w;
+  const _PerfilTecnico(this.w);
+
+  @override
+  State<_PerfilTecnico> createState() => _PerfilTecnicoState();
+}
+
+class _PerfilTecnicoState extends State<_PerfilTecnico> {
+  late String foto = widget.w.foto;
+  late final telefono = TextEditingController(text: widget.w.telefono);
+  String? error;
+
+  @override
+  void dispose() {
+    telefono.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    final w = Trabajador.fromJson(widget.w.toJson())
+      ..foto = foto
+      ..telefono = telefono.text.trim();
+    try {
+      // Una cuenta de técnico no puede tocar el resto de su ficha: solo su foto y su teléfono, en el servidor.
+      if (store.nube?.esTrabajador ?? false) await store.nube!.guardarMiPerfil(w.foto, w.telefono);
+      store.guardarTrabajador(w);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      debugPrint('Pultec: no se pudo guardar el perfil: $e');
+      setState(() => error = 'No se ha podido guardar. Inténtalo de nuevo.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => VentanaFormulario(
+    etiqueta: 'Mi perfil',
+    titulo: widget.w.nombreCompleto,
+    lider: FotoFormulario(foto: foto, onCambio: (f) => setState(() => foto = f)),
+    onGuardar: _guardar,
+    campos: [
+      Bloque('Datos', primero: true, descripcion: 'Pulsa el círculo de arriba para poner tu foto. La ven el equipo y la oficina.', [
+        campo('Teléfono', telefono, teclado: TextInputType.phone, error: error),
+        if (widget.w.email.isNotEmpty) ...[
+          etiqueta('Correo'),
+          Text(widget.w.email, style: TextStyle(color: P.textoSuave)),
+        ],
+      ]),
+      Bloque('Apariencia', descripcion: 'Solo cambia cómo ves la app en este dispositivo.', [
+        etiqueta('Tema'),
+        Pestanas(
+          opciones: const ['Claro', 'Oscuro'],
+          seleccion: ajustes.oscuro ? 1 : 0,
+          onChanged: (i) => setState(() => ajustes.ponerTema(i == 1 ? ThemeMode.dark : ThemeMode.light)),
+        ),
+        const SizedBox(height: 16),
+        etiqueta('Tamaño de letra'),
+        Pestanas(
+          opciones: const ['Normal', 'Grande', 'Más grande', 'Máxima'],
+          seleccion: ajustes.tamanoLetra,
+          onChanged: (i) => setState(() => ajustes.ponerTamanoLetra(i)),
+        ),
+      ]),
+    ],
   );
 }
 
@@ -724,25 +1297,42 @@ class _MisTrabajos extends StatelessWidget {
 class _PanelTecnico extends StatefulWidget {
   final Trabajador w;
   final ValueChanged<Tarea> abrir;
-  const _PanelTecnico(this.w, this.abrir);
+
+  /// 0 órdenes, 1 incidencias, 2 histórico. En escritorio se elige en la barra lateral; en el móvil, con
+  /// las pestañas de arriba ([pestanas]).
+  final int vista;
+  final ValueChanged<int> onVista;
+  final bool pestanas;
+
+  /// Máquinas elegidas al entrar (vacío = todas) y cómo volver a elegirlas (null = no hay entre qué elegir).
+  final Set<String> maquinas;
+  final VoidCallback? onMaquinas;
+  const _PanelTecnico(
+    this.w,
+    this.abrir, {
+    required this.vista,
+    required this.onVista,
+    required this.pestanas,
+    required this.maquinas,
+    this.onMaquinas,
+  });
   @override
   State<_PanelTecnico> createState() => _PanelTecnicoState();
 }
 
 class _PanelTecnicoState extends State<_PanelTecnico> {
-  int vista = 0, fecha = 0;
+  int fecha = 0;
+  int get vista => widget.vista;
   /// Otros días (atrasadas y próximas) plegados bajo lo de hoy.
   bool otrosDias = false;
   int? estado, resultado;
   TipoMantenimiento? tipo;
-  String? activoId;
   String busqueda = '';
   Future<List<Informe>>? historial;
   static const fechas = ['Todas las fechas', 'Para hoy', 'Atrasadas', 'Próximos 7 días', 'Próximas'];
 
   bool _coincide(String texto, String? activo, TipoMantenimiento? clase, DateTime? dia) {
     if (tipo != null && tipo != clase) return false;
-    if (activoId != null && !store.ramaDe(activoId!).contains(activo)) return false;
     if (!'$texto ${dondeEs(activo)}'.toLowerCase().contains(busqueda.toLowerCase().trim())) return false;
     final d = dia == null ? null : diasHasta(dia);
     return switch (fecha) {
@@ -751,15 +1341,27 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
     };
   }
 
-  void _vista(int n) => setState(() {
-    vista = n;
-    // Las fechas de planificación no deben ocultar el historial al cambiar de vista.
-    fecha = 0;
-    if (n == 2) historial = informes.delTecnico(widget.w.id);
-  });
+  void _vista(int n) => widget.onVista(n);
+
+  @override
+  void initState() {
+    super.initState();
+    if (vista == 2) historial = informes.delTecnico(widget.w.id);
+  }
+
+  @override
+  void didUpdateWidget(_PanelTecnico old) {
+    super.didUpdateWidget(old);
+    if (old.vista != vista) {
+      // Las fechas de planificación no deben ocultar el historial al cambiar de vista.
+      fecha = 0;
+      estado = null;
+      if (vista == 2) historial = informes.delTecnico(widget.w.id);
+    }
+  }
 
   Widget _filtros() {
-    final n = [tipo, activoId, if (fecha != 0) fecha, if (vista != 2) estado, if (vista == 2) resultado]
+    final n = [tipo, if (fecha != 0) fecha, if (vista != 2) estado, if (vista == 2) resultado]
       .where((x) => x != null).length;
     MenuItemButton opcion(String nombre, bool marcado, VoidCallback elegir, {Color? color}) => MenuItemButton(
       leadingIcon: color == null ? null : Icon(Icons.circle, size: 8, color: color),
@@ -794,10 +1396,10 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
         ], child: const Text('Resultado del parte')),
         const Divider(),
         MenuItemButton(onPressed: () => setState(() {
-          tipo = null; activoId = null; fecha = 0; estado = null; resultado = null;
+          tipo = null; fecha = 0; estado = null; resultado = null;
         }), child: const Text('Quitar filtros')),
       ],
-      builder: (context, menu, _) => BotonAccion(n == 0 ? 'Filtros' : 'Filtros · $n',
+      builder: (context, menu, _) => BotonAccion(n == 0 ? 'Filtros' : 'Filtros ($n)',
         icono: Icons.filter_list_rounded, onPressed: () => menu.isOpen ? menu.close() : menu.open()),
     );
   }
@@ -832,35 +1434,43 @@ Text('$etiqueta: ${t.nombre}')
 
   @override
   Widget build(BuildContext context) {
-    final pendientes = _misTrabajos(widget.w).where((t) => t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy())).toList()
+    final sel = widget.maquinas;
+    final pendientes = _misTrabajos(widget.w)
+        .where((t) => t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy()) && _enMaquinas(t.activoId, sel))
+        .toList()
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
-    final avisos = store.incidencias.where((i) => i.tecnicoId == widget.w.id ||
-      (i.tecnicoId == null && (store.nube?.esTrabajador ?? false))).toList()
+    final avisos = store.incidencias.where((i) => (i.tecnicoId == widget.w.id ||
+      (i.tecnicoId == null && (store.nube?.esTrabajador ?? false))) && _enMaquinas(i.activoId, sel)).toList()
       ..sort((a, b) => b.creada.compareTo(a.creada));
+    final titulos = ['Mis órdenes', 'Incidencias', 'Histórico'];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _CifrasTecnico(widget.w, pendientes, filtro: vista == 0 ? fecha : 0, onFiltro: (f) => setState(() {
-        if (vista != 0) _vista(0);
-        fecha = fecha == f ? 0 : f;
-      })),
-      const SizedBox(height: 14),
-      BarraVista(izquierda: [Pestanas(opciones: ['Pendientes · ${pendientes.length}', 'Incidencias · ${avisos.length}', 'Histórico'],
-        seleccion: vista, onChanged: (n) { estado = null; _vista(n); })], derecha: [_filtros()]),
-      const SizedBox(height: 10),
-      Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8, runSpacing: 8, children: [
-        Buscador(hint: 'Buscar en la lista…', width: 260, onChanged: (s) => setState(() => busqueda = s)),
-        ConstrainedBox(constraints: const BoxConstraints(maxWidth: 250),
-          child: SelectorActivo(activoId, (id) => setState(() => activoId = id), filtro: true)),
-      ]),
-      if (tipo != null || fecha != 0 || estado != null || resultado != null) Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Text([
-          if (tipo != null) tipo!.etiqueta, if (fecha != 0) fechas[fecha],
-          if (estado != null) vista == 1 ? EstadoIncidencia.values[estado!].etiqueta : estado == 0 ? 'Pendiente' : 'En curso',
-          if (vista == 2 && resultado != null) ['Completadas', 'Con incidencias', 'No se pudo hacer'][resultado!],
-        ].join(' · '), style: TextStyle(color: P.textoSuave, fontSize: 12)),
+      _CifrasTecnico(widget.w, pendientes, filtro: vista == 0 ? fecha : 0,
+        // Las máquinas elegidas al entrar, a la derecha del saludo; al pulsar se vuelven a elegir.
+        accion: widget.onMaquinas == null ? null : BotonAccion(
+          sel.isEmpty ? 'Todas las máquinas' : '${sel.length} ${sel.length == 1 ? 'máquina' : 'máquinas'}',
+          icono: Icons.precision_manufacturing_outlined, tooltip: 'Cambiar las máquinas en las que trabajas',
+          onPressed: widget.onMaquinas!),
+        onFiltro: (f) => setState(() {
+          if (vista != 0) _vista(0);
+          fecha = fecha == f ? 0 : f;
+        })),
+      const SizedBox(height: 18),
+      // Una sola fila: el apartado (o las pestañas en el móvil), y a la derecha buscar y filtrar.
+      BarraVista(
+        izquierda: [
+          if (widget.pestanas)
+            Pestanas(opciones: ['Órdenes', 'Incidencias', 'Histórico'], seleccion: vista,
+              onChanged: (n) { estado = null; _vista(n); })
+          else
+            Text(titulos[vista], style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700,
+              letterSpacing: -.4)),
+        ],
+        derecha: [
+          Buscador(hint: 'Buscar…', width: 220, onChanged: (s) => setState(() => busqueda = s)),
+          _filtros(),
+        ],
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 12),
       Expanded(child: switch (vista) {
         1 => _listaIncidencias(avisos),
         2 => _historial(),
@@ -873,16 +1483,21 @@ Text('$etiqueta: ${t.nombre}')
     final lista = pendientes.where((t) => _coincide(t.nombre, t.activoId, t.tipoMantenimiento, t.proximo)
       && (estado == null || (estado == 0 ? t.estado == EstadoTrabajo.pendiente : t.estado == EstadoTrabajo.enCurso))).toList();
     if (lista.isEmpty) return _vacio('No tienes órdenes pendientes con estos filtros');
-    // Con un filtro de fecha (o al pulsar una cifra) se ve la lista tal cual; sin él, solo lo de hoy
-    // y el resto de días plegado debajo.
+    // Con un filtro de fecha (o al pulsar una cifra) se ve la lista tal cual. Sin él: primero lo atrasado,
+    // luego lo de hoy y el resto de días plegado debajo («Otros días»).
     final filas = <Object>[...lista];
     if (fecha == 0) {
+      final atrasadas = lista.where((t) => t.proximo != null && diasHasta(t.proximo!) < 0).toList();
       final deHoy = lista.where((t) => t.proximo != null && diasHasta(t.proximo!) == 0).toList();
-      final otros = lista.where((t) => !deHoy.contains(t)).toList();
+      final otros = lista.where((t) => !atrasadas.contains(t) && !deHoy.contains(t)).toList();
       filas
         ..clear()
-        ..addAll(deHoy.isEmpty ? ['vacio'] : deHoy);
-      if (otros.isNotEmpty) filas..add(otros.length)..addAll(otrosDias ? otros : const []);
+        ..addAll([
+          if (atrasadas.isNotEmpty) ...[('Atrasadas', atrasadas.length, P.rojo), ...atrasadas],
+          ('Hoy', deHoy.length, P.morado),
+          ...(deHoy.isEmpty ? ['vacio'] : deHoy),
+          if (otros.isNotEmpty) ...[otros.length, if (otrosDias) ...otros],
+        ]);
     }
     return ListView.builder(itemCount: filas.length, itemBuilder: (_, n) => switch (filas[n]) {
       final Tarea t => Padding(
@@ -892,6 +1507,7 @@ Text('$etiqueta: ${t.nombre}')
           Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo)),
         ])),
       ),
+      (final String titulo, final int total, final Color color) => _TituloSeccion(titulo, total, color),
       final int total => _Plegable('Otros días', total, abierto: otrosDias,
         onTap: () => setState(() => otrosDias = !otrosDias)),
       _ => Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(child: Text('Hoy no tienes órdenes.',
@@ -974,7 +1590,10 @@ class _CifrasTecnico extends StatelessWidget {
   final List<Tarea> pendientes;
   final int filtro;
   final ValueChanged<int> onFiltro;
-  const _CifrasTecnico(this.w, this.pendientes, {required this.filtro, required this.onFiltro});
+
+  /// Botón a la derecha del saludo (las máquinas elegidas).
+  final Widget? accion;
+  const _CifrasTecnico(this.w, this.pendientes, {required this.filtro, required this.onFiltro, this.accion});
 
   @override
   Widget build(BuildContext context) {
@@ -992,9 +1611,18 @@ class _CifrasTecnico extends StatelessWidget {
           style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
-        Text(
-          'Hola, ${w.nombre}',
-          style: TextStyle(fontFamily: P.titulos, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -.6),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Hola, ${w.nombre}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontFamily: P.titulos, fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -.7),
+              ),
+            ),
+            ?accion,
+          ],
         ),
         const SizedBox(height: 14),
         Row(
@@ -1007,8 +1635,9 @@ class _CifrasTecnico extends StatelessWidget {
                   onTap: () => onFiltro(f),
                   child: Row(
                     children: [
-                      // Mejorada: icono en cuadro redondeado, como las cifras de Inicio.
-                      Container(
+                      // Mejorada: icono en cuadro redondeado, como las cifras de Inicio. En el móvil, sin icono
+                      // (si no, no cabe la palabra).
+                      if (!esMovil(context)) ...[Container(
                         width: P.mejorada ? 44 : 36,
                         height: P.mejorada ? 44 : 36,
                         decoration: P.mejorada
@@ -1016,7 +1645,7 @@ class _CifrasTecnico extends StatelessWidget {
                             : BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
                         child: Icon(icono, size: P.mejorada ? 23 : 18, color: color),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 12)],
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1041,6 +1670,26 @@ class _CifrasTecnico extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Título de un grupo de la lista (Atrasadas, Hoy): punto de su color, nombre y cuántas en gris.
+class _TituloSeccion extends StatelessWidget {
+  final String titulo;
+  final int total;
+  final Color color;
+  const _TituloSeccion(this.titulo, this.total, this.color);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
+    child: Row(children: [
+      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 8),
+      Text(titulo, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color == P.rojo ? P.rojo : P.texto)),
+      const SizedBox(width: 8),
+      Text('$total', style: TextStyle(fontSize: 14, color: P.textoSuave)),
+    ]),
+  );
 }
 
 /// Cabecera plegable de la lista: título, cuántas hay en gris y flecha que gira al abrir.
