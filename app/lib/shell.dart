@@ -697,11 +697,11 @@ class _BarraState extends State<_Barra> {
                     const SizedBox(height: 10),
                   ] else
                     const SizedBox(height: 18),
-                  // Cambiar de planta (empresa): retirado de momento a petición de Mike (2026-11-19); se deja comentado.
-                  // if (store.nube != null) ...[
-                  //   SelectorEmpresa(compacto: iconos, escala: escala),
-                  //   SizedBox(height: iconos ? 8 : 10),
-                  // ],
+                  // Cambiar de planta (empresa), encima de Crear.
+                  if (store.nube != null) ...[
+                    SelectorEmpresa(compacto: iconos, escala: escala),
+                    SizedBox(height: iconos ? 8 : 10),
+                  ],
                   _BotonCrear(compacto: iconos, menu: widget.crear),
                   SizedBox(height: iconos ? 10 : 14),
                   _menu(vencidas),
@@ -1028,8 +1028,8 @@ class _BarraInferior extends StatelessWidget {
                     (Icons.unfold_more_rounded, 'Empresas'),
                     (Icons.person_outline_rounded, 'Tu cuenta y ajustes'),
                   ].indexed)
-                    // Cambiar de planta (empresa), retirado de momento: antes `i != 2 || store.nube != null`.
-                    if (i != 2)
+                    // Cambiar de planta (empresa): solo con cuenta en la nube.
+                    if (i != 2 || store.nube != null)
                       (
                         i,
                         Row(
