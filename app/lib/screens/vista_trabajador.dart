@@ -230,12 +230,23 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                           onPressed: () => setState(() => tareaId = null),
                         ),
                       ],
-                principal: industrial && tarea == null && !elegir
-                    ? BotonPrimario(
-                        'Nueva incidencia',
-                        icono: Icons.add_rounded,
-                        onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
-                      )
+                // También mientras elige máquinas; en el móvil, con texto (solo el «+» no se entendía).
+                principal: industrial && tarea == null
+                    ? movil
+                          ? SizedBox(
+                              height: 40,
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(backgroundColor: P.morado),
+                                onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
+                                icon: const Icon(Icons.add_rounded, size: 19),
+                                label: const Text('Incidencia'),
+                              ),
+                            )
+                          : BotonPrimario(
+                              'Nueva incidencia',
+                              icono: Icons.add_rounded,
+                              onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
+                            )
                     : null,
                 derecha: industrial
                     ? [if (tarea == null) _menuCuenta(w)]
