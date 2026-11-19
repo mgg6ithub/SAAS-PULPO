@@ -127,23 +127,32 @@ class VistazoActivos extends StatelessWidget {
 /// número; al pulsar, Órdenes de trabajo con esa criticidad) y las primeras órdenes pendientes de todas,
 /// por fecha. Cada fila: icono del activo en el color de su criticidad, el activo en una etiqueta gris, la
 /// orden, su fecha y su técnico, y la píldora del tipo. Respeta la cifra elegida arriba ([periodoInicio]).
-class OrdenesPorCriticidad extends StatelessWidget {
+class OrdenesPorCriticidad extends StatefulWidget {
   final ValueChanged<String> onAbrir;
   final ValueChanged<int> onVerMas;
   const OrdenesPorCriticidad({super.key, required this.onAbrir, required this.onVerMas});
 
+  @override
+  State<OrdenesPorCriticidad> createState() => _OrdenesPorCriticidadState();
+}
+
+class _OrdenesPorCriticidadState extends State<OrdenesPorCriticidad> {
   static const _maximo = 4;
+
+  /// Criticidad elegida en la leyenda: filtra aquí mismo, sin ir a Órdenes de trabajo (null = todas).
+  TipoMantenimiento? filtro;
 
   @override
   Widget build(BuildContext context) =>
       ValueListenableBuilder(valueListenable: periodoInicio, builder: (context, periodo, _) => _construir(periodo));
 
   Widget _construir(int periodo) {
-    final ots = [...store.tareas, ...store.subtareas].where((t) {
+    final todas = [...store.tareas, ...store.subtareas].where((t) {
       if (t.esPlantilla || t.tipoMantenimiento == null) return false;
       if (periodo == 4) return pasaFechaTrabajo(t, 4);
       return otPendiente(t) && pasaFechaTrabajo(t, periodo);
     }).toList()..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
+    final ots = filtro == null ? todas : [for (final o in todas) if (o.tipoMantenimiento == filtro) o];
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
       decoration: BoxDecoration(
@@ -155,56 +164,45 @@ class OrdenesPorCriticidad extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Solo «Órdenes de trabajo»: el «Ver todas (N)» va abajo, sin repetirlo aquí.
-          Text(
-            'Órdenes de trabajo',
-            style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
-          ),
-          const SizedBox(height: 10),
+          // Título a la izquierda y, en la misma línea a la derecha, las tres criticidades; si no caben, bajan.
+          // El «Ver todas (N)» va abajo, sin repetirlo aquí.
           Wrap(
-            spacing: 22,
-            runSpacing: 6,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 8,
             children: [
-              for (final t in TipoMantenimiento.values)
-                Tooltip(
-                  message: t.descripcion,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(6),
-                    onTap: () => onVerMas(t.index + 1),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          puntoTipo(t.color),
-                          const SizedBox(width: 8),
-                          Text(t.etiqueta, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.color)),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${ots.where((o) => o.tipoMantenimiento == t).length}',
-                            style: TextStyle(fontSize: 14, color: P.textoSuave),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+              Text(
+                'Órdenes de trabajo',
+                style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
+              ),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [for (final t in TipoMantenimiento.values) _criticidad(t, todas)],
+              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           if (ots.isEmpty)
             SizedBox(
               height: 150,
-              child: Vacio(icono: Icons.event_available_outlined, texto: 'Ninguna orden de trabajo pendiente'),
+              child: Vacio(
+                icono: Icons.event_available_outlined,
+                texto: filtro == null
+                    ? 'Ninguna orden de trabajo pendiente'
+                    : 'Ninguna orden de trabajo ${filtro!.etiqueta.toLowerCase()} pendiente',
+              ),
             )
           else
-            for (final o in ots.take(_maximo)) ...[_FilaOrden(o, onAbrir: onAbrir), const SizedBox(height: 8)],
+            for (final o in ots.take(_maximo)) ...[_FilaOrden(o, onAbrir: widget.onAbrir), const SizedBox(height: 8)],
           if (ots.length > _maximo)
             Align(
               alignment: Alignment.centerLeft,
               child: InkWell(
                 borderRadius: BorderRadius.circular(6),
-                onTap: () => onVerMas(0),
+                // Lleva a Órdenes de trabajo con la criticidad elegida aquí.
+                onTap: () => widget.onVerMas(filtro == null ? 0 : filtro!.index + 1),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                   child: Row(
@@ -222,6 +220,50 @@ class OrdenesPorCriticidad extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Una criticidad de la leyenda con su número. Al pulsarla, solo se ven las suyas; otra vez, todas.
+  Widget _criticidad(TipoMantenimiento t, List<Tarea> todas) {
+    final elegida = filtro == t;
+    final apagada = filtro != null && !elegida;
+    return Tooltip(
+      message: t.descripcion,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(99),
+          hoverColor: t.color.withValues(alpha: .08),
+          onTap: () => setState(() => filtro = elegida ? null : t),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: elegida ? t.color.withValues(alpha: .12) : Colors.transparent,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: elegida ? t.color.withValues(alpha: .5) : Colors.transparent),
+            ),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 180),
+              opacity: apagada ? .45 : 1,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  puntoTipo(t.color),
+                  const SizedBox(width: 8),
+                  Text(t.etiqueta, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.color)),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${todas.where((o) => o.tipoMantenimiento == t).length}',
+                    style: TextStyle(fontSize: 14, color: P.textoSuave),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
