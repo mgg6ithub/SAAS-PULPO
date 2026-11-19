@@ -1184,13 +1184,23 @@ class Vacio extends StatelessWidget {
   final String texto;
   final String? titulo;
   final Widget? accion;
-  const Vacio({super.key, required this.icono, required this.texto, this.titulo, this.accion});
+
+  /// Con scroll si no cabe (por defecto). Sin él, se puede medir su alto natural (p. ej. dentro de un
+  /// IntrinsicHeight, que no admite listas desplazables).
+  final bool desplazable;
+  const Vacio({
+    super.key,
+    required this.icono,
+    required this.texto,
+    this.titulo,
+    this.accion,
+    this.desplazable = true,
+  });
 
   @override
   Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
+    child: _envolver(
+      Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
@@ -1217,6 +1227,10 @@ class Vacio extends StatelessWidget {
       ),
     ),
   );
+
+  Widget _envolver(Widget hijo) => desplazable
+      ? SingleChildScrollView(padding: const EdgeInsets.all(24), child: hijo)
+      : Padding(padding: const EdgeInsets.all(24), child: hijo);
 }
 
 // ── Tablas ───────────────────────────────────────────────

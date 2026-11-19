@@ -164,30 +164,27 @@ class _OrdenesPorCriticidadState extends State<OrdenesPorCriticidad> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Título a la izquierda y, en la misma línea a la derecha, las tres criticidades; si no caben, bajan.
-          // El «Ver todas (N)» va abajo, sin repetirlo aquí.
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 16,
-            runSpacing: 8,
-            children: [
-              Text(
-                'Órdenes de trabajo',
-                style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
-              ),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [for (final t in TipoMantenimiento.values) _criticidad(t, todas)],
-              ),
-            ],
+          // Título y, debajo, las tres criticidades (filtran aquí mismo). El «Ver todas (N)» va abajo.
+          Text(
+            'Órdenes de trabajo',
+            style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
+          ),
+          const SizedBox(height: 8),
+          Transform.translate(
+            // Sin el aire interior de la primera pastilla, alineada con el título.
+            offset: const Offset(-10, 0),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [for (final t in TipoMantenimiento.values) _criticidad(t, todas)],
+            ),
           ),
           const SizedBox(height: 14),
           if (ots.isEmpty)
             SizedBox(
               height: 150,
               child: Vacio(
+                desplazable: false,
                 icono: Icons.event_available_outlined,
                 texto: filtro == null
                     ? 'Ninguna orden de trabajo pendiente'

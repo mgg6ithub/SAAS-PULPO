@@ -27,7 +27,8 @@ class FotoPlanta extends StatelessWidget {
                 child: Image.asset(
                   'assets/planta.jpg',
                   fit: BoxFit.cover,
-                  alignment: const Alignment(.2, -.1),
+                  // Algo menos de cielo: la cabecera es más baja.
+                  alignment: const Alignment(.2, .1),
                   filterQuality: FilterQuality.medium,
                 ),
               ),

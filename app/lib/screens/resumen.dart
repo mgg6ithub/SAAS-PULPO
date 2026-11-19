@@ -175,17 +175,24 @@ class Resumen extends StatelessWidget {
                           const SizedBox(height: 16),
                           _CargaTrabajadores(onTrabajador: onTrabajador),
                         ];
+                        // Las dos columnas acaban a la misma altura: la carga del equipo se estira hasta el final de
+                        // las órdenes (o las órdenes hasta el final de la derecha), sin huecos abajo.
                         return alLado
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(flex: 3, child: ordenes),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: lado),
-                                  ),
-                                ],
+                            ? IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(flex: 3, child: ordenes),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [lado[0], lado[1], Expanded(child: lado[2])],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               )
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -791,7 +798,12 @@ class _Pendientes extends StatelessWidget {
               SizedBox(
                 height: P.mejorada ? 170 : 140,
                 child: P.mejorada
-                    ? const Vacio(icono: Icons.check_rounded, titulo: 'No hay acciones pendientes', texto: 'Todo al día.')
+                    ? const Vacio(
+                        icono: Icons.check_rounded,
+                        titulo: 'No hay acciones pendientes',
+                        texto: 'Todo al día.',
+                        desplazable: false,
+                      )
                     : const Vacio(icono: Icons.task_alt_rounded, texto: 'Nada pendiente. ¡Todo al día!'),
               ),
             ]
@@ -836,7 +848,7 @@ class _CargaTrabajadores extends StatelessWidget {
         if (ws.isEmpty)
           SizedBox(
             height: 140,
-            child: Vacio(icono: Marca.iconoTrabajador, texto: m('Aún no hay trabajadores')),
+            child: Vacio(icono: Marca.iconoTrabajador, texto: m('Aún no hay trabajadores'), desplazable: false),
           )
         else
           for (final w in ws.take(6))
@@ -1177,8 +1189,9 @@ extension on _HeroState {
       ],
     );
     if (!industrial) return Padding(padding: const EdgeInsets.only(bottom: 4), child: texto);
+    // Alto justo para el texto y las pastillas: menos hueco hasta las cifras.
     return SizedBox(
-      height: 210,
+      height: 192,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -1194,7 +1207,7 @@ extension on _HeroState {
               child: FractionallySizedBox(widthFactor: .6, heightFactor: 1, child: FotoPlanta()),
             ),
           ),
-          Positioned.fill(child: Align(alignment: Alignment.centerLeft, child: texto)),
+          Positioned.fill(child: Align(alignment: Alignment.topLeft, child: texto)),
         ],
       ),
     );
