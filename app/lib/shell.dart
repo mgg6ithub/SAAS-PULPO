@@ -366,13 +366,14 @@ class _BotonCrearState extends State<_BotonCrear> {
           child: widget.compacto
               ? IconButton.filled(
                   style: IconButton.styleFrom(
-                    backgroundColor: P.morado,
+                    backgroundColor: P.crear,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
                   ),
                   onPressed: () => menu.isOpen ? menu.close() : menu.open(),
                   icon: const Icon(Icons.add_rounded, size: 22, color: Colors.white),
                 )
               : FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: P.crear),
                   onPressed: () => menu.isOpen ? menu.close() : menu.open(),
                   // FittedBox: mientras la barra se estrecha, el contenido encoge en vez de desbordar.
                   child: const FittedBox(
@@ -576,8 +577,8 @@ class _BarraState extends State<_Barra> {
             decoration: BoxDecoration(
               color: P.barra,
               border: ajustes.barraDerecha
-                  ? Border(left: BorderSide(color: P.borde))
-                  : Border(right: BorderSide(color: P.borde)),
+                  ? Border(left: BorderSide(color: P.bordeBarra))
+                  : Border(right: BorderSide(color: P.bordeBarra)),
             ),
             padding: EdgeInsets.fromLTRB(iconos ? 10 : 14, 18, iconos ? 10 : 14, 14),
             child: Material(
@@ -613,6 +614,7 @@ class _BarraState extends State<_Barra> {
                               fontSize: 21 * escala,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -.6,
+                              color: P.textoBarra,
                             ),
                           ),
                         ),
@@ -629,15 +631,15 @@ class _BarraState extends State<_Barra> {
                   // Contraída: una línea separa el logo del menú. Expandida, solo aire.
                   if (iconos) ...[
                     const SizedBox(height: 8),
-                    Divider(height: 1, color: P.borde),
+                    Divider(height: 1, color: P.bordeBarra),
                     const SizedBox(height: 10),
                   ] else
                     const SizedBox(height: 18),
-                  // Empresa abierta, para cambiar de una a otra (solo con sesión).
-                  if (store.nube != null) ...[
-                    SelectorEmpresa(compacto: iconos, escala: escala),
-                    SizedBox(height: iconos ? 8 : 10),
-                  ],
+                  // Cambiar de planta (empresa): retirado de momento a petición de Mike (2026-11-19); se deja comentado.
+                  // if (store.nube != null) ...[
+                  //   SelectorEmpresa(compacto: iconos, escala: escala),
+                  //   SizedBox(height: iconos ? 8 : 10),
+                  // ],
                   _BotonCrear(compacto: iconos, menu: widget.crear),
                   SizedBox(height: iconos ? 10 : 14),
                   _menu(vencidas),
@@ -646,13 +648,13 @@ class _BarraState extends State<_Barra> {
                   _BotonDemo(
                     texto: 'Simulaciones',
                     icono: Icons.science_outlined,
-                    color: P.morado,
+                    color: P.mejorada ? P.teal : P.morado,
                     compacta: iconos,
                     escala: escala,
                     onTap: () => abrirSimulaciones(context),
                   ),
                   const SizedBox(height: 8),
-                  Divider(height: 1, color: P.borde),
+                  Divider(height: 1, color: P.bordeBarra),
                   const SizedBox(height: 8),
                   Builder(
                     builder: (context) =>
@@ -720,14 +722,14 @@ class _BarraState extends State<_Barra> {
     child: InkWell(
       borderRadius: BorderRadius.circular(P.radioControl),
       mouseCursor: SystemMouseCursors.click,
-      hoverColor: P.hover.withValues(alpha: .7),
+      hoverColor: P.hoverBarra,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         child: Row(
           mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
-            lider ?? Icon(icono, size: 19 * escala, color: P.textoSuave),
+            lider ?? Icon(icono, size: 19 * escala, color: P.textoBarraSuave),
             if (!iconos) ...[
               const SizedBox(width: 12),
               Expanded(
@@ -735,7 +737,7 @@ class _BarraState extends State<_Barra> {
                   texto,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14.5 * escala, color: P.texto),
+                  style: TextStyle(fontSize: 14.5 * escala, color: P.textoBarra),
                 ),
               ),
             ],
@@ -771,7 +773,7 @@ class _BarraState extends State<_Barra> {
           right: 0,
           height: _altoItem,
           child: DecoratedBox(
-            decoration: BoxDecoration(color: P.moradoSuave, borderRadius: BorderRadius.circular(P.radioControl)),
+            decoration: BoxDecoration(color: P.seleccionBarra, borderRadius: BorderRadius.circular(P.radioControl)),
           ),
         ),
         Column(children: [for (final (icono, texto, s, aviso) in items) _item(icono, texto, s, aviso: aviso)]),
@@ -793,7 +795,7 @@ class _BarraState extends State<_Barra> {
           splashFactory: NoSplash.splashFactory,
           highlightColor: Colors.transparent,
           // Mismo color siempre: al pulsar, el fondo de la elegida (encima) lo tapa sin cambio brusco ni parpadeo.
-          hoverColor: P.hover.withValues(alpha: .7),
+          hoverColor: P.hoverBarra,
           onTap: () => widget.onTap(s),
           child: Container(
             height: _altoItem,
@@ -805,7 +807,7 @@ class _BarraState extends State<_Barra> {
                   clipBehavior: Clip.none,
                   children: [
                     TweenAnimationBuilder<Color?>(
-                      tween: ColorTween(end: sel ? P.morado : P.textoSuave),
+                      tween: ColorTween(end: sel ? P.iconoBarraElegido : P.textoBarraSuave),
                       duration: const Duration(milliseconds: 200),
                       builder: (_, c, _) => Icon(icono, size: 20 * escala, color: c),
                     ),
@@ -836,7 +838,7 @@ class _BarraState extends State<_Barra> {
                         fontFamily: P.titulos,
                         fontSize: 15 * escala,
                         fontWeight: FontWeight.w600,
-                        color: sel ? P.moradoOscuro : P.texto,
+                        color: sel ? P.textoBarraElegido : P.textoBarra,
                       ),
                       child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
@@ -955,7 +957,8 @@ class _BarraInferior extends StatelessWidget {
                     (Icons.unfold_more_rounded, 'Empresas'),
                     (Icons.person_outline_rounded, 'Tu cuenta y ajustes'),
                   ].indexed)
-                    if (i != 2 || store.nube != null)
+                    // Cambiar de planta (empresa), retirado de momento: antes `i != 2 || store.nube != null`.
+                    if (i != 2)
                       (
                         i,
                         Row(
@@ -1111,11 +1114,11 @@ class _Icono extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(7),
         mouseCursor: SystemMouseCursors.click,
-        hoverColor: P.hover.withValues(alpha: .7),
+        hoverColor: P.hoverBarra,
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.all(pequeno ? 5 : 9),
-          child: Icon(icono, size: 18, color: P.textoSuave),
+          child: Icon(icono, size: 18, color: P.textoBarraSuave),
         ),
       ),
     ),
@@ -1146,7 +1149,7 @@ class _BotonDemo extends StatelessWidget {
     child: InkWell(
       borderRadius: BorderRadius.circular(P.radioControl),
       mouseCursor: SystemMouseCursors.click,
-      hoverColor: P.hover.withValues(alpha: .7),
+      hoverColor: P.hoverBarra,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -1167,7 +1170,7 @@ class _BotonDemo extends StatelessWidget {
                   texto,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13 * escala, fontWeight: FontWeight.w500, color: P.textoSuave),
+                  style: TextStyle(fontSize: 13 * escala, fontWeight: FontWeight.w500, color: P.textoBarraSuave),
                 ),
               ),
             ],

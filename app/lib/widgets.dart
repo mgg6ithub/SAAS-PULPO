@@ -202,6 +202,7 @@ class _HoverCardState extends State<HoverCard> {
             color: P.superficie,
             borderRadius: BorderRadius.circular(P.radio),
             border: Border.all(color: widget.marcado ? P.morado : activo ? P.morado.withValues(alpha: .45) : P.borde),
+            boxShadow: P.sombra,
           ),
           child: widget.child,
         ),
@@ -223,6 +224,7 @@ class Tarjeta extends StatelessWidget {
       color: color ?? P.superficie,
       borderRadius: BorderRadius.circular(P.radio),
       border: Border.all(color: color == null ? P.borde : Colors.transparent),
+      boxShadow: color == null ? P.sombra : null,
     ),
     child: child,
   );
@@ -259,7 +261,7 @@ class SeccionTarjeta extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: alto,
-    decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+    decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio), boxShadow: P.sombra),
     // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
     foregroundDecoration: BoxDecoration(
       borderRadius: BorderRadius.circular(P.radio),
@@ -270,10 +272,16 @@ class SeccionTarjeta extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+          padding: P.mejorada ? const EdgeInsets.fromLTRB(20, 18, 16, 12) : const EdgeInsets.fromLTRB(18, 14, 14, 14),
           child: Row(
             children: [
-              if (icono != null) ...[IconoCuadro(icono!, colorIcono ?? P.morado, size: 30), const SizedBox(width: 10)],
+              // Mejorada: icono de línea junto al título, sin cuadro (como «Acciones pendientes» de la maqueta).
+              if (icono != null) ...[
+                P.mejorada
+                    ? Icon(icono, size: 24, color: colorIcono ?? P.texto)
+                    : IconoCuadro(icono!, colorIcono ?? P.morado, size: 30),
+                SizedBox(width: P.mejorada ? 12 : 10),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +290,7 @@ class SeccionTarjeta extends StatelessWidget {
                       titulo,
                       style: TextStyle(
                         fontFamily: P.titulos,
-                        fontSize: 16,
+                        fontSize: P.mejorada ? 18 : 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -.3,
                       ),
@@ -295,7 +303,7 @@ class SeccionTarjeta extends StatelessWidget {
             ],
           ),
         ),
-        Divider(height: 1, color: P.borde),
+        if (!P.mejorada) Divider(height: 1, color: P.borde),
         if (alto == null)
           ..._cuerpo()
         else
@@ -945,7 +953,12 @@ class TituloVista extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     texto,
     maxLines: 1,
-    style: TextStyle(fontFamily: P.titulos, fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -.6),
+    style: TextStyle(
+      fontFamily: P.titulos,
+      fontSize: P.mejorada ? 24 : 22,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -.6,
+    ),
   );
 }
 
@@ -1183,8 +1196,11 @@ class Vacio extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(18)),
-            child: Icon(icono, color: P.textoSuave.withValues(alpha: .6), size: 28),
+            // Mejorada: en círculo, como el «todo al día» de la maqueta.
+            decoration: P.mejorada
+                ? BoxDecoration(color: P.hover, shape: BoxShape.circle)
+                : BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(18)),
+            child: Icon(icono, color: P.textoSuave.withValues(alpha: P.mejorada ? .9 : .6), size: 28),
           ),
           const SizedBox(height: 14),
           if (titulo != null) ...[
@@ -1425,7 +1441,7 @@ class _TablaState extends State<Tabla> {
       });
     _nCols = columnas.length;
     return Container(
-      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio), boxShadow: P.sombra),
       // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
       foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(P.radio),
@@ -1678,7 +1694,12 @@ class _TituloColumnaState extends State<_TituloColumna> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: widget.derecha ? TextAlign.right : TextAlign.left,
-            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: P.textoSuave),
+            // Mejorada: cabecera algo más marcada, como las tablas de un panel tradicional.
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: P.mejorada ? FontWeight.w600 : FontWeight.w500,
+              color: P.textoSuave,
+            ),
           ),
         ),
         AnimatedOpacity(

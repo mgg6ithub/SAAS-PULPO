@@ -37,6 +37,10 @@ class Ajustes extends ChangeNotifier {
   /// Índice en `acentos` (theme.dart); 0 es el morado del logo.
   int acento = 0;
 
+  /// Vista mejorada (Simulaciones): estilo más tradicional, con barra lateral oscura, tarjetas con sombra
+  /// y la cabecera de Inicio con imagen. Activa por defecto; apagada vuelve al estilo minimalista.
+  bool mejorada = true;
+
   /// Paso "Mira tu trabajo en el itinerario" de la guía de Inicio, ya hecho.
   bool guiaItinerario = false;
 
@@ -65,6 +69,13 @@ class Ajustes extends ChangeNotifier {
     anchoExpandido = _prefs!.getDouble('ajustes_ancho_expandido') ?? 248;
     guiaItinerario = _prefs!.getBool('ajustes_guia_itinerario') ?? false;
     guiaOrganizar = _prefs!.getBool('ajustes_guia_organizar') ?? false;
+    mejorada = _prefs!.getBool('ajustes_vista_mejorada') ?? true;
+  }
+
+  void ponerMejorada(bool v) {
+    mejorada = v;
+    _prefs?.setBool('ajustes_vista_mejorada', v);
+    notifyListeners();
   }
 
   /// Si la app se pinta en oscuro ahora mismo (el modo sistema mira el del navegador).

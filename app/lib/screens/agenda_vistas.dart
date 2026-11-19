@@ -311,7 +311,7 @@ class VistaDiaTecnicos extends StatelessWidget {
         final porHora = max(72.0, (box.maxWidth - izq) / (_hasta - _desde));
         final ancho = izq + porHora * (_hasta - _desde);
         return Container(
-          decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+          decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio), boxShadow: P.sombra),
           // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
           foregroundDecoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
@@ -517,7 +517,7 @@ class VistaSemana extends StatelessWidget {
         t.inicioMin == null || (!t.hechaEl(d) && t.proximo != null && diasHasta(t.proximo!) < 0);
     const izq = 50.0;
     return Container(
-      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio), boxShadow: P.sombra),
       // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
       foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(P.radio),
@@ -839,7 +839,7 @@ class _MapaAgendaState extends State<MapaAgenda> {
     final sel = elegido == null ? null : store.cliente(elegido);
 
     return Container(
-      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio), boxShadow: P.sombra),
       // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
       foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(P.radio),

@@ -118,6 +118,7 @@ class _CalendarioTrabajosState extends State<CalendarioTrabajos> {
               color: P.superficie,
               borderRadius: BorderRadius.circular(P.radio),
               border: Border.all(color: P.borde),
+              boxShadow: P.sombra,
             ),
             child: switch (widget.modo) {
               ModoCalendario.mes => _MesCalendario(

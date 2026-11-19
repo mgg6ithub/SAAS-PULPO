@@ -1007,11 +1007,14 @@ class _CifrasTecnico extends StatelessWidget {
                   onTap: () => onFiltro(f),
                   child: Row(
                     children: [
+                      // Mejorada: icono en cuadro redondeado, como las cifras de Inicio.
                       Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
-                        child: Icon(icono, size: 18, color: color),
+                        width: P.mejorada ? 44 : 36,
+                        height: P.mejorada ? 44 : 36,
+                        decoration: P.mejorada
+                            ? BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(12))
+                            : BoxDecoration(color: color.withValues(alpha: .1), shape: BoxShape.circle),
+                        child: Icon(icono, size: P.mejorada ? 23 : 18, color: color),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

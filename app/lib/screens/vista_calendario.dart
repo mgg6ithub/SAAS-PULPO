@@ -80,7 +80,7 @@ class _VistaCalendarioState extends State<VistaCalendario> {
                   child: SingleChildScrollView(
                     key: const PageStorageKey('itinerario-mes'),
                     child: Container(
-                      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio)),
+                      decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio), boxShadow: P.sombra),
                       // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
                       foregroundDecoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(P.radio),

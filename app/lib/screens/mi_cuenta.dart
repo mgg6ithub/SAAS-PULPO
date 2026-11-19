@@ -227,12 +227,14 @@ class BotonUsuario extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatar = Avatar(inicialesCuenta(), P.tinta, size: 28 * escala, cuadrado: true);
+    // En la barra oscura de la vista mejorada, el avatar en el acento (la tinta no se vería).
+    final avatar = Avatar(inicialesCuenta(), P.mejorada ? P.morado : P.tinta, size: 28 * escala, cuadrado: true);
     return Tooltip(
       message: store.nube == null ? 'Ajustes' : 'Tu cuenta y ajustes',
       child: InkWell(
         borderRadius: BorderRadius.circular(P.radioControl),
         mouseCursor: SystemMouseCursors.click,
+        hoverColor: P.hoverBarra,
         onTap: () => abrirMenuUsuario(context),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: compacto ? 0 : 6, vertical: 6),
@@ -250,13 +252,13 @@ class BotonUsuario extends StatelessWidget {
                             store.nube == null ? 'Modo de pruebas' : (_correo() ?? ''),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 13.5 * escala, fontWeight: FontWeight.w600, color: P.texto),
+                            style: TextStyle(fontSize: 13.5 * escala, fontWeight: FontWeight.w600, color: P.textoBarra),
                           ),
                           Text(
                             store.nube == null ? 'Ajustes' : _empresaYRol(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12 * escala, color: P.textoSuave),
+                            style: TextStyle(fontSize: 12 * escala, color: P.textoBarraSuave),
                           ),
                         ],
                       ),

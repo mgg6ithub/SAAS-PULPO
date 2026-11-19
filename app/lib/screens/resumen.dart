@@ -17,6 +17,7 @@ import 'tarea_card.dart';
 import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos, historicoTrabajos;
 import '../marca.dart';
 import '../industrial/activos.dart' show abrirActivoForm;
+import '../industrial/ilustracion_planta.dart';
 import '../industrial/vistazo.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
@@ -95,7 +96,8 @@ class Resumen extends StatelessWidget {
                   if (!hayTarea && !ajustes.guiaOrganizar) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
                     // Pultec: las cuatro cifras son de órdenes de trabajo; con su título, como «Estado de los activos».
-                    if (industrial) ...[
+                    // En la vista mejorada, sin título: las cifras van justo bajo la cabecera, como en la maqueta.
+                    if (industrial && !P.mejorada) ...[
                       Row(
                         children: [
                           Expanded(
@@ -150,8 +152,46 @@ class Resumen extends StatelessWidget {
                         },
                       ),
                     ),
-                    // Pultec: bajo las cifras, las máquinas por tipo de mantenimiento pendiente.
-                    if (industrial && store.activos.isNotEmpty) ...[
+                    // Vista mejorada de Pultec: a la izquierda las órdenes por criticidad; a la derecha, lo pendiente
+                    // y la carga del equipo.
+                    if (industrial && P.mejorada && store.activos.isNotEmpty) ...[
+                      AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
+                      const SizedBox(height: 24),
+                      IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
+                      () {
+                        final ordenes = OrdenesPorCriticidad(
+                          onAbrir: onTarea ?? (_) {},
+                          onVerMas: (f) {
+                            filtroFechaTrabajos.value = periodoInicio.value;
+                            historicoTrabajos.value = false;
+                            filtroCriticidadTrabajos.value = f;
+                            onIr(Seccion.tareas);
+                          },
+                        );
+                        final lado = [
+                          _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
+                          const SizedBox(height: 16),
+                          _CargaTrabajadores(onTrabajador: onTrabajador),
+                        ];
+                        return dosCol
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(flex: 3, child: ordenes),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: lado),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [ordenes, const SizedBox(height: 16), ...lado],
+                              );
+                      }(),
+                      const SizedBox(height: 32),
+                    ] else if (industrial && store.activos.isNotEmpty) ...[
                       AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
                       // Lo primero que hay que atender: partes con incidencia o sin hacer.
@@ -169,11 +209,13 @@ class Resumen extends StatelessWidget {
                       const SizedBox(height: 32),
                     ] else
                       const SizedBox(height: 16),
-                    par(
-                      _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
-                      _CargaTrabajadores(onTrabajador: onTrabajador),
-                    ),
-                    const SizedBox(height: 32),
+                    if (!(industrial && P.mejorada && store.activos.isNotEmpty)) ...[
+                      par(
+                        _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
+                        _CargaTrabajadores(onTrabajador: onTrabajador),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
                     // Pultec: lo próximo ya está en las órdenes por criticidad.
                     if (!industrial) _Proximos(conFecha, onIr: onIr, columnas: dosCol ? 2 : 1),
                     // Las estadísticas son de clientes y equipos: en Pultec su lugar lo ocupa el vistazo.
@@ -733,12 +775,15 @@ class _Pendientes extends StatelessWidget {
     ];
     return SeccionTarjeta(
       titulo: 'Acciones pendientes',
+      icono: P.mejorada ? Icons.assignment_outlined : null,
       accion: filas.isEmpty ? null : Pill('${filas.length}', P.rojo),
       children: filas.isEmpty
           ? [
-              const SizedBox(
-                height: 140,
-                child: Vacio(icono: Icons.task_alt_rounded, texto: 'Nada pendiente. ¡Todo al día!'),
+              SizedBox(
+                height: P.mejorada ? 170 : 140,
+                child: P.mejorada
+                    ? const Vacio(icono: Icons.check_rounded, titulo: 'No hay acciones pendientes', texto: 'Todo al día.')
+                    : const Vacio(icono: Icons.task_alt_rounded, texto: 'Nada pendiente. ¡Todo al día!'),
               ),
             ]
           : filas,
@@ -775,6 +820,7 @@ class _CargaTrabajadores extends StatelessWidget {
     final maximo = max(1, ws.isEmpty ? 1 : carga(ws.first));
     return SeccionTarjeta(
       titulo: 'Carga del equipo',
+      icono: P.mejorada ? Icons.groups_outlined : null,
       subtitulo: m('Trabajos asignados en los próximos 7 días'),
       sinFilas: true,
       children: [
@@ -966,6 +1012,7 @@ class _HeroState extends State<_Hero> {
       (trabajos, m(trabajos == 1 ? 'trabajo' : 'trabajos')),
       (trabajadores, m(trabajadores == 1 ? 'trabajador' : 'trabajadores')),
     ];
+    if (P.mejorada) return _mejorada(cifras, sinDatos: clientes == 0 && !ajustes.guiaOrganizar);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1059,6 +1106,88 @@ class _HeroState extends State<_Hero> {
           ),
         ),
       ],
+    );
+  }
+}
+
+extension on _HeroState {
+  /// Vista mejorada: sin bloque de color; fecha, título grande, la frase y las tres cifras en pastillas,
+  /// con la ilustración de la planta a la derecha (Pultec), como la maqueta.
+  Widget _mejorada(List<(int, String)> cifras, {required bool sinDatos}) {
+    final iconos = industrial
+        ? const [Icons.layers_outlined, Icons.assignment_outlined, Icons.groups_outlined]
+        : [Marca.iconoCliente, Marca.iconoTrabajo, Marca.iconoTrabajador];
+    final texto = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(this.fecha, style: TextStyle(color: P.textoSuave, fontSize: 14, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        Text(
+          saludo,
+          style: TextStyle(
+            fontFamily: P.titulos,
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1,
+            height: 1.1,
+            color: P.texto,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(frase, style: TextStyle(color: P.textoSuave, fontSize: 16)),
+        const SizedBox(height: 18),
+        if (sinDatos)
+          Text('Completa los primeros pasos', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: P.texto))
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final (i, (n, etiqueta)) in cifras.indexed)
+                Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: P.superficie.withValues(alpha: .85),
+                    borderRadius: BorderRadius.circular(P.radioControl),
+                    border: Border.all(color: P.borde),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(iconos[i], size: 19, color: P.textoSuave),
+                      const SizedBox(width: 10),
+                      Text('$n', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: P.texto)),
+                      const SizedBox(width: 6),
+                      Text(etiqueta, style: TextStyle(fontSize: 14, color: P.textoSuave)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+      ],
+    );
+    if (!industrial) return Padding(padding: const EdgeInsets.only(bottom: 4), child: texto);
+    return SizedBox(
+      height: 210,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // La planta ocupa algo más de la mitad derecha (hasta el borde de arriba) y se funde con el fondo;
+          // el texto va encima.
+          Positioned(
+            top: -margenPagina.top - 16,
+            right: -margenPagina.right,
+            bottom: 0,
+            left: 0,
+            child: const Align(
+              alignment: Alignment.centerRight,
+              child: FractionallySizedBox(widthFactor: .62, heightFactor: 1, child: IlustracionPlanta()),
+            ),
+          ),
+          Positioned.fill(child: Align(alignment: Alignment.centerLeft, child: texto)),
+        ],
+      ),
     );
   }
 }
@@ -1210,6 +1339,23 @@ class _Kpis extends StatelessWidget {
           ? (Icons.task_alt_rounded, 'Completados', hechas, P.verde, 'órdenes realizadas')
           : (Icons.task_alt_rounded, 'Hechos', hechas, P.verde, 'últimos 30 días'),
     ];
+    if (P.mejorada) {
+      return Rejilla(
+        columnas: dosCol ? 4 : 2,
+        children: [
+          for (final (i, (icono, etiqueta, valor, color, nota)) in items.indexed)
+            _KpiMejorada(
+              icono: icono,
+              etiqueta: etiqueta,
+              valor: valor,
+              color: color,
+              nota: nota,
+              elegida: elegida == i + 1,
+              onTap: () => onTap(i + 1),
+            ),
+        ],
+      );
+    }
     return Rejilla(
       columnas: dosCol ? 4 : 2,
       children: [
@@ -1261,6 +1407,121 @@ class _Kpis extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Cifra de Inicio en la vista mejorada: icono en un cuadro de su color a la izquierda, etiqueta, número
+/// grande y nota; fondo con un leve tinte de su color, sombra y la barra de color abajo. Se marca al pasar.
+class _KpiMejorada extends StatefulWidget {
+  final IconData icono;
+  final String etiqueta, nota;
+  final int valor;
+  final Color color;
+  final bool elegida;
+  final VoidCallback onTap;
+  const _KpiMejorada({
+    required this.icono,
+    required this.etiqueta,
+    required this.nota,
+    required this.valor,
+    required this.color,
+    required this.elegida,
+    required this.onTap,
+  });
+
+  @override
+  State<_KpiMejorada> createState() => _KpiMejoradaState();
+}
+
+class _KpiMejoradaState extends State<_KpiMejorada> {
+  bool hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.color;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => hover = true),
+      onExit: (_) => setState(() => hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(P.radio),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [P.superficie, Color.lerp(P.superficie, c, ajustes.oscuro ? .1 : .05)!],
+            ),
+            border: Border.all(
+              color: widget.elegida ? c : (hover ? c.withValues(alpha: .4) : P.borde),
+              width: widget.elegida ? 2 : 1,
+            ),
+            boxShadow: P.sombra,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(color: c.withValues(alpha: .12), borderRadius: BorderRadius.circular(12)),
+                      child: Icon(widget.icono, size: 26, color: c),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.etiqueta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, color: P.texto),
+                          ),
+                          const SizedBox(height: 2),
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: widget.valor.toDouble()),
+                            duration: const Duration(milliseconds: 600),
+                            curve: Curves.easeOutCubic,
+                            builder: (_, v, _) => Text(
+                              '${v.round()}',
+                              style: TextStyle(
+                                fontFamily: P.titulos,
+                                fontSize: 36,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -1,
+                                height: 1.15,
+                                color: c == P.rojo && widget.valor > 0 ? P.rojo : P.texto,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            widget.nota,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(height: 4, color: c),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -123,6 +123,206 @@ class VistazoActivos extends StatelessWidget {
   }
 }
 
+/// Inicio de Pultec en la vista mejorada: una sola tarjeta con la leyenda de las tres criticidades (con su
+/// número; al pulsar, Órdenes de trabajo con esa criticidad) y las primeras órdenes pendientes de todas,
+/// por fecha. Cada fila: icono del activo en el color de su criticidad, el activo en una etiqueta gris, la
+/// orden, su fecha y su técnico, y la píldora del tipo. Respeta la cifra elegida arriba ([periodoInicio]).
+class OrdenesPorCriticidad extends StatelessWidget {
+  final ValueChanged<String> onAbrir;
+  final ValueChanged<int> onVerMas;
+  const OrdenesPorCriticidad({super.key, required this.onAbrir, required this.onVerMas});
+
+  static const _maximo = 4;
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder(valueListenable: periodoInicio, builder: (context, periodo, _) => _construir(periodo));
+
+  Widget _construir(int periodo) {
+    final ots = [...store.tareas, ...store.subtareas].where((t) {
+      if (t.esPlantilla || t.tipoMantenimiento == null) return false;
+      if (periodo == 4) return pasaFechaTrabajo(t, 4);
+      return otPendiente(t) && pasaFechaTrabajo(t, periodo);
+    }).toList()..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+      decoration: BoxDecoration(
+        color: P.superficie,
+        borderRadius: BorderRadius.circular(P.radio),
+        border: Border.all(color: P.borde),
+        boxShadow: P.sombra,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Órdenes de trabajo por criticidad',
+                  style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
+                ),
+              ),
+              Enlace('Ver todas', onTap: () => onVerMas(0)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 22,
+            runSpacing: 6,
+            children: [
+              for (final t in TipoMantenimiento.values)
+                Tooltip(
+                  message: t.descripcion,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () => onVerMas(t.index + 1),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          puntoTipo(t.color),
+                          const SizedBox(width: 8),
+                          Text(t.etiqueta, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.color)),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${ots.where((o) => o.tipoMantenimiento == t).length}',
+                            style: TextStyle(fontSize: 14, color: P.textoSuave),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (ots.isEmpty)
+            SizedBox(
+              height: 150,
+              child: Vacio(icono: Icons.event_available_outlined, texto: 'Ninguna orden de trabajo pendiente'),
+            )
+          else
+            for (final o in ots.take(_maximo)) ...[_FilaOrden(o, onAbrir: onAbrir), const SizedBox(height: 8)],
+          if (ots.length > _maximo)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => onVerMas(0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Ver todas (${ots.length})',
+                        style: TextStyle(color: P.morado, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(Icons.arrow_forward_rounded, size: 17, color: P.morado),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Una orden en [OrdenesPorCriticidad]: tarjeta interior con borde fino que se marca al pasar.
+class _FilaOrden extends StatelessWidget {
+  final Tarea o;
+  final ValueChanged<String> onAbrir;
+  const _FilaOrden(this.o, {required this.onAbrir});
+
+  @override
+  Widget build(BuildContext context) {
+    final tipo = o.tipoMantenimiento ?? TipoMantenimiento.preventivo;
+    final activo = o.activoId == null ? null : store.activo(o.activoId!);
+    final raiz = _raiz(o.activoId);
+    final vencida = o.proximo != null && diasHasta(o.proximo!) < 0;
+    final tecnico = o.trabajadorIds.isEmpty ? null : store.trabajador(o.trabajadorIds.first)?.nombreCompleto;
+    Widget dato(IconData icono, String texto, {Color? color}) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icono, size: 16, color: color ?? P.textoSuave),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13.5, color: color ?? P.textoSuave),
+          ),
+        ),
+      ],
+    );
+    return HoverCard(
+      padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+      onTap: () => onAbrir(o.id),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: SizedBox(
+              width: 34,
+              child: raiz == null && activo == null
+                  ? Icon(Icons.assignment_outlined, size: 28, color: tipo.color)
+                  : IconoActivo((activo ?? raiz)!.icono, size: 30, color: tipo.color),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (activo != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(6)),
+                    child: Text(
+                      activo.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.5, color: P.textoSuave, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                Text(
+                  o.nombre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, letterSpacing: -.2, color: P.texto),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 22,
+                  runSpacing: 4,
+                  children: [
+                    dato(
+                      Icons.calendar_today_outlined,
+                      o.proximo == null ? 'Sin fecha' : '${relativo(o.proximo!)}, ${fecha(o.proximo!)}',
+                      color: vencida ? P.rojo : null,
+                    ),
+                    dato(Icons.person_outline_rounded, tecnico ?? 'Sin técnico'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          PillTipo(tipo),
+        ],
+      ),
+    );
+  }
+}
+
 /// El activo principal (sin padre) del que cuelga este activo o componente.
 Activo? _raiz(String? id) {
   var a = id == null ? null : store.activo(id);

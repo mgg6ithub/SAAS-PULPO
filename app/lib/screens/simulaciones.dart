@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ajustes.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
@@ -507,6 +508,36 @@ class _SimulacionesState extends State<_Simulaciones> {
                   ),
                 ),
               ],
+              // Estilo de la app: la vista mejorada (por defecto) o la minimalista de antes.
+              const SizedBox(height: 16),
+              Tarjeta(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Vista mejorada', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Barra lateral oscura, tarjetas con sombra y Inicio con imagen. Apágala para volver a la vista minimalista.',
+                            style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Switch(
+                      value: ajustes.mejorada,
+                      onChanged: (v) {
+                        ajustes.ponerMejorada(v);
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 'Cada simulación sustituye a la anterior. Al quitar los datos de ejemplo se recuperan tus datos originales.',
