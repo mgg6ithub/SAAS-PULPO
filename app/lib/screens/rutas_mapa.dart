@@ -460,11 +460,15 @@ class _BotonPulpoState extends State<BotonPulpo> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // El pulpo del logo, en blanco sobre el morado (como en la landing).
-              ColorFiltered(
-                colorFilter: ColorFilter.mode(industrial ? P.morado : Colors.white, BlendMode.srcIn),
-                child: const LogoPulpo(size: 20),
-              ),
+              // El pulpo del logo, en blanco sobre el morado (como en la landing). En la vista mejorada de Pultec, un
+              // icono de línea como el de los demás botones.
+              if (industrial && P.mejorada)
+                Icon(Icons.auto_awesome_outlined, size: 18, color: P.morado)
+              else
+                ColorFiltered(
+                  colorFilter: ColorFilter.mode(industrial ? P.morado : Colors.white, BlendMode.srcIn),
+                  child: const LogoPulpo(size: 20),
+                ),
               if (!esMovil(context)) ...[
                 const SizedBox(width: 8),
                 Text(

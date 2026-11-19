@@ -18,34 +18,35 @@ class P {
   /// Color de acento (por defecto el morado del logo; se cambia en Ajustes). En la vista mejorada de Pultec,
   /// el azul de la marca algo más vivo, como el de la maqueta.
   static Color get morado => industrial && mejorada && ajustes.acento == 0
-      ? const Color(0xFF2E6BC6)
+      ? moradoVivo
       : acentos[ajustes.acento.clamp(0, acentos.length - 1)].color;
+
+  /// Morado vivo de la vista mejorada (el del pulpo del logo, algo más luminoso).
+  static const moradoVivo = Color(0xFF6C3CF0);
   static Color get moradoOscuro => Color.lerp(morado, _o ? Colors.white : Colors.black, _o ? .5 : .22)!;
   static Color get moradoSuave => Color.lerp(_o ? superficie : Colors.white, morado, _o ? .22 : .09)!;
 
   /// Fondo del contenido: lavanda muy leve (el "tint" de la landing); las tarjetas, blancas encima.
   static Color get fondo => mejorada
-      ? (_o ? const Color(0xFF0C1119) : const Color(0xFFEEF2F7))
+      ? (_o ? const Color(0xFF0E0D16) : const Color(0xFFF3F2F9))
       : _o ? _n(0xFF0F0E16, 0xFF0D1015) : _n(0xFFF7F6FB, 0xFFF5F7FA);
   static Color get superficie => _o ? _n(0xFF18171F, 0xFF161A20) : Colors.white;
 
   /// Barra lateral: blanca con su borde, como la navegación de la landing.
-  /// En la vista mejorada, azul marino oscuro (también en modo claro) con el texto claro.
-  static Color get barra => mejorada
-      ? (_o ? const Color(0xFF111D31) : const Color(0xFF0F1A2B))
-      : _o ? _n(0xFF14131B, 0xFF13161C) : Colors.white;
+  /// Clara en las dos vistas; en la mejorada, con la opción elegida en morado vivo de fondo suave.
+  static Color get barra => _o ? _n(0xFF14131B, 0xFF13161C) : Colors.white;
 
-  /// Textos, iconos, fondos al pasar y borde de la barra lateral (claros sobre la barra oscura en la mejorada).
-  static Color get textoBarra => mejorada ? const Color(0xFFE6EDF6) : texto;
-  static Color get textoBarraSuave => mejorada ? const Color(0xFF93A3B8) : textoSuave;
-  static Color get hoverBarra => mejorada ? Colors.white.withValues(alpha: .07) : hover.withValues(alpha: .7);
-  static Color get seleccionBarra => mejorada ? Colors.white.withValues(alpha: .11) : moradoSuave;
-  static Color get iconoBarraElegido => mejorada ? Colors.white : morado;
-  static Color get textoBarraElegido => mejorada ? Colors.white : moradoOscuro;
-  static Color get bordeBarra => mejorada ? Colors.white.withValues(alpha: .08) : borde;
+  /// Textos, iconos, fondos al pasar y borde de la barra lateral.
+  static Color get textoBarra => texto;
+  static Color get textoBarraSuave => textoSuave;
+  static Color get hoverBarra => mejorada ? morado.withValues(alpha: _o ? .12 : .06) : hover.withValues(alpha: .7);
+  static Color get seleccionBarra => mejorada ? morado.withValues(alpha: _o ? .22 : .12) : moradoSuave;
+  static Color get iconoBarraElegido => morado;
+  static Color get textoBarraElegido => mejorada ? (_o ? Color.lerp(morado, Colors.white, .45)! : morado) : moradoOscuro;
+  static Color get bordeBarra => borde;
 
-  /// Botón «Crear» de la barra: verde azulado en la mejorada, el acento en la minimalista.
-  static Color get crear => mejorada ? teal : morado;
+  /// Botón «Crear» de la barra: el acento (morado vivo en la mejorada).
+  static Color get crear => morado;
 
   /// Sombra de las tarjetas: solo en la vista mejorada (la minimalista va sin sombras).
   static List<BoxShadow>? get sombra => !mejorada
@@ -66,10 +67,10 @@ class P {
 
   /// Cabecera de tabla.
   static Color get cabeceraTabla => mejorada && !_o
-      ? const Color(0xFFF4F7FA)
+      ? const Color(0xFFF7F6FC)
       : _o ? _n(0xFF1C1B24, 0xFF1A1E25) : _n(0xFFFBFAFD, 0xFFFAFBFC);
   static Color get borde => mejorada && !_o
-      ? const Color(0xFFE2E8F0)
+      ? const Color(0xFFE6E4F0)
       : _o ? _n(0xFF2B2A35, 0xFF2A303A) : _n(0xFFE7E4F0, 0xFFE3E7EE);
   static Color get texto => _o ? _n(0xFFEDEDF2, 0xFFECEFF3) : _n(0xFF14121F, 0xFF121821);
   static Color get textoSuave => _o ? _n(0xFF9D9BAD, 0xFF98A1AE) : _n(0xFF5D5A6E, 0xFF5A6474);
@@ -108,8 +109,9 @@ class LogoPulpo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Image.asset(
-    // En Pultec, el mismo pulpo en el azul de la marca (PNG propio, sin fondo).
-    industrial ? 'assets/ipultec.png' : 'assets/pulpo.png',
+    // En Pultec, el mismo pulpo en el azul de la marca (PNG propio, sin fondo); en la vista mejorada, el morado
+    // vivo del pulpo original.
+    industrial && !ajustes.mejorada ? 'assets/ipultec.png' : 'assets/pulpo.png',
     width: size,
     height: size,
     filterQuality: FilterQuality.medium,

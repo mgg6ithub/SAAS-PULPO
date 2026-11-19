@@ -77,6 +77,7 @@ flutter:
   assets:
     - assets/pulpo.png
     - assets/ipultec.png
+    - assets/planta.jpg
     - assets/iconos/
     - assets/videos/pulpo-animacione.mp4
 

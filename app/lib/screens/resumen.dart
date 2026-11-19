@@ -17,7 +17,7 @@ import 'tarea_card.dart';
 import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos, historicoTrabajos;
 import '../marca.dart';
 import '../industrial/activos.dart' show abrirActivoForm;
-import '../industrial/ilustracion_planta.dart';
+import '../industrial/foto_planta.dart';
 import '../industrial/vistazo.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
@@ -59,7 +59,7 @@ class Resumen extends StatelessWidget {
 
     // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
     return SegunTamano(
-      clave: (box) => min(1080.0, box.maxWidth - margenPagina.horizontal) > 760,
+      clave: (box) => (P.mejorada, min(1080.0, box.maxWidth - margenPagina.horizontal) > 760),
       builder: (context, box) {
         final dosCol = min(1080.0, box.maxWidth - margenPagina.horizontal) > 760;
         // En pareja, las dos tarjetas miden lo mismo: lo que pida la más alta, sin huecos fijos.
@@ -76,16 +76,13 @@ class Resumen extends StatelessWidget {
               )
             : Column(children: [a, const SizedBox(height: 16), b]);
 
+        // Vista mejorada: a todo el ancho (sin columna central ni huecos a los lados), con algo más de margen.
+        final lado = P.mejorada ? margenPagina.left + 12 : margenPagina.left;
         return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            margenPagina.left,
-            margenPagina.top + 16,
-            margenPagina.right,
-            margenPagina.bottom,
-          ),
+          padding: EdgeInsets.fromLTRB(lado, margenPagina.top + 16, lado, margenPagina.bottom),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1080),
+              constraints: BoxConstraints(maxWidth: P.mejorada ? double.infinity : 1080),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1173,16 +1170,16 @@ extension on _HeroState {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // La planta ocupa algo más de la mitad derecha (hasta el borde de arriba) y se funde con el fondo;
-          // el texto va encima.
+          // La foto de la planta ocupa algo más de la mitad derecha, hasta los bordes de arriba y de la derecha,
+          // y se funde con el fondo; el texto va encima.
           Positioned(
             top: -margenPagina.top - 16,
-            right: -margenPagina.right,
-            bottom: 0,
+            right: -margenPagina.right - 12,
+            bottom: -10,
             left: 0,
             child: const Align(
               alignment: Alignment.centerRight,
-              child: FractionallySizedBox(widthFactor: .62, heightFactor: 1, child: IlustracionPlanta()),
+              child: FractionallySizedBox(widthFactor: .6, heightFactor: 1, child: FotoPlanta()),
             ),
           ),
           Positioned.fill(child: Align(alignment: Alignment.centerLeft, child: texto)),
