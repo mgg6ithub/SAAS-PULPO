@@ -127,14 +127,11 @@ class _ActivosState extends State<Activos> {
           BarraVista(
             // Icono de Activos en grande delante del título.
             izquierda: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                widget.navegacion ?? SizedBox(height: 40, child: Row(mainAxisSize: MainAxisSize.min, children: [
+              // Sin frase de relleno debajo: solo la navegación con el título.
+              widget.navegacion ?? SizedBox(height: 40, child: Row(mainAxisSize: MainAxisSize.min, children: [
                 _flechaActivo(false, null), _flechaActivo(true, null),
-                const SizedBox(width: 4), _raizActivos(),
+                const SizedBox(width: 8), const TituloVista('Activos'),
               ])),
-                Padding(padding: const EdgeInsets.only(left: 60),
-                  child: Text('Todos los activos de tu empresa', style: TextStyle(fontSize: 13.5, color: P.textoSuave))),
-              ]),
             ],
             derecha: const [],
             principal: BotonPrimario(

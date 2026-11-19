@@ -63,18 +63,8 @@ class _TrabajadoresState extends State<Trabajadores> {
                     // Una sola barra: título y filtros a la izquierda; buscador y acciones a la derecha.
                     BarraVista(
                       izquierda: [
-                        if (industrial)
-                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(Marca.iconoTrabajador, size: 28, color: P.textoSuave),
-                              const SizedBox(width: 8),
-                              TituloVista(m('Trabajadores')),
-                            ]),
-                            const SizedBox(height: 4),
-                            Text('Gestiona los técnicos y su disponibilidad',
-                              style: TextStyle(fontSize: 13.5, color: P.textoSuave)),
-                          ])
-                        else TituloVista(m('Trabajadores')),
+                        // Solo el título: sin icono grande ni frase de relleno debajo.
+                        TituloVista(m('Trabajadores')),
                         Pestanas(
                           opciones: const ['Todos', 'Disponibles', 'Ocupados', 'Ausentes'],
                           // El punto con el color de cada estado (como en la columna Hoy).
