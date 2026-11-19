@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
+import 'accesos.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'tipos_competencias.dart' show abrirGrupos;
@@ -20,7 +21,8 @@ class _TrabajadoresState extends State<Trabajadores> {
   String q = '';
   int estado = 0; // 0 todos; si no, EstadoHoy.values[estado - 1]
   String? competencia;
-  bool lista = true;
+  /// Por defecto, en bloques.
+  bool lista = false;
 
   /// Modo selección: para eliminar varios de golpe.
   bool seleccionando = false;
@@ -78,6 +80,14 @@ class _TrabajadoresState extends State<Trabajadores> {
                         Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
                         SelectorVista(lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
                         // Pultec: grupos de técnicos (crear, ver y meter técnicos).
+                        // Quién entra en la empresa con su cuenta: invitar con un enlace o quitar el acceso.
+                        if (store.nube != null)
+                          BotonAccion(
+                            'Accesos',
+                            icono: Icons.key_outlined,
+                            tooltip: 'Invitar técnicos con un enlace y quitar accesos',
+                            onPressed: () => abrirAccesos(context),
+                          ),
                         if (industrial)
                           BotonAccion(
                             'Grupo',

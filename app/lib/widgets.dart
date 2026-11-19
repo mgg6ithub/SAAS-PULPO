@@ -1916,8 +1916,9 @@ class SelectorVista extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final (v, i, tip) in [
-          (true, Icons.view_list_rounded, 'Lista'),
+          // Bloques primero (a la izquierda) y la lista a la derecha.
           (false, Icons.grid_view_rounded, 'Bloques'),
+          (true, Icons.view_list_rounded, 'Lista'),
         ])
           Tooltip(
             message: tip,
