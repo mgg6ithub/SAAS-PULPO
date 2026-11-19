@@ -148,12 +148,7 @@ class OrdenesPorCriticidad extends StatelessWidget {
       return otPendiente(t) && pasaFechaTrabajo(t, periodo);
     }).toList()..sort((a, b) => (a.proximo ?? DateTime(9999)).compareTo(b.proximo ?? DateTime(9999)));
     final columnas = [
-      // TEMPORAL: solo preventivos, para ver cómo quedan las columnas sin órdenes.
-      for (final t in TipoMantenimiento.values)
-        _columna(t, [
-          if (t == TipoMantenimiento.preventivo)
-            for (final o in todas) if (o.tipoMantenimiento == t) o,
-        ]),
+      for (final t in TipoMantenimiento.values) _columna(t, [for (final o in todas) if (o.tipoMantenimiento == t) o]),
     ];
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
