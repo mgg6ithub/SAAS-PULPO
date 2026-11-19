@@ -481,11 +481,8 @@ class _PlanFormState extends State<PlanForm> {
       onBorrar: !existe
           ? null
           : () async {
-              final nav = Navigator.of(context);
-              if (await confirmar(context, '¿Eliminar el mantenimiento ${p.nombre}? Sus OT se quedan.')) {
-                store.borrarPlan(p.id);
-                nav.pop();
-              }
+              store.deshacible('Has borrado el mantenimiento ${p.nombre}', () => store.borrarPlan(p.id));
+              Navigator.of(context).pop();
             },
       campos: [
         Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [

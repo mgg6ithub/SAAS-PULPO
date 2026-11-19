@@ -1224,16 +1224,21 @@ class _ActivoFormState extends State<ActivoForm> {
               final con = n == 0
                   ? ''
                   : ' y sus $n ${n == 1 ? 'componente' : 'componentes'}';
-              if (await confirmar(
-                context,
-                '¿Eliminar ${a.titulo}$con? Sus OT se quedan, sin activo.',
-              )) {
-                store.borrarActivo(a.id);
-                if (widget.incrustada) {
-                  widget.onTerminar?.call();
-                } else {
-                  nav.pop();
-                }
+              // Solo se pregunta si se lleva por delante componentes o mantenimientos; si no, basta con «Deshacer».
+              final arrastra = n > 0 || store.planes.any((p) => p.activoId == a.id);
+              if (arrastra &&
+                  !await confirmar(
+                    context,
+                    '¿Eliminar ${a.titulo}$con y sus mantenimientos? Sus OT se quedan, sin activo.',
+                    nota: 'Podrás deshacerlo.',
+                  )) {
+                return;
+              }
+              store.deshacible('Has borrado ${a.titulo}', () => store.borrarActivo(a.id));
+              if (widget.incrustada) {
+                widget.onTerminar?.call();
+              } else {
+                nav.pop();
               }
             },
       campos: [

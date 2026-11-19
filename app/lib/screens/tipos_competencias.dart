@@ -223,15 +223,7 @@ class _FilaTipo extends StatelessWidget {
                 ? null
                 : IconButton(
                     tooltip: m('Quitar (sus trabajos pasan a «${tipos.last.nombre}»)'),
-                    onPressed: () async {
-                      if (await confirmar(
-                        context,
-                        m('¿Quitar «${t.nombre}»? Sus trabajos pasan a «${tipos.last.nombre}».'),
-                        accion: 'Quitar',
-                      )) {
-                        store.borrarTipo(t.id);
-                      }
-                    },
+                    onPressed: () => store.deshacible('Has quitado «${t.nombre}»', () => store.borrarTipo(t.id)),
                     icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
                   ),
           ),
@@ -255,15 +247,7 @@ class _FilaCompetencia extends StatelessWidget {
           width: 40,
           child: IconButton(
             tooltip: 'Quitar',
-            onPressed: () async {
-              if (await confirmar(
-                context,
-                m('¿Quitar «$c»? Se quita también de trabajadores y trabajos.'),
-                accion: 'Quitar',
-              )) {
-                store.borrarCompetencia(c);
-              }
-            },
+            onPressed: () => store.deshacible('Has quitado «$c»', () => store.borrarCompetencia(c)),
             icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
           ),
         ),
@@ -379,15 +363,7 @@ class _FilaGrupo extends StatelessWidget {
                 width: 40,
                 child: IconButton(
                   tooltip: 'Quitar grupo',
-                  onPressed: () async {
-                    if (await confirmar(
-                      context,
-                      '¿Quitar el grupo «${g.nombre}»? Sus técnicos se quedan sin grupo.',
-                      accion: 'Quitar',
-                    )) {
-                      store.borrarGrupo(g.id);
-                    }
-                  },
+                  onPressed: () => store.deshacible('Has quitado el grupo «${g.nombre}»', () => store.borrarGrupo(g.id)),
                   icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
                 ),
               ),

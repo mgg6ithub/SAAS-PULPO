@@ -35,10 +35,12 @@ class _TrabajadoresState extends State<Trabajadores> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    if (!await confirmar(context, m('¿Eliminar $n ${n == 1 ? 'trabajador' : 'trabajadores'}?'))) return;
-    for (final id in seleccion) {
-      store.borrarTrabajador(id);
-    }
+    if (!await confirmar(context, m('¿Eliminar $n ${n == 1 ? 'trabajador' : 'trabajadores'}?'), nota: 'Podrás deshacerlo.')) return;
+    store.deshacible(m('Has borrado $n ${n == 1 ? 'trabajador' : 'trabajadores'}'), () {
+      for (final id in seleccion) {
+        store.borrarTrabajador(id);
+      }
+    });
     salirSeleccion();
   }
 

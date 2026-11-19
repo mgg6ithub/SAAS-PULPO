@@ -14,6 +14,17 @@ import 'theme.dart' show TipoInfo, tipos, tiposBase, tiposParaMarca, competencia
 import 'marca.dart';
 
 /// Datos del prototipo. Se guardan en el navegador; más adelante, Supabase.
+/// Un borrado que se puede deshacer: qué se hizo, cuándo y cómo estaban las filas que tocó
+/// (las quitadas, en JSON, y las cambiadas, con su JSON de antes y de después).
+class Accion {
+  final String texto;
+  final DateTime cuando;
+  final Map<String, List<String>> quitadas;
+  final Map<String, Map<String, (String, String)>> cambiadas;
+  bool deshecha = false;
+  Accion(this.texto, this.cuando, this.quitadas, this.cambiadas);
+}
+
 class Store extends ChangeNotifier {
   static const _clave = 'pulpo_v2';
   static const _respaldo = 'pulpo_v2_respaldo';
@@ -435,6 +446,119 @@ class Store extends ChangeNotifier {
   void _cambio() {
     _guardar();
     notifyListeners();
+  }
+
+  // ── Deshacer ──
+
+  /// Lo que se ha hecho en esta sesión y se puede deshacer, lo último primero (pestaña Historial).
+  final acciones = <Accion>[];
+
+  /// La última acción, para el aviso con «Deshacer» de abajo en el centro.
+  final ultimaAccion = ValueNotifier<Accion?>(null);
+
+  Map<String, List<dynamic>> get _listas => {
+    'clientes': clientes,
+    'trabajadores': trabajadores,
+    'tareas': tareas,
+    'subtareas': subtareas,
+    'etiquetas': etiquetas,
+    'equipos': equipos,
+    'vencimientos': vencimientos,
+    'activos': activos,
+    'planes': planes,
+    'incidencias': incidencias,
+    'grupos': grupos,
+  };
+
+  static final Map<String, Object Function(Map<String, dynamic>)> _desdeJson = {
+    'clientes': Cliente.fromJson,
+    'trabajadores': Trabajador.fromJson,
+    'tareas': Tarea.fromJson,
+    'subtareas': Tarea.fromJson,
+    'etiquetas': EtiquetaTrabajo.fromJson,
+    'equipos': Equipo.fromJson,
+    'vencimientos': Vencimiento.fromJson,
+    'activos': Activo.fromJson,
+    'planes': PlanMantenimiento.fromJson,
+    'incidencias': Incidencia.fromJson,
+    'grupos': GrupoTecnicos.fromJson,
+  };
+
+  /// Cada fila por id, en JSON; tipos y competencias, enteros.
+  Map<String, Map<String, String>> _foto() => {
+    for (final e in _listas.entries) e.key: {for (final x in e.value) (x as dynamic).id as String: jsonEncode(x.toJson())},
+    '_tipos': {'': jsonEncode([for (final t in tipos) t.toJson()])},
+    '_competencias': {'': jsonEncode(competencias)},
+  };
+
+  /// Hace [cambio] (un borrado) y apunta cómo estaba todo lo que ha tocado, para poder deshacerlo.
+  void deshacible(String texto, void Function() cambio) {
+    final antes = _foto();
+    cambio();
+    final despues = _foto();
+    final quitadas = <String, List<String>>{};
+    final cambiadas = <String, Map<String, (String, String)>>{};
+    for (final t in antes.keys) {
+      for (final e in antes[t]!.entries) {
+        final ahora = despues[t]![e.key];
+        if (ahora == null) {
+          (quitadas[t] ??= []).add(e.value);
+        } else if (ahora != e.value) {
+          (cambiadas[t] ??= {})[e.key] = (e.value, ahora);
+        }
+      }
+    }
+    if (quitadas.isEmpty && cambiadas.isEmpty) return;
+    final a = Accion(texto, DateTime.now(), quitadas, cambiadas);
+    acciones.insert(0, a);
+    ultimaAccion.value = a;
+  }
+
+  /// Vuelve a poner lo borrado. Lo que se ha cambiado después a mano no se pisa.
+  void deshacer(Accion a) {
+    if (a.deshecha) return;
+    a.deshecha = true;
+    if (ultimaAccion.value == a) ultimaAccion.value = null;
+    final listas = _listas;
+    for (final e in a.cambiadas.entries) {
+      if (e.key == '_tipos') {
+        if (jsonEncode([for (final t in tipos) t.toJson()]) == e.value['']!.$2) {
+          tipos = [for (final x in jsonDecode(e.value['']!.$1) as List) TipoInfo.fromJson(x)];
+        }
+        continue;
+      }
+      if (e.key == '_competencias') {
+        if (jsonEncode(competencias) == e.value['']!.$2) competencias = List<String>.from(jsonDecode(e.value['']!.$1));
+        continue;
+      }
+      final l = listas[e.key]!;
+      for (final c in e.value.entries) {
+        final i = l.indexWhere((x) => (x as dynamic).id == c.key);
+        if (i >= 0 && jsonEncode(l[i].toJson()) == c.value.$2) l[i] = _desdeJson[e.key]!(jsonDecode(c.value.$1));
+      }
+    }
+    final vueltos = <PlanMantenimiento>[];
+    for (final e in a.quitadas.entries) {
+      final l = listas[e.key]!;
+      for (final j in e.value) {
+        final x = _desdeJson[e.key]!(jsonDecode(j));
+        if (l.any((y) => (y as dynamic).id == (x as dynamic).id)) continue;
+        l.add(x);
+        if (x is PlanMantenimiento && x.activa) vueltos.add(x);
+      }
+    }
+    // Un mantenimiento que vuelve llega primero inactivo, para que la base no le cree otra OT antes de
+    // recuperar la suya; después se activa.
+    if (nube != null && vueltos.isNotEmpty) {
+      for (final p in vueltos) {
+        p.activa = false;
+      }
+      _guardar();
+      for (final p in vueltos) {
+        p.activa = true;
+      }
+    }
+    _cambio();
   }
 
   void guardarEtiqueta(EtiquetaTrabajo e) {

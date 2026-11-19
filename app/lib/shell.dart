@@ -199,6 +199,13 @@ class _ShellState extends State<Shell> {
         body: Stack(
           children: [
             Positioned.fill(child: _cuerpo(movil, compacta, pagina)),
+            // Tras borrar algo: qué se ha borrado y «Deshacer», abajo en el centro.
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: movil ? 84 : 24,
+              child: const Center(child: AvisoDeshacer()),
+            ),
             Positioned(right: movil ? 12 : 24, bottom: movil ? 84 : 24, child: avisos),
           ],
         ),

@@ -250,10 +250,12 @@ class _FichaRapida extends StatelessWidget {
                   style: TextButton.styleFrom(foregroundColor: P.rojo),
                   onPressed: () async {
                     final nav = Navigator.of(context);
-                    if (await confirmar(context, preguntaBorrarTrabajos([t.id], nombre: '"${t.nombre}"'))) {
-                      store.borrarTarea(t.id);
-                      nav.pop();
+                    if (store.hijas(t.id).isNotEmpty &&
+                        !await confirmar(context, preguntaBorrarTrabajos([t.id], nombre: '"${t.nombre}"'), nota: 'Podrás deshacerlo.')) {
+                      return;
                     }
+                    store.deshacible('Has borrado ${t.nombre}', () => store.borrarTarea(t.id));
+                    nav.pop();
                   },
                   child: const Text('Eliminar'),
                 ),

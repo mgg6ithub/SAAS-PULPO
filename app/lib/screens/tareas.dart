@@ -446,7 +446,10 @@ class _EtiquetaDialogoState extends State<_EtiquetaDialogo> {
                 if (widget.original != null)
                   TextButton(
                     onPressed: () {
-                      store.borrarEtiqueta(widget.original!.id);
+                      store.deshacible(
+                        'Has borrado la etiqueta ${widget.original!.nombre}',
+                        () => store.borrarEtiqueta(widget.original!.id),
+                      );
                       Navigator.pop(context);
                     },
                     child: Text('Eliminar', style: TextStyle(color: P.rojo)),

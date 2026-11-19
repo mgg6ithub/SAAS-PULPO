@@ -1010,8 +1010,8 @@ class _ClienteFormState extends State<ClienteForm> {
         ? null
         : () async {
             final nav = Navigator.of(context);
-            if (await confirmar(context, m('¿Eliminar ${c.nombre} y todos sus trabajos?'))) {
-              store.borrarCliente(c.id);
+            if (await confirmar(context, m('¿Eliminar ${c.nombre} y todos sus trabajos?'), nota: 'Podrás deshacerlo.')) {
+              store.deshacible('Has borrado ${c.nombre}', () => store.borrarCliente(c.id));
               nav.pop();
             }
           },
@@ -1158,11 +1158,8 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
     onBorrar: widget.original == null
         ? null
         : () async {
-            final nav = Navigator.of(context);
-            if (await confirmar(context, '¿Eliminar a ${w.nombreCompleto}?')) {
-              store.borrarTrabajador(w.id);
-              if (!widget.incrustada) nav.pop();
-            }
+            store.deshacible('Has borrado a ${w.nombreCompleto}', () => store.borrarTrabajador(w.id));
+            if (!widget.incrustada) Navigator.of(context).pop();
           },
     campos: [
       Bloque('Datos personales', primero: true, descripcion: 'Nombre y forma de contacto.', [
@@ -1615,10 +1612,13 @@ class _TareaFormState extends State<TareaForm> {
           ? null
           : () async {
               final nav = Navigator.of(context);
-              if (await confirmar(context, preguntaBorrarTrabajos([t.id], nombre: '"${t.nombre}"'))) {
-                store.borrarTarea(t.id);
-                if (!widget.incrustada) nav.pop();
+              // Solo se pregunta si se llevan subtrabajos por delante; si no, basta con «Deshacer».
+              if (store.hijas(t.id).isNotEmpty &&
+                  !await confirmar(context, preguntaBorrarTrabajos([t.id], nombre: '"${t.nombre}"'), nota: 'Podrás deshacerlo.')) {
+                return;
               }
+              store.deshacible('Has borrado ${t.nombre}', () => store.borrarTarea(t.id));
+              if (!widget.incrustada) nav.pop();
             },
       // Mismo esquema que cliente y trabajador: bloques con su título a la izquierda y los campos a la derecha.
       campos: [

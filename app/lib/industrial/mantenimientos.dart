@@ -297,11 +297,8 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       onBorrar: !existe
           ? null
           : () async {
-              final nav = Navigator.of(context);
-              if (await confirmar(context, '¿Eliminar esta incidencia? Su OT, si la tiene, se queda.')) {
-                store.borrarIncidencia(x.id);
-                nav.pop();
-              }
+              store.deshacible('Has borrado una incidencia', () => store.borrarIncidencia(x.id));
+              Navigator.of(context).pop();
             },
       campos: [
         Bloque('Incidencia', primero: true, descripcion: 'Qué máquina o pieza falla y qué le pasa.', [

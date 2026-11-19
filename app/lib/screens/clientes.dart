@@ -33,10 +33,12 @@ class _ClientesState extends State<Clientes> {
 
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
-    if (!await confirmar(context, m('¿Eliminar $n ${n == 1 ? 'cliente' : 'clientes'} y sus trabajos?'))) return;
-    for (final id in seleccion) {
-      store.borrarCliente(id);
-    }
+    if (!await confirmar(context, m('¿Eliminar $n ${n == 1 ? 'cliente' : 'clientes'} y sus trabajos?'), nota: 'Podrás deshacerlo.')) return;
+    store.deshacible(m('Has borrado $n ${n == 1 ? 'cliente' : 'clientes'}'), () {
+      for (final id in seleccion) {
+        store.borrarCliente(id);
+      }
+    });
     salirSeleccion();
   }
 

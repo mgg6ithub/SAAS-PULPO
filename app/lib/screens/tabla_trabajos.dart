@@ -70,10 +70,12 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   Future<void> eliminarSeleccion() async {
     final n = seleccion.length;
     final nombre = m('$n ${n == 1 ? widget.nombre : '${widget.nombre}s'}');
-    if (!await confirmar(context, preguntaBorrarTrabajos(seleccion, nombre: nombre))) return;
-    for (final id in seleccion) {
-      store.borrarTarea(id);
-    }
+    if (!await confirmar(context, preguntaBorrarTrabajos(seleccion, nombre: nombre), nota: 'Podrás deshacerlo.')) return;
+    store.deshacible('Has borrado $nombre', () {
+      for (final id in seleccion) {
+        store.borrarTarea(id);
+      }
+    });
     salirSeleccion();
   }
 
