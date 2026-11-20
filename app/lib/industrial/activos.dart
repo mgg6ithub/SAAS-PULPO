@@ -17,6 +17,8 @@ import 'iconos.dart';
 import 'uso_maquinas.dart';
 import 'gravedad.dart';
 import 'historicos.dart';
+import 'incidencia.dart' show EstadoIncidencia;
+import 'mantenimientos.dart' show abrirIncidenciaForm;
 import 'plan.dart';
 import 'planes.dart';
 import '../rellenar.dart';
@@ -610,6 +612,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   /// Órdenes de trabajo del activo: pendientes o, aparte, el histórico (como en Órdenes de trabajo).
   bool _historicoOt = false;
 
+  /// Filtros de las órdenes del activo: criticidad (0 todas, 1 preventivo, 2 no crítico, 3 crítico) y solo las que
+  /// salen de una incidencia (al pulsar «con OT» arriba).
+  int _criticidadOt = 0;
+  bool _soloIncidencias = false;
+
   int get pestana => _pestana;
   set pestana(int v) => _pestana = v;
 
@@ -847,6 +854,38 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                     ),
                   ],
                 ),
+                // A la derecha del todo: sus incidencias, abiertas (sin orden) y con OT. Abierta: se abre para
+                // sacarle su orden; con OT: lleva a sus órdenes, filtradas a las de incidencias.
+                Builder(builder: (context) {
+                  final rama = store.ramaDe(a.id);
+                  final suyas = store.incidencias.where((x) => rama.contains(x.activoId)).toList();
+                  final abiertas = suyas.where((x) => store.estadoIncidencia(x) == EstadoIncidencia.abierta).toList();
+                  final conOt = suyas.where((x) => store.estadoIncidencia(x) == EstadoIncidencia.conOt).length;
+                  if (abiertas.isEmpty && conOt == 0) return const SizedBox.shrink();
+                  Widget boton(String texto, Color color, VoidCallback onTap) => InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: onTap,
+                    child: Pill(texto, color, punto: true),
+                  );
+                  return Wrap(spacing: 8, runSpacing: 6, children: [
+                    if (abiertas.isNotEmpty)
+                      boton(
+                        abiertas.length == 1 ? '1 incidencia abierta' : '${abiertas.length} incidencias abiertas',
+                        P.rojo,
+                        () => abrirIncidenciaForm(context, original: abiertas.first),
+                      ),
+                    if (conOt > 0)
+                      boton(
+                        conOt == 1 ? '1 incidencia con OT' : '$conOt incidencias con OT',
+                        P.azul,
+                        () => setState(() {
+                          pestana = 2;
+                          _historicoOt = false;
+                          _soloIncidencias = true;
+                        }),
+                      ),
+                  ]);
+                }),
               ],
             ),
           ),
@@ -884,6 +923,26 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   seleccion: _historicoOt ? 1 : 0,
                   onChanged: (i) => setState(() => _historicoOt = i == 1),
                 ),
+                // Como en Órdenes de trabajo: por criticidad y, si se llega desde arriba, solo las de incidencias.
+                if (!_historicoOt) ...[
+                  const SizedBox(width: 12),
+                  Pestanas(
+                    opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
+                    colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                    seleccion: _criticidadOt,
+                    compactas: true,
+                    onChanged: (i) => setState(() => _criticidadOt = i),
+                  ),
+                  if (_soloIncidencias) ...[
+                    const SizedBox(width: 12),
+                    InputChip(
+                      label: const Text('De incidencias'),
+                      avatar: Icon(Icons.report_outlined, size: 16, color: P.rojo),
+                      onDeleted: () => setState(() => _soloIncidencias = false),
+                      deleteButtonTooltipMessage: 'Quitar filtro',
+                    ),
+                  ],
+                ],
                 const Spacer(),
                 if (!_historicoOt)
                   FiltroFlujoMantenimiento(
@@ -942,16 +1001,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             'Órdenes pendientes',
                             '${ots.where(otPendiente).length}',
                           ),
-                          // Partes con incidencia o sin hacer que aún nadie ha solucionado.
-                          if (ots.where(incidenciaAbierta).length case final n
-                              when n > 0)
-                            Pill(
-                              n == 1
-                                  ? '1 incidencia abierta'
-                                  : '$n incidencias abiertas',
-                              P.rojo,
-                              punto: true,
-                            ),
                         ],
                       ),
                       const SizedBox(height: huecoVista),
@@ -1050,7 +1099,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                           1 => ot.trabajadorIds.isEmpty,
                           2 => ot.trabajadorIds.isNotEmpty,
                           _ => true,
-                        }).toList()..sort((a, b) {
+                        }).where((ot) =>
+                          (_criticidadOt == 0 || ot.tipoMantenimiento?.index == _criticidadOt - 1) &&
+                          (!_soloIncidencias || store.incidenciaDeOt(ot.id) != null),
+                        ).toList()..sort((a, b) {
                           if (a.proximo == null) return b.proximo == null ? 0 : 1;
                           if (b.proximo == null) return -1;
                           return a.proximo!.compareTo(b.proximo!);
