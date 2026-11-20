@@ -36,7 +36,7 @@ class _Ajustes extends StatefulWidget {
 }
 
 /// Versión que se enseña en Ajustes (la de pubspec.yaml).
-const versionApp = '1.0.0';
+const versionApp = '0.1.1';
 
 class _AjustesState extends State<_Ajustes> {
   static const _altoFila = 40.0, _huecoFila = 4.0;
