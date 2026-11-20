@@ -450,18 +450,21 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
                 ],
               ),
             ),
-            pw.SizedBox(width: 16),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: pw.BoxDecoration(
-                color: fondoResultado,
-                borderRadius: pw.BorderRadius.circular(20),
+            // Solo si no fue bien (con incidencias o sin hacer): «Todo correcto» no hace falta decirlo.
+            if (i.resultado != 0) ...[
+              pw.SizedBox(width: 16),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  color: fondoResultado,
+                  borderRadius: pw.BorderRadius.circular(20),
+                ),
+                child: pw.Text(
+                  resultadosInforme[i.resultado],
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: colorResultado),
+                ),
               ),
-              child: pw.Text(
-                resultadosInforme[i.resultado],
-                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: colorResultado),
-              ),
-            ),
+            ],
           ],
         ),
         if (incidencia != null) ...[
@@ -476,7 +479,10 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
             pw.Expanded(
               child: tarjeta(industrial ? 'Orden de trabajo' : m('Trabajo'), [
                 dato('Número', numero),
-                if (industrial && t.tipoMantenimiento != null) dato('Criticidad', t.tipoMantenimiento!.etiqueta),
+                if (industrial && t.tipoMantenimiento != null)
+                  _datoPuntoPdf('Criticidad', t.tipoMantenimiento!.etiqueta, t.tipoMantenimiento!.color),
+                if (industrial)
+                  dato('Origen', incidencia != null ? 'Incidencia' : plan != null ? 'Mantenimiento' : 'Manual'),
                 if (plan != null) dato('Mantenimiento', [plan.nombre, if (plan.cada.isNotEmpty) plan.cada].join(', ')),
                 if (t.proximo != null || t.ultimo != null) dato('Fecha prevista', fecha(t.proximo ?? t.ultimo)),
               ]),
@@ -512,6 +518,13 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
             ],
           ),
         ),
+        // Lo que pasó, en orden: de la avería (o el mantenimiento) a la orden cerrada.
+        if (industrial) ...[
+          pw.SizedBox(height: 16),
+          etiqueta('Historial'),
+          pw.SizedBox(height: 8),
+          for (final (cuando, texto) in cronologiaOt(t, i)) _pasoPdf(cuando, texto),
+        ],
         seccion('Trabajo realizado', i.notas.isEmpty ? 'Sin observaciones.' : i.notas),
         if (i.valor != null)
           seccion(
@@ -530,9 +543,15 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
-            firmaBloque('Técnico', w?.nombreCompleto ?? ''),
-            pw.SizedBox(width: 40),
-            firmaBloque(industrial ? 'Firma del responsable' : m('Conforme, el cliente'), i.firmante, imagen: firma),
+            // Pultec: firma el técnico que la hizo (su firma y su nombre).
+            if (industrial)
+              firmaBloque('Firma del técnico', w?.nombreCompleto ?? i.firmante, imagen: firma)
+            else ...[
+              firmaBloque('Técnico', w?.nombreCompleto ?? ''),
+              pw.SizedBox(width: 40),
+              firmaBloque(m('Conforme, el cliente'), i.firmante, imagen: firma),
+            ],
+            if (industrial) pw.Expanded(child: pw.SizedBox()),
           ],
         ),
       ],
@@ -540,6 +559,75 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
   );
   return doc.save();
 }
+
+/// Cronología de una OT cerrada: incidencia comunicada (si la hay), orden creada, asignada y realizada.
+List<(String, String)> cronologiaOt(Tarea t, Informe i) {
+  String cuando(DateTime d) => '${fecha(d)} ${hhmm(d.hour * 60 + d.minute)}';
+  final x = industrial ? store.incidenciaDeOt(t.id) : null;
+  final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+  final tecnicos = [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombreCompleto];
+  final w = store.trabajadores.where((y) => y.id == i.trabajadorId).firstOrNull;
+  return [
+    if (x != null)
+      (
+        cuando(x.creada),
+        'Incidencia comunicada por ${(x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombreCompleto ?? 'la oficina'}'
+            ' (${x.gravedad.etiqueta.toLowerCase()}): ${x.descripcion}',
+      ),
+    if (x != null)
+      ('', 'Se crea esta orden de trabajo para resolverla${t.proximo == null ? '' : ', prevista para el ${fecha(t.proximo)}'}.')
+    else if (plan != null)
+      ('', 'Orden creada sola por el mantenimiento «${plan.nombre}»${plan.cada.isEmpty ? '' : ' (${plan.cada})'}.')
+    else
+      ('', 'Orden creada a mano${t.proximo == null ? '' : ', prevista para el ${fecha(t.proximo)}'}.'),
+    if (tecnicos.isNotEmpty) ('', 'Asignada a ${tecnicos.join(', ')}.'),
+    (
+      cuando(i.cuando),
+      'Realizada por ${w?.nombreCompleto ?? 'el técnico'}${i.minutos == null ? '' : ' en ${duracionTexto(i.minutos!)}'}'
+          '${i.resultado == 0 ? '' : ' (${resultadosInforme[i.resultado].toLowerCase()})'}.',
+    ),
+  ];
+}
+
+/// Un paso de la cronología: punto morado, fecha (si la hay) y texto.
+pw.Widget _pasoPdf(String cuando, String texto) => pw.Padding(
+  padding: const pw.EdgeInsets.only(bottom: 6),
+  child: pw.Row(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      pw.Container(
+        margin: const pw.EdgeInsets.only(top: 3.5, right: 8),
+        width: 5,
+        height: 5,
+        decoration: pw.BoxDecoration(color: PdfColor.fromInt(P.morado.toARGB32()), shape: pw.BoxShape.circle),
+      ),
+      if (cuando.isNotEmpty)
+        pw.SizedBox(width: 92, child: pw.Text(cuando, style: pw.TextStyle(fontSize: 9.5, color: _suavePdf))),
+      pw.Expanded(child: pw.Text(texto, style: pw.TextStyle(fontSize: 10, color: _tintaPdf))),
+    ],
+  ),
+);
+
+/// Dato con un punto de color delante (p. ej. la criticidad).
+pw.Widget _datoPuntoPdf(String nombre, String valor, Color color) => pw.Padding(
+  padding: const pw.EdgeInsets.only(bottom: 7),
+  child: pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      pw.Text(nombre, style: pw.TextStyle(fontSize: 8.5, color: _suavePdf)),
+      pw.SizedBox(height: 1.5),
+      pw.Row(children: [
+        pw.Container(
+          width: 6,
+          height: 6,
+          margin: const pw.EdgeInsets.only(right: 5),
+          decoration: pw.BoxDecoration(color: PdfColor.fromInt(color.toARGB32()), shape: pw.BoxShape.circle),
+        ),
+        pw.Text(valor, style: pw.TextStyle(fontSize: 11, color: _tintaPdf)),
+      ]),
+    ],
+  ),
+);
 
 // ── Piezas comunes de los PDF (parte de OT e informe de incidencia) ──
 final _tintaPdf = PdfColor.fromInt(0xFF111827);
@@ -665,7 +753,8 @@ pw.MultiPage _paginaPdf({
 
 Future<Uint8List?> _logoPdf() async {
   try {
-    return (await rootBundle.load(industrial ? 'assets/ipultec.png' : 'assets/pultec.png')).buffer.asUint8List();
+    // El pulpo morado, como en la app.
+    return (await rootBundle.load('assets/pultec.png')).buffer.asUint8List();
   } catch (_) {
     return null;
   }

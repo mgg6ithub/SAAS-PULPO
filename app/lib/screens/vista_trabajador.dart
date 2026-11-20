@@ -2154,6 +2154,14 @@ class _FormularioInformeState extends State<FormularioInforme> {
     void aviso(String texto) =>
         messenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
     bool subido;
+    // Sin minutos escritos: el tiempo desde que pulsó «Empezar OT» hasta ahora.
+    var minutosOt = raiz != null ? null : _minutos;
+    if (minutosOt == null && raiz == null) {
+      final empezo = DateTime.tryParse(
+        (await SharedPreferences.getInstance()).getString('ot_inicio_${store.nube?.empresaId ?? 'demo'}_${widget.t.id}') ?? '',
+      );
+      if (empezo != null) minutosOt = DateTime.now().difference(empezo).inMinutes.clamp(1, 10080);
+    }
     try {
       subido = await informes.crear(
         Informe(
@@ -2162,7 +2170,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
           resultado: resultado,
           notas: notas.text.trim(),
           material: material.text.trim(),
-          minutos: raiz != null ? null : _minutos,
+          minutos: minutosOt,
           valor: plan == null || _medida == null || _medida!.isNaN ? null : _medida,
           firmante: firma.vacia || industrial ? '' : firmante.text.trim(),
         ),
