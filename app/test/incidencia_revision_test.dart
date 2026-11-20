@@ -34,7 +34,7 @@ void main() {
     await tester.pump();
     await tester.enterText(find.byType(TextField).first, 'Fuga de aceite');
     await tester.pump();
-    tester.widget<VentanaFormulario>(find.byType(VentanaFormulario)).onGuardar!();
+    tester.widget<VentanaFormulario>(find.byType(VentanaFormulario)).onGuardar();
     await tester.pumpAndSettle();
     expect(store.tareas, isEmpty);
     expect(store.incidencias.single.estado, EstadoIncidencia.abierta);

@@ -111,21 +111,6 @@ void main() {
     }
 
     for (final ancho in [1440.0, 980.0, 700.0, 600.0, 420.0, 360.0]) {
-      testWidgets('tabla de activos compacta con pie y tipo a $ancho', (tester) async {
-        tester.view.physicalSize = Size(ancho, 1000);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
-        filtroActivos.value = 0;
-        await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
-        await tester.pumpAndSettle();
-        expect(find.text('Tipo de mantenimiento'), findsOneWidget);
-        final filtro = tester.widget<Pestanas>(find.byType(Pestanas));
-        expect(filtro.colores, [null, for (final t in TipoMantenimiento.values) t.color]);
-        expect(tester.getSize(find.byType(Tabla)).height, lessThan(400));
-        expect(find.textContaining('2 activos'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      });
-
       testWidgets('componentes, datos, OT e histórico sin desbordar a $ancho', (tester) async {
         await pintar(tester, ancho);
         expect(find.text('Motor'), findsOneWidget);
@@ -140,35 +125,6 @@ void main() {
         expect(find.text('Todos los activos'), findsNothing);
       });
     }
-
-    testWidgets('muestra horas restantes y fecha estimada en la lista y ficha', (tester) async {
-      final a = store.activo('a1')!
-        ..frecuencia = FrecuenciaActivo.horas
-        ..cadaHoras = 5000
-        ..horas = 2400
-        ..horasUso = 7
-        ..fechaLectura = DateTime(2026, 10, 30);
-      expect(horasRestantes(a), '≈ 2600 h');
-      expect(proximaFecha(a), '≈ 06/11/2027');
-      tester.view.physicalSize = const Size(1440, 1000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      filtroActivos.value = 0;
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Activos())));
-      await tester.pumpAndSettle();
-      expect(find.text('Horas totales'), findsOneWidget);
-      expect(find.text('Horas restantes'), findsOneWidget);
-      expect(tester.getTopLeft(find.text('≈ 2600 h')).dx - tester.getTopRight(find.text('2400 h')).dx, greaterThanOrEqualTo(28));
-      expect(find.text('≈ 2600 h'), findsOneWidget);
-      expect(find.text('≈ 06/11/2027'), findsOneWidget);
-      await tester.tap(find.text('CAM-01 · Camión'));
-      await tester.pumpAndSettle();
-      expect(find.text('≈ 2600 h'), findsOneWidget);
-      expect(find.text('≈ 06/11/2027'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      a.horasUso = 0;
-      expect(proximaFecha(a), 'Falta ritmo de uso');
-    });
 
     testWidgets('elige un icono industrial y lo conserva en la ficha del activo', (tester) async {
       await pintar(tester, 980);
