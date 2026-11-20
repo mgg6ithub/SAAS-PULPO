@@ -558,45 +558,72 @@ class _BarraTecnico extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            for (final (i, (icono, texto, n)) in items.indexed)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(P.radioControl),
-                  splashFactory: NoSplash.splashFactory,
-                  hoverColor: P.hoverBarra,
-                  mouseCursor: SystemMouseCursors.click,
-                  onTap: () => onVista(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+            // Como la barra del administrador: un único fondo blanco que se desliza a la elegida; las filas, sin
+            // onda, solo cambian de color.
+            Stack(
+              children: [
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  top: vista * 44.0,
+                  left: 0,
+                  right: 0,
+                  height: 40,
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: vista == i ? P.seleccionBarra : Colors.transparent,
+                      color: P.seleccionBarra,
                       borderRadius: BorderRadius.circular(P.radioControl),
-                      boxShadow: vista == i ? P.sombraSeleccionBarra : null,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(icono, size: 20, color: vista == i ? P.iconoBarraElegido : P.textoBarraSuave),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            texto,
-                            style: TextStyle(
-                              fontFamily: P.titulos,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: vista == i ? P.textoBarraElegido : P.textoBarra,
-                            ),
-                          ),
-                        ),
-                        if (n > 0) Text('$n', style: TextStyle(fontSize: 13, color: P.textoBarraSuave)),
-                      ],
+                      boxShadow: P.sombraSeleccionBarra,
                     ),
                   ),
                 ),
-              ),
+                Column(
+                  children: [
+                    for (final (i, (icono, texto, n)) in items.indexed)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          splashFactory: NoSplash.splashFactory,
+                          highlightColor: Colors.transparent,
+                          hoverColor: P.hoverBarra,
+                          mouseCursor: SystemMouseCursors.click,
+                          onTap: () => onVista(i),
+                          child: SizedBox(
+                            height: 40,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Row(
+                                children: [
+                                  TweenAnimationBuilder<Color?>(
+                                    tween: ColorTween(end: vista == i ? P.iconoBarraElegido : P.textoBarraSuave),
+                                    duration: const Duration(milliseconds: 200),
+                                    builder: (_, c, _) => Icon(icono, size: 20, color: c),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: AnimatedDefaultTextStyle(
+                                      duration: const Duration(milliseconds: 200),
+                                      style: TextStyle(
+                                        fontFamily: P.titulos,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: vista == i ? P.textoBarraElegido : P.textoBarra,
+                                      ),
+                                      child: Text(texto),
+                                    ),
+                                  ),
+                                  if (n > 0) Text('$n', style: TextStyle(fontSize: 13, color: P.textoBarraSuave)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
             const Spacer(),
             if (onAdmin != null) _fila(Icons.swap_horiz_rounded, 'Vista de administrador', onAdmin!),
             _fila(Icons.logout_rounded, 'Cerrar sesión', onSalir),
