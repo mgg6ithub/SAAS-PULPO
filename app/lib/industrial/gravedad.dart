@@ -142,8 +142,8 @@ Widget iconoAsignacion(Tarea? ot) => Tooltip(
     final h = horasRestantesPlan(p);
     if (h == null) return null;
     final d = proximoPlan(p);
-    final texto = h <= 0 ? 'Le toca ya' : 'Quedan ${h.round()} h de ${p.cadaHoras} h';
-    return ((h / p.cadaHoras!).clamp(0, 1).toDouble(), d == null ? texto : '$texto\n≈ ${fechaDe(d)}');
+    final texto = h <= 0 ? 'Le toca ya' : 'Quedan ${h.round()} h';
+    return ((h / p.cadaHoras!).clamp(0, 1).toDouble(), d == null ? texto : '$texto, hacia el ${fechaDe(d)}');
   }
   final d = fecha ?? proximoPlan(p);
   if (d == null) return null;
@@ -157,8 +157,8 @@ Widget iconoAsignacion(Tarea? ot) => Tooltip(
       ? 'Vencida hace ${-quedan} ${-quedan == 1 ? 'día' : 'días'}'
       : quedan == 0
       ? 'Toca hoy'
-      : 'Quedan $quedan ${quedan == 1 ? 'día' : 'días'} de $total';
-  return ((quedan / math.max(total, 1)).clamp(0, 1).toDouble(), '$texto\n${fechaDe(d)}');
+      : 'Quedan $quedan ${quedan == 1 ? 'día' : 'días'}';
+  return ((quedan / math.max(total, 1)).clamp(0, 1).toDouble(), '$texto, el ${fechaDe(d)}');
 }
 
 (double, String)? cicloOt(Tarea t) {
