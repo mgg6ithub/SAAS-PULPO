@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/screens/ajustes_dialogo.dart';
-import 'package:pulpo/screens/simulaciones.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/screens/ajustes_dialogo.dart';
+import 'package:pultec/screens/simulaciones.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Ajustes y Simulaciones se abren sin desbordes en móvil.

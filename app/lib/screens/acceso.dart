@@ -12,7 +12,7 @@ import 'cuenta.dart';
 import 'vista_trabajador.dart';
 import '../marca.dart';
 
-/// Entrada de la app con Supabase: sin sesión pide acceso; con sesión carga la empresa y abre Pulpo.
+/// Entrada de la app con Supabase: sin sesión pide acceso; con sesión carga la empresa y abre Pultec.
 class PuertaNube extends StatefulWidget {
   const PuertaNube({super.key});
 
@@ -123,7 +123,7 @@ class _PuertaNubeState extends State<PuertaNube> {
     } on InvitacionNoValida {
       if (mounted) setState(() => _fase = _Fase.invitacionMala);
     } catch (e) {
-      debugPrint('Pulpo: no se pudo abrir la empresa: $e');
+      debugPrint('Pultec: no se pudo abrir la empresa: $e');
       if (mounted) setState(() => _fase = _Fase.fallo);
     }
   }
@@ -216,7 +216,7 @@ class _Marco extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: LogoPulpo(size: 44)),
+                const Center(child: LogoPultec(size: 44)),
                 const SizedBox(height: 20),
                 ...children,
               ],
@@ -375,7 +375,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     return _Marco(
       children: [
         Text(
-          _nueva ? 'Crea tu cuenta' : m('Entra en Pulpo'),
+          _nueva ? 'Crea tu cuenta' : m('Entra en Pultec'),
           textAlign: TextAlign.center,
           style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700),
         ),

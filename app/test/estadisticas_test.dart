@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/industrial/estadisticas.dart';
-import 'package:pulpo/industrial/incidencias.dart';
-import 'package:pulpo/industrial/simulacion_dominion.dart';
-import 'package:pulpo/industrial/simulacion_historial.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/industrial/estadisticas.dart';
+import 'package:pultec/industrial/incidencias.dart';
+import 'package:pultec/industrial/simulacion_dominion.dart';
+import 'package:pultec/industrial/simulacion_historial.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Estadísticas e Incidencias con seis meses simulados (sin sesión): cada apartado se dibuja sin errores,

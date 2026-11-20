@@ -1,11 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/agenda_vistas.dart';
-import 'package:pulpo/screens/planificacion.dart';
-import 'package:pulpo/screens/vista_dias.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/agenda_vistas.dart';
+import 'package:pultec/screens/planificacion.dart';
+import 'package:pultec/screens/vista_dias.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -51,7 +51,7 @@ void main() {
     expect(store.tareasDelDia(masDias(hoy(), 1)), isEmpty);
   });
 
-  test('el pulpo asigna solo a quien es apto', () {
+  test('Pultec asigna solo a quien es apto', () {
     final actual = store.tareas.where((t) => !t.esPlantilla).toList();
     expect(store.automatizar(actual), 2); // ascensor y centralita → Javier; la caldera pide RITE y él no lo tiene
     expect(store.tareas.firstWhere((t) => t.id == 'a').trabajadorIds, ['w1']);

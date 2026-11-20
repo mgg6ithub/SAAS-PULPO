@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/agenda_vistas.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/agenda_vistas.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// El mapa del itinerario se pinta con los clientes de ejemplo, con las chinchetas cercanas agrupadas.

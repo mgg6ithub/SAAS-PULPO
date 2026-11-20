@@ -183,7 +183,7 @@ class Finanzas extends ChangeNotifier {
         },
         onError: (Object e) {
           _pidiendo = false;
-          debugPrint('Pulpo: no se pudieron leer las finanzas: $e');
+          debugPrint('Pultec: no se pudieron leer las finanzas: $e');
         },
       );
     }
@@ -330,7 +330,7 @@ String mesYAno(DateTime m) => '${_mesLargo(m)} de ${m.year}';
 /// Descarga el CSV (con BOM para que Excel lea bien las tildes).
 Future<void> descargarCsv(Iterable<Documento> docs, DateTime mes) => descargar(
   Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(finanzas.csv(docs))]),
-  'Pulpo ${mesYAno(mes)}.csv',
+  '${Marca.nombre} ${mesYAno(mes)}.csv',
   'text/csv',
 );
 

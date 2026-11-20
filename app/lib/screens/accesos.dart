@@ -58,7 +58,7 @@ class _AccesosState extends State<Accesos> {
         _fallo = false;
       });
     } catch (e) {
-      debugPrint('Pulpo: no se pudieron leer los accesos: $e');
+      debugPrint('Pultec: no se pudieron leer los accesos: $e');
       if (mounted) setState(() => _fallo = true);
     }
   }
@@ -70,7 +70,7 @@ class _AccesosState extends State<Accesos> {
     } on UltimoAdministrador {
       _avisar('La empresa tiene que tener al menos un administrador.');
     } catch (e) {
-      debugPrint('Pulpo: fallo en accesos: $e');
+      debugPrint('Pultec: fallo en accesos: $e');
       _avisar('No se pudo hacer. Comprueba la conexión.');
     }
     await _cargar();

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/forms.dart';
-import 'package:pulpo/industrial/activo.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/forms.dart';
+import 'package:pultec/industrial/activo.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

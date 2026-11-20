@@ -6,11 +6,11 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:pulpo/informes.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/nube.dart';
-import 'package:pulpo/store.dart';
-import 'package:pulpo/theme.dart' show P;
+import 'package:pultec/informes.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/nube.dart';
+import 'package:pultec/store.dart';
+import 'package:pultec/theme.dart' show P;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

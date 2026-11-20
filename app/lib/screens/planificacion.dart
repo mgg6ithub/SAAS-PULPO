@@ -15,7 +15,7 @@ import 'calendario_trabajos.dart';
 import 'rutas_mapa.dart';
 import 'tarea_card.dart';
 import 'vista_dias.dart';
-import 'vista_pulpo.dart';
+import 'vista_pultec.dart';
 
 /// Agenda (antes Planificación), inspirada en el Schedule de Jobber:
 /// Día (una fila por técnico), Semana (por horas), Mes y Tablero, con un mapa lateral opcional
@@ -156,7 +156,7 @@ class _PlanificacionState extends State<Planificacion> {
     final mostrarGuia = _guiaOrganizarVisible;
     final (desde, hasta, nombrePeriodo) = periodo;
     final contenido = switch (vista) {
-      0 => VistaPulpo(
+      0 => VistaPultec(
         dia: dia,
         mostrarSinConcretar: _mostrarSinConcretar,
         onCambiarVisibilidad: () => setState(() => _mostrarSinConcretar = !_mostrarSinConcretar),
@@ -286,8 +286,8 @@ class _PlanificacionState extends State<Planificacion> {
                       },
                     ),
                   if (vista == 1) const SizedBox(width: 8),
-                  // El pulpo: organiza el día que estás viendo.
-                  BotonPulpo(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
+                  // Organizar: organiza el día que estás viendo.
+                  BotonPultec(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
                   // Pultec, sin rutas: sin mapa ni su botón.
                   if (Marca.mapa && vista == 1) ...[
                     const SizedBox(width: 8),
@@ -407,7 +407,7 @@ class _PlanificacionState extends State<Planificacion> {
                     : Positioned.fill(
                         child: IgnorePointer(
                           child: Semantics(
-                            label: m('Pulsa Organizar para que Pulpo asigne el trabajo al técnico.'),
+                            label: m('Pulsa Organizar para que Pultec asigne el trabajo al técnico.'),
                             liveRegion: true,
                             child: CustomPaint(painter: _GuiaOrganizarPainter(rect)),
                           ),
@@ -442,7 +442,7 @@ class _GuiaOrganizarPainter extends CustomPainter {
         ..strokeWidth = 3,
     );
 
-    final texto = m('Pulsa Organizar para que Pulpo asigne el trabajo al técnico.');
+    final texto = m('Pulsa Organizar para que Pultec asigne el trabajo al técnico.');
     final letras = TextPainter(
       text: TextSpan(
         text: texto,
@@ -547,7 +547,7 @@ class _Tablero extends StatelessWidget {
                   w,
                   box.maxHeight,
                   botonHecha: true,
-                  accion: _PulpoMagico(actual),
+                  accion: _PultecMagico(actual),
                 ),
                 const SizedBox(width: 16),
                 _Columna('Futuro', 'Más adelante', P.azul, futuro, w, box.maxHeight),
@@ -561,9 +561,9 @@ class _Tablero extends StatelessWidget {
 }
 
 /// Botón que automatiza lo actual: asigna el trabajador más adecuado a lo que no tiene.
-class _PulpoMagico extends StatelessWidget {
+class _PultecMagico extends StatelessWidget {
   final List<Tarea> tareas;
-  const _PulpoMagico(this.tareas);
+  const _PultecMagico(this.tareas);
 
   @override
   Widget build(BuildContext context) {
@@ -586,7 +586,7 @@ class _PulpoMagico extends StatelessWidget {
                     ? (pendientes == 0
                           ? m('Todo lo actual ya tiene trabajador.')
                           : m('No hay trabajadores aptos para lo que falta.'))
-                    : m('Pulpo ha asignado $n ${n == 1 ? 'trabajo' : 'trabajos'}.'),
+                    : m('Pultec ha asignado $n ${n == 1 ? 'trabajo' : 'trabajos'}.'),
               ),
             ),
           );

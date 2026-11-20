@@ -93,7 +93,7 @@ class Resumen extends StatelessWidget {
                   _Hero(conFecha: conFecha, pasos: pasos),
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
-                  // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pulpo.
+                  // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pultec.
                   if (!hayTarea && !ajustes.guiaOrganizar) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
                     // Pultec: las cuatro cifras son de órdenes de trabajo; con su título, como «Estado de los activos».
@@ -270,7 +270,7 @@ const _meses = [
   'diciembre',
 ];
 
-/// Para una cuenta sin trabajos: el ciclo de Pulpo en tres tarjetas y qué cifras verá en Inicio.
+/// Para una cuenta sin trabajos: el ciclo de Pultec en tres tarjetas y qué cifras verá en Inicio.
 /// Desaparece con el primer trabajo y deja paso a las cifras y los paneles.
 class _ComoFunciona extends StatelessWidget {
   final bool columnas;
@@ -297,11 +297,11 @@ class _ComoFunciona extends StatelessWidget {
             (
               P.teal,
               m('Sus trabajos'),
-              m('Qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca y avisa de lo que vence.'),
+              m('Qué hay que revisar y cada cuánto. Pultec calcula cuándo toca y avisa de lo que vence.'),
             ),
             (
               P.ambar,
-              m('Pulpo organiza'),
+              m('Pultec organiza'),
               m('Reparte los trabajos entre tu equipo según lo que sabe hacer y traza la ruta del día.'),
             ),
           ];
@@ -373,7 +373,7 @@ class _ComoFunciona extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
-            m('Cómo funciona Pulpo'),
+            m('Cómo funciona Pultec'),
             style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
           ),
         ),
@@ -473,7 +473,7 @@ class _PrimerosPasos extends StatelessWidget {
             ? 'Un mantenimiento de una máquina o de uno de sus componentes: qué hay que hacer, cada cuánto y de qué '
                   'tipo (preventivo, correctivo no crítico o crítico). Pultec calcula cuándo toca.'
             : m(
-                'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pulpo calcula cuándo toca. '
+                'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pultec calcula cuándo toca. '
                 'También puedes crearlo desde la ficha del cliente.',
               ),
         (Marca.iconoTrabajo, m('Trabajos'), m('Nuevo trabajo'), Seccion.tareas, (c) => abrirTareaForm(c, null)),
@@ -490,13 +490,13 @@ class _PrimerosPasos extends StatelessWidget {
         BotonPrimario('Ir al itinerario', icono: Icons.calendar_month_outlined, onPressed: _verItinerario),
       ),
       (
-        !hayTrabajador ? m('Añade un trabajador') : m('Deja que Pulpo organice tu primer trabajo'),
+        !hayTrabajador ? m('Añade un trabajador') : m('Deja que Pultec organice tu primer trabajo'),
         !hayTrabajador
-            ? m('Quién hace los mantenimientos. Indica qué sabe hacer y Pulpo le propondrá los trabajos que le encajan.')
+            ? m('Quién hace los mantenimientos. Indica qué sabe hacer y Pultec le propondrá los trabajos que le encajan.')
             : m(
                 Marca.mapa
-                    ? 'Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico y trazará la ruta.'
-                    : 'Ve al itinerario y pulsa Organizar. Pulpo asignará el trabajo al técnico según su categoría.',
+                    ? 'Ve al itinerario y pulsa Organizar. Pultec asignará el trabajo al técnico y trazará la ruta.'
+                    : 'Ve al itinerario y pulsa Organizar. Pultec asignará el trabajo al técnico según su categoría.',
               ),
         !hayTrabajador
             // Con las competencias de los trabajos ya creados, Organizar podrá asignar el primero.
@@ -1078,7 +1078,7 @@ class _HeroState extends State<_Hero> {
     final pasos = widget.pasos;
     final quedan = pasos.where((p) => !p).length;
     if (quedan == pasos.length) {
-      return m('Te damos la bienvenida a Pulpo. En unos minutos tendrás tu mantenimiento en marcha.');
+      return m('Te damos la bienvenida a Pultec. En unos minutos tendrás tu mantenimiento en marcha.');
     }
     if (quedan == 1) return 'Ya casi está: solo te falta un paso.';
     if (quedan > 1) return 'Vas bien: en nada tendrás tu mantenimiento en marcha.';
@@ -1099,7 +1099,7 @@ class _HeroState extends State<_Hero> {
       final cuando = diasHasta(d) == 1 ? 'mañana' : 'el ${_dias[d.weekday - 1]} ${d.day}';
       return 'Hoy no hay nada programado. El próximo mantenimiento es $cuando.';
     }
-    return m('Todo al día. Pulpo te avisará cuando toque el siguiente mantenimiento.');
+    return m('Todo al día. Pultec te avisará cuando toque el siguiente mantenimiento.');
   }
 
   @override
@@ -1137,7 +1137,7 @@ class _HeroState extends State<_Hero> {
           padding: const EdgeInsets.fromLTRB(_sangriaHero, 18, _sangriaHero, 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(P.radio),
-            // Pultec: color liso, más sobrio. Pulpo: claro a la izquierda y el morado del logo a la derecha.
+            // Pultec: color liso, más sobrio. Pulcón: claro a la izquierda y el morado del logo a la derecha.
             color: industrial ? P.morado : null,
             gradient: industrial
                 ? null

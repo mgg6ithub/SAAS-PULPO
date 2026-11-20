@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/ajustes.dart';
-import 'package:pulpo/forms.dart';
-import 'package:pulpo/screens/resumen.dart';
-import 'package:pulpo/store.dart';
-import 'package:pulpo/theme.dart';
+import 'package:pultec/ajustes.dart';
+import 'package:pultec/forms.dart';
+import 'package:pultec/screens/resumen.dart';
+import 'package:pultec/store.dart';
+import 'package:pultec/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -29,7 +29,7 @@ void main() {
     addTearDown(tester.view.reset);
     ajustes.marcarGuiaOrganizar();
     store.vaciar();
-    await tester.pumpWidget(MaterialApp(theme: temaPulpo(), home: Scaffold(body: Resumen(onIr: (_) {}, onTrabajador: (_) {}))));
+    await tester.pumpWidget(MaterialApp(theme: temaPultec(), home: Scaffold(body: Resumen(onIr: (_) {}, onTrabajador: (_) {}))));
     await tester.pumpAndSettle();
     expect(find.text('Primeros pasos'), findsNothing);
     expect(find.text('Tus activos'), findsNothing);

@@ -3,12 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:pulpo/forms.dart';
-import 'package:pulpo/informes.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/informes.dart';
-import 'package:pulpo/screens/vista_trabajador.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/forms.dart';
+import 'package:pultec/informes.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/informes.dart';
+import 'package:pultec/screens/vista_trabajador.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

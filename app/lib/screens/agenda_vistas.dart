@@ -869,7 +869,7 @@ class _MapaAgendaState extends State<MapaAgenda> {
                 // OpenStreetMap, gratis y sin clave. Algo desaturado para que no compita con las chinchetas;
                 // invertido en modo oscuro.
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'pulpo.app',
+                userAgentPackageName: 'pultec.app',
                 tileBuilder: (context, tile, imagen) => ajustes.oscuro
                     ? darkModeTileBuilder(context, tile, imagen)
                     : ColorFiltered(

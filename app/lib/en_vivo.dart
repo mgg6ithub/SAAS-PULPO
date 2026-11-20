@@ -65,7 +65,7 @@ class EnVivo {
       c.onPostgresChanges(event: PostgresChangeEvent.delete, schema: 'public', table: t, callback: (_) => cambio(t));
     }
     _canal = c..subscribe((estado, [error]) {
-      if (error != null) debugPrint('Pulpo: en vivo $estado: $error');
+      if (error != null) debugPrint('Pultec: en vivo $estado: $error');
       // Al volver la conexión no llegan los cambios de mientras: se vuelve a leer todo.
       if (estado == RealtimeSubscribeStatus.subscribed) {
         if (_caido) alCambiar({...tablasEnVivo});

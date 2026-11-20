@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/industrial/activo.dart';
-import 'package:pulpo/industrial/iconos.dart';
-import 'package:pulpo/industrial/vistazo.dart';
-import 'package:pulpo/industrial/activos.dart';
-import 'package:pulpo/industrial/plantillas.dart';
-import 'package:pulpo/marca.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/store.dart';
-import 'package:pulpo/screens/tarea_detalle.dart';
-import 'package:pulpo/theme.dart';
-import 'package:pulpo/widgets.dart';
+import 'package:pultec/industrial/activo.dart';
+import 'package:pultec/industrial/iconos.dart';
+import 'package:pultec/industrial/vistazo.dart';
+import 'package:pultec/industrial/activos.dart';
+import 'package:pultec/industrial/plantillas.dart';
+import 'package:pultec/marca.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/store.dart';
+import 'package:pultec/screens/tarea_detalle.dart';
+import 'package:pultec/theme.dart';
+import 'package:pultec/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

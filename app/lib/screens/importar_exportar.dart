@@ -87,7 +87,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ],
       ),
       Text(
-        m('Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pulpo no se duplica.'),
+        m('Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.'),
         style: TextStyle(fontSize: 13, color: P.textoSuave),
       ),
       const SizedBox(height: 18),
@@ -106,7 +106,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Text(
-            m('Cada trabajo va a un cliente que ya exista en Pulpo (por nombre o CIF): importa antes los clientes.'),
+            m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.'),
             style: TextStyle(fontSize: 12.5, color: P.textoSuave),
           ),
         ),

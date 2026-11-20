@@ -224,7 +224,7 @@ class _EquipoFormState extends State<EquipoForm> {
         ]),
         Bloque(
           'Vencimientos legales',
-          descripcion: m('Inspecciones y revisiones obligatorias. Pulpo avisa en Inicio antes de que caduquen.'),
+          descripcion: m('Inspecciones y revisiones obligatorias. Pultec avisa en Inicio antes de que caduquen.'),
           [
             for (final (v, c) in vencimientos)
               Row(

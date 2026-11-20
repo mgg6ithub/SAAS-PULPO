@@ -69,7 +69,7 @@ class _EnlaceState extends State<_Enlace> {
           if (mounted) setState(() => _enlace = Nube.enlace(c));
         })
         .catchError((Object e) {
-          debugPrint('Pulpo: no se pudo crear la invitación: $e');
+          debugPrint('Pultec: no se pudo crear la invitación: $e');
           if (mounted) setState(() => _fallo = true);
         });
   }

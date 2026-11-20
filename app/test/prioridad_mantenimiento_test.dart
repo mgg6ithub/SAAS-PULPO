@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/industrial/plan.dart';
-import 'package:pulpo/models.dart';
+import 'package:pultec/industrial/plan.dart';
+import 'package:pultec/models.dart';
 
 void main() {
   test('prioridad conserva los valores anteriores sin generar correctivos', () {

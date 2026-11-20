@@ -3,7 +3,7 @@
 
 Uso (desde app/):  python3 tool/probar_nube.py
 Necesita la CLI de Supabase enlazada (supabase/ en la raíz del repo) y SUPABASE_ACCESS_TOKEN
-(variable de entorno o en un .env: ~/Desktop/PULPO/.env).
+(variable de entorno o en un .env: ~/Desktop/PULTEC/.env).
 """
 
 import os
@@ -18,7 +18,7 @@ RAIZ = os.path.dirname(APP)
 def token():
     if os.environ.get("SUPABASE_ACCESS_TOKEN"):
         return os.environ["SUPABASE_ACCESS_TOKEN"]
-    for ruta in (os.path.join(RAIZ, ".env"), os.path.join(APP, ".env"), os.path.expanduser("~/Desktop/PULPO/.env")):
+    for ruta in (os.path.join(RAIZ, ".env"), os.path.join(APP, ".env"), os.path.expanduser("~/Desktop/PULTEC/.env")):
         if os.path.exists(ruta):
             for linea in open(ruta):
                 if linea.startswith("SUPABASE_ACCESS_TOKEN="):

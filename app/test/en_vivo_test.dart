@@ -1,7 +1,7 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/en_vivo.dart';
-import 'package:pulpo/nube.dart';
+import 'package:pultec/en_vivo.dart';
+import 'package:pultec/nube.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {

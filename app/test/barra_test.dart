@@ -2,9 +2,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/ajustes.dart';
-import 'package:pulpo/shell.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/ajustes.dart';
+import 'package:pultec/shell.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

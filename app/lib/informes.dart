@@ -179,7 +179,7 @@ class Informes extends ChangeNotifier {
         if (l != null) _de[g.trabajoId] = [g, ...l.where((i) => i.id != g.id)];
         cambio = true;
       } catch (e) {
-        debugPrint('Pulpo: parte sin subir: $e');
+        debugPrint('Pultec: parte sin subir: $e');
         if (!Nube.sinConexion(e)) continue;
         _reintentar();
         break;
@@ -197,7 +197,7 @@ class Informes extends ChangeNotifier {
     try {
       await n.enviarParte(g.id, await informePdf(g, t));
     } catch (e) {
-      debugPrint('Pulpo: no se pudo mandar el parte al cliente: $e');
+      debugPrint('Pultec: no se pudo mandar el parte al cliente: $e');
     }
   }
 
@@ -232,7 +232,7 @@ class Informes extends ChangeNotifier {
               notifyListeners();
             },
             onError: (Object e) {
-              debugPrint('Pulpo: no se pudieron leer los informes: $e');
+              debugPrint('Pultec: no se pudieron leer los informes: $e');
               _pedidos.remove(trabajoId);
             },
           );
@@ -665,7 +665,7 @@ pw.MultiPage _paginaPdf({
 
 Future<Uint8List?> _logoPdf() async {
   try {
-    return (await rootBundle.load(industrial ? 'assets/ipultec.png' : 'assets/pulpo.png')).buffer.asUint8List();
+    return (await rootBundle.load(industrial ? 'assets/ipultec.png' : 'assets/pultec.png')).buffer.asUint8List();
   } catch (_) {
     return null;
   }

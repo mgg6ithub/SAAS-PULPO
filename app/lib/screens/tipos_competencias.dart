@@ -32,7 +32,7 @@ Future<void> abrirTipos(BuildContext context) => _dialogo(
 Future<void> abrirCompetencias(BuildContext context) => _dialogo(
   context,
   'Competencias',
-  m('Pulpo solo asigna un trabajo a quien tiene sus competencias. Cambiar el nombre lo cambia en todas partes.'),
+  m('Pultec solo asigna un trabajo a quien tiene sus competencias. Cambiar el nombre lo cambia en todas partes.'),
   (context) => [
     for (final c in competencias) _FilaCompetencia(c, key: ValueKey(c)),
     const SizedBox(height: 8),

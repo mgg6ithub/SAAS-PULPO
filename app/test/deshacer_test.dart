@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/industrial/activo.dart';
-import 'package:pulpo/industrial/plan.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/industrial/activo.dart';
+import 'package:pultec/industrial/plan.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Borrar y deshacer deja todo como estaba, y lo cambiado después a mano no se pisa.

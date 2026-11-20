@@ -52,7 +52,7 @@ class _VistaFinanzasState extends State<VistaFinanzas> {
       }
       _aviso('${nuevas.length} ${nuevas.length == 1 ? 'factura creada' : 'facturas creadas'}');
     } catch (e) {
-      debugPrint('Pulpo: no se pudieron crear las facturas: $e');
+      debugPrint('Pultec: no se pudieron crear las facturas: $e');
       _aviso('No se pudieron crear todas las facturas. Inténtalo de nuevo.');
     }
   }
@@ -359,7 +359,7 @@ class _DocumentoFormState extends State<DocumentoForm> {
     try {
       await finanzas.guardar(d);
     } catch (e) {
-      debugPrint('Pulpo: no se pudo guardar el documento: $e');
+      debugPrint('Pultec: no se pudo guardar el documento: $e');
       if (mounted) setState(() => guardando = false);
       return _aviso(m, 'No se pudo guardar. Inténtalo de nuevo.');
     }
@@ -382,7 +382,7 @@ class _DocumentoFormState extends State<DocumentoForm> {
       await finanzas.borrar(widget.original);
       nav.pop();
     } catch (e) {
-      debugPrint('Pulpo: no se pudo borrar el documento: $e');
+      debugPrint('Pultec: no se pudo borrar el documento: $e');
       _aviso(m, 'No se pudo borrar.');
     }
   }

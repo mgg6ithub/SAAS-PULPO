@@ -4,7 +4,7 @@ técnico invitado que cierra una → lo que ven los dos. Crea dos cuentas @ipult
 industrial, lanza test/flujo_pultec_real_test.dart y lo borra todo siempre, falle o no.
 
 Uso (desde app/):  python3 tool/probar_flujo_pultec.py
-Necesita la CLI de Supabase enlazada y SUPABASE_ACCESS_TOKEN (variable de entorno o ~/Desktop/PULPO/.env).
+Necesita la CLI de Supabase enlazada y SUPABASE_ACCESS_TOKEN (variable de entorno o ~/Desktop/PULTEC/.env).
 """
 
 import random

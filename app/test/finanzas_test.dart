@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/finanzas.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/finanzas.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/finanzas.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/finanzas.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

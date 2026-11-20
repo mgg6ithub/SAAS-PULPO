@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/main.dart';
-import 'package:pulpo/screens/mi_cuenta.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/main.dart';
+import 'package:pultec/screens/mi_cuenta.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Abajo de la barra, un solo botón de usuario (sin «Ajustes» y «Mi cuenta» sueltos); sin sesión abre los Ajustes.
@@ -17,7 +17,7 @@ void main() {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(const PulpoApp());
+    await tester.pumpWidget(const PultecApp());
     await tester.pump(const Duration(seconds: 1));
     expect(find.byType(BotonUsuario), findsOneWidget);
     expect(find.text('Mi cuenta'), findsNothing);

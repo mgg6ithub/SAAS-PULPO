@@ -1187,7 +1187,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         industrial ? 'Especialidades' : 'Competencias',
         descripcion: industrial
             ? 'Áreas de mantenimiento del técnico. No limita la asignación de OT.'
-            : m('Qué sabe hacer. Pulpo solo le asigna trabajos que puede hacer.'),
+            : m('Qué sabe hacer. Pultec solo le asigna trabajos que puede hacer.'),
         [
           KeyedSubtree(
             key: _claveCompetencias,
@@ -1802,7 +1802,7 @@ class _TareaFormState extends State<TareaForm> {
           industrial ? 'Duración prevista' : 'Cuánto',
           descripcion: industrial
               ? 'Tiempo estimado de la intervención.'
-              : m('Cuánto tiempo lleva hacerlo. Pulpo lo usa para cuadrar el día y las rutas.'),
+              : m('Cuánto tiempo lleva hacerlo. Pultec lo usa para cuadrar el día y las rutas.'),
           [
             etiqueta('Duración'),
             conMargen(
@@ -1843,7 +1843,7 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ]),
         if (!industrial)
-          Bloque('Competencias', descripcion: m('Qué tiene que saber hacer. Pulpo solo se la asigna a quien puede.'), [
+          Bloque('Competencias', descripcion: m('Qué tiene que saber hacer. Pultec solo se la asigna a quien puede.'), [
             conMargen(chipsCompetencias(t.competencias, () => setState(() {}))),
           ]),
         Bloque(
@@ -2864,7 +2864,7 @@ class _SelectorCuandoState extends State<SelectorCuando> {
                 SizedBox(
                   height: 46,
                   child: Tooltip(
-                    message: m('El pulpo no cambia su hora ni su técnico al organizar'),
+                    message: m('Pultec no cambia su hora ni su técnico al organizar'),
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         padding: esMovil(context) ? EdgeInsets.zero : null,

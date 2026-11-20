@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/marca.dart';
-import 'package:pulpo/industrial/activo.dart';
-import 'package:pulpo/industrial/activos.dart';
-import 'package:pulpo/store.dart';
-import 'package:pulpo/industrial/plan.dart';
-import 'package:pulpo/industrial/historicos.dart';
-import 'package:pulpo/widgets.dart';
-import 'package:pulpo/models.dart';
+import 'package:pultec/marca.dart';
+import 'package:pultec/industrial/activo.dart';
+import 'package:pultec/industrial/activos.dart';
+import 'package:pultec/store.dart';
+import 'package:pultec/industrial/plan.dart';
+import 'package:pultec/industrial/historicos.dart';
+import 'package:pultec/widgets.dart';
+import 'package:pultec/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

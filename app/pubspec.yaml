@@ -1,4 +1,4 @@
-name: pulpo
+name: pultec
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -75,11 +75,11 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/pulpo.png
+    - assets/pultec.png
     - assets/ipultec.png
     - assets/planta.jpg
     - assets/iconos/
-    - assets/videos/pulpo-animacione.mp4
+    - assets/videos/pultec-animacione.mp4
 
   # To add assets to your application, add an assets section, like this:
   # assets:

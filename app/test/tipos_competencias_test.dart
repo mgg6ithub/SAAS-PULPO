@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/tipos_competencias.dart';
-import 'package:pulpo/store.dart';
-import 'package:pulpo/theme.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/tipos_competencias.dart';
+import 'package:pultec/store.dart';
+import 'package:pultec/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Tipos de trabajo y competencias editables por empresa.

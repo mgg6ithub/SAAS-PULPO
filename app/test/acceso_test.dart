@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/screens/acceso.dart';
-import 'package:pulpo/screens/cuenta.dart';
+import 'package:pultec/screens/acceso.dart';
+import 'package:pultec/screens/cuenta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -17,7 +17,7 @@ void main() {
 
   testWidgets('una pantalla para entrar o crear cuenta, con Google en las dos', (tester) async {
     await pintar(tester);
-    expect(find.text('Entra en Pulpo'), findsOneWidget);
+    expect(find.text('Entra en Pulcón'), findsOneWidget);
     expect(find.text('Continuar con Google'), findsOneWidget);
     expect(find.text('¿Has olvidado la contraseña?'), findsOneWidget);
     await tester.tap(find.text('Crea una'));
@@ -27,7 +27,7 @@ void main() {
     expect(find.text('¿Has olvidado la contraseña?'), findsNothing);
     await tester.tap(find.text('Entra'));
     await tester.pumpAndSettle();
-    expect(find.text('Entra en Pulpo'), findsOneWidget);
+    expect(find.text('Entra en Pulcón'), findsOneWidget);
   });
 
   testWidgets('errores en castellano y diciendo qué hacer, sin llamar a la nube', (tester) async {

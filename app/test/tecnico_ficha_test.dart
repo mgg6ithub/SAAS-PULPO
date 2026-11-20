@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/marca.dart';
-import 'package:pulpo/forms.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/store.dart';
-import 'package:pulpo/screens/trabajador_detalle.dart';
+import 'package:pultec/marca.dart';
+import 'package:pultec/forms.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/store.dart';
+import 'package:pultec/screens/trabajador_detalle.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

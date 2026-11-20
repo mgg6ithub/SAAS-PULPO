@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/theme.dart';
-import 'package:pulpo/widgets.dart';
+import 'package:pultec/theme.dart';
+import 'package:pultec/widgets.dart';
 
 void main() {
   testWidgets('la columna arrastrada muestra fondo y guías hasta abajo y los retira al soltar', (tester) async {

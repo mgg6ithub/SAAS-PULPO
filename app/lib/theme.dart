@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'ajustes.dart';
 import 'marca.dart';
 
-/// Colores de Pulpo: los mismos de la landing (tinta, morado del logo, lavanda y verde azulado).
+/// Colores de Pultec: los mismos de la landing (tinta, morado del logo, lavanda y verde azulado).
 /// Los neutros cambian con el modo oscuro; los de acento son fijos.
 class P {
   static bool get _o => ajustes.oscuro;
@@ -116,16 +116,16 @@ const margenPagina = EdgeInsets.fromLTRB(12, 12, 12, 12);
 /// Hueco entre los bloques de una vista (barra y contenido, panel, calendario y mapa): igual en todas.
 const huecoVista = 10.0;
 
-/// Logo de Pulpo (el de la landing).
-class LogoPulpo extends StatelessWidget {
+/// Logo de Pultec (el de la landing).
+class LogoPultec extends StatelessWidget {
   final double size;
-  const LogoPulpo({super.key, this.size = 30});
+  const LogoPultec({super.key, this.size = 30});
 
   @override
   Widget build(BuildContext context) => Image.asset(
     // En Pultec, el mismo pulpo en el azul de la marca (PNG propio, sin fondo); en la vista mejorada, el morado
     // vivo del pulpo original.
-    industrial && !ajustes.mejorada ? 'assets/ipultec.png' : 'assets/pulpo.png',
+    industrial && !ajustes.mejorada ? 'assets/ipultec.png' : 'assets/pultec.png',
     width: size,
     height: size,
     filterQuality: FilterQuality.medium,
@@ -346,7 +346,7 @@ String? _fuente() {
   }
 }
 
-ThemeData temaPulpo() {
+ThemeData temaPultec() {
   final brillo = ajustes.oscuro ? Brightness.dark : Brightness.light;
   final fuente = _fuente();
   final base = ThemeData(

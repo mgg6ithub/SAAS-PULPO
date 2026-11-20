@@ -7,16 +7,16 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/industrial/activo.dart';
-import 'package:pulpo/industrial/estadisticas.dart' show resumenActivo;
-import 'package:pulpo/industrial/incidencia.dart';
-import 'package:pulpo/industrial/simulacion_dominion.dart';
-import 'package:pulpo/industrial/simulacion_historial.dart';
-import 'package:pulpo/industrial/plan.dart';
-import 'package:pulpo/informes.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/nube.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/industrial/activo.dart';
+import 'package:pultec/industrial/estadisticas.dart' show resumenActivo;
+import 'package:pultec/industrial/incidencia.dart';
+import 'package:pultec/industrial/simulacion_dominion.dart';
+import 'package:pultec/industrial/simulacion_historial.dart';
+import 'package:pultec/industrial/plan.dart';
+import 'package:pultec/informes.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/nube.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

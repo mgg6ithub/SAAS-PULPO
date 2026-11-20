@@ -157,7 +157,7 @@ class Importacion {
   /// «Fila 4: …», en el orden del archivo.
   final avisos = <String>[];
 
-  /// Filas que ya estaban (en Pulpo o repetidas en el archivo) y no se importan.
+  /// Filas que ya estaban (en Pultec o repetidas en el archivo) y no se importan.
   int duplicados = 0;
   Importacion(this.que);
 

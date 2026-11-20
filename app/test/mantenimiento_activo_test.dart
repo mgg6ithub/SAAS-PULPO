@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/industrial/activo.dart';
+import 'package:pultec/industrial/activo.dart';
 
 void main() {
   test('5000 horas a 7 horas diarias estiman 715 días sin cambiar el contador', () {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/forms.dart';
-import 'package:pulpo/main.dart';
-import 'package:pulpo/shell.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/forms.dart';
+import 'package:pultec/main.dart';
+import 'package:pultec/shell.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Un aviso lanzado desde una ventana emergente sale encima de su fondo oscuro, no debajo.
@@ -18,7 +18,7 @@ void main() {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(const PulpoApp());
+    await tester.pumpWidget(const PultecApp());
     await tester.pump(const Duration(seconds: 1));
 
     abrirPanel(

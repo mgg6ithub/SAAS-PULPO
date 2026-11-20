@@ -18,7 +18,7 @@ class Ajustes extends ChangeNotifier {
   /// Tipo de letra: índice en `fuentes` (theme.dart).
   int fuente = 0;
 
-  /// Vista con la que abre el itinerario: 0 Pulpo, 1 Calendario.
+  /// Vista con la que abre el itinerario: 0 Pultec, 1 Calendario.
   int vistaInicio = 0;
 
   /// Ancho de la barra lateral, ajustable arrastrando su borde. Por debajo de [anchoTextos]

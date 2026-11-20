@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/forms.dart';
+import 'package:pultec/forms.dart';
 
 void main() {
   testWidgets('acoplar conserva los campos y no los vuelve a maquetar en cada fotograma', (tester) async {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/industrial/activo.dart';
-import 'package:pulpo/marca.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/vista_trabajador.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/industrial/activo.dart';
+import 'package:pultec/marca.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/vista_trabajador.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Al entrar, el técnico ve marcados los activos de la última vez que aún tienen órdenes («Seguir»); los que ya

@@ -1,4 +1,4 @@
-# Pruebas automáticas de Pulpo (DEV-032): análisis y tests de la app en cada cambio,
+# Pruebas automáticas de Pultec (DEV-032): análisis y tests de la app en cada cambio,
 # y la prueba real contra Supabase cuando el repositorio tiene sus secretos.
 name: Pruebas
 

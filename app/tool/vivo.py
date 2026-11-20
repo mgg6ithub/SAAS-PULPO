@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pulpo en vivo: como Live Server, pero para Flutter web.
+"""Pultec en vivo: como Live Server, pero para Flutter web.
 
 Arranca la app en http://localhost:8080 y, cada vez que cambia un .dart de lib/,
 hace hot reload (r) sin perder el estado; si cambian assets o pubspec, o Flutter rechaza
@@ -47,7 +47,7 @@ def main():
         text=True,
         bufsize=1,
     )
-    print(f"\n🐙 {'Pultec' if INDUSTRIAL else 'Pulpo'} en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)
+    print(f"\n🐙 {'Pultec' if INDUSTRIAL else 'Pulcón'} en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)
 
     def enviar(tecla):
         try:

@@ -1075,7 +1075,7 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
-  /// El "pulpo mágico": asigna el mejor trabajador a las tareas que no tienen.
+  /// El "Pultec mágico": asigna el mejor trabajador a las tareas que no tienen.
   /// Devuelve cuántas ha organizado.
   int automatizar(List<Tarea> lista) {
     var n = 0;
@@ -1233,7 +1233,7 @@ class Store extends ChangeNotifier {
           estadoHoy: est,
           color: i,
           telefono: '6${(10000000 + r.nextInt(89999999))}',
-          email: '${n.toLowerCase()}@pulpo-demo.es',
+          email: '${n.toLowerCase()}@pultec-demo.es',
           titulos: comp.first,
         ),
     ];

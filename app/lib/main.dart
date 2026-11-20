@@ -43,19 +43,19 @@ Future<void> main() async {
     await Nube.recordarInvitacion(Uri.base.queryParameters['invitacion']);
   }
   if (industrial) ponerPestana('favicon-ipultec.png', Marca.nombre);
-  runApp(PulpoApp(local: local));
+  runApp(PultecApp(local: local));
 }
 
-class PulpoApp extends StatefulWidget {
+class PultecApp extends StatefulWidget {
   /// Sin Supabase: datos en el navegador (pruebas y capturas).
   final bool local;
-  const PulpoApp({super.key, this.local = true});
+  const PultecApp({super.key, this.local = true});
 
   @override
-  State<PulpoApp> createState() => _PulpoAppState();
+  State<PultecApp> createState() => _PultecAppState();
 }
 
-class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
+class _PultecAppState extends State<PultecApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -89,7 +89,7 @@ class _PulpoAppState extends State<PulpoApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) => MaterialApp(
     title: Marca.nombre,
     debugShowCheckedModeBanner: false,
-    theme: temaPulpo(),
+    theme: temaPultec(),
     locale: const Locale('es'),
     supportedLocales: const [Locale('es')],
     localizationsDelegates: const [

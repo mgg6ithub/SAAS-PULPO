@@ -1,14 +1,14 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pulpo/screens/planificacion.dart';
+import 'package:pultec/screens/planificacion.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/ajustes.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/store.dart';
-import 'package:pulpo/theme.dart';
-import 'package:pulpo/screens/calendario_datos.dart';
-import 'package:pulpo/screens/calendario_trabajos.dart';
+import 'package:pultec/ajustes.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/store.dart';
+import 'package:pultec/theme.dart';
+import 'package:pultec/screens/calendario_datos.dart';
+import 'package:pultec/screens/calendario_trabajos.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Tarea trabajo(String id, DateTime d, int? inicio, {int duracion = 60}) => Tarea(
@@ -86,7 +86,7 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
-        theme: temaPulpo(),
+        theme: temaPultec(),
         home: Scaffold(
           body: MediaQuery(
             data: MediaQueryData(size: Size(ancho, 900), textScaler: TextScaler.linear(escala)),

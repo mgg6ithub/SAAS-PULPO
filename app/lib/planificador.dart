@@ -9,7 +9,7 @@ import 'models.dart';
 import 'store.dart';
 import 'marca.dart';
 
-/// Planificador de rutas, primera versión ("el pulpo planifica").
+/// Planificador de rutas, primera versión ("Pultec planifica").
 ///
 /// Reglas, en este orden:
 ///  1. Se reparten primero las tareas más críticas y, a igual criticidad, las de franja más estrecha.

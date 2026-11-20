@@ -663,7 +663,7 @@ class _BarraState extends State<_Barra> {
                 children: [
                   // Logo y nombre, como en la landing; a la derecha, contraer/expandir.
                   if (iconos) ...[
-                    const Center(child: LogoPulpo(size: 32)),
+                    const Center(child: LogoPultec(size: 32)),
                     const SizedBox(height: 4),
                     _Icono(
                       ajustes.barraDerecha
@@ -676,7 +676,7 @@ class _BarraState extends State<_Barra> {
                     Row(
                       children: [
                         const SizedBox(width: 2),
-                        const LogoPulpo(size: 32),
+                        const LogoPultec(size: 32),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(

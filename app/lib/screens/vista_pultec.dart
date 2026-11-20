@@ -11,12 +11,12 @@ import '../marca.dart';
 
 const _quitarTrabajador = '__quitar_trabajador__';
 
-class VistaPulpo extends StatelessWidget {
+class VistaPultec extends StatelessWidget {
   final DateTime dia;
   final VoidCallback onCrearTrabajo;
   final bool mostrarSinConcretar;
   final VoidCallback onCambiarVisibilidad;
-  const VistaPulpo({
+  const VistaPultec({
     super.key,
     required this.dia,
     required this.onCrearTrabajo,

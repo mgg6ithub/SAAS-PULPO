@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/importar.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/importar_exportar.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/importar.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/importar_exportar.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Importar desde CSV (con avisos y sin duplicados) y exportar con las mismas columnas.

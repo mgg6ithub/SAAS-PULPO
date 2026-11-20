@@ -196,7 +196,7 @@ class _AccesoState extends State<_Acceso> {
         invitado: (r[1] as List<InvitacionPendiente>).any((i) => nube.esFicha(widget.w.id, i.trabajadorId)),
       );
     } catch (e) {
-      debugPrint('Pulpo: no se pudo leer el acceso de ${widget.w.nombre}: $e');
+      debugPrint('Pultec: no se pudo leer el acceso de ${widget.w.nombre}: $e');
     }
     if (mounted) setState(() => _estado = estado);
   }
@@ -253,7 +253,7 @@ class _TareaAsignada extends StatelessWidget {
 
 // ── Asignar tarea a mano ─────────────────────────────────
 
-/// Lista de clientes con sus tareas para asignar a mano. Normalmente lo hará Pulpo solo,
+/// Lista de clientes con sus tareas para asignar a mano. Normalmente lo hará Pultec solo,
 /// pero siempre se puede hacer manualmente. Avisa de solapes de horario.
 Future<void> abrirAsignar(BuildContext context, Trabajador w) => showDialog(
   context: context,

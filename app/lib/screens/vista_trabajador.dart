@@ -70,7 +70,7 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
               child: Text(
-                m('Ver Pulpo como…'),
+                m('Ver Pultec como…'),
                 style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w700),
               ),
             ),
@@ -221,7 +221,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
               BarraVista(
                 izquierda: tarea == null
                     ? [
-                        const LogoPulpo(size: 30),
+                        const LogoPultec(size: 30),
                         if (!movil && !industrial)
                           Pestanas(
                             opciones: _pestanas,
@@ -532,7 +532,7 @@ class _BarraTecnico extends StatelessWidget {
             Row(
               children: [
                 const SizedBox(width: 2),
-                const LogoPulpo(size: 32),
+                const LogoPultec(size: 32),
                 const SizedBox(width: 10),
                 Text(
                   Marca.nombre,
@@ -2139,7 +2139,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
         final c = await comprimirFoto(f.bytes!);
         if (mounted) setState(() => fotos.add(c));
       } catch (e) {
-        debugPrint('Pulpo: no se pudo leer la foto ${f.name}: $e');
+        debugPrint('Pultec: no se pudo leer la foto ${f.name}: $e');
       }
     }
     if (mounted) setState(() => leyendoFotos = false);
@@ -2172,7 +2172,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
         firma: await firma.png(),
       );
     } catch (e) {
-      debugPrint('Pulpo: no se pudo guardar el informe: $e');
+      debugPrint('Pultec: no se pudo guardar el informe: $e');
       if (mounted) setState(() => guardando = false);
       aviso('No se pudo guardar el informe. Inténtalo de nuevo.');
       return;

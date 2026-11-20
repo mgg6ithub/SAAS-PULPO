@@ -627,7 +627,7 @@ class Nube {
           _ => 'otro',
         };
 
-  /// Color de una empresa: el elegido o, si no eligió (0), el morado de Pulpo.
+  /// Color de una empresa: el elegido o, si no eligió (0), el morado de Pulcón.
   static Color colorEmpresa(int argb) => argb == 0 ? P.morado : Color(argb);
 
   /// Cambia a otra empresa de la cuenta (se recuerda para la próxima vez).
@@ -979,7 +979,7 @@ class Nube {
         if (envio == _envios) await _apuntarPendiente(const {}, const {});
         error.value = null;
       } catch (e) {
-        debugPrint('Pulpo: no se pudo guardar en Supabase: $e');
+        debugPrint('Pultec: no se pudo guardar en Supabase: $e');
         error.value = sinConexion(e)
             ? 'Sin conexión. Los cambios se guardan aquí y se subirán al volver.'
             : 'No se pudo guardar. Se reintentará solo.';
@@ -1130,7 +1130,7 @@ class Nube {
           });
       } while (_otraVez);
     } catch (e) {
-      debugPrint('Pulpo: no se pudo leer en vivo: $e');
+      debugPrint('Pultec: no se pudo leer en vivo: $e');
     } finally {
       _recargando = false;
     }

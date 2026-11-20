@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/forms.dart';
-import 'package:pulpo/industrial/activo.dart';
-import 'package:pulpo/industrial/iconos.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/forms.dart';
+import 'package:pultec/industrial/activo.dart';
+import 'package:pultec/industrial/iconos.dart';
+import 'package:pultec/store.dart';
 
 /// Flecha de la derecha que abre los componentes de [nombre] (pulsar el nombre elige el activo).
 Finder flechaDe(String nombre) =>

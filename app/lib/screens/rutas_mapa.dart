@@ -374,19 +374,19 @@ class _FlujoRuta extends StatelessWidget {
   }
 }
 
-// ── Botón del pulpo: planifica el día con una pequeña animación ──
+// ── Botón Organizar: planifica el día con una pequeña animación ──
 
-/// Pulpo en el centro del itinerario: planifica las tareas del día elegido.
-class BotonPulpo extends StatefulWidget {
+/// Pultec en el centro del itinerario: planifica las tareas del día elegido.
+class BotonPultec extends StatefulWidget {
   final DateTime dia;
   final VoidCallback onHecho;
-  const BotonPulpo({super.key, required this.dia, required this.onHecho});
+  const BotonPultec({super.key, required this.dia, required this.onHecho});
 
   @override
-  State<BotonPulpo> createState() => _BotonPulpoState();
+  State<BotonPultec> createState() => _BotonPultecState();
 }
 
-class _BotonPulpoState extends State<BotonPulpo> {
+class _BotonPultecState extends State<BotonPultec> {
   bool hover = false;
 
   Future<void> _planificar() async {
@@ -420,9 +420,9 @@ class _BotonPulpoState extends State<BotonPulpo> {
         width: 460,
         content: Text(
           asignacionTutorial
-              ? m('Pulpo ha asignado el trabajo al técnico.')
+              ? m('Pultec ha asignado el trabajo al técnico.')
               : m(
-                  'Pulpo ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
+                  'Pultec ha planificado $n ${n == 1 ? 'trabajo' : 'trabajos'}'
                   '${plan.sinProgramar.isEmpty ? '' : ' · ${plan.sinProgramar.length} sin programar'}',
                 ),
         ),
@@ -433,7 +433,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
   /// Como el "✦ Organizar" de la landing: morado del logo, plano; al pasar, sube un pelo y se ilumina.
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: m('Organizar: Pulpo reparte los trabajos del día y traza las rutas'),
+    message: m('Organizar: Pultec reparte los trabajos del día y traza las rutas'),
     child: MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => hover = true),
@@ -443,7 +443,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           height: 40,
-          // En móvil, solo el pulpo.
+          // En móvil, solo el logo.
           padding: EdgeInsets.symmetric(horizontal: esMovil(context) ? 10 : 16),
           transform: Matrix4.translationValues(0, hover ? -1 : 0, 0),
           // Pultec: secundario (blanco con borde); el principal es «Orden de trabajo».
@@ -467,7 +467,7 @@ class _BotonPulpoState extends State<BotonPulpo> {
               else
                 ColorFiltered(
                   colorFilter: ColorFilter.mode(industrial ? P.morado : Colors.white, BlendMode.srcIn),
-                  child: const LogoPulpo(size: 20),
+                  child: const LogoPultec(size: 20),
                 ),
               if (!esMovil(context)) ...[
                 const SizedBox(width: 8),
@@ -510,7 +510,7 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> with SingleT
   @override
   void initState() {
     super.initState();
-    _video = VideoPlayerController.asset('assets/videos/pulpo-animacione.mp4');
+    _video = VideoPlayerController.asset('assets/videos/pultec-animacione.mp4');
     if (industrial) {
       _videoListo = Future<void>.value();
       Future<void>.delayed(const Duration(seconds: 4), () {
@@ -557,7 +557,7 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> with SingleT
               if (industrial)
                 ScaleTransition(
                   scale: Tween(begin: .8, end: 1.1).animate(CurvedAnimation(parent: _latido, curve: Curves.easeInOut)),
-                  child: const LogoPulpo(size: 120),
+                  child: const LogoPultec(size: 120),
                 )
               else
                 FutureBuilder<void>(
@@ -577,7 +577,7 @@ class _DialogoPlanificandoState extends State<_DialogoPlanificando> with SingleT
                 ),
               const SizedBox(height: 14),
               Text(
-                m('El pulpo está planificando…'),
+                m('Pultec está planificando…'),
                 style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -.4),
               ),
               const SizedBox(height: 6),

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Variante de la app, elegida al compilar: Pultec (por defecto) o Pultec, la industrial
+/// Variante de la app, elegida al compilar: Pulcón (por defecto) o Pultec, la industrial
 /// (`--dart-define=MARCA=industrial`). Todo lo que cambia entre las dos sale de aquí: nombre, color,
 /// palabras, iconos y funciones visibles. Al ser constante, en Pultec lo industrial ni se compila.
 const industrial = String.fromEnvironment('MARCA') == 'industrial';
 
 class Marca {
-  static const nombre = industrial ? 'Pultec' : 'Pulpo';
+  static const nombre = industrial ? 'Pultec' : 'Pulcón';
 
   /// Color principal y de acento: morado del logo en Pultec, azul apagado en Pultec.
   static const color = industrial ? Color(0xFF4F77A6) : Color(0xFF6A2FF6);
@@ -25,8 +25,8 @@ class Marca {
 }
 
 /// Texto visible según la variante: en Pultec, tal cual; en Pultec, cliente → activo,
-/// trabajador → técnico y trabajo → orden de trabajo (con su artículo en femenino) y Pulpo → Pultec.
-String m(String texto) => industrial ? _industrial(texto) : texto;
+/// trabajador → técnico y trabajo → orden de trabajo (con su artículo en femenino). En Pulcón, Pultec → Pulcón.
+String m(String texto) => industrial ? _industrial(texto) : texto.replaceAll('Pultec', Marca.nombre);
 
 // Artículos y adjetivos que van delante de «trabajo» y cambian a femenino con «orden».
 const _antes = <String, String>{
@@ -59,7 +59,7 @@ const _antes = <String, String>{
 final _palabras = RegExp(
   '(?:\\b(${_antes.keys.join('|')}) )?\\b(trabajos?)\\b'
   '(?: (\\w*(?:ad|id|ech|iert|uest|nuev|asociad|propi|vencid)o(?:s?))\\b)?'
-  '|\\b(trabajador(?:a|es|as)?|clientes?|Pulpo)\\b',
+  '|\\b(trabajador(?:a|es|as)?|clientes?)\\b',
   caseSensitive: false,
   unicode: true,
 );
@@ -72,11 +72,8 @@ String _industrial(String texto) => texto.replaceAllMapped(_palabras, (c) {
     final antes = c[1] == null ? '' : '${_antes[c[1]!.toLowerCase()]} ';
     nuevo = '$antes${plural ? 'órdenes de trabajo' : 'orden de trabajo'}${_femenino(c[3])}';
   } else {
-    // «el pulpo» en minúscula es el de Organizar, no la marca: se queda.
-    if (c[4] == 'pulpo') return todo;
     final p = c[4]!.toLowerCase();
     nuevo = switch (p) {
-      'pulpo' => Marca.nombre,
       'cliente' => 'activo',
       'clientes' => 'activos',
       'trabajador' => 'técnico',
@@ -96,9 +93,8 @@ String _femenino(String? adjetivo) {
   return ' ${adjetivo.substring(0, m.start)}a${m[1]}';
 }
 
-/// Respeta la mayúscula inicial del original (y «Pulpo», que siempre la lleva).
+/// Respeta la mayúscula inicial del original.
 String _mayuscula(String original, String nuevo) {
-  if (nuevo == Marca.nombre) return nuevo;
   final mayus = original[0] != original[0].toLowerCase();
   return mayus ? '${nuevo[0].toUpperCase()}${nuevo.substring(1)}' : nuevo;
 }

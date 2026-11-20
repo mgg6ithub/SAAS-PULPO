@@ -262,7 +262,7 @@ class SeccionTarjeta extends StatelessWidget {
   /// Alto fijo: para que las tarjetas puestas en pareja midan lo mismo. El contenido hace scroll.
   final double? alto;
 
-  /// Icono de color junto al título (el toque Pulpo).
+  /// Icono de color junto al título (el toque Pultec).
   final IconData? icono;
   final Color? colorIcono;
   const SeccionTarjeta({
@@ -2046,7 +2046,7 @@ Widget pillEstado(Tarea t) {
 }
 
 /// Consejo de la interfaz: bombilla morada y una frase que explica para qué sirve algo.
-/// Todos los consejos de Pulpo usan este estilo.
+/// Todos los consejos de Pultec usan este estilo.
 class Consejo extends StatelessWidget {
   final String texto;
   const Consejo(this.texto, {super.key});

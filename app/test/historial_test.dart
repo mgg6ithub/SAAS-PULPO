@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/models.dart';
-import 'package:pulpo/screens/cliente_detalle.dart';
-import 'package:pulpo/store.dart';
+import 'package:pultec/models.dart';
+import 'package:pultec/screens/cliente_detalle.dart';
+import 'package:pultec/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// La ficha de cliente enseña todas las visitas de todos sus equipos, no solo la última.

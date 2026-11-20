@@ -1,4 +1,4 @@
-# pulpo
+# pultec
 
 A new Flutter project.
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pulpo/screens/cuenta.dart';
+import 'package:pultec/screens/cuenta.dart';
 
 void main() {
   Future<void> pintar(WidgetTester tester, Widget w) async {

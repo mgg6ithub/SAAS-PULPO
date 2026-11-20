@@ -99,7 +99,7 @@ class _InformeState extends State<_Informe> {
     try {
       await descargarInformePdf(widget.i, widget.t);
     } catch (e) {
-      debugPrint('Pulpo: no se pudo crear el PDF: $e');
+      debugPrint('Pultec: no se pudo crear el PDF: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
@@ -342,7 +342,7 @@ class _BotonPdfState extends State<BotonPdf> {
     try {
       await widget.descargar();
     } catch (e) {
-      debugPrint('Pulpo: no se pudo crear el PDF: $e');
+      debugPrint('Pultec: no se pudo crear el PDF: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),

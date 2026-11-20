@@ -1,4 +1,4 @@
-# Landing de Pulpo
+# Landing de Pultec
 
 ## Dirección
 - Estilo: minimalista con acento de producto moderno. Elegido por el agente con autorización del usuario.
@@ -13,10 +13,10 @@
 Se centra en el núcleo: tareas, equipo, botón "Organizar" y rutas optimizadas, más historial y aprendizaje con IA. El módulo de finanzas aparece solo como "Próximamente". El mapa del hero es una ilustración, no una captura real; los nombres y las direcciones son de ejemplo. No hay cifras, testimonios ni precios.
 
 ## Botón principal
-"Probar Pulpo" (navegación, hero y bloque final) lleva a `../`, la app publicada en la raíz de GitHub Pages (/SAAS-PULPO/).
+"Probar Pultec" (navegación, hero y bloque final) lleva a `../`, la app publicada en la raíz de GitHub Pages (/SAAS-PULTEC/).
 
 ## Recursos
-- `assets/pulpo.png`: el icono del usuario, limpio de manchas y recortado.
+- `assets/pultec.png`: el icono del usuario, limpio de manchas y recortado.
 - `assets/favicon.png`, `assets/apple-touch-icon.png` y `assets/og.png`: generados a partir del icono.
 
 ## Verificaciones
