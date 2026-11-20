@@ -215,7 +215,7 @@ class Resumen extends StatelessWidget {
                                       flex: 2,
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: [...lado.take(4), Expanded(child: lado[4])],
+                                        children: [...lado.take(lado.length - 1), Expanded(child: lado.last)],
                                       ),
                                     ),
                                   ],
