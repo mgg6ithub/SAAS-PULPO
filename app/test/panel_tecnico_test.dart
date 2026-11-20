@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pulpo/marca.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/incidencia.dart';
@@ -41,7 +42,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('pendientes es una lista sin desplegable y filtra por tipo', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'pendientes es una lista sin desplegable y filtra por tipo', (tester) async {
     await montar(tester);
     // Orden 2 es de dentro de dos días: está en «Otros días», plegado.
     await tester.tap(find.text('Otros días'));
@@ -60,7 +64,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('incidencias muestra solo las del técnico con origen y fecha', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'incidencias muestra solo las del técnico con origen y fecha', (tester) async {
     store.incidencias = [
       Incidencia(
         id: 'propia',
@@ -78,14 +85,17 @@ void main() {
     expect(find.text('Fuga detectada'), findsOneWidget);
     expect(find.text('Aviso de otro técnico'), findsNothing);
     expect(find.text('Orden de origen: Orden 1'), findsOneWidget);
+    // Abierta: el técnico aún puede corregirla entera.
     await tester.tap(find.text('Fuga detectada'));
     await tester.pumpAndSettle();
-    expect(find.text('Incidencia enviada'), findsOneWidget);
-    expect(find.textContaining('Enviada el'), findsOneWidget);
+    expect(find.text('Editar incidencia'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('el historial usa partes propios y permite filtrar no realizadas', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'el historial usa partes propios y permite filtrar no realizadas', (tester) async {
     for (var i = 0; i < 3; i++) {
       await informes.crear(Informe(trabajoId: 'ot$i', trabajadorId: 'w-panel', resultado: i, notas: 'Prueba'));
     }

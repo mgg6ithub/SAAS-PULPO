@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pulpo/marca.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/activos.dart';
 import 'package:pulpo/store.dart';
@@ -112,7 +113,10 @@ void main() {
     });
   }
 
-  testWidgets('completar una OT reduce su fila antes de retirarla', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'completar una OT reduce su fila antes de retirarla', (tester) async {
     tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

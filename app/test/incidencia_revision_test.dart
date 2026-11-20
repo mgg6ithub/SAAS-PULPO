@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pulpo/marca.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/incidencia.dart';
@@ -64,7 +65,10 @@ void main() {
     expect(p.proximo, DateTime(2026, 12, 1));
   });
 
-  testWidgets('el técnico distingue hoy y atrasadas de las próximas órdenes', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'el técnico distingue hoy y atrasadas de las próximas órdenes', (tester) async {
     tester.view.physicalSize = const Size(1200, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

@@ -66,11 +66,14 @@ void main() {
     final ot = p.ot('ot9');
     expect(ot.activoId, 'a2');
     expect(ot.esPlantilla, isFalse);
-    expect(ot.tipoMantenimiento, TipoMantenimiento.correctivoNoCritico);
+    // Desde el 08/11 el mantenimiento es siempre preventivo; su urgencia va en la prioridad.
+    expect(ot.tipoMantenimiento, TipoMantenimiento.preventivo);
+    expect(p.prioridad, PrioridadMantenimiento.values[TipoMantenimiento.correctivoNoCritico.index]);
     expect(ot.competencias, ['Electricidad']);
     expect(ot.periodicidad, Periodicidad.mensual);
     expect(ot.duracionMin, 90);
-    expect(ot.notas, contains('Filtro'));
+    expect(ot.repuestos, 'Filtro');
+    expect(ot.procedimiento, 'Vaciar y llenar');
     // Borrar el activo se lleva los mantenimientos de sus componentes.
     store.borrarActivo('a1');
     expect(store.planes, isEmpty);
@@ -158,13 +161,17 @@ void main() {
       // La incidencia abre su ficha con la gravedad.
       await tester.tap(find.text('Ruido raro'));
       await tester.pumpAndSettle();
-      expect(find.text('Crear OT'), findsOneWidget);
+      // En el móvil, el botón principal es solo su icono (con «Crear OT» de tooltip).
+      expect(find.text('Crear OT').evaluate().length + find.byTooltip('Crear OT').evaluate().length, 1);
       expect(tester.takeException(), isNull);
     });
   }
 
   for (final ancho in [1440.0, 980.0, 700.0, 420.0]) {
-    testWidgets('Activos y su ficha se pintan a ${ancho.round()} px', (tester) async {
+    testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'Activos y su ficha se pintan a ${ancho.round()} px', (tester) async {
       tester.view.physicalSize = Size(ancho, 1000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -253,8 +260,13 @@ void main() {
       expect(find.text('Cambio de aceite'), findsNWidgets(2));
       expect(find.text('Fuga en bomba'), findsOneWidget);
       expect(find.text('Pendiente'), findsNothing);
-      // Filtro de tipo: solo las críticas.
-      await tester.tap(find.text('Correctivo crítico').first);
+      // Filtro de tipo («Crítico» con cuántas hay): solo las críticas.
+      // En estrecho, las pestañas son un desplegable: primero se abre.
+      if (find.text('Crítico 1').evaluate().isEmpty) {
+        await tester.tap(find.text('Todos').first);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Crítico 1').last);
       await tester.pumpAndSettle();
       expect(find.text('Cambio de aceite'), findsNothing);
       expect(find.text('Fuga en bomba'), findsOneWidget);

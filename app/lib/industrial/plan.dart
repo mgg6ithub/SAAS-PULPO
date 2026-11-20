@@ -100,7 +100,13 @@ class PlanMantenimiento {
     criticidad: Criticidad.rutinaria,
     duracionMin: duracionMin,
     competencias: [if (categoria.isNotEmpty) categoria],
-    notas: [procedimiento, if (repuestos.isNotEmpty) 'Repuestos: $repuestos'].where((x) => x.isNotEmpty).join('\n\n'),
+    // Como la base (`asegurar_ot`): repuestos y procedimiento en sus campos; en notas, solo lo de preparar.
+    repuestos: repuestos,
+    procedimiento: procedimiento,
+    notas: [
+      if (subcontratado && empresaExterna.isNotEmpty) 'Lo hace una empresa externa: $empresaExterna',
+      if (preparar.isNotEmpty) 'Preparar: $preparar',
+    ].join('\n\n'),
   );
 
   Map<String, dynamic> toJson() => {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pulpo/marca.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/incidencia.dart';
@@ -31,7 +32,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Camión'), findsOneWidget);
     expect(find.text('Motor'), findsNothing);
-    await tester.tap(find.text('Camión'));
+    // La flecha abre los componentes; pulsar el nombre elegiría el camión entero.
+    await tester.tap(find.byWidgetPredicate(
+      (w) => w is Tooltip && (w.message ?? '').startsWith('Componentes de'),
+    ).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Motor'));
     await tester.pumpAndSettle();
@@ -39,7 +43,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('gravedad y categoría son compactas, alineadas y sin aura', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'gravedad y categoría son compactas, alineadas y sin aura', (tester) async {
     tester.view.physicalSize = const Size(1400, 1200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

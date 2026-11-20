@@ -46,13 +46,14 @@ class Estadisticas extends StatelessWidget {
                         children: [
                           Text('$n', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
-                          Container(
+                          // Flexible: con letra grande o poco ancho, la barra cede en vez de desbordar.
+                          Flexible(child: Container(
                             height: 80 * n / maxMes + 2,
                             decoration: BoxDecoration(
                               color: n == 0 ? P.hover : P.morado,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                          ),
+                          )),
                           const SizedBox(height: 6),
                           Text(_mesesCortos[m.month - 1], style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
                         ],

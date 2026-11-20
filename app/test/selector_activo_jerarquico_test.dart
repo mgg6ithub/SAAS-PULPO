@@ -5,6 +5,11 @@ import 'package:pulpo/industrial/activo.dart';
 import 'package:pulpo/industrial/iconos.dart';
 import 'package:pulpo/store.dart';
 
+/// Flecha de la derecha que abre los componentes de [nombre] (pulsar el nombre elige el activo).
+Finder flechaDe(String nombre) =>
+    find.byWidgetPredicate((w) => w is Tooltip && (w.message ?? '').startsWith('Componentes de') &&
+        (w.message ?? '').contains(nombre));
+
 void main() {
   testWidgets('muestra solo hijos en submenús compactos y permite elegir una hoja', (tester) async {
     store.activos = [
@@ -23,14 +28,12 @@ void main() {
     await tester.tap(find.text('Elegir activo'));
     await tester.pumpAndSettle();
     expect(find.text('Camión'), findsOneWidget);
-    expect(tester.widget<SubmenuButton>(find.widgetWithText(SubmenuButton, 'Camión')).leadingIcon, isA<IconoActivo>());
     expect(find.text('Bomba'), findsNothing);
-    await tester.tap(find.text('Camión'));
+    await tester.tap(flechaDe('Camión'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Seleccionar '), findsNothing);
     expect(find.text('Bomba'), findsOneWidget);
     expect(find.text('Válvula'), findsNothing);
-    await tester.tap(find.text('Bomba'));
+    await tester.tap(flechaDe('Bomba'));
     await tester.pumpAndSettle();
     expect(
       tester.widget<MenuItemButton>(find.widgetWithText(MenuItemButton, 'Válvula')).leadingIcon,
@@ -58,10 +61,9 @@ void main() {
     );
     await tester.tap(find.text('Activos'));
     await tester.pumpAndSettle();
+    // Pulsar el activo lo elige entero, con sus componentes (la flecha solo los enseña).
+    expect(flechaDe('Camión'), findsOneWidget);
     await tester.tap(find.text('Camión'));
-    await tester.pumpAndSettle();
-    expect(find.text('Bomba'), findsOneWidget);
-    await tester.tap(find.text('Este activo y sus componentes'));
     await tester.pumpAndSettle();
     expect(elegido, 'a');
     expect(tester.takeException(), isNull);

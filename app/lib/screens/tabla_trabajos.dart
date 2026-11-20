@@ -247,7 +247,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   Widget _tabla(List<Tarea> ts) => SegunTamano(
     clave: (box) => (box.maxWidth > widget.umbralAncho, box.maxWidth > 600, box.maxWidth > 1100),
     builder: (context, box) {
-      final conPdf = ts.any((t) => t.estado == EstadoTrabajo.realizado);
+      // El PDF con un clic solo si cabe (en estrecho, desde la ficha de la orden).
+      final conPdf = box.maxWidth > 980 && ts.any((t) => t.estado == EstadoTrabajo.realizado);
       final ancho = box.maxWidth > widget.umbralAncho;
       // Poco sitio (p. ej. media pantalla): columnas más estrechas y criticidad solo con su punto.
       final apurado = box.maxWidth <= 1100;

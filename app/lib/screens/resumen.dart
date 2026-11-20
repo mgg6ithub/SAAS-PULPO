@@ -850,9 +850,12 @@ class _CargaTrabajadores extends StatelessWidget {
       sinFilas: true,
       children: [
         if (ws.isEmpty)
-          SizedBox(
-            height: 140,
-            child: Vacio(icono: Marca.iconoTrabajador, texto: m('Aún no hay trabajadores'), desplazable: false),
+          // Alto mínimo, no fijo: en móvil el texto ocupa dos líneas y no cabría.
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 140),
+            child: Center(
+              child: Vacio(icono: Marca.iconoTrabajador, texto: m('Aún no hay trabajadores'), desplazable: false),
+            ),
           )
         else
           for (final w in ws.take(6))

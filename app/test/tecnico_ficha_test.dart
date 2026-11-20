@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pulpo/marca.dart';
 import 'package:pulpo/forms.dart';
 import 'package:pulpo/models.dart';
 import 'package:pulpo/store.dart';
@@ -7,7 +8,10 @@ import 'package:pulpo/screens/trabajador_detalle.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('ficha industrial consulta datos y permite editar explícitamente', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'ficha industrial consulta datos y permite editar explícitamente', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await store.cargar();
     store.trabajadores = [Trabajador(id: 'w', nombre: 'Juan', telefono: '123456789', email: 'juan@example.com')];
@@ -26,7 +30,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('la OT existente no permite cambiar de activo', (tester) async {
+  testWidgets(
+    // Solo Pultec: en Pulcón esta vista es otra.
+    skip: !industrial,
+    'la OT existente no permite cambiar de activo', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await store.cargar();
     tester.view.physicalSize = const Size(1400, 1100);
