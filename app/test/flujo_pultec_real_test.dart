@@ -5,9 +5,13 @@
 //   el administrador la ve hecha, el mantenimiento reiniciado y la siguiente OT creada; el técnico, en su histórico.
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
+import 'package:pulpo/industrial/estadisticas.dart' show resumenActivo;
 import 'package:pulpo/industrial/incidencia.dart';
+import 'package:pulpo/industrial/simulacion_dominion.dart';
+import 'package:pulpo/industrial/simulacion_historial.dart';
 import 'package:pulpo/industrial/plan.dart';
 import 'package:pulpo/informes.dart';
 import 'package:pulpo/models.dart';
@@ -235,10 +239,57 @@ void main() {
       expect(hecha.cerradaEl, isNotNull);
       expect(store.planes.firstWhere((p) => p.id == revision.id).ultimo, h, reason: 'la revisión vuelve a contar');
       expect(store.incidencias.firstWhere((i) => i.id == delParte.id).estado, EstadoIncidencia.desestimada);
+
+      // ── 8. Producción simulada: tres meses de trabajo sobre la planta de Dominion ──
+      crearSimulacionDominion();
+      final resumen = await simularHistorial(meses: 3);
+      debugPrint('Simulación: $resumen');
+      final estados = {for (final x in store.incidencias) store.estadoIncidencia(x)};
+      expect(estados, containsAll(EstadoIncidencia.values), reason: 'incidencias en los cuatro estados');
+      final conMedicion = store.planes.where((p) => p.conMedicion).toList();
+      expect(conMedicion, isNotEmpty, reason: 'mantenimientos con medición');
+      final medidas = await informes.mediciones(conMedicion.first.id);
+      expect(medidas, isNotEmpty, reason: 'mediciones subidas con sus partes');
+      expect(medidas.first.$1.isBefore(masDias(h, -7)), isTrue, reason: 'con la fecha del parte, no la de hoy');
+      final planta = store.hijosDe(null).firstWhere((a) => a.tag == 'PST-02');
+      final r = resumenActivo(planta, masDias(h, -91));
+      expect(r.hechas, greaterThan(10), reason: 'la planta tiene historial de OT hechas');
+      expect(r.planes.every((x) => x.$2 > 0 || x.$1.cadaDias == null || x.$1.cadaDias! > 91), isTrue,
+        reason: 'cada mantenimiento frecuente cuenta sus hechos');
+      // Una OT de un mantenimiento con medición para el técnico, que medirá fuera de límites.
+      final medido = conMedicion.firstWhere((p) => p.medicionMax != null);
+      final otMedida = medido.ot(store.nuevoId())
+        ..proximo = h
+        ..trabajadorIds = [tecnico.id];
+      store.guardarTarea(otMedida);
+      await n.guardado;
+      expect(Nube.error.value, isNull, reason: 'la simulación se guarda sin errores');
+      await _salir(n);
+
+      // ── 9. Técnico: hace la OT y mide por encima del máximo ──
+      n = await _entrar(_env['SB_TECNICO']!);
+      final paraMedir = store.tarea(otMedida.id)!;
+      expect(
+        await informes.crear(Informe(trabajoId: paraMedir.id, trabajadorId: tecnico.id, resultado: 0,
+          notas: 'Medido', valor: medido.medicionMax! + 5)),
+        isTrue,
+      );
+      store.marcarHecha(paraMedir);
+      await n.guardado;
+      expect(Nube.error.value, isNull);
+      await _salir(n);
+
+      // ── 10. Administrador: la medición fuera de límites ha abierto una incidencia ──
+      n = await _entrar(_env['SB_ADMIN']!);
+      final fuera = store.incidencias.where((x) => x.origenTrabajoId == otMedida.id).toList();
+      expect(fuera, hasLength(1), reason: 'incidencia por medición fuera de límites');
+      expect(fuera.single.descripcion, contains('fuera de límites'));
+      expect(store.estadoIncidencia(fuera.single), EstadoIncidencia.abierta);
+      expect(store.tarea(otMedida.id)!.estado, EstadoTrabajo.realizado);
       await _salir(n);
     });
   },
-    timeout: const Timeout(Duration(minutes: 4)),
+    timeout: const Timeout(Duration(minutes: 10)),
     // Solo con las cuentas que crea tool/probar_flujo_pultec.py: en la suite normal no hay Supabase.
     skip: _env['SB_ADMIN'] == null,
   );

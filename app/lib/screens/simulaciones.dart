@@ -1,4 +1,5 @@
 import '../industrial/simulacion_dominion.dart';
+import '../industrial/simulacion_historial.dart';
 
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
@@ -150,7 +151,11 @@ class _SimulacionesState extends State<_Simulaciones> {
     ],
   );
 
-  void _mostrarResultado(String mensaje) => setState(() => _resultado = mensaje);
+  void _mostrarResultado(String mensaje) {
+    if (mounted) setState(() => _resultado = mensaje);
+  }
+
+  bool _simulandoHistorial = false;
 
   /// En la nube, una simulación sustituye lo que haya: se pregunta antes si hay datos reales.
   Future<bool> _puedeSustituir() async =>
@@ -503,6 +508,44 @@ class _SimulacionesState extends State<_Simulaciones> {
                           final n = crearSimulacionDominion();
                           _mostrarResultado('Dominion: 4 activos y $n mantenimientos creados.');
                         },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Meses de uso: OT hechas con su parte, mediciones e incidencias, para Estadísticas e Incidencias.
+                Tarjeta(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Historial de trabajo', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Seis meses de uso sobre los activos que haya (si no hay, los de Dominion): técnicos, OT hechas '
+                              'con su parte y mediciones, e incidencias abiertas, con OT, completadas y desestimadas.',
+                              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      BotonAccion(
+                        _simulandoHistorial ? 'Creando…' : 'Crear',
+                        icono: Icons.history_rounded,
+                        onPressed: _simulandoHistorial
+                            ? () {}
+                            : () async {
+                                setState(() => _simulandoHistorial = true);
+                                try {
+                                  _mostrarResultado(await simularHistorial());
+                                } catch (e) {
+                                  _mostrarResultado('No se pudo crear el historial: $e');
+                                }
+                                if (mounted) setState(() => _simulandoHistorial = false);
+                              },
                       ),
                     ],
                   ),

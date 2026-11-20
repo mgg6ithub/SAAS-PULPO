@@ -414,6 +414,8 @@ class Nube {
             'material': i.material,
             'minutos': i.minutos,
             if (i.valor != null) 'valor': i.valor,
+            // La hora en que se hizo el parte (sin conexión puede subirse más tarde).
+            'created_at': i.cuando.toUtc().toIso8601String(),
             'fotos': rutas,
             'firma': rutaFirma,
             'firmante': i.firmante,
@@ -1436,7 +1438,7 @@ class Nube {
         };
       }
     }
-    // Quien la creó y cuándo los pone la base; las fotos, de momento, solo se leen.
+    // Quien la creó lo pone la base; la fecha va de la app (se conserva). Las fotos, de momento, solo se leen.
     for (final x in s.incidencias.where((x) => activos.contains(x.activoId))) {
       r['incidencias']![_u(x.id)] = {
         'id': _u(x.id),
@@ -1448,6 +1450,8 @@ class Nube {
         'descripcion': x.descripcion,
         'gravedad': x.gravedad.index,
         'estado': x.estado.index,
+        'created_at': x.creada.toUtc().toIso8601String(),
+        if (x.cerradaEl != null) 'cerrada_el': x.cerradaEl!.toUtc().toIso8601String(),
         'plan_id': s.planes.any((p) => p.id == x.planId && activos.contains(p.activoId)) ? _u(x.planId!) : null,
       };
     }
