@@ -17,7 +17,7 @@ import 'tarea_card.dart';
 import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos, historicoTrabajos;
 import '../marca.dart';
 import '../industrial/activos.dart' show abrirActivoForm;
-import '../industrial/foto_planta.dart';
+// import '../industrial/foto_planta.dart'; // Foto de Inicio quitada de momento.
 import '../industrial/vistazo.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
@@ -1275,18 +1275,18 @@ extension on _HeroState {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // La foto de la planta ocupa algo más de la mitad derecha, hasta los bordes de arriba y de la derecha,
-          // y se funde con el fondo; el texto va encima.
-          Positioned(
-            top: -margenPagina.top - 16,
-            right: -margenPagina.right - 12,
-            bottom: -10,
-            left: 0,
-            child: const Align(
-              alignment: Alignment.centerRight,
-              child: FractionallySizedBox(widthFactor: .6, heightFactor: 1, child: FotoPlanta()),
-            ),
-          ),
+          // Foto de la planta quitada de momento (pedido 20/11/2026). Ocupaba algo más de la mitad derecha, hasta los
+          // bordes de arriba y de la derecha, y se fundía con el fondo; el texto iba encima.
+          // Positioned(
+          //   top: -margenPagina.top - 16,
+          //   right: -margenPagina.right - 12,
+          //   bottom: -10,
+          //   left: 0,
+          //   child: const Align(
+          //     alignment: Alignment.centerRight,
+          //     child: FractionallySizedBox(widthFactor: .6, heightFactor: 1, child: FotoPlanta()),
+          //   ),
+          // ),
           Positioned.fill(child: Align(alignment: Alignment.topLeft, child: texto)),
         ],
       ),
