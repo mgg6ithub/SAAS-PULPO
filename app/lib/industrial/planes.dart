@@ -8,6 +8,7 @@ import '../widgets.dart';
 import 'gravedad.dart';
 import 'activo.dart';
 import 'plan.dart';
+import '../rellenar.dart';
 
 /// Próximo de un mantenimiento: el puesto a mano o, si va por horas, estimado con el contador y el ritmo de uso
 /// de su activo o componente.
@@ -622,6 +623,16 @@ class _PlanFormState extends State<PlanForm> {
   Widget build(BuildContext context) {
     final existe = widget.original != null;
     return VentanaFormulario(
+      // Datos de prueba (solo al desarrollar): nombre que no tenga ya este activo, cada cuántos días y descripción.
+      onRellenar: existe
+          ? null
+          : () => setState(() {
+              final m = alAzar(mantenimientosPrueba);
+              nombre.text = unico(m.$1, [for (final x in store.planesDe(p.activoId)) x.nombre]);
+              descripcion.text = m.$2;
+              modo = 0;
+              dias.text = '${alAzar(const [15, 30, 60, 90, 180])}';
+            }),
       etiqueta: store.activo(p.activoId)?.titulo ?? 'Activo',
       titulo: existe ? 'Editar mantenimiento' : 'Nuevo mantenimiento',
       tituloDesplazado: nombre.text,

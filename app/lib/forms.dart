@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'rellenar.dart';
 
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
@@ -96,7 +98,11 @@ class VentanaFormulario extends StatefulWidget {
 
   /// Incrustada sin pie (sin Guardar, Cancelar ni Eliminar): se guarda sola al cambiar un campo.
   final bool sinPie;
+
+  /// Solo al desarrollar: «Rellenar» abajo a la izquierda pone datos de prueba (nombres que no se repiten).
+  final VoidCallback? onRellenar;
   const VentanaFormulario({
+    this.onRellenar,
     this.sinPie = false,
     super.key,
     required this.titulo,
@@ -399,6 +405,13 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             style: TextButton.styleFrom(foregroundColor: P.rojo),
             onPressed: widget.onBorrar,
             child: Text(widget.textoBorrar),
+          ),
+        if (kDebugMode && widget.onRellenar != null)
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: P.morado),
+            onPressed: widget.onRellenar,
+            icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+            label: const Text('Rellenar'),
           ),
         Expanded(
           child: widget.avisos.isEmpty
@@ -1173,8 +1186,29 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
     }
   }
 
+  /// Datos de prueba (solo al desarrollar): nombre y apellido que no estén ya, teléfono y correo.
+  void _rellenar() => setState(() {
+    final usados = {for (final x in store.trabajadores) x.nombreCompleto.toLowerCase()};
+    var n = alAzar(nombresPrueba), ap = alAzar(apellidosPrueba);
+    for (var i = 0; i < 30 && usados.contains('$n $ap'.toLowerCase()); i++) {
+      n = alAzar(nombresPrueba);
+      ap = alAzar(apellidosPrueba);
+    }
+    ap = unico('$n $ap', usados).substring(n.length + 1);
+    nombre.text = n;
+    apellidos.text = ap;
+    telefono.text = telefonoPrueba();
+    email.text = '${n.toLowerCase()}.${ap.split(' ').first.toLowerCase()}@prueba.com'
+        .replaceAll(RegExp('[áàä]'), 'a')
+        .replaceAll(RegExp('[éè]'), 'e')
+        .replaceAll(RegExp('[íì]'), 'i')
+        .replaceAll(RegExp('[óò]'), 'o')
+        .replaceAll(RegExp('[úü]'), 'u');
+  });
+
   @override
   Widget build(BuildContext context) => VentanaFormulario(
+    onRellenar: widget.original == null ? _rellenar : null,
     etiqueta: m('Trabajadores'),
     titulo: widget.original == null ? m('Nuevo trabajador') : (widget.incrustada ? 'Ficha' : m('Editar trabajador')),
     tituloDesplazado: '${nombre.text} ${apellidos.text}',
@@ -1622,6 +1656,16 @@ class _TareaFormState extends State<TareaForm> {
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
     return VentanaFormulario(
+      // Datos de prueba (solo al desarrollar): nombre que no esté ya, activo, tipo y fecha.
+      onRellenar: industrial && nueva && !t.esPlantilla
+          ? () => setState(() {
+              nombre.text = unico(alAzar(mantenimientosPrueba).$1, [for (final x in store.tareas) x.nombre]);
+              descripcion.text = alAzar(mantenimientosPrueba).$2;
+              if (store.activos.isNotEmpty) t.activoId ??= alAzar(store.activos).id;
+              t.tipoMantenimiento = alAzar(TipoMantenimiento.values);
+              t.proximo = masDias(hoy(), 1 + azar.nextInt(30));
+            })
+          : null,
       etiqueta: t.esPlantilla ? 'Plantillas' : (t.padreId != null ? 'Subtrabajos' : m('Trabajos')),
       titulo: nueva
           ? (t.esPlantilla ? 'Nueva plantilla' : (t.padreId != null ? 'Nuevo subtrabajo' : m('Nuevo trabajo')))

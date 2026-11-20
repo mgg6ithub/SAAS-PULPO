@@ -18,6 +18,7 @@ import 'gravedad.dart';
 import 'historicos.dart';
 import 'plan.dart';
 import 'planes.dart';
+import '../rellenar.dart';
 import '../screens/tabla_trabajos.dart';
 import '../screens/tarea_detalle.dart';
 
@@ -1347,6 +1348,35 @@ class _ActivoFormState extends State<ActivoForm> {
       ? 'Ponle un tag o un nombre'
       : null;
 
+  /// Datos de prueba (solo al desarrollar): máquina o componente con nombre y tag que no estén ya, contador,
+  /// ritmo de uso y ficha técnica.
+  void _rellenar() => setState(() {
+    final nombres = [for (final x in store.activos) x.nombre];
+    final tags = {for (final x in store.activos) x.tag.toLowerCase()};
+    final (base, prefijo, desc) = componente
+        ? (() {
+            final c = alAzar(componentesPrueba);
+            return (c.$1, c.$2, '');
+          })()
+        : alAzar(maquinasPrueba);
+    nombre.text = unico(base, nombres);
+    var i = 1;
+    while (tags.contains('$prefijo-${'$i'.padLeft(2, '0')}'.toLowerCase())) {
+      i++;
+    }
+    tag.text = '$prefijo-${'$i'.padLeft(2, '0')}';
+    descripcion.text = desc;
+    final (fab, mod) = alAzar(fabricantesPrueba);
+    fabricante.text = fab;
+    modelo.text = mod;
+    serie.text = 'SN${100000 + azar.nextInt(900000)}';
+    if (!componente) {
+      a.icono = alAzar(todosLosIconos.take(11).toList()).$1;
+      horasC.text = '${azar.nextInt(20) * 500}';
+      ritmo.text = '${alAzar(const [4, 6, 8, 10, 12])}';
+    }
+  });
+
   /// Pasa lo escrito en los campos al activo.
   void _volcar() {
     a
@@ -1416,6 +1446,7 @@ class _ActivoFormState extends State<ActivoForm> {
 
     final que = componente ? 'componente' : 'activo';
     return VentanaFormulario(
+      onRellenar: existe ? null : _rellenar,
       sinPie: _autoguardado,
       lider: existe ? Icon(Icons.edit_outlined, size: 20, color: P.textoSuave) : null,
       incrustada: widget.incrustada,
