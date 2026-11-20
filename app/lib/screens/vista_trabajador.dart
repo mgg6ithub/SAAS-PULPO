@@ -1549,6 +1549,8 @@ Text('$etiqueta: ${t.nombre}')
       ..sort((a, b) => b.creada.compareTo(a.creada));
     final titulos = ['Mis órdenes', 'Incidencias', 'Histórico'];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // En el histórico no hacen falta las cifras de lo pendiente (para hoy, atrasadas, esta semana).
+      if (vista != 2)
       _CifrasTecnico(widget.w, pendientes, filtro: vista == 0 ? fecha : 0,
         // Las máquinas elegidas al entrar, a la derecha del saludo; al pulsar se vuelven a elegir.
         accion: widget.onMaquinas == null ? null : BotonAccion(
@@ -1559,7 +1561,7 @@ Text('$etiqueta: ${t.nombre}')
           if (vista != 0) _vista(0);
           fecha = fecha == f ? 0 : f;
         })),
-      const SizedBox(height: 18),
+      if (vista != 2) const SizedBox(height: 18),
       // Una sola fila: el apartado (o las pestañas en el móvil), y a la derecha buscar y filtrar.
       BarraVista(
         izquierda: [
@@ -1664,14 +1666,68 @@ Text('$etiqueta: ${t.nombre}')
         && (resultado == null || i.resultado == resultado);
     }).toList();
     if (lista.isEmpty) return _vacio('No tienes partes registrados con estos filtros');
-    return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) {
-      final i = lista[n], t = store.tarea(i.trabajoId);
-      final texto = ['Completada', 'Con incidencias', 'No se pudo hacer'][i.resultado];
-      return Padding(padding: const EdgeInsets.only(bottom: 8), child: HoverCard(padding: EdgeInsets.zero,
+    // Por días, de lo último a lo primero: una cabecera por día y debajo lo que se hizo.
+    lista.sort((a, b) => b.cuando.compareTo(a.cuando));
+    final filas = <Object>[];
+    DateTime? dia;
+    for (final i in lista) {
+      final d = DateUtils.dateOnly(i.cuando);
+      if (dia != d) {
+        dia = d;
+        filas.add(d);
+      }
+      filas.add(i);
+    }
+    const dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
+      'noviembre', 'diciembre'];
+    return ListView.builder(itemCount: filas.length, itemBuilder: (_, n) {
+      final f = filas[n];
+      if (f is DateTime) {
+        final cuantos = lista.where((i) => DateUtils.isSameDay(i.cuando, f)).length;
+        final nombre = diasHasta(f) == 0 ? 'Hoy' : diasHasta(f) == -1 ? 'Ayer'
+          : '${dias[f.weekday - 1][0].toUpperCase()}${dias[f.weekday - 1].substring(1)} ${f.day} de ${meses[f.month - 1]}'
+            '${f.year == hoy().year ? '' : ' de ${f.year}'}';
+        return Padding(
+          padding: EdgeInsets.fromLTRB(4, n == 0 ? 0 : 14, 0, 8),
+          child: Row(children: [
+            Text(nombre, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 8),
+            Text('$cuantos', style: TextStyle(color: P.textoSuave)),
+          ]),
+        );
+      }
+      final i = f as Informe, t = store.tarea(i.trabajoId);
+      final tipo = t?.tipoMantenimiento;
+      final x = t == null ? null : store.incidenciaDeOt(t.id);
+      return Padding(padding: const EdgeInsets.only(bottom: 8), child: HoverCard(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         onTap: t == null ? null : () => verInforme(context, i, t),
-        child: FilaLista(lider: Icon(i.resultado == 0 ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
-          color: coloresResultado[i.resultado]), titulo: t?.nombre ?? 'Orden no disponible',
-          subtitulo: '${_cuando(i.cuando)}   $texto\n${dondeEs(t?.activoId)}'),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _IconoActivo(t?.activoId, color: tipo?.color ?? P.textoSuave),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(t?.nombre ?? 'Orden no disponible', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            Text(dondeEs(t?.activoId), style: TextStyle(color: P.textoSuave, fontSize: 13)),
+            if (i.notas.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(i.notas, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5)),
+            ],
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              if (tipo != null) Pill(tipo.etiqueta, tipo.color, punto: true),
+              if (x != null) Pill('De incidencia', P.rojo, icono: Icons.report_outlined),
+              if (i.resultado != 0) Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], punto: true),
+              if (i.minutos != null)
+                Text(duracionTexto(i.minutos!), style: TextStyle(color: P.textoSuave, fontSize: 13)),
+              if (i.fotos.isNotEmpty)
+                Text('${i.fotos.length} ${i.fotos.length == 1 ? 'foto' : 'fotos'}',
+                  style: TextStyle(color: P.textoSuave, fontSize: 13)),
+            ]),
+          ])),
+          const SizedBox(width: 12),
+          Text(hhmm(i.cuando.hour * 60 + i.cuando.minute), style: TextStyle(color: P.textoSuave, fontSize: 13)),
+        ]),
       ));
     });
   });
