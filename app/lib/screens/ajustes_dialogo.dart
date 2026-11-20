@@ -11,8 +11,8 @@ import 'importar_exportar.dart';
 import 'tipos_competencias.dart';
 import '../marca.dart';
 
-/// Ajustes de la app, como los Ajustes del Mac: a la izquierda tu cuenta y las secciones (con su icono de color);
-/// a la derecha, la sección elegida con su cabecera y sus filas en tarjetas. Simplificados (2026-11-19): sin color
+/// Ajustes de la app: a la izquierda tu cuenta y las secciones (como la barra lateral de Pultec); a la derecha,
+/// la sección elegida con su título y sus filas en tarjetas. Simplificados (2026-11-19): sin color
 /// (siempre el morado de Pultec), sin tema del sistema, sin vista de agenda ni lado de la barra lateral.
 Future<void> abrirAjustes(BuildContext context) => showDialog(
   context: context,
@@ -25,7 +25,7 @@ Future<void> abrirAjustes(BuildContext context) => showDialog(
   ),
 );
 
-/// Sección de los ajustes: icono y color (cuadradito redondeado, como en el Mac), nombre y frase de su cabecera.
+/// Sección de los ajustes: icono de línea y su color al elegirla, nombre y frase de su cabecera.
 typedef _Seccion = (IconData, Color, String, String);
 
 class _Ajustes extends StatefulWidget {
@@ -39,19 +39,12 @@ class _AjustesState extends State<_Ajustes> {
   int elegida = 0;
 
   List<_Seccion> get _secciones => [
-    if (store.nube != null) (Icons.person_rounded, P.morado, 'Cuenta', 'Tu perfil, el correo y la contraseña, las sesiones abiertas y borrar la cuenta.'),
-    (Icons.contrast_rounded, P.azul, 'Apariencia', 'Tema claro u oscuro, y el tamaño y el tipo de letra de toda la app.'),
-    (Icons.business_rounded, P.ambar, 'Empresa', m('Los tipos de trabajo y las competencias de tus trabajadores.')),
+    if (store.nube != null) (Icons.person_outline_rounded, P.morado, 'Cuenta', 'Tu perfil, el correo y la contraseña, las sesiones abiertas y borrar la cuenta.'),
+    (Icons.contrast_rounded, P.morado, 'Apariencia', 'Tema claro u oscuro, y el tamaño y el tipo de letra de toda la app.'),
+    (Icons.business_outlined, P.morado, 'Empresa', m('Los tipos de trabajo y las competencias de tus trabajadores.')),
     if (!(store.nube?.esTrabajador ?? false))
-      (Icons.swap_vert_rounded, P.verde, 'Datos', m('Importar y exportar clientes, trabajadores y trabajos en CSV (Excel).')),
+      (Icons.swap_vert_rounded, P.morado, 'Datos', m('Importar y exportar clientes, trabajadores y trabajos en CSV (Excel).')),
   ];
-
-  Widget _cuadro(IconData icono, Color color, {double tam = 28}) => Container(
-    width: tam,
-    height: tam,
-    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(tam * .26)),
-    child: Icon(icono, size: tam * .62, color: Colors.white),
-  );
 
   List<Widget> _contenido(String seccion) => switch (seccion) {
     'Cuenta' => [
@@ -142,7 +135,7 @@ class _AjustesState extends State<_Ajustes> {
     listenable: ajustes,
     builder: (context, _) {
       final secciones = _secciones;
-      final (icono, color, nombre, frase) = secciones[elegida.clamp(0, secciones.length - 1)];
+      final (_, _, nombre, frase) = secciones[elegida.clamp(0, secciones.length - 1)];
       final correo = Nube.correo;
       return ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 820, maxHeight: 560),
@@ -201,25 +194,29 @@ class _AjustesState extends State<_Ajustes> {
                   for (final (i, (ic, c, n, _)) in secciones.indexed)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 2),
+                      // Como la barra lateral de la app: la elegida, en blanco con borde fino e icono morado.
                       child: Material(
-                        color: i == elegida ? P.morado : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        color: i == elegida ? P.superficie : Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          side: BorderSide(color: i == elegida ? P.borde : Colors.transparent),
+                        ),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(P.radioControl),
                           hoverColor: P.hover,
                           onTap: () => setState(() => elegida = i),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                             child: Row(
                               children: [
-                                _cuadro(ic, i == elegida ? Colors.white.withValues(alpha: .22) : c, tam: 24),
+                                Icon(ic, size: 20, color: i == elegida ? c : P.textoSuave),
                                 const SizedBox(width: 10),
                                 Text(
                                   n,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: i == elegida ? Colors.white : P.texto,
+                                    fontWeight: i == elegida ? FontWeight.w600 : FontWeight.w500,
+                                    color: P.texto,
                                   ),
                                 ),
                               ],
@@ -240,33 +237,23 @@ class _AjustesState extends State<_Ajustes> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: P.superficie,
-                            borderRadius: BorderRadius.circular(P.radio),
-                            border: Border.all(color: P.borde),
-                          ),
+                        // Título de la sección y su frase, como las cabeceras de las vistas.
+                        Padding(
+                          padding: const EdgeInsets.only(right: 32, bottom: 18),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _cuadro(icono, color, tam: 48),
-                              const SizedBox(height: 10),
                               Text(
                                 nombre,
                                 style: TextStyle(
                                   fontFamily: P.titulos,
-                                  fontSize: 20,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.w700,
-                                  letterSpacing: -.4,
+                                  letterSpacing: -.5,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                frase,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 13, color: P.textoSuave, height: 1.4),
-                              ),
+                              Text(frase, style: TextStyle(fontSize: 13.5, color: P.textoSuave, height: 1.4)),
                             ],
                           ),
                         ),
