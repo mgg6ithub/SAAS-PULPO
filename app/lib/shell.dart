@@ -841,7 +841,8 @@ class _BarraState extends State<_Barra> {
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
-      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
+      // Estadísticas, oculta de momento (pedido 20/11/2026).
+      // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
@@ -974,7 +975,8 @@ class _BarraInferior extends StatelessWidget {
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
-      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
+      // Estadísticas, oculta de momento (pedido 20/11/2026).
+      // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     return Container(
