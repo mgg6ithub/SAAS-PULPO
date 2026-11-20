@@ -446,7 +446,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                           ],
                           Expanded(child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true)),
                         ])),
-                // Con el icono de su sitio: mantenimiento (portapapeles), incidencia (aviso) o a mano (lápiz).
+                // Con el icono de su sitio: mantenimiento (portapapeles), incidencia (aviso) o a mano (una mano).
                 if (medio && _ver('Origen'))
                   Builder(builder: (_) {
                     final (origen, color) = origenOt(t);
@@ -454,10 +454,10 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         ? Icons.content_paste_rounded
                         : origen == 'Incidencia'
                         ? Icons.report_outlined
-                        : Icons.edit_outlined;
+                        : Icons.back_hand_outlined;
                     return Row(children: [
-                      // Solo la incidencia en rojo; mantenimiento y manual, en gris.
-                      Icon(icono, size: 18, color: origen == 'Incidencia' ? color : P.textoSuave),
+                      // Incidencia en rojo, manual (una mano) en azul y mantenimiento en gris.
+                      Icon(icono, size: 18, color: origen == 'Incidencia' ? color : origen == 'Manual' ? P.azul : P.textoSuave),
                       const SizedBox(width: 6),
                       Flexible(child: celdaTexto(origen, suave: true)),
                     ]);
