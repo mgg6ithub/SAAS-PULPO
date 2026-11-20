@@ -194,7 +194,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     _movil = esMovil(context);
     // Mismo ancho centrada y acoplada: al cambiar de modo solo se mueve el marco y los campos no se
     // recolocan (cambiar de ancho rehacía todo el formulario de golpe y daba un tirón).
-    final ancho = _movil ? pantalla.width : min(860.0, pantalla.width - 48);
+    final ancho = _movil ? pantalla.width : min(760.0, pantalla.width - 48);
     final alto = acoplada ? pantalla.height : min(pantalla.height * .9, 900.0);
     var left = lado < 0 ? 0.0 : pantalla.width - ancho;
     var top = 0.0;
@@ -232,7 +232,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                       maxWidth: ancho,
                       child: SingleChildScrollView(
                         controller: scroll,
-                        padding: EdgeInsets.fromLTRB(_movil ? 16 : 32, 6, _movil ? 16 : 32, 32),
+                        padding: EdgeInsets.fromLTRB(_movil ? 16 : 22, 2, _movil ? 16 : 22, 20),
                         child: RepaintBoundary(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
                         ),
@@ -272,14 +272,14 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
             // A la derecha, sitio para los botones de ventana (y la criticidad debajo, si la hay).
             padding: EdgeInsets.fromLTRB(
-              _movil ? 16 : 32,
-              widget.incrustada ? 10 : (acoplada ? 16 : 6),
+              _movil ? 16 : 22,
+              widget.incrustada ? 10 : (acoplada ? 16 : 4),
               widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : (_movil ? 56 : 120)),
               widget.incrustada ? 10 : 8,
             ),
             child: Column(
               children: [
-                if (!acoplada && !widget.incrustada) const SizedBox(height: 12),
+                if (!acoplada && !widget.incrustada) const SizedBox(height: 8),
                 Row(
                   children: [
                     if (widget.lider != null) ...[widget.lider!, const SizedBox(width: 12)],
@@ -586,13 +586,13 @@ class Bloque extends StatelessWidget {
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 210, child: cabeza),
-                  const SizedBox(width: 32),
+                  SizedBox(width: 190, child: cabeza),
+                  const SizedBox(width: 24),
                   Expanded(child: campos),
                 ],
               );
         return Container(
-          padding: EdgeInsets.only(top: primero ? 16 : 22, bottom: 10),
+          padding: EdgeInsets.only(top: primero ? 12 : 16, bottom: 6),
           decoration: BoxDecoration(
             border: primero ? null : Border(top: BorderSide(color: P.borde)),
           ),
