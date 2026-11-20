@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
@@ -128,6 +130,9 @@ class _TrabajadoresState extends State<Trabajadores> {
                       )
                     : this.lista
                     ? _tabla(lista)
+                    // Pultec con grupos: los técnicos segmentados por grupo desde el principio.
+                    : industrial && store.grupos.isNotEmpty
+                    ? _RejillaPorGrupos(lista, _tarjeta)
                     : ListaRejilla(anchoMin: 260, total: lista.length, item: (i) => _tarjeta(lista[i])),
               ),
             ],
@@ -340,5 +345,71 @@ class _FiltroCompetencia extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+/// Pultec: tarjetas de técnicos por grupo (por nombre de grupo; al final, los que no tienen). Cada grupo con su
+/// título, cuántos son y su área en gris. Virtualizada como `ListaRejilla`.
+class _RejillaPorGrupos extends StatelessWidget {
+  final List<Trabajador> ws;
+  final Widget Function(Trabajador) tarjeta;
+  const _RejillaPorGrupos(this.ws, this.tarjeta);
+
+  static const _anchoMin = 260.0, _hueco = 16.0;
+  int _cols(BoxConstraints box) => max(1, ((box.maxWidth + _hueco) / (_anchoMin + _hueco)).floor());
+
+  @override
+  Widget build(BuildContext context) => SegunTamano(
+    clave: _cols,
+    builder: (context, box) {
+      final cols = _cols(box);
+      final grupos = [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre));
+      final filas = <Object>[];
+      for (final (titulo, area, suyos) in [
+        for (final g in grupos) (g.nombre, g.area, ws.where((w) => w.grupoId == g.id).toList()),
+        ('Sin grupo', '', ws.where((w) => store.grupo(w.grupoId) == null).toList()),
+      ]) {
+        if (suyos.isEmpty) continue;
+        filas.add((titulo, area, suyos.length));
+        for (var i = 0; i < suyos.length; i += cols) {
+          filas.add(suyos.sublist(i, min(i + cols, suyos.length)));
+        }
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 80),
+        itemCount: filas.length,
+        itemBuilder: (_, n) => switch (filas[n]) {
+          (final String titulo, final String area, final int total) => Padding(
+            padding: EdgeInsets.fromLTRB(4, n == 0 ? 4 : 12, 4, 10),
+            child: Row(
+              children: [
+                Text(titulo, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 8),
+                Text('$total', style: TextStyle(fontSize: 14, color: P.textoSuave)),
+                if (area.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(area, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: P.textoSuave)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          final List<Trabajador> fila => Padding(
+            padding: const EdgeInsets.only(bottom: _hueco),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var j = 0; j < cols; j++) ...[
+                  if (j > 0) const SizedBox(width: _hueco),
+                  Expanded(child: j < fila.length ? tarjeta(fila[j]) : const SizedBox()),
+                ],
+              ],
+            ),
+          ),
+          _ => const SizedBox.shrink(),
+        },
+      );
+    },
   );
 }

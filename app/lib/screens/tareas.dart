@@ -121,17 +121,23 @@ class _TareasPaginaState extends State<TareasPagina> {
                   // Solo el título: sin icono grande ni frase de relleno debajo.
                   TituloVista(m('Trabajos')),
                   // Pultec: pendientes y, aparte, el histórico de las hechas (para que no sea una lista sin fin).
+                  // «Sin asignar» como pestaña propia, para ver de un vistazo lo que nadie tiene.
                   if (industrial)
                     Pestanas(
                       opciones: [
                         'Pendientes · ${store.tareas.where((t) => !t.esPlantilla && !_hecha(t)).length}',
+                        'Sin asignar · ${store.tareas.where((t) => !t.esPlantilla && pasaFechaTrabajo(t, 2)).length}',
                         'Histórico · ${store.tareas.where((t) => !t.esPlantilla && _hecha(t)).length}',
                       ],
-                      iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
-                      seleccion: historicoTrabajos.value ? 1 : 0,
+                      iconos: const [
+                        Icons.radio_button_unchecked_rounded,
+                        Icons.person_off_outlined,
+                        Icons.task_alt_rounded,
+                      ],
+                      seleccion: historicoTrabajos.value ? 2 : (fecha == 2 ? 1 : 0),
                       onChanged: (i) {
-                        historicoTrabajos.value = i == 1;
-                        filtroFechaTrabajos.value = 0;
+                        historicoTrabajos.value = i == 2;
+                        filtroFechaTrabajos.value = i == 1 ? 2 : 0;
                       },
                     ),
                   // Pultec: la criticidad como filtro, igual que en los mantenimientos de un activo.
@@ -179,8 +185,9 @@ class _TareasPaginaState extends State<TareasPagina> {
                             // (número de filtro, etiqueta, color, icono); sin «Hechos»: lo cubre «Completados».
                             for (final (i, nombre, color, icono) in [
                               (0, 'Todos', P.textoSuave, null),
+                              // Sin «Sin técnico»: ya es la pestaña «Sin asignar».
                               for (final (j, (n, c, ic)) in _filtrosFecha.indexed)
-                                if (j != 3) (j + 1, n, c, ic),
+                                if (j != 3 && j != 1) (j + 1, n, c, ic),
                               (7, 'Automatizaciones', P.ambar, Icons.bolt_rounded),
                             ]) ...[
                               _ChipTipo(

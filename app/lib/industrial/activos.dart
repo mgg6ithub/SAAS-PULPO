@@ -357,6 +357,17 @@ String proximaFecha(Activo a) {
 
 String horas(double h) => h == 0 ? '—' : '${h % 1 == 0 ? h.toInt() : h} h';
 
+/// Contador de hoy del activo (el de su activo principal) y cómo avanza: «1.240 h, +8 h al día».
+String contadorTexto(Activo a) {
+  final r = raizActivo(a.id) ?? a;
+  final h = horasHoy(a);
+  final redondo = h.round() == h ? h.toInt().toString() : h.toStringAsFixed(1);
+  if (r.usoPlanificado) return '$redondo h, por turnos';
+  if (r.usoDiario <= 0) return horas(h);
+  final ritmo = r.usoSemanal ? '+${horas(r.horasUso)} a la semana' : '+${horas(r.horasUso)} al día';
+  return '$redondo h, $ritmo';
+}
+
 /// Ficha del activo y de cada componente: resumen, datos editables, OT e histórico propio.
 class ActivoDetalle extends StatefulWidget {
   final String activoId;
@@ -796,7 +807,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             ]),
                             style: TextStyle(fontSize: 13.5, color: P.textoSuave),
                           ),
-                          _dato('Contador', horas(horasHoy(a))),
+                          // Con ritmo de uso, el contador se ve siempre (también a 0 el día de la lectura) y con
+                          // lo que suma, para que se note que avanza solo.
+                          _dato('Contador', contadorTexto(a)),
                           _dato(
                             'Órdenes pendientes',
                             '${ots.where(otPendiente).length}',
