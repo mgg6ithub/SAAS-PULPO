@@ -158,7 +158,7 @@ Widget iconoAsignacion(Tarea? ot) => Tooltip(
       : quedan == 0
       ? 'Toca hoy'
       : 'Quedan $quedan ${quedan == 1 ? 'día' : 'días'}';
-  return ((quedan / math.max(total, 1)).clamp(0, 1).toDouble(), '$texto, el ${fechaDe(d)}');
+  return ((quedan / math.max(total, 1)).clamp(0, 1).toDouble(), '$texto, es el ${fechaDe(d)}');
 }
 
 (double, String)? cicloOt(Tarea t) {
