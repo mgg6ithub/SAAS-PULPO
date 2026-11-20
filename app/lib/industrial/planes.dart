@@ -251,16 +251,18 @@ class _TablaPlanesState extends State<TablaPlanes> {
 
           return [
             if (elegidos.any((p) => p.activa))
-              TextButton(
+              TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: Colors.white),
                 onPressed: () => poner(false),
-                child: const Text('Pausar'),
+                icon: const Icon(Icons.pause_rounded, size: 18),
+                label: const Text('Pausar'),
               ),
             if (elegidos.any((p) => !p.activa))
-              TextButton(
+              TextButton.icon(
                 style: TextButton.styleFrom(foregroundColor: Colors.white),
                 onPressed: () => poner(true),
-                child: const Text('Reanudar'),
+                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                label: const Text('Reanudar'),
               ),
             const SizedBox(width: 4),
           ];
@@ -306,7 +308,11 @@ class _TablaPlanesState extends State<TablaPlanes> {
                             p.activa = !p.activa;
                             store.guardarPlan(p);
                           },
-                          child: Pill(p.activa ? 'Vigente' : 'Pausado', p.activa ? P.verde : P.gris, punto: true),
+                          child: Pill(
+                            p.activa ? 'Vigente' : 'Pausado',
+                            p.activa ? P.verde : P.gris,
+                            icono: p.activa ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                          ),
                         ),
                       ),
                     );
