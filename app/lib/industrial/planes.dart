@@ -301,9 +301,9 @@ class _TablaPlanesState extends State<TablaPlanes> {
         ...s.columna,
         const Col('Mantenimiento', flex: 4),
         for (final c in vistas) _cols[c]!,
-        if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
-        // Al final: vigente (play) o pausado (pausa); en la cabecera, pausar o reanudar todos.
+        // Vigente (play) o pausado (pausa); en la cabecera, pausar o reanudar todos. Al final, elegir columnas.
         if (medio) Col('Pausa', ancho: 48, derecha: true, cabecera: _pausarTodos()),
+        if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
       ];
       // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
       final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 70.0 * c.flex));
@@ -427,7 +427,6 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   ),
                 ),
                 for (final c in vistas) celda(c),
-                if (medio) const SizedBox(),
                 // Pausado: no crea más órdenes (las que ya hay siguen); al reanudarlo, crea la suya.
                 if (medio)
                   Align(
@@ -448,6 +447,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                       ),
                     ),
                   ),
+                if (medio) const SizedBox(),
               ];
             },
           ),
