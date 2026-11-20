@@ -99,6 +99,9 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
         activoId: activoId!,
         tecnicoId: tecnicoId,
         origenTrabajoId: origenTrabajoId,
+        // Sale de la orden de un mantenimiento: se vincula a él (al resolverla, ese mantenimiento vuelve a contar
+        // desde cero). El administrador puede cambiarlo o quitarlo en la incidencia.
+        planId: store.tarea(origenTrabajoId ?? '')?.planId,
         descripcion: descripcion.text.trim(),
         gravedad: gravedad,
         estado: EstadoIncidencia.abierta,
