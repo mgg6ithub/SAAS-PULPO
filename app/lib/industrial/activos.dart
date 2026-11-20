@@ -828,31 +828,31 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                     ),
                   ],
                 ),
-                if (pestana == 2)
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    // Pendientes / Histórico siempre el último (a la derecha del todo): no se mueve al cambiar;
-                    // el filtro de asignación, solo en Pendientes, va a su izquierda.
-                    children: [
-                      if (!_historicoOt)
-                        FiltroFlujoMantenimiento(
-                          incluirSinOrden: false,
-                          seleccion: _asignacionOt,
-                          onChanged: (i) => setState(() => _asignacionOt = i),
-                        ),
-                      Pestanas(
-                        opciones: const ['Pendientes', 'Histórico'],
-                        iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
-                        seleccion: _historicoOt ? 1 : 0,
-                        onChanged: (i) => setState(() => _historicoOt = i == 1),
-                      ),
-                    ],
-                  ),
               ],
             ),
           ),
+          // Órdenes de trabajo: encima de la tabla, Pendientes / Histórico a la izquierda y la asignación (solo en
+          // Pendientes) a la derecha, con la misma separación que entre las pestañas y la tabla.
+          if (pestana == 2) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Pestanas(
+                  opciones: const ['Pendientes', 'Histórico'],
+                  iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                  seleccion: _historicoOt ? 1 : 0,
+                  onChanged: (i) => setState(() => _historicoOt = i == 1),
+                ),
+                const Spacer(),
+                if (!_historicoOt)
+                  FiltroFlujoMantenimiento(
+                    incluirSinOrden: false,
+                    seleccion: _asignacionOt,
+                    onChanged: (i) => setState(() => _asignacionOt = i),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           Expanded(
             child: AnimatedSwitcher(
