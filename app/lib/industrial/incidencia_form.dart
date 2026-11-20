@@ -193,7 +193,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
   @override
   Widget build(BuildContext context) => VentanaFormulario(
     etiqueta: 'Incidencias',
-    titulo: 'Nueva incidencia',
+    titulo: 'Crear incidencia',
     onGuardar: _guardar,
     avisos: [
       if (activoId == null) ('Te falta el activo o componente', () => _ir(claveActivo)),

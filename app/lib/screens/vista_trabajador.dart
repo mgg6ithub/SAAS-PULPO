@@ -238,13 +238,14 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                               child: FilledButton.icon(
                                 style: FilledButton.styleFrom(backgroundColor: P.morado),
                                 onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
-                                icon: const Icon(Icons.add_rounded, size: 19),
-                                label: const Text('Incidencia'),
+                                icon: const Icon(Icons.report_outlined, size: 19),
+                                label: const Text('Crear incidencia'),
                               ),
                             )
                           : BotonPrimario(
-                              'Nueva incidencia',
-                              icono: Icons.add_rounded,
+                              'Crear incidencia',
+                              icono: Icons.report_outlined,
+                              conIcono: true,
                               onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
                             )
                     : null,
@@ -497,8 +498,8 @@ class _BarraTecnico extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
                 ),
                 onPressed: onIncidencia,
-                icon: const Icon(Icons.add_rounded, size: 19),
-                label: const Text('Nueva incidencia', style: TextStyle(fontWeight: FontWeight.w600)),
+                icon: const Icon(Icons.report_outlined, size: 19),
+                label: const Text('Crear incidencia', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),
             const SizedBox(height: 14),
