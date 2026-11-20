@@ -986,8 +986,25 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
     portal.hide();
   }
 
+  /// «Ver el próximo mantenimiento»: además del aro, se abre su ficha como al pasar el ratón.
+  void _alResaltar() {
+    if (otResaltada.value != widget.visita.tarea.id) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && otResaltada.value == widget.visita.tarea.id && !portal.isShowing) _abrir(fijar: true);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    otResaltada.addListener(_alResaltar);
+    // Recién saltado a su día, el bloque se crea ya resaltado.
+    _alResaltar();
+  }
+
   @override
   void dispose() {
+    otResaltada.removeListener(_alResaltar);
     espera?.cancel();
     HardwareKeyboard.instance.removeHandler(_tecla);
     super.dispose();
