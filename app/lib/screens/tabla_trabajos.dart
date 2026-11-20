@@ -456,7 +456,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         ? Icons.report_outlined
                         : Icons.edit_outlined;
                     return Row(children: [
-                      Icon(icono, size: 18, color: color),
+                      // Solo la incidencia en rojo; mantenimiento y manual, en gris.
+                      Icon(icono, size: 18, color: origen == 'Incidencia' ? color : P.textoSuave),
                       const SizedBox(width: 6),
                       Flexible(child: celdaTexto(origen, suave: true)),
                     ]);
