@@ -18,7 +18,8 @@ final filtroCriticidadTrabajos = ValueNotifier<int>(0);
 /// Pultec: Órdenes de trabajo partida en dos: pendientes (false) o histórico de las hechas (true).
 final historicoTrabajos = ValueNotifier<bool>(false);
 
-bool _hecha(Tarea t) => t.estado == EstadoTrabajo.realizado;
+/// Al histórico: completadas y canceladas.
+bool _hecha(Tarea t) => t.estado == EstadoTrabajo.realizado || t.estado == EstadoTrabajo.noRealizado;
 
 /// Pultec: en vez de «Esta semana», «Sin técnico» (órdenes pendientes que nadie tiene asignadas).
 final _filtrosFecha = [

@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 
 import 'geo.dart';
 import 'industrial/activo.dart';
+import 'industrial/gravedad.dart' show otDeMantenimientoVigente, cancelarOts;
 import 'industrial/iconos.dart';
 import 'informes.dart';
 import 'marca.dart';
@@ -74,6 +75,9 @@ class VentanaFormulario extends StatefulWidget {
   final VoidCallback onGuardar;
   final VoidCallback? onBorrar;
 
+  /// Texto del botón de [onBorrar].
+  final String textoBorrar;
+
   /// Lo que falta para poder guardar, en el orden de los campos, con la acción de ir a cada uno. Abajo a la
   /// izquierda sale el primero con un triángulo; al pulsarlo, un menú con todos.
   final List<(String, VoidCallback)> avisos;
@@ -101,6 +105,7 @@ class VentanaFormulario extends StatefulWidget {
     required this.campos,
     required this.onGuardar,
     this.onBorrar,
+    this.textoBorrar = 'Eliminar',
     this.avisos = const [],
     this.incrustada = false,
     this.sinCabecera = false,
@@ -379,7 +384,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
           TextButton(
             style: TextButton.styleFrom(foregroundColor: P.rojo),
             onPressed: widget.onBorrar,
-            child: const Text('Eliminar'),
+            child: Text(widget.textoBorrar),
           ),
         Expanded(
           child: widget.avisos.isEmpty
@@ -1623,8 +1628,15 @@ class _TareaFormState extends State<TareaForm> {
         if (errorHorario != null)
           (errorHorario == 'Pon una hora' ? 'Te falta la hora' : errorHorario!, () => _irA(_claveCuando)),
       ],
-      onBorrar: nueva
+      // Pultec: las OT no se borran, se cancelan (quedan en el histórico); las de un mantenimiento vigente, ni eso.
+      textoBorrar: industrial ? 'Cancelar orden' : 'Eliminar',
+      onBorrar: nueva || (industrial && (!t.estado.abierta || otDeMantenimientoVigente(t)))
           ? null
+          : industrial
+          ? () {
+              cancelarOts(context, [t]);
+              if (!widget.incrustada) Navigator.of(context).pop();
+            }
           : () async {
               final nav = Navigator.of(context);
               // Solo se pregunta si se llevan subtrabajos por delante; si no, basta con «Deshacer».
@@ -2411,6 +2423,8 @@ class SelectorEstado extends StatelessWidget {
               ? Icon(
                   e == EstadoTrabajo.realizado
                       ? Icons.check_circle_outline_rounded
+                      : e == EstadoTrabajo.noRealizado
+                      ? Icons.block_rounded
                       : Icons.radio_button_unchecked_rounded,
                   size: 18,
                   color: e == EstadoTrabajo.realizado ? P.verde : P.textoSuave,
@@ -2421,11 +2435,20 @@ class SelectorEstado extends StatelessWidget {
                   decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
                 ),
           trailingIcon:
-              e == t.estado || (industrial && e == EstadoTrabajo.pendiente && t.estado != EstadoTrabajo.realizado)
+              e == t.estado || (industrial && e == EstadoTrabajo.pendiente && t.estado.abierta)
               ? Icon(Icons.check_rounded, size: 18, color: P.textoSuave)
               : null,
-          onPressed: () => _elegir(context, e),
-          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 110), child: Text(e.etiqueta)),
+          // La OT de un mantenimiento vigente no se cancela: se volvería a crear sola.
+          onPressed: e == EstadoTrabajo.noRealizado && otDeMantenimientoVigente(t) ? null : () => _elegir(context, e),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 110),
+            child: Tooltip(
+              message: e == EstadoTrabajo.noRealizado && otDeMantenimientoVigente(t)
+                  ? 'Es de un mantenimiento vigente: pausa antes el mantenimiento'
+                  : '',
+              child: Text(e.etiqueta),
+            ),
+          ),
         ),
     ],
     builder: (context, menu, _) => _CajaMenu(

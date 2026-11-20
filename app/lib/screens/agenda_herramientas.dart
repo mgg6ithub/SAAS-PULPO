@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../industrial/gravedad.dart' show otDeMantenimientoVigente, cancelarOts;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -246,6 +247,17 @@ class _FichaRapida extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                // Pultec: las OT se cancelan (no se borran); las de un mantenimiento vigente, ni eso.
+                if (industrial && t.estado.abierta && !otDeMantenimientoVigente(t))
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: P.rojo),
+                    onPressed: () {
+                      cancelarOts(context, [t]);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Cancelar orden'),
+                  ),
+                if (!industrial)
                 TextButton(
                   style: TextButton.styleFrom(foregroundColor: P.rojo),
                   onPressed: () async {

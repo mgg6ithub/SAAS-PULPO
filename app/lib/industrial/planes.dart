@@ -144,6 +144,7 @@ class TablaPlanes extends StatefulWidget {
 class _TablaPlanesState extends State<TablaPlanes> {
   /// Columnas opcionales, en su orden, y las que se ven (se recuerdan mientras dure la sesión).
   static const _opcionales = [
+    'Estado',
     'Código',
     'Orden de trabajo',
     // 'Prioridad', // Aparcada para el futuro.
@@ -156,10 +157,11 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Duración',
     'Repuestos',
   ];
-  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Fecha', 'Orden de trabajo'};
+  static const _porDefecto = {'Estado', 'Código', 'Cada cuánto', 'Horas restantes', 'Fecha', 'Orden de trabajo'};
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
+    'Estado': Col('Estado', ancho: 110),
     'Código': Col('Código', ancho: 130),
     'Componente': Col('Componente', flex: 2),
     'Prioridad': Col('Prioridad', ancho: 150),
@@ -264,6 +266,24 @@ class _TablaPlanesState extends State<TablaPlanes> {
               final otPendienteDe = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
               Widget celda(String c) {
                 switch (c) {
+                  case 'Estado':
+                    // Pausado: no crea más órdenes (las que ya hay siguen); al reanudarlo, crea la suya.
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Tooltip(
+                        message: p.activa
+                            ? 'Pausar: al completar su orden no se creará la siguiente'
+                            : 'Reanudar: vuelve a crear sus órdenes',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () {
+                            p.activa = !p.activa;
+                            store.guardarPlan(p);
+                          },
+                          child: Pill(p.activa ? 'Vigente' : 'Pausado', p.activa ? P.verde : P.gris, punto: true),
+                        ),
+                      ),
+                    );
                   case 'Código':
                     return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
                   case 'Componente':
@@ -302,7 +322,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   case 'Orden de trabajo':
                     // El técnico es de la orden, no del mantenimiento. La orden la crea la base sola al guardar
                     // el mantenimiento: si aún no ha llegado, se espera.
-                    if (otPendienteDe == null) return celdaTexto('Creando orden…', suave: true);
+                    if (otPendienteDe == null) return celdaTexto(p.activa ? 'Creando orden…' : '—', suave: true);
                     final f = otPendienteDe.proximo;
                     final vencida = f != null && diasHasta(f) < 0;
                     return Padding(

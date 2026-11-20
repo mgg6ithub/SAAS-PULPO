@@ -388,7 +388,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
   List<int> _cuentas(Trabajador w) {
     final sel = _maquinasElegidas[w.id] ?? const {};
     final pendientes = _misTrabajos(w)
-        .where((t) => t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy()) && _enMaquinas(t.activoId, sel))
+        .where((t) => t.estado.abierta && !t.hechaEl(hoy()) && _enMaquinas(t.activoId, sel))
         .length;
     final avisos = store.incidencias
         .where((i) => i.tecnicoId == w.id || (i.tecnicoId == null && (store.nube?.esTrabajador ?? false)))
@@ -1372,7 +1372,7 @@ class _MisTrabajos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pendientes = _misTrabajos(w)
-      .where((t) => t.proximo != null && t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy())).toList()
+      .where((t) => t.proximo != null && t.estado.abierta && !t.hechaEl(hoy())).toList()
       ..sort((a, b) {
         final c = a.proximo!.compareTo(b.proximo!);
         return c != 0 ? c : _porHora(a, b);
@@ -1543,7 +1543,7 @@ Text('$etiqueta: ${t.nombre}')
   Widget build(BuildContext context) {
     final sel = widget.maquinas;
     final pendientes = _misTrabajos(widget.w)
-        .where((t) => t.estado != EstadoTrabajo.realizado && !t.hechaEl(hoy()) && _enMaquinas(t.activoId, sel))
+        .where((t) => t.estado.abierta && !t.hechaEl(hoy()) && _enMaquinas(t.activoId, sel))
         .toList()
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
     final avisos = store.incidencias.where((i) => (i.tecnicoId == widget.w.id ||

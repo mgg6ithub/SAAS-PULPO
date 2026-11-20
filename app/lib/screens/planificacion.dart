@@ -519,7 +519,9 @@ class _Tablero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activas = store.tareas.where((t) => !t.esPlantilla && t.activa).toList();
+    final activas = store.tareas
+        .where((t) => !t.esPlantilla && t.activa && t.estado != EstadoTrabajo.noRealizado)
+        .toList();
     final realizadas =
         activas.where((t) => t.ultimo != null && diasHasta(t.ultimo!) >= -30 && diasHasta(t.ultimo!) <= 0).toList()
           ..sort((a, b) => b.ultimo!.compareTo(a.ultimo!));

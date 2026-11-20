@@ -20,8 +20,46 @@ TipoMantenimiento? masGrave(Iterable<Tarea> ots) {
   return r;
 }
 
+/// OT de un mantenimiento vigente: no se cancela, porque se volvería a crear sola. Para quitarla, se pausa
+/// antes su mantenimiento.
+bool otDeMantenimientoVigente(Tarea t) => t.planId != null && store.planes.any((p) => p.id == t.planId && p.activa);
+
+/// De dónde sale la OT: de un mantenimiento (sola), de una incidencia o creada a mano.
+(String, Color) origenOt(Tarea t) => t.planId != null
+    ? ('Mantenimiento', P.morado)
+    : store.incidenciaDeOt(t.id) != null
+    ? ('Incidencia', P.rojo)
+    : ('Manual', P.gris);
+
+/// Cancela las OT que se pueden (quedan en el histórico como «Canceladas») y avisa de las que no.
+void cancelarOts(BuildContext context, Iterable<Tarea> ts) {
+  final si = ts.where((t) => t.estado.abierta && !otDeMantenimientoVigente(t)).toList();
+  final no = ts.where(otDeMantenimientoVigente).length;
+  if (si.isNotEmpty) {
+    store.deshacible(
+      si.length == 1 ? 'Has cancelado ${si.first.nombre}' : 'Has cancelado ${si.length} órdenes de trabajo',
+      () => store.cambiarEstado(si, EstadoTrabajo.noRealizado),
+    );
+  }
+  if (no > 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: 420,
+        content: Text(
+          no == 1
+              ? 'La orden de un mantenimiento vigente no se cancela: pausa antes su mantenimiento.'
+              : '$no órdenes son de mantenimientos vigentes y no se cancelan: pausa antes sus mantenimientos.',
+        ),
+      ),
+    );
+  }
+}
+
 /// Cómo acabó una OT según su parte: (texto, color). Sin parte, si está hecha, «Hecha».
-(String, Color) resultadoOt(Tarea t) => switch (t.resultado) {
+(String, Color) resultadoOt(Tarea t) => t.estado == EstadoTrabajo.noRealizado
+    ? ('Cancelada', P.gris)
+    : switch (t.resultado) {
   1 => ('Con incidencia', P.ambar),
   2 => ('No se pudo hacer', P.rojo),
   // Sin parte: si ya se hizo alguna vez (o está cerrada), «Hecha».

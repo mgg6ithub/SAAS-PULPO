@@ -23,6 +23,11 @@ List<Realizada> otsRealizadas() => [
   // Las que no se pudieron hacer también cuentan en el historial (siguen pendientes, pero con aviso).
   for (final t in [...store.tareas, ...store.subtareas])
     if (t.resultado == 2 && t.ultimo == null) (t.proximo ?? hoy(), t),
+  // Las canceladas, con su fecha prevista.
+  for (final t in [...store.tareas, ...store.subtareas])
+    if (t.estado == EstadoTrabajo.noRealizado && (t.activoId != null || t.tipoMantenimiento != null) &&
+        !(t.resultado == 2 && t.ultimo == null))
+      (t.proximo ?? hoy(), t),
 ]..sort((a, b) => b.$1.compareTo(a.$1));
 
 /// Periodos del filtro de fecha, en días hacia atrás (null = todo).

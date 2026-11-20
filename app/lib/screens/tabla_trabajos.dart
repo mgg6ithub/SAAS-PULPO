@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/iconos.dart';
-import '../industrial/gravedad.dart' show iconoAsignacion;
+import '../industrial/gravedad.dart' show iconoAsignacion, cancelarOts, origenOt;
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos;
 import '../models.dart';
@@ -69,6 +69,12 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   });
 
   Future<void> eliminarSeleccion() async {
+    // Pultec: las OT no se borran, se cancelan (quedan en el histórico).
+    if (industrial) {
+      cancelarOts(context, [for (final id in seleccion) ?store.tarea(id)]);
+      salirSeleccion();
+      return;
+    }
     final n = seleccion.length;
     final nombre = m('$n ${n == 1 ? widget.nombre : '${widget.nombre}s'}');
     if (!await confirmar(context, preguntaBorrarTrabajos(seleccion, nombre: nombre), nota: 'Podrás deshacerlo.')) return;
@@ -124,6 +130,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               opcion(
                 e.etiqueta,
                 () {
+                  // Pultec: cancelar solo las que se pueden (no las de mantenimientos vigentes).
+                  if (industrial && e == EstadoTrabajo.noRealizado) return cancelarOts(context, sel);
                   store.cambiarEstado(sel, e);
                   aplicado();
                 },
@@ -131,6 +139,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                     ? Icon(
                         e == EstadoTrabajo.realizado
                             ? Icons.check_circle_outline_rounded
+                            : e == EstadoTrabajo.noRealizado
+                            ? Icons.block_rounded
                             : Icons.radio_button_unchecked_rounded,
                         size: 18,
                         color: P.textoSuave,
@@ -225,6 +235,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             child: Center(
               child: BarraSeleccion(
                 acciones: [_cambiar()],
+                textoEliminar: industrial ? 'Cancelar' : 'Eliminar',
                 seleccionados: seleccion.length,
                 total: ts.length,
                 nombre: m('${widget.nombre}s'),
@@ -331,8 +342,27 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         celdaTexto(t.nombre, negrita: true),
+                        // Pultec: de dónde sale (mantenimiento, incidencia o a mano), con su punto de color.
+                        if (industrial)
+                          Builder(builder: (_) {
+                            final (origen, color) = origenOt(t);
+                            return Row(
+                              children: [
+                                puntoTipo(color, tam: 6),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    [origen, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 11.5, color: P.textoSuave),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
                         // Pultec: sin el tipo («Otro»), que no significa nada; solo la ubicación si la hay.
-                        if (!industrial || t.ubicacion.isNotEmpty)
+                        if (!industrial)
                           Text(
                             industrial ? t.ubicacion : [t.tipo, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
                             maxLines: 1,

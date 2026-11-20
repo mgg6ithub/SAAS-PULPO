@@ -37,17 +37,30 @@ enum EstadoTrabajo { pendiente, enCurso, realizado, noRealizado }
 
 extension EstadoTrabajoX on EstadoTrabajo {
   String get etiqueta => industrial
-      ? (this == EstadoTrabajo.realizado ? 'Completada' : 'Pendiente')
+      ? (this == EstadoTrabajo.realizado
+            ? 'Completada'
+            : this == EstadoTrabajo.noRealizado
+            ? 'Cancelada'
+            : 'Pendiente')
       : const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
-  // Pultec: completada en verde y pendiente en rojo.
+  // Pultec: completada en verde, cancelada en gris y pendiente en rojo.
   Color get color => industrial
-      ? (this == EstadoTrabajo.realizado ? P.verde : P.rojo)
+      ? (this == EstadoTrabajo.realizado
+            ? P.verde
+            : this == EstadoTrabajo.noRealizado
+            ? P.gris
+            : P.rojo)
       : const [P.ambar, P.azul, P.verde, P.rojo][index];
+
+  /// Aún por hacer (ni completada ni cancelada).
+  bool get abierta => this == EstadoTrabajo.pendiente || this == EstadoTrabajo.enCurso;
 }
 
 /// Opciones de la interfaz; conserva los valores guardados del flujo residencial y del técnico.
 List<EstadoTrabajo> get estadosTrabajo =>
-    industrial ? const [EstadoTrabajo.pendiente, EstadoTrabajo.realizado] : EstadoTrabajo.values;
+    industrial
+    ? const [EstadoTrabajo.pendiente, EstadoTrabajo.realizado, EstadoTrabajo.noRealizado]
+    : EstadoTrabajo.values;
 
 enum EstadoMaquina { operativa, revision, averiada }
 

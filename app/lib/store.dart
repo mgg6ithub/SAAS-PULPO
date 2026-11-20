@@ -778,6 +778,8 @@ class Store extends ChangeNotifier {
     if (!x.estado.pendiente) return x.estado;
     final ot = x.trabajoId == null ? null : tarea(x.trabajoId!);
     if (ot == null) return x.trabajoId == null ? EstadoIncidencia.abierta : x.estado;
+    // Con su OT cancelada vuelve a estar abierta, para sacarle otra o desestimarla.
+    if (ot.estado == EstadoTrabajo.noRealizado) return EstadoIncidencia.abierta;
     return ot.estado == EstadoTrabajo.realizado ? EstadoIncidencia.completada : EstadoIncidencia.conOt;
   }
 
@@ -826,7 +828,7 @@ class Store extends ChangeNotifier {
     final ws = tecnicosDe(grupoId).where((w) => !(DateUtils.isSameDay(d, hoy()) && w.estadoHoy == EstadoHoy.ausente));
     int abiertas(Trabajador w, {bool soloDia = false}) => tareas
         .where((t) => t.activa && !t.esPlantilla && t.trabajadorIds.contains(w.id) &&
-            t.estado != EstadoTrabajo.realizado && (!soloDia || (t.proximo != null && DateUtils.isSameDay(t.proximo, d))))
+            t.estado.abierta && (!soloDia || (t.proximo != null && DateUtils.isSameDay(t.proximo, d))))
         .length;
     final lista = ws.toList()
       ..sort((a, b) {

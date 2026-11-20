@@ -100,7 +100,7 @@ List<Aviso> avisosAhora() {
         (t) =>
             !t.esPlantilla &&
             t.activa &&
-            t.estado != EstadoTrabajo.realizado &&
+            t.estado.abierta &&
             t.trabajadorIds.isEmpty &&
             t.proximo != null &&
             diasHasta(t.proximo!) <= 0,

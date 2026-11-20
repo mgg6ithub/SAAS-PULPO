@@ -2286,9 +2286,13 @@ class BarraSeleccion extends StatelessWidget {
 
   /// Acciones propias de lo que se selecciona (trabajos, trabajadores, clientes), antes de «Eliminar».
   final List<Widget> acciones;
+
+  /// Texto del botón rojo (Pultec cancela las OT en vez de borrarlas).
+  final String textoEliminar;
   const BarraSeleccion({
     super.key,
     this.acciones = const [],
+    this.textoEliminar = 'Eliminar',
     required this.seleccionados,
     required this.total,
     required this.nombre,
@@ -2323,7 +2327,7 @@ class BarraSeleccion extends StatelessWidget {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: P.rojo),
             onPressed: seleccionados == 0 ? null : onEliminar,
-            child: const Text('Eliminar'),
+            child: Text(textoEliminar),
           ),
           IconButton(
             tooltip: 'Salir de la selección',
