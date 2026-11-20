@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import '../theme.dart';
+import '../widgets.dart' show IconoAsignado;
 
 /// Filtro continuo: Todos y las tres fases de preparación de la OT.
 class FiltroFlujoMantenimiento extends StatelessWidget {
@@ -56,10 +57,13 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
                             padding: EdgeInsets.only(left: i > 0 ? 12 : 0, right: 12),
                             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                               if (i > 0) ...[
-                                // Sin asignar: persona tachada; asignado: persona (el check queda para lo terminado).
-                                Icon([Icons.list, if (incluirSinOrden) Icons.content_paste_rounded, Icons.person_off_outlined,
-                                  Icons.person_outline_rounded][i], size: 18,
-                                  color: i == etiquetas.length - 1 ? P.verde : seleccion == i ? P.morado : P.textoSuave),
+                                // Sin asignar: persona tachada en un círculo; asignado: persona en un círculo.
+                                if (i >= etiquetas.length - 2)
+                                  IconoAsignado(i == etiquetas.length - 1, size: 18,
+                                    color: i == etiquetas.length - 1 ? P.verde : seleccion == i ? P.morado : P.textoSuave)
+                                else
+                                  Icon([Icons.list, if (incluirSinOrden) Icons.content_paste_rounded][i], size: 18,
+                                    color: seleccion == i ? P.morado : P.textoSuave),
                                 const SizedBox(width: 6),
                               ],
                               Text(etiquetas[i], style: estilo.copyWith(color: seleccion == i ? P.morado : P.textoSuave)),

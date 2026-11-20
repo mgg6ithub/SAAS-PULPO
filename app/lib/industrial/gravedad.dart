@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import '../widgets.dart' show IconoAsignado;
 import '../models.dart';
 import '../store.dart';
 import 'incidencia.dart';
@@ -123,8 +124,8 @@ bool incidenciaAbierta(Tarea t) =>
 /// Estado de preparación de una OT, sin confundirlo con su tipo de mantenimiento.
 Widget iconoAsignacion(Tarea? ot) => Tooltip(
   message: ot == null ? 'Sin orden' : ot.trabajadorIds.isEmpty ? 'Sin asignar' : 'Asignado',
-  // Sin asignar: persona tachada; asignado: persona (el círculo con check es solo para lo terminado).
-  child: Icon(ot == null ? Icons.content_paste_rounded : ot.trabajadorIds.isEmpty
-      ? Icons.person_off_outlined : Icons.person_outline_rounded,
-    size: 18, color: ot != null && ot.trabajadorIds.isNotEmpty ? P.verde : P.textoSuave),
+  // Sin asignar: persona tachada en un círculo; asignado: persona en un círculo (el check es solo para lo terminado).
+  child: ot == null
+      ? Icon(Icons.content_paste_rounded, size: 18, color: P.textoSuave)
+      : IconoAsignado(ot.trabajadorIds.isNotEmpty, size: 18),
 );

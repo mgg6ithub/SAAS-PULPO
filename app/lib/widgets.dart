@@ -1984,6 +1984,25 @@ class SelectorVista extends StatelessWidget {
   );
 }
 
+/// Asignación en un círculo: persona (asignado, en verde) o persona tachada (sin asignar, en gris).
+class IconoAsignado extends StatelessWidget {
+  final bool asignado;
+  final double size;
+  final Color? color;
+  const IconoAsignado(this.asignado, {super.key, this.size = 20, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? (asignado ? P.verde : P.textoSuave);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: c, width: 1.4)),
+      child: Icon(asignado ? Icons.person_outline_rounded : Icons.person_off_outlined, size: size * .6, color: c),
+    );
+  }
+}
+
 /// Avatares superpuestos de los trabajadores asignados.
 class AvataresTrabajadores extends StatelessWidget {
   final List<String> ids;
@@ -2003,7 +2022,8 @@ class AvataresTrabajadores extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: P.borde, width: 1.5),
           ),
-          child: Icon(Icons.person_outline_rounded, size: size * .55, color: P.textoSuave),
+          // Sin nadie: la persona tachada dentro del círculo.
+          child: Icon(Icons.person_off_outlined, size: size * .55, color: P.textoSuave),
         ),
       );
     }

@@ -438,8 +438,6 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(padding: const EdgeInsets.only(top: 6), child: iconoAsignacion(otPendienteDe)),
-                      const SizedBox(width: 10),
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
