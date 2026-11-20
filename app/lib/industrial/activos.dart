@@ -1292,6 +1292,7 @@ class _ActivoFormState extends State<ActivoForm> {
                   teclado: const TextInputType.numberWithOptions(decimal: true),
                   hint: '0',
                   error: errores['actual'],
+                  obligatorio: true,
                 ),
               ),
               dos(
@@ -1338,6 +1339,7 @@ class _ActivoFormState extends State<ActivoForm> {
               teclado: const TextInputType.numberWithOptions(decimal: true),
               hint: '0',
               error: errores['actual'],
+              obligatorio: true,
             ),
           ),
           // Fijo (por día o por semana) o planificado a mano por turnos en el calendario de uso.
@@ -1491,8 +1493,9 @@ class _ActivoFormState extends State<ActivoForm> {
 
     final que = componente ? 'componente' : 'activo';
     return VentanaFormulario(
-      // Guardar, apagado hasta que tenga tag o nombre.
-      puedeGuardar: tag.text.trim().isNotEmpty || nombre.text.trim().isNotEmpty,
+      // Guardar, apagado hasta que tenga tag o nombre y, al crearlo, su contador (si lleva uno propio).
+      puedeGuardar: (tag.text.trim().isNotEmpty || nombre.text.trim().isNotEmpty) &&
+          (existe || (componente && !a.contadorPropio) || horasC.text.trim().isNotEmpty),
       onRellenar: existe ? null : _rellenar,
       sinPie: _autoguardado,
       lider: existe ? Icon(Icons.edit_outlined, size: 20, color: P.textoSuave) : null,
