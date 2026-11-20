@@ -153,8 +153,8 @@ class _ActivosState extends State<Activos> {
                 hint: 'Buscar activo…',
                 onChanged: (v) => setState(() => q = v),
               ),
-              // Sin activos no hay uso que marcar: aparece con el primero.
-              if (store.activos.isNotEmpty)
+              // Solo hace falta si algún activo se planifica por turnos (es donde se marcan los turnos).
+              if (store.activos.any((a) => a.usoPlanificado))
               BotonAccion(
                 'Uso de activos',
                 icono: Icons.event_note_outlined,
