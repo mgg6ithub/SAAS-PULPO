@@ -915,8 +915,18 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               ),
               const SizedBox(height: 12),
             ],
-            Row(
-              children: [
+            // Si no cabe todo en una línea, la asignación baja (sin desbordar).
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
                 Pestanas(
                   opciones: const ['Pendientes', 'Histórico'],
                   iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
@@ -925,7 +935,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                 ),
                 // Como en Órdenes de trabajo: por criticidad y, si se llega desde arriba, solo las de incidencias.
                 if (!_historicoOt) ...[
-                  const SizedBox(width: 12),
                   Pestanas(
                     opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
                     colores: [null, for (final t in TipoMantenimiento.values) t.color],
@@ -934,8 +943,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                     onChanged: (i) => setState(() => _criticidadOt = i),
                   ),
                   if (_soloIncidencias) ...[
-                    const SizedBox(width: 12),
-                    InputChip(
+                      InputChip(
                       label: const Text('De incidencias'),
                       avatar: Icon(Icons.report_outlined, size: 16, color: P.rojo),
                       onDeleted: () => setState(() => _soloIncidencias = false),
@@ -943,14 +951,16 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                     ),
                   ],
                 ],
-                const Spacer(),
+                    ],
+                  ),
                 if (!_historicoOt)
                   FiltroFlujoMantenimiento(
                     incluirSinOrden: false,
                     seleccion: _asignacionOt,
                     onChanged: (i) => setState(() => _asignacionOt = i),
                   ),
-              ],
+                ],
+              ),
             ),
           ],
           const SizedBox(height: 16),
