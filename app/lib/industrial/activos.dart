@@ -862,19 +862,21 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               seleccion: vista,
                               onChanged: (i) => setState(() => vista = i),
                             ),
+                            // En medio, la vigencia; a la derecha del todo, la asignación.
+                            if (vista == 0)
+                              Pestanas(
+                                opciones: const ['Todos', 'Activos', 'Pausados'],
+                                iconos: const [null, Icons.play_arrow_rounded, Icons.pause_rounded],
+                                coloresIconos: const [null, P.verde, P.gris],
+                                seleccion: _vigencia,
+                                compactas: true,
+                                onChanged: (i) => setState(() => _vigencia = i),
+                              ),
                             if (vista == 0)
                               FiltroFlujoMantenimiento(
                                 incluirSinOrden: false,
                                 seleccion: _estadoOrden,
                                 onChanged: (i) => setState(() => _estadoOrden = i),
-                              ),
-                            if (vista == 0)
-                              Pestanas(
-                                opciones: const ['Todos', 'Activos', 'Pausados'],
-                                colores: const [null, P.verde, P.gris],
-                                seleccion: _vigencia,
-                                compactas: true,
-                                onChanged: (i) => setState(() => _vigencia = i),
                               ),
                             // Futuro: filtro de prioridad Normal / Alta / Muy alta.
                           ],

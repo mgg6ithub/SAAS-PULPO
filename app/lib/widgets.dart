@@ -1002,8 +1002,12 @@ class Pestanas extends StatelessWidget {
 
   /// Icono neutro delante de cada opción (null = sin icono).
   final List<IconData?>? iconos;
+
+  /// Color de cada icono (null = el neutro).
+  final List<Color?>? coloresIconos;
   const Pestanas({
     this.iconos,
+    this.coloresIconos,
     super.key,
     required this.opciones,
     required this.seleccion,
@@ -1019,7 +1023,7 @@ class Pestanas extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (iconos != null && iconos![i] != null) ...[
-              Icon(iconos![i], size: 17, color: P.textoSuave),
+              Icon(iconos![i], size: 17, color: coloresIconos?[i] ?? P.textoSuave),
               const SizedBox(width: 6),
             ],
             if (colores != null && colores![i] != null) ...[
