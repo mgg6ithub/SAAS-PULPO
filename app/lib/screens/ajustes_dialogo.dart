@@ -267,7 +267,7 @@ class _AjustesState extends State<_Ajustes> {
                         const LogoPultec(size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          '${Marca.nombre} · versión $versionApp',
+                          '${Marca.nombre} versión $versionApp',
                           style: TextStyle(fontSize: 12, color: P.textoSuave),
                         ),
                       ],
