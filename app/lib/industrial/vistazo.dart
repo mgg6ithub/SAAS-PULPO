@@ -2,6 +2,7 @@ import '../screens/tareas.dart' show pasaFechaTrabajo;
 
 import 'package:flutter/material.dart';
 
+import '../forms.dart' show SelectorTrabajadores;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -258,25 +259,9 @@ class _FilaOrden extends StatelessWidget {
     final tipo = o.tipoMantenimiento ?? TipoMantenimiento.preventivo;
     final activo = o.activoId == null ? null : store.activo(o.activoId!);
     final raiz = _raiz(o.activoId);
-    final vencida = o.proximo != null && diasHasta(o.proximo!) < 0;
-    final tecnico = o.trabajadorIds.isEmpty ? null : store.trabajador(o.trabajadorIds.first)?.nombreCompleto;
-    Widget dato(IconData icono, String texto, {Color? color}) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icono, size: 16, color: color ?? P.textoSuave),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            texto,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13.5, color: color ?? P.textoSuave),
-          ),
-        ),
-      ],
-    );
+    final descripcion = descripcionOt(o);
     return HoverCard(
-      padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
       onTap: () => onAbrir(o.id),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,26 +298,28 @@ class _FilaOrden extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, letterSpacing: -.2, color: P.texto),
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 22,
-                  runSpacing: 4,
-                  children: [
-                    dato(
-                      Icons.calendar_today_outlined,
-                      // Lo atrasado, dicho tal cual («Atrasada 20 días»); lo demás, cuándo toca y su fecha.
-                      o.proximo == null
-                          ? 'Sin fecha'
-                          : vencida
-                          ? 'Atrasada ${-diasHasta(o.proximo!)} ${-diasHasta(o.proximo!) == 1 ? 'día' : 'días'}'
-                          : '${relativo(o.proximo!)}, ${fecha(o.proximo!)}',
-                      color: vencida ? P.rojo : null,
-                    ),
-                    dato(Icons.person_outline_rounded, tecnico ?? 'Sin asignar'),
-                  ],
-                ),
+                // Qué hay que hacer (la fecha y lo que queda, en el anillo de la derecha).
+                if (descripcion.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    descripcion,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13.5, color: P.textoSuave, height: 1.35),
+                  ),
+                ],
               ],
             ),
+          ),
+          const SizedBox(width: 8),
+          // Arriba a la derecha: cuánto queda (anillo) y el técnico, que se asigna desde aquí.
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnilloCiclo(cicloOt(o), size: 20),
+              const SizedBox(width: 6),
+              SelectorTrabajadores(o, () => store.guardarTarea(o), compacto: true),
+            ],
           ),
         ],
       ),

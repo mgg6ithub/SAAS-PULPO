@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/iconos.dart';
-import '../industrial/gravedad.dart' show cancelarOts, origenOt, AnilloCiclo, cicloOt;
+import '../industrial/gravedad.dart' show cancelarOts, origenOt, AnilloCiclo, cicloOt, descripcionOt;
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos;
 import '../models.dart';
@@ -104,15 +104,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   static final _visibles = {'Origen', 'Activo', 'Criticidad', 'Asignado a', 'Periodicidad'};
   bool _ver(String c) => _visibles.contains(c);
 
-  /// Qué hay que hacer: la descripción de la orden o, si no tiene, la de su mantenimiento o su incidencia.
-  String _descripcion(Tarea t) {
-    if (t.descripcion.trim().isNotEmpty) return t.descripcion.trim();
-    final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
-    if (plan != null && plan.descripcion.trim().isNotEmpty) return plan.descripcion.trim();
-    final x = store.incidenciaDeOt(t.id);
-    if (x != null && x.descripcion.trim().isNotEmpty) return x.descripcion.trim();
-    return t.ubicacion;
-  }
+  String _descripcion(Tarea t) => descripcionOt(t);
 
   Widget _menuColumnas() => MenuAnchor(
     alignmentOffset: const Offset(-180, 4),

@@ -228,3 +228,13 @@ class _Anillo extends CustomPainter {
 }
 
 String fechaDe(DateTime d) => fecha(d);
+
+/// Qué hay que hacer: la descripción de la orden o, si no tiene, la de su mantenimiento o su incidencia.
+String descripcionOt(Tarea t) {
+  if (t.descripcion.trim().isNotEmpty) return t.descripcion.trim();
+  final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+  if (plan != null && plan.descripcion.trim().isNotEmpty) return plan.descripcion.trim();
+  final x = store.incidenciaDeOt(t.id);
+  if (x != null && x.descripcion.trim().isNotEmpty) return x.descripcion.trim();
+  return t.ubicacion;
+}
