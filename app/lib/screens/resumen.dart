@@ -312,12 +312,15 @@ class _SinMaquinas extends StatelessWidget {
                 onPressed: () => abrirActivoForm(context),
               ),
             )
+          // Sin órdenes porque aún no hay mantenimientos (lo normal: cada mantenimiento crea su orden).
           : Vacio(
               desplazable: false,
-              icono: Icons.assignment_outlined,
-              titulo: 'Sin órdenes de trabajo',
-              texto:
-                  'Crea un mantenimiento en una máquina y Pultec generará sus órdenes de trabajo para cuando toque.',
+              icono: Icons.content_paste_rounded,
+              titulo: store.planes.isEmpty ? 'Sin mantenimientos ni órdenes de trabajo' : 'Sin órdenes de trabajo',
+              texto: store.planes.isEmpty
+                  ? 'Tus máquinas aún no tienen mantenimientos. Crea uno y Pultec generará sus órdenes de trabajo '
+                        'para cuando toque.'
+                  : 'Pultec generará las órdenes de trabajo de tus mantenimientos para cuando toque.',
               accion: BotonPrimario(
                 'Mantenimiento',
                 conIcono: true,
@@ -1180,7 +1183,9 @@ class _HeroState extends State<_Hero> {
   String get frase {
     if (industrial && store.activos.isEmpty) return 'Aún no hay máquinas. Da de alta la primera para empezar.';
     if (industrial && !store.tareas.any((t) => !t.esPlantilla)) {
-      return 'Aún no hay órdenes de trabajo. Crea un mantenimiento y Pultec las generará solo.';
+      return store.planes.isEmpty
+          ? 'Aún no hay mantenimientos ni órdenes de trabajo.'
+          : 'Aún no hay órdenes de trabajo.';
     }
     final pasos = widget.pasos;
     final quedan = pasos.where((p) => !p).length;
@@ -1323,7 +1328,7 @@ extension on _HeroState {
   /// con la ilustración de la planta a la derecha (Pultec), como la maqueta.
   Widget _mejorada(List<(int, String)> cifras, {required bool sinDatos}) {
     final iconos = industrial
-        ? const [Icons.layers_outlined, Icons.assignment_outlined, Icons.groups_outlined]
+        ? const [Marca.iconoCliente, Icons.assignment_outlined, Icons.groups_outlined]
         : [Marca.iconoCliente, Marca.iconoTrabajo, Marca.iconoTrabajador];
     final texto = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
