@@ -536,6 +536,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   int _estadoOrden = 0;
   int _asignacionOt = 0;
 
+  /// Filtro de vigencia de los mantenimientos: 0 todos, 1 activos, 2 pausados.
+  int _vigencia = 0;
+
   /// Órdenes de trabajo del activo: pendientes o, aparte, el histórico (como en Órdenes de trabajo).
   bool _historicoOt = false;
 
@@ -592,6 +595,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         };
       }).toList();
     }
+    if (_vigencia != 0) planes = planes.where((p) => p.activa == (_vigencia == 1)).toList();
     // Prioridad aparcada para el futuro.
     // if (criticidad != 0) planes = planes.where((p) => p.prioridad.index == criticidad - 1).toList();
     if (planes.isEmpty) {
@@ -863,6 +867,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 incluirSinOrden: false,
                                 seleccion: _estadoOrden,
                                 onChanged: (i) => setState(() => _estadoOrden = i),
+                              ),
+                            if (vista == 0)
+                              Pestanas(
+                                opciones: const ['Todos', 'Activos', 'Pausados'],
+                                colores: const [null, P.verde, P.gris],
+                                seleccion: _vigencia,
+                                compactas: true,
+                                onChanged: (i) => setState(() => _vigencia = i),
                               ),
                             // Futuro: filtro de prioridad Normal / Alta / Muy alta.
                           ],

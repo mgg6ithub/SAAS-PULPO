@@ -309,9 +309,9 @@ class _TablaPlanesState extends State<TablaPlanes> {
       final columnas = [
         ...s.columna,
         const Col('Mantenimiento', flex: 4),
+        // Activo (play) o pausado (pausa); en la cabecera, pausar o reanudar todos.
+        if (medio) Col('Vigencia', ancho: 130, cabecera: _pausarTodos()),
         for (final c in vistas) _cols[c]!,
-        // Vigente (play) o pausado (pausa); en la cabecera, pausar o reanudar todos. Al final, elegir columnas.
-        if (medio) Col('Vigencia', ancho: 110, cabecera: _pausarTodos()),
         // Separado de lo anterior por una raya fina.
         if (medio)
           Col(
@@ -445,27 +445,39 @@ class _TablaPlanesState extends State<TablaPlanes> {
                     ],
                   ),
                 ),
-                for (final c in vistas) celda(c),
                 // Pausado: no crea más órdenes (las que ya hay siguen); al reanudarlo, crea la suya.
                 if (medio)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      tooltip: p.activa
-                          ? 'Vigente · pausar: al completar su orden no se creará la siguiente'
-                          : 'Pausado · reanudar: vuelve a crear sus órdenes',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () {
-                        p.activa = !p.activa;
-                        store.guardarPlan(p);
-                      },
-                      icon: Icon(
-                        p.activa ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                        size: 18,
-                        color: p.activa ? P.verde : P.gris,
+                    child: Tooltip(
+                      message: p.activa
+                          ? 'Pausar: al completar su orden no se creará la siguiente'
+                          : 'Reanudar: vuelve a crear sus órdenes',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          p.activa = !p.activa;
+                          store.guardarPlan(p);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                p.activa ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                                size: 18,
+                                color: p.activa ? P.verde : P.gris,
+                              ),
+                              const SizedBox(width: 4),
+                              celdaTexto(p.activa ? 'Activo' : 'Pausado', suave: !p.activa),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
+                for (final c in vistas) celda(c),
                 if (medio) const SizedBox(),
               ];
             },
