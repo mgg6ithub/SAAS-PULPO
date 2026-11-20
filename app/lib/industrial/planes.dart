@@ -179,9 +179,17 @@ class _TablaPlanesState extends State<TablaPlanes> {
     final rama = store.ramaDe(widget.activoId);
     final todos = store.planes.where((p) => rama.contains(p.activoId)).toList();
     final pausar = todos.any((p) => p.activa);
-    return Align(
-      alignment: Alignment.centerRight,
-      child: IconButton(
+    return Row(
+      children: [
+        Text(
+          'Vigencia',
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: P.mejorada ? FontWeight.w600 : FontWeight.w500,
+            color: P.textoSuave,
+          ),
+        ),
+        IconButton(
           tooltip: pausar ? 'Pausar todos los mantenimientos de este activo' : 'Reanudar todos sus mantenimientos',
           visualDensity: VisualDensity.compact,
           onPressed: todos.isEmpty
@@ -200,7 +208,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
             size: 18,
             color: pausar ? P.textoSuave : P.verde,
           ),
-      ),
+        ),
+      ],
     );
   }
 
@@ -302,8 +311,18 @@ class _TablaPlanesState extends State<TablaPlanes> {
         const Col('Mantenimiento', flex: 4),
         for (final c in vistas) _cols[c]!,
         // Vigente (play) o pausado (pausa); en la cabecera, pausar o reanudar todos. Al final, elegir columnas.
-        if (medio) Col('Pausa', ancho: 48, derecha: true, cabecera: _pausarTodos()),
-        if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
+        if (medio) Col('Vigencia', ancho: 110, cabecera: _pausarTodos()),
+        // Separado de lo anterior por una raya fina.
+        if (medio)
+          Col(
+            'Columnas',
+            ancho: 48,
+            derecha: true,
+            cabecera: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [Container(width: 1, height: 20, color: P.borde), const Spacer(), _menuColumnas()],
+            ),
+          ),
       ];
       // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
       final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 70.0 * c.flex));
@@ -430,7 +449,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                 // Pausado: no crea más órdenes (las que ya hay siguen); al reanudarlo, crea la suya.
                 if (medio)
                   Align(
-                    alignment: Alignment.centerRight,
+                    alignment: Alignment.centerLeft,
                     child: IconButton(
                       tooltip: p.activa
                           ? 'Vigente · pausar: al completar su orden no se creará la siguiente'
