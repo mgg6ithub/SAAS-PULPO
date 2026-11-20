@@ -33,9 +33,7 @@ void main() {
     expect(find.text('Camión'), findsOneWidget);
     expect(find.text('Motor'), findsNothing);
     // La flecha abre los componentes; pulsar el nombre elegiría el camión entero.
-    await tester.tap(find.byWidgetPredicate(
-      (w) => w is Tooltip && (w.message ?? '').startsWith('Componentes de'),
-    ).first);
+    await tester.tap(find.byTooltip('Ver componentes').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Motor'));
     await tester.pumpAndSettle();

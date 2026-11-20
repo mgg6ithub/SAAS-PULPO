@@ -423,7 +423,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             onPressed: widget.onBorrar,
             child: Text(widget.textoBorrar),
           ),
-        if (kDebugMode && widget.onRellenar != null)
+        // En móvil no cabe junto al botón de guardar.
+        if (kDebugMode && widget.onRellenar != null && !_movil)
           TextButton.icon(
             style: TextButton.styleFrom(foregroundColor: P.morado),
             onPressed: widget.onRellenar,
@@ -437,7 +438,10 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: EdgeInsets.only(left: widget.onBorrar != null ? 12 : 0),
-                    child: _Avisos(widget.avisos),
+                    // Con poco sitio, solo el triángulo (al pulsarlo, la lista de lo que falta).
+                    child: LayoutBuilder(
+                      builder: (context, box) => _Avisos(widget.avisos, compacto: box.maxWidth < 160),
+                    ),
                   ),
                 ),
         ),
@@ -451,7 +455,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
           const SizedBox(width: 8),
         ],
         if (!widget.sinPie)
-          widget.iconoGuardar == null
+          // En móvil, sin icono (no cabe junto a los avisos).
+          widget.iconoGuardar == null || _movil
               ? FilledButton(
                   style: widget.colorGuardar == null ? null : FilledButton.styleFrom(backgroundColor: widget.colorGuardar),
                   onPressed: widget.puedeGuardar ? widget.onGuardar : null,
@@ -472,7 +477,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
 /// la lista en orden, y elegir uno lleva la vista a su campo.
 class _Avisos extends StatelessWidget {
   final List<(String, VoidCallback)> avisos;
-  const _Avisos(this.avisos);
+  final bool compacto;
+  const _Avisos(this.avisos, {this.compacto = false});
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -500,6 +506,7 @@ class _Avisos extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.warning_amber_rounded, size: 17, color: P.rojo),
+            if (!compacto) ...[
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -516,6 +523,7 @@ class _Avisos extends StatelessWidget {
               ),
             const SizedBox(width: 4),
             const Icon(CupertinoIcons.chevron_up_chevron_down, size: 13, color: P.rojo),
+            ],
           ],
         ),
       ),
@@ -2530,7 +2538,8 @@ class _PanelActivosState extends State<_PanelActivos> {
         : (store.activos.where((a) => '${a.nombre} ${a.tag}'.toLowerCase().contains(busqueda)).toList()
             ..sort((x, y) => x.titulo.toLowerCase().compareTo(y.titulo.toLowerCase())));
     return SizedBox(
-      width: 340,
+      // En móvil, sin salirse de la pantalla.
+      width: min(340.0, MediaQuery.sizeOf(context).width - 40),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2553,9 +2562,13 @@ class _PanelActivosState extends State<_PanelActivos> {
           // Alto máximo fijo (el menú no da alto acotado: un Flexible aquí colgaba la app).
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 380),
-            child: ListView(
-                shrinkWrap: true,
+            // Sin ListView: el menú mide su ancho intrínseco y una lista perezosa no lo admite (se colgaba).
+            child: SingleChildScrollView(
+                // Propio, no el del menú (que ya tiene el suyo): si no, choca con su barra de desplazamiento.
+                primary: false,
                 padding: const EdgeInsets.only(bottom: 6),
+                child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: busqueda.isNotEmpty
                     ? [
                         for (final a in encontrados)
@@ -2589,6 +2602,7 @@ class _PanelActivosState extends State<_PanelActivos> {
                           const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Divider(height: 1)),
                         for (final a in hijos[null] ?? const <Activo>[]) _activo(a, 0, {}),
                       ],
+              ),
               ),
           ),
         ],

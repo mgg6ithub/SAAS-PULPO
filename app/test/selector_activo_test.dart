@@ -28,7 +28,7 @@ void main() {
       expect(elegido, 'a');
       await tester.tap(find.text(filtro ? 'Activos' : 'Elegir activo'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(SubmenuButton).first);
+      await tester.tap(find.byTooltip('Ver componentes'));
       await tester.pumpAndSettle();
       expect(find.text('Frenos'), findsOneWidget);
       await tester.tap(find.text('Frenos'));
