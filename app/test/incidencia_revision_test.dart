@@ -48,7 +48,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Fuga de aceite'), findsOneWidget);
     expect(find.text('Revisar'), findsOneWidget);
-    expect(find.textContaining('Pendiente de revisión'), findsOneWidget);
+    expect(find.textContaining('Oficina'), findsOneWidget, reason: 'quién la comunicó');
   });
   test('resolver un aviso no completa la OT ni reinicia su mantenimiento', () {
     final p = PlanMantenimiento(id: 'p', activoId: 'a', cadaDias: 30, ultimoHoras: 100, proximo: DateTime(2026, 12, 1));
