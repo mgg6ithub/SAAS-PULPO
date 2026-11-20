@@ -215,6 +215,12 @@ class _TablaPlanesState extends State<TablaPlanes> {
             color: pausar ? P.textoSuave : P.verde,
           ),
         ),
+        // La raya de separación con la columna siguiente (las cabeceras propias no llevan la de la tabla).
+        const Spacer(),
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: Container(width: 1, height: 16, color: P.borde),
+        ),
       ],
     );
   }

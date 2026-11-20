@@ -925,9 +925,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               children: [
                                 Pestanas(
                                   opciones: [
-                                    'Mantenimientos · ${planes.length}',
+                                    'Mantenimientos ${planes.length}',
                                     // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
-                                    '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
+                                    '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} ${componentes.length}',
                                   ],
                                   iconos: const [
                                     Icons.content_paste_rounded,
