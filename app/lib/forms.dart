@@ -596,7 +596,8 @@ class Bloque extends StatelessWidget {
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 170, child: cabeza),
+                  // Cabe la rejilla de iconos en cuatro columnas.
+                  SizedBox(width: 180, child: cabeza),
                   const SizedBox(width: 18),
                   Expanded(child: campos),
                 ],
