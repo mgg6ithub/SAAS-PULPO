@@ -58,7 +58,7 @@ class FiltroFlujoMantenimiento extends StatelessWidget {
                               if (i > 0) ...[
                                 // Sin asignar: persona tachada; asignados: persona en verde (sin círculo).
                                 Icon([Icons.list, if (incluirSinOrden) Icons.content_paste_rounded, Icons.person_off_outlined,
-                                  Icons.person_outline_rounded][i], size: 21,
+                                  Icons.person_outline_rounded][i], size: 19,
                                   color: i == etiquetas.length - 1 ? P.verde : seleccion == i ? P.morado : P.textoSuave),
                                 const SizedBox(width: 6),
                               ],
