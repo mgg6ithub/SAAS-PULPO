@@ -1092,7 +1092,8 @@ class _AccionesOtState extends State<_AccionesOt> {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        BotonAccion('Comunicar incidencia', icono: Icons.report_problem_outlined,
+        // El mismo icono de incidencia que en el resto de la app, en rojo.
+        BotonAccion('Comunicar incidencia', icono: Icons.report_outlined, color: P.rojo,
           onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: widget.w.id, origenTrabajoId: t.id))),
         if (!enCurso)
           BotonAccion(
