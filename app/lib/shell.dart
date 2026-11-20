@@ -421,6 +421,8 @@ class _BotonCrearState extends State<_BotonCrear> {
           opciones: [
             (Marca.iconoCliente, m('Cliente'), () => abrirClienteForm(context)),
             (Marca.iconoTrabajo, m('Trabajo'), () => abrirTareaForm(context, null)),
+            // Pultec: la incidencia, en rojo, entre la orden de trabajo y el técnico.
+            if (industrial) (Icons.report_outlined, 'Incidencia', () => abrirIncidenciaForm(context)),
             (Marca.iconoTrabajador, m('Trabajador'), () => abrirTrabajadorForm(context)),
           ],
         ),
@@ -552,7 +554,8 @@ class _FilaCrearState extends State<_FilaCrear> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icono, size: 24, color: i == elegida ? P.morado : P.texto),
+                  // La incidencia va siempre en rojo, como en la barra lateral.
+                  Icon(icono, size: 24, color: icono == Icons.report_outlined ? P.rojo : i == elegida ? P.morado : P.texto),
                   const SizedBox(height: 6),
                   Text(
                     texto,
@@ -562,7 +565,7 @@ class _FilaCrearState extends State<_FilaCrear> {
                       height: 1.15,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
-                      color: i == elegida ? P.morado : P.texto,
+                      color: icono == Icons.report_outlined ? P.rojo : i == elegida ? P.morado : P.texto,
                     ),
                   ),
                 ],
@@ -886,7 +889,10 @@ class _BarraState extends State<_Barra> {
                   clipBehavior: Clip.none,
                   children: [
                     TweenAnimationBuilder<Color?>(
-                      tween: ColorTween(end: sel ? P.iconoBarraElegido : P.textoBarraSuave),
+                      // Incidencias, al elegirla, con su icono en rojo.
+                      tween: ColorTween(
+                        end: sel ? (s == Seccion.incidencias ? P.rojo : P.iconoBarraElegido) : P.textoBarraSuave,
+                      ),
                       duration: const Duration(milliseconds: 200),
                       builder: (_, c, _) => Icon(icono, size: 20 * escala, color: c),
                     ),
@@ -997,7 +1003,7 @@ class _BarraInferior extends StatelessWidget {
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              Icon(icono, size: 22, color: s == seccion ? P.morado : P.textoSuave),
+                              Icon(icono, size: 22, color: s == seccion ? (s == Seccion.incidencias ? P.rojo : P.morado) : P.textoSuave),
                               if (aviso > 0)
                                 Positioned(
                                   right: -3,

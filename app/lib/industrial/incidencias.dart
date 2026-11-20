@@ -87,6 +87,7 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
             principal: BotonPrimario(
               'Incidencia',
               conIcono: true,
+              color: P.rojo,
               tecla: 'N',
               onPressed: () => abrirIncidenciaForm(context, activoId: activoId),
             ),
