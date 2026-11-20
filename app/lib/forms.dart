@@ -2299,83 +2299,25 @@ class SelectorActivo extends StatelessWidget {
       controller.close();
       onChanged(id);
     }
-    final hijos = <String?, List<Activo>>{};
-    for (final a in store.activos) {
-      (hijos[a.padreId] ??= []).add(a);
-    }
-    Widget texto(Activo a) => Tooltip(
-      message: a.titulo,
-      // Ancho fijo: todas las filas iguales y las flechas de los componentes alineadas a la derecha.
-      child: SizedBox(
-        width: a.padreId == null ? 240 : 180,
-        child: Directionality(textDirection: TextDirection.ltr, child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(a.nombre.trim().isEmpty ? a.tag : a.nombre,
-              maxLines: 1, overflow: TextOverflow.ellipsis),
-            if (a.nombre.trim().isNotEmpty && a.tag.isNotEmpty)
-              Text(a.tag, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
-          ],
-        )),
-      ),
-    );
-    final estilo = MenuStyle(
-      backgroundColor: WidgetStatePropertyAll(P.superficie),
-      maximumSize: const WidgetStatePropertyAll(Size(380, 420)),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-    );
-    Widget opcion(Activo a, Set<String> ancestros) {
-      final componentes = hijos[a.id] ?? [];
-      if (componentes.isEmpty || ancestros.contains(a.id)) {
-        return MenuItemButton(
-          leadingIcon: IconoActivo(a.icono, size: 22, color: P.textoSuave),
-          onPressed: () => elegir(a.id),
-          // Hueco del check y de la flecha también en las hojas, para que todas las filas midan igual.
-          trailingIcon: Padding(
-            padding: const EdgeInsets.only(right: 48),
-            child: Icon(Icons.check_rounded, size: 18, color: valor == a.id ? P.morado : Colors.transparent),
-          ),
-          child: texto(a),
-        );
-      }
-      // Con componentes: pulsar el activo lo elige (con su check); la flecha de la derecha abre sus componentes.
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // El botón del menú se estira por dentro: aquí, en una fila, mide lo que pide su contenido.
-          IntrinsicWidth(
-            child: MenuItemButton(
-              leadingIcon: IconoActivo(a.icono, size: 22, color: valor == a.id ? P.morado : P.textoSuave),
-              onPressed: () => elegir(a.id),
-              trailingIcon: Icon(Icons.check_rounded, size: 18, color: valor == a.id ? P.morado : Colors.transparent),
-              child: texto(a),
-            ),
-          ),
-          // La flecha (con su hueco) abre los componentes; ancho fijo, como la columna de las hojas.
-          SizedBox(
-            width: 60,
-            child: SubmenuButton(
-              menuStyle: estilo.copyWith(maximumSize: const WidgetStatePropertyAll(Size(300, 420))),
-              menuChildren: [for (final h in componentes) opcion(h, {...ancestros, a.id})],
-              child: Tooltip(message: 'Componentes de ${a.titulo}', child: const SizedBox(height: 36)),
-            ),
-          ),
-        ],
-      );
-    }
-    // Igual en el filtro del técnico y en el formulario: icono a la izquierda y flecha a la derecha (si no cabe a la
-    // derecha, el submenú se abre hacia la izquierda solo).
+
+    // Un solo panel (sin submenús laterales): buscador, «Todos»/«Sin activo» y el árbol de activos con sus
+    // componentes, que se despliegan dentro del propio panel.
     return Directionality(
       textDirection: Directionality.of(context),
       child: MenuAnchor(
       controller: controller,
-      style: estilo,
-      menuChildren: [
-        MenuItemButton(onPressed: () => elegir(null), child: Text(filtro ? 'Todos los activos' : 'Sin activo')),
-        for (final a in hijos[null] ?? <Activo>[]) opcion(a, {}),
-      ],
+      alignmentOffset: const Offset(0, 6),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(P.superficie),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        elevation: const WidgetStatePropertyAll(6),
+        shadowColor: const WidgetStatePropertyAll(Colors.black26),
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: P.borde)),
+        ),
+      ),
+      menuChildren: [_PanelActivos(valor: valor, filtro: filtro, onElegir: elegir)],
       builder: (context, menu, _) => Tooltip(
         message: filtro ? 'Filtrar por activo o componente' : 'Asignar a un activo o componente',
         child: filtro ? TextButton(
@@ -2412,6 +2354,219 @@ class SelectorActivo extends StatelessWidget {
         ),
       ),
     ));
+  }
+}
+
+/// Contenido del menú de activos: buscador arriba, la opción general y el árbol (activos y, al desplegarlos, sus
+/// componentes con sangría). Al buscar, lista plana con la ruta de cada uno.
+class _PanelActivos extends StatefulWidget {
+  final String? valor;
+  final bool filtro;
+  final ValueChanged<String?> onElegir;
+  const _PanelActivos({required this.valor, required this.filtro, required this.onElegir});
+
+  @override
+  State<_PanelActivos> createState() => _PanelActivosState();
+}
+
+class _PanelActivosState extends State<_PanelActivos> {
+  String q = '';
+
+  /// Desplegados: de entrada, la ruta del elegido (para verlo sin buscar).
+  late final abiertos = <String>{
+    for (var a = store.activo(store.activo(widget.valor)?.padreId); a != null; a = store.activo(a.padreId)) a.id,
+  };
+
+  late final hijos = () {
+    final h = <String?, List<Activo>>{};
+    for (final a in store.activos) {
+      (h[a.padreId] ??= []).add(a);
+    }
+    for (final l in h.values) {
+      l.sort((x, y) => x.titulo.toLowerCase().compareTo(y.titulo.toLowerCase()));
+    }
+    return h;
+  }();
+
+  String _nombre(Activo a) => a.nombre.trim().isEmpty ? a.tag : a.nombre.trim();
+
+  /// «Camión › Motor»: de dónde cuelga (para la búsqueda).
+  String _ruta(Activo a) {
+    final partes = <String>[];
+    final vistos = <String>{};
+    for (var p = store.activo(a.padreId); p != null && vistos.add(p.id); p = store.activo(p.padreId)) {
+      partes.insert(0, _nombre(p));
+    }
+    return partes.join(' › ');
+  }
+
+  Widget _fila({
+    required Widget icono,
+    required String titulo,
+    String? subtitulo,
+    required bool elegido,
+    required VoidCallback onTap,
+    int nivel = 0,
+    Widget? flecha,
+  }) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+    child: Material(
+      color: elegido ? P.moradoSuave : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        hoverColor: P.hover,
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(6 + nivel * 18.0, 6, 10, 6),
+          child: Row(
+            children: [
+              // Hueco fijo de la flecha: las filas con y sin componentes quedan alineadas.
+              SizedBox(width: 24, height: 24, child: flecha),
+              const SizedBox(width: 4),
+              icono,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titulo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: elegido ? FontWeight.w600 : FontWeight.w500,
+                        color: elegido ? P.moradoOscuro : P.texto,
+                      ),
+                    ),
+                    if (subtitulo != null && subtitulo.isNotEmpty)
+                      Text(
+                        subtitulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: P.textoSuave),
+                      ),
+                  ],
+                ),
+              ),
+              if (elegido) Icon(Icons.check_rounded, size: 18, color: P.morado),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _activo(Activo a, int nivel, Set<String> ancestros) {
+    final componentes = ancestros.contains(a.id) ? const <Activo>[] : hijos[a.id] ?? const <Activo>[];
+    final abierto = abiertos.contains(a.id);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _fila(
+          nivel: nivel,
+          icono: IconoActivo(a.icono, size: 20, color: widget.valor == a.id ? P.morado : P.textoSuave),
+          titulo: _nombre(a),
+          subtitulo: a.nombre.trim().isEmpty ? null : a.tag,
+          elegido: widget.valor == a.id,
+          onTap: () => widget.onElegir(a.id),
+          flecha: componentes.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: abierto ? 'Ocultar componentes' : 'Ver componentes',
+                  padding: EdgeInsets.zero,
+                  iconSize: 18,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => setState(() => abierto ? abiertos.remove(a.id) : abiertos.add(a.id)),
+                  icon: AnimatedRotation(
+                    turns: abierto ? .25 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    child: Icon(Icons.chevron_right_rounded, color: P.textoSuave),
+                  ),
+                ),
+        ),
+        if (abierto)
+          for (final h in componentes) _activo(h, nivel + 1, {...ancestros, a.id}),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final busqueda = q.trim().toLowerCase();
+    final encontrados = busqueda.isEmpty
+        ? const <Activo>[]
+        : (store.activos.where((a) => '${a.nombre} ${a.tag}'.toLowerCase().contains(busqueda)).toList()
+            ..sort((x, y) => x.titulo.toLowerCase().compareTo(y.titulo.toLowerCase())));
+    return SizedBox(
+      width: 340,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+            child: TextField(
+              autofocus: true,
+              onChanged: (v) => setState(() => q = v),
+              style: const TextStyle(fontSize: 14),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Buscar activo o componente…',
+                prefixIcon: Icon(Icons.search_rounded, size: 18, color: P.textoSuave),
+                prefixIconConstraints: const BoxConstraints(minWidth: 36),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 380),
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.only(bottom: 6),
+                children: busqueda.isNotEmpty
+                    ? [
+                        for (final a in encontrados)
+                          _fila(
+                            icono: IconoActivo(a.icono, size: 20, color: widget.valor == a.id ? P.morado : P.textoSuave),
+                            titulo: _nombre(a),
+                            subtitulo: [if (a.padreId != null) _ruta(a), if (a.nombre.trim().isNotEmpty) a.tag]
+                                .where((x) => x.isNotEmpty)
+                                .join(' · '),
+                            elegido: widget.valor == a.id,
+                            onTap: () => widget.onElegir(a.id),
+                          ),
+                        if (encontrados.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text('Ningún activo con «${q.trim()}»', style: TextStyle(color: P.textoSuave)),
+                          ),
+                      ]
+                    : [
+                        _fila(
+                          icono: Icon(
+                            widget.filtro ? Icons.layers_outlined : Icons.block_rounded,
+                            size: 20,
+                            color: widget.valor == null ? P.morado : P.textoSuave,
+                          ),
+                          titulo: widget.filtro ? 'Todos los activos' : 'Sin activo',
+                          elegido: widget.valor == null,
+                          onTap: () => widget.onElegir(null),
+                        ),
+                        if ((hijos[null] ?? const []).isNotEmpty)
+                          const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Divider(height: 1)),
+                        for (final a in hijos[null] ?? const <Activo>[]) _activo(a, 0, {}),
+                      ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
