@@ -52,7 +52,6 @@ class Resumen extends StatelessWidget {
     );
     // Pultec: la guía sale solo hasta completarla una vez en la empresa (se recuerda). Si luego se borra todo, no
     // vuelve: en su lugar, un aviso sencillo para empezar.
-    final vacia = industrial && store.activos.isEmpty && !hayTarea;
     final empresa = store.nube?.empresaId ?? 'local';
     final datosPultec = [store.activos.isNotEmpty, store.planes.isNotEmpty, hayTrabajador, hayTrabajoAsignado];
     if (industrial && !datosPultec.contains(false)) ajustes.marcarGuiaPultec(empresa);
