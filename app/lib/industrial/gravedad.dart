@@ -60,6 +60,17 @@ String? avisoBorrarPlanes(Iterable<String> ids) {
   return partes.isEmpty ? null : 'Se borrarán también ${_enumerar(partes)}, también del calendario y del histórico.';
 }
 
+/// Borra una fila del histórico: la OT cerrada entera; si sigue abierta (el día viene de su historial), solo ese día.
+void borrarDelHistorico(Tarea t, DateTime d) {
+  if (!t.estado.abierta) return store.borrarTarea(t.id);
+  t.historial.removeWhere((x) => DateUtils.isSameDay(x, d));
+  if (DateUtils.isSameDay(t.ultimo, d)) {
+    t.ultimo = t.historial.isEmpty ? null : t.historial.reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+  if (t.resultado == 2 && t.ultimo == null) t.resultado = 0;
+  store.guardarTarea(t);
+}
+
 /// De dónde sale la OT: de un mantenimiento (sola), de una incidencia o creada a mano.
 (String, Color) origenOt(Tarea t) => t.planId != null
     ? ('Mantenimiento', P.morado)

@@ -172,8 +172,21 @@ class _TablaRealizadas extends StatelessWidget {
     clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
     builder: (context, box) {
       final medio = box.maxWidth > 600, ancho = box.maxWidth > 980;
-      return Align(alignment: Alignment.topCenter, child: Tabla(
+      // Una fila es una OT en un día: así se identifica para seleccionarla y borrarla.
+      String clave(Realizada r) => '${r.$2.id}|${r.$1.toIso8601String()}';
+      final porClave = {for (final r in lista) clave(r): r};
+      return SeleccionMultiple(
+        ids: [for (final r in lista) clave(r)],
+        singular: 'orden del histórico',
+        plural: 'órdenes del histórico',
+        borrar: (id) {
+          final r = porClave[id];
+          if (r != null) borrarDelHistorico(r.$2, r.$1);
+        },
+        builder: (context, s) => Align(alignment: Alignment.topCenter, child: Tabla(
+        seleccionCabecera: s.cabecera,
         columnas: [
+          ...s.columna,
           const Col('Fecha', ancho: 120),
           const Col('Orden de trabajo', flex: 3),
           if (medio) const Col('Activo', flex: 5),
@@ -190,6 +203,7 @@ class _TablaRealizadas extends StatelessWidget {
           final ejecutores = t.ejecutadoPor != null ? [t.ejecutadoPor!] : t.trabajadorIds;
           final nombres = [for (final id in ejecutores) ?store.trabajador(id)?.nombre];
           return [
+            ...s.casilla(clave(lista[i])),
             celdaTexto(fecha(d), suave: true),
             Row(
               children: [
@@ -236,9 +250,10 @@ class _TablaRealizadas extends StatelessWidget {
           ];
         },
         // Lo hecho no se edita aquí: se ve la orden con su parte.
-        onTap: (i) => verOrdenHecha(context, lista[i].$2),
+        onTap: (i) => s.tocar(clave(lista[i]), () => verOrdenHecha(context, lista[i].$2)),
         pie: pieTabla(lista.length, lista.length == 1 ? 'orden de trabajo realizada' : 'órdenes de trabajo realizadas'),
-      ));
+      )),
+      );
     },
   );
 }

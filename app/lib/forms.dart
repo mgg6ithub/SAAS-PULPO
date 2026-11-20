@@ -1629,10 +1629,10 @@ class _TareaFormState extends State<TareaForm> {
           (errorHorario == 'Pon una hora' ? 'Te falta la hora' : errorHorario!, () => _irA(_claveCuando)),
       ],
       // Pultec: las OT no se borran, se cancelan (quedan en el histórico); las de un mantenimiento vigente, ni eso.
-      textoBorrar: industrial ? 'Cancelar orden' : 'Eliminar',
-      onBorrar: nueva || (industrial && (!t.estado.abierta || otDeMantenimientoVigente(t)))
+      textoBorrar: industrial && t.estado.abierta ? 'Cancelar orden' : 'Eliminar',
+      onBorrar: nueva || (industrial && t.estado.abierta && otDeMantenimientoVigente(t))
           ? null
-          : industrial
+          : industrial && t.estado.abierta
           ? () {
               cancelarOts(context, [t]);
               if (!widget.incrustada) Navigator.of(context).pop();

@@ -69,9 +69,22 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   });
 
   Future<void> eliminarSeleccion() async {
-    // Pultec: las OT no se borran, se cancelan (quedan en el histórico).
+    // Pultec: las OT abiertas no se borran, se cancelan (quedan en el histórico); las del histórico sí se borran.
     if (industrial) {
-      cancelarOts(context, [for (final id in seleccion) ?store.tarea(id)]);
+      final sel = [for (final id in seleccion) ?store.tarea(id)];
+      final cerradas = sel.where((t) => !t.estado.abierta).toList();
+      if (cerradas.isNotEmpty) {
+        final que = '${cerradas.length} ${cerradas.length == 1 ? 'orden del histórico' : 'órdenes del histórico'}';
+        if (!await confirmar(context, '¿Eliminar $que?', nota: 'Podrás deshacerlo.')) return;
+        store.deshacible('Has borrado $que', () {
+          for (final t in cerradas) {
+            store.borrarTarea(t.id);
+          }
+        });
+      }
+      if (!mounted) return;
+      final abiertas = sel.where((t) => t.estado.abierta).toList();
+      if (abiertas.isNotEmpty) cancelarOts(context, abiertas);
       salirSeleccion();
       return;
     }
@@ -235,7 +248,13 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             child: Center(
               child: BarraSeleccion(
                 acciones: [_cambiar()],
-                textoEliminar: industrial ? 'Cancelar' : 'Eliminar',
+                // Pultec: en el histórico (todo cerrado) se elimina; si hay alguna abierta, se cancela.
+                textoEliminar: industrial &&
+                        (seleccion.isEmpty
+                            ? ts.any((t) => t.estado.abierta)
+                            : seleccion.any((id) => store.tarea(id)?.estado.abierta ?? false))
+                    ? 'Cancelar'
+                    : 'Eliminar',
                 seleccionados: seleccion.length,
                 total: ts.length,
                 nombre: m('${widget.nombre}s'),
