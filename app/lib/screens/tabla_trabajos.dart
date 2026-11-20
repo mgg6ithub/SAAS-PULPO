@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/iconos.dart';
-import '../industrial/gravedad.dart' show cancelarOts, origenOt;
+import '../industrial/gravedad.dart' show cancelarOts, origenOt, AnilloCiclo, cicloOt;
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos;
 import '../models.dart';
@@ -355,6 +355,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (seleccionando) CirculoSeleccion(seleccion.contains(t.id)),
               Row(
                 children: [
+                  // Pultec: cuánto le queda al ciclo, de un vistazo.
+                  if (industrial) ...[AnilloCiclo(cicloOt(t)), const SizedBox(width: 10)],
                   if (!industrial) ...[BarraTipo(t.tipo, alto: 28, color: t.colorBloque), const SizedBox(width: 10)],
                   Flexible(
                     child: Column(

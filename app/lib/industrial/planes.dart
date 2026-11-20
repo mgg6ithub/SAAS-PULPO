@@ -438,6 +438,12 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Cuánto le queda al ciclo (pausado, sin anillo).
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: AnilloCiclo(p.activa ? cicloPlan(p) : null),
+                      ),
+                      const SizedBox(width: 10),
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

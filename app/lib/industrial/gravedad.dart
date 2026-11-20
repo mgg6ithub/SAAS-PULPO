@@ -5,6 +5,9 @@ import '../widgets.dart' show IconoAsignado;
 import '../models.dart';
 import '../store.dart';
 import 'incidencia.dart';
+import 'plan.dart';
+import 'planes.dart' show horasRestantesPlan, proximoPlan;
+import 'dart:math' as math;
 
 /// OT que aún cuenta para el estado de un activo: activa y sin terminar.
 bool otPendiente(Tarea t) =>
@@ -129,3 +132,89 @@ Widget iconoAsignacion(Tarea? ot) => Tooltip(
       ? Icon(Icons.content_paste_rounded, size: 18, color: P.textoSuave)
       : IconoAsignado(ot.trabajadorIds.isNotEmpty, size: 18),
 );
+
+
+/// Cuánto le queda al ciclo (1 = recién hecho, 0 = toca ya o vencido) y el texto de lo que queda. Por horas, con
+/// las horas que le quedan; por días, con los días hasta su fecha sobre el «cada cuánto». Sin periodo (una orden
+/// suelta), sobre una ventana de 30 días.
+(double, String)? cicloPlan(PlanMantenimiento p, {DateTime? fecha}) {
+  if (p.cadaHoras != null && p.cadaHoras! > 0) {
+    final h = horasRestantesPlan(p);
+    if (h == null) return null;
+    return ((h / p.cadaHoras!).clamp(0, 1).toDouble(), h <= 0 ? 'Le toca ya' : 'Quedan ${h.round()} h de ${p.cadaHoras} h');
+  }
+  final d = fecha ?? proximoPlan(p);
+  if (d == null) return null;
+  return _cicloDias(diasHasta(d), p.cadaDias ?? 30);
+}
+
+(double, String) _cicloDias(int quedan, int total) => (
+  (quedan / math.max(total, 1)).clamp(0, 1).toDouble(),
+  quedan < 0 ? 'Vencida hace ${-quedan} ${-quedan == 1 ? 'día' : 'días'}' : quedan == 0 ? 'Toca hoy' : 'Quedan $quedan ${quedan == 1 ? 'día' : 'días'} de $total',
+);
+
+(double, String)? cicloOt(Tarea t) {
+  if (!t.estado.abierta || t.proximo == null) return null;
+  final p = t.planId == null ? null : store.planes.where((x) => x.id == t.planId).firstOrNull;
+  if (p != null) return cicloPlan(p, fecha: p.cadaHoras != null ? null : t.proximo);
+  return _cicloDias(diasHasta(t.proximo!), 30);
+}
+
+/// Anillo de progreso del ciclo, de un vistazo: lleno y verde recién hecho; se vacía con los días (u horas); por
+/// debajo del 20 % pasa a ámbar y del 10 %, a rojo.
+class AnilloCiclo extends StatelessWidget {
+  final (double, String)? ciclo;
+  final double size;
+  const AnilloCiclo(this.ciclo, {super.key, this.size = 18});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ciclo;
+    if (c == null) return SizedBox(width: size, height: size);
+    final (f, texto) = c;
+    final color = f <= .1 ? P.rojo : f <= .2 ? P.ambar : P.verde;
+    return Tooltip(
+      message: texto,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(end: f),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
+        builder: (_, v, _) => CustomPaint(size: Size.square(size), painter: _Anillo(v, color)),
+      ),
+    );
+  }
+}
+
+class _Anillo extends CustomPainter {
+  final double f;
+  final Color color;
+  const _Anillo(this.f, this.color);
+
+  @override
+  void paint(Canvas canvas, Size s) {
+    final grosor = s.width * .2;
+    final r = (s.width - grosor) / 2;
+    final centro = s.center(Offset.zero);
+    final rect = Rect.fromCircle(center: centro, radius: r);
+    canvas.drawCircle(centro, r, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = grosor
+      ..color = color.withValues(alpha: .18));
+    if (f <= 0) return;
+    // Un brillo suave debajo del arco, como un anillo encendido.
+    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * f, false, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = grosor
+      ..strokeCap = StrokeCap.round
+      ..color = color.withValues(alpha: .35)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
+    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * f, false, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = grosor
+      ..strokeCap = StrokeCap.round
+      ..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _Anillo old) => old.f != f || old.color != color;
+}
