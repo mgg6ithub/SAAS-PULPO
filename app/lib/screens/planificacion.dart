@@ -286,6 +286,29 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                     const SizedBox(width: 8),
                   ],
+                  // Pultec: ir al próximo mantenimiento, pegado a la izquierda del «+».
+                  if (industrial && vista == 1) ...[
+                    Tooltip(
+                      message: 'Ver el próximo mantenimiento',
+                      child: Material(
+                        color: P.superficie,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          side: BorderSide(color: P.borde),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          onTap: _verProximo,
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: Center(child: Prismaticos(size: 20, color: P.texto)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   if (vista == 1)
                     // Como en Órdenes de trabajo: botón principal con su «+» y la tecla N.
                     BotonPrimario(
@@ -306,33 +329,11 @@ class _PlanificacionState extends State<Planificacion> {
                         }
                       },
                     ),
-                  if (vista == 1) const SizedBox(width: 8),
+                  if (vista == 1 && !industrial) const SizedBox(width: 8),
                   // Organizar: organiza el día que estás viendo.
-                  // Pultec: Organizar quitado de momento; en su sitio, ir al próximo mantenimiento.
+                  // Pultec: Organizar quitado de momento (el próximo mantenimiento va a la izquierda del «+»).
                   if (!industrial)
                     BotonPultec(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
-                  if (industrial && vista == 1) ...[
-                    const SizedBox(width: 8),
-                    Tooltip(
-                      message: 'Ver el próximo mantenimiento',
-                      child: Material(
-                        color: P.superficie,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(P.radioControl),
-                          side: BorderSide(color: P.borde),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(P.radioControl),
-                          onTap: _verProximo,
-                          child: SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: Center(child: Prismaticos(size: 20, color: P.morado)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                   // Pultec, sin rutas: sin mapa ni su botón.
                   if (Marca.mapa && vista == 1) ...[
                     const SizedBox(width: 8),
