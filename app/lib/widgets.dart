@@ -377,6 +377,8 @@ class FilaLista extends StatelessWidget {
     child: InkWell(
       onTap: onTap,
       hoverColor: P.hoverFila,
+      // Sin toque propio (dentro de una tarjeta que se pulsa entera): manda el cursor de la tarjeta.
+      mouseCursor: onTap == null ? MouseCursor.defer : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         child: Row(

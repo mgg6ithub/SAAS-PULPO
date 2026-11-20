@@ -1541,10 +1541,8 @@ Text('$etiqueta: ${t.nombre}')
     return ListView.builder(itemCount: filas.length, itemBuilder: (_, n) => switch (filas[n]) {
       final Tarea t => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        // Toda la tarjeta se abre y se marca al pasar el ratón (borde morado, como en el administrador);
-        // las atrasadas, con fondo y borde de aviso.
+        // Toda la tarjeta se abre y se marca al pasar el ratón (borde morado, como en el administrador).
         child: HoverCard(padding: EdgeInsets.zero, onTap: () => widget.abrir(t),
-          tinte: t.proximo != null && diasHasta(t.proximo!) < 0 ? P.rojo : null,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _FilaTrabajo(t, widget.abrir, mostrarDia: true, dentroDeTarjeta: true),
           Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo)),
@@ -1564,11 +1562,13 @@ Text('$etiqueta: ${t.nombre}')
     if (lista.isEmpty) return _vacio('No tienes incidencias enviadas con estos filtros');
     return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) {
       final i = lista[n];
-      return Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(padding: EdgeInsets.zero,
+      // Igual que las órdenes: la tarjeta entera se pulsa y se marca al pasar el ratón.
+      return Padding(padding: const EdgeInsets.only(bottom: 8), child: HoverCard(padding: EdgeInsets.zero,
+        onTap: () => _verIncidencia(i),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           FilaLista(lider: _IconoActivo(i.activoId), titulo: i.descripcion,
             subtitulo: '${_cuando(i.creada)}\n${dondeEs(i.activoId)}',
-            derecha: Pill(store.estadoIncidencia(i).etiqueta, store.estadoIncidencia(i).color), onTap: () => _verIncidencia(i)),
+            derecha: Pill(store.estadoIncidencia(i).etiqueta, store.estadoIncidencia(i).color)),
           Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: Text(
             'Orden de origen: ${store.tarea(i.origenTrabajoId ?? '')?.nombre ?? 'Sin orden asociada'}'
             '${i.trabajoId == null ? '' : '\nOrden para resolverla: ${store.tarea(i.trabajoId!)?.nombre ?? 'Orden no disponible'}'}',
@@ -1593,11 +1593,11 @@ Text('$etiqueta: ${t.nombre}')
     return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) {
       final i = lista[n], t = store.tarea(i.trabajoId);
       final texto = ['Completada', 'Con incidencias', 'No se pudo hacer'][i.resultado];
-      return Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(padding: EdgeInsets.zero,
+      return Padding(padding: const EdgeInsets.only(bottom: 8), child: HoverCard(padding: EdgeInsets.zero,
+        onTap: t == null ? null : () => verInforme(context, i, t),
         child: FilaLista(lider: Icon(i.resultado == 0 ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
           color: coloresResultado[i.resultado]), titulo: t?.nombre ?? 'Orden no disponible',
-          subtitulo: '${_cuando(i.cuando)}   $texto\n${dondeEs(t?.activoId)}',
-          onTap: t == null ? null : () => verInforme(context, i, t)),
+          subtitulo: '${_cuando(i.cuando)}   $texto\n${dondeEs(t?.activoId)}'),
       ));
     });
   });
@@ -1728,7 +1728,7 @@ class _TituloSeccion extends StatelessWidget {
     child: Row(children: [
       Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
       const SizedBox(width: 8),
-      Text(titulo, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color == P.rojo ? P.rojo : P.texto)),
+      Text(titulo, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: P.texto)),
       const SizedBox(width: 8),
       Text('$total', style: TextStyle(fontSize: 14, color: P.textoSuave)),
     ]),
