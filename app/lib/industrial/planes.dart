@@ -392,6 +392,13 @@ class _PlanFormState extends State<PlanForm> {
   late final repuestos = TextEditingController(text: p.repuestos);
   late final procedimiento = TextEditingController(text: p.procedimiento);
   late final avisoDias = TextEditingController(text: p.avisoDias?.toString() ?? '');
+  late final medicion = TextEditingController(text: p.medicionNombre);
+  late final unidad = TextEditingController(text: p.medicionUnidad);
+  late final minimo = TextEditingController(text: _num(p.medicionMin));
+  late final maximo = TextEditingController(text: _num(p.medicionMax));
+
+  static String _num(double? v) => v == null ? '' : (v == v.roundToDouble() ? '${v.toInt()}' : '$v');
+  static double? _decimal(TextEditingController c) => double.tryParse(c.text.trim().replaceAll(',', '.'));
   late final avisoCorreos = TextEditingController(text: p.avisoCorreos);
   late final preparar = TextEditingController(text: p.preparar);
   late final empresaExterna = TextEditingController(text: p.empresaExterna);
@@ -457,6 +464,10 @@ class _PlanFormState extends State<PlanForm> {
       ..ultimoHoras = double.tryParse(contador.text.trim().replaceAll(',', '.')) ?? (modo == 1 ? _horasActivo() : null)
       ..repuestos = repuestos.text.trim()
       ..procedimiento = procedimiento.text.trim()
+      ..medicionNombre = medicion.text.trim()
+      ..medicionUnidad = medicion.text.trim().isEmpty ? '' : unidad.text.trim()
+      ..medicionMin = medicion.text.trim().isEmpty ? null : _decimal(minimo)
+      ..medicionMax = medicion.text.trim().isEmpty ? null : _decimal(maximo)
       ..avisoDias = _entero(avisoDias)
       ..avisoCorreos = avisoCorreos.text.trim()
       ..preparar = preparar.text.trim()
@@ -602,6 +613,23 @@ class _PlanFormState extends State<PlanForm> {
         Bloque('Procedimiento', descripcion: 'Los pasos, para que cualquier técnico lo haga igual.', [
           campo('Procedimiento', procedimiento, lineas: 5),
         ]),
+        // Verificación con dato: el técnico apunta el valor en su parte y sale en Estadísticas.
+        Bloque(
+          'Medición',
+          descripcion: 'Si hay que apuntar un dato (vibración, temperatura…). Fuera de límites abre una incidencia.',
+          [
+            dos(
+              campo('Qué se mide', medicion, hint: 'Vibración'),
+              campo('Unidad', unidad, hint: 'mm/s'),
+            ),
+            dos(
+              campo('Mínimo admitido', minimo, hint: 'Sin mínimo',
+                teclado: const TextInputType.numberWithOptions(decimal: true, signed: true)),
+              campo('Máximo admitido', maximo, hint: 'Sin máximo',
+                teclado: const TextInputType.numberWithOptions(decimal: true, signed: true)),
+            ),
+          ],
+        ),
         Bloque(
           'Preparación',
           descripcion: 'Aviso previo para tener a tiempo grúas, repuestos complejos o personal cualificado o externo.',

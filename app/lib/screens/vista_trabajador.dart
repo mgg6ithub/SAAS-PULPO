@@ -2022,6 +2022,19 @@ class _FormularioInformeState extends State<FormularioInforme> {
   late final raiz = industrial ? raizActivo(widget.t.activoId) : null;
   final contador = TextEditingController();
 
+  /// Pultec: el mantenimiento pide una medición (verificación con dato).
+  late final plan = industrial ? store.planes.where((p) => p.id == widget.t.planId && p.conMedicion).firstOrNull : null;
+  final medida = TextEditingController();
+
+  /// Valor medido (null = vacío; NaN = no válido). Obligatorio si se pide medición y se ha hecho el trabajo.
+  double? get _medida {
+    final c = medida.text.trim().replaceAll(',', '.');
+    if (c.isEmpty) return null;
+    return double.tryParse(c) ?? double.nan;
+  }
+
+  bool get _faltaMedida => plan != null && resultado != 2 && (_medida == null || _medida!.isNaN);
+
   @override
   void initState() {
     super.initState();
@@ -2039,7 +2052,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
 
   @override
   void dispose() {
-    for (final c in [notas, material, minutos, firmante, contador]) {
+    for (final c in [notas, material, minutos, firmante, contador, medida]) {
       c.dispose();
     }
     firma.dispose();
@@ -2071,7 +2084,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
 
   Future<void> _guardar() async {
     if (guardando || leyendoFotos) return;
-    if (notas.text.trim().isEmpty || _minutos == -1 || _contador == -1) {
+    if (notas.text.trim().isEmpty || _minutos == -1 || _contador == -1 || _faltaMedida) {
       setState(() => intentado = true);
       return;
     }
@@ -2089,6 +2102,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
           notas: notas.text.trim(),
           material: material.text.trim(),
           minutos: raiz != null ? null : _minutos,
+          valor: plan == null || _medida == null || _medida!.isNaN ? null : _medida,
           firmante: firma.vacia || industrial ? '' : firmante.text.trim(),
         ),
         fotos: fotos,
@@ -2146,6 +2160,8 @@ class _FormularioInformeState extends State<FormularioInforme> {
     aviso(subido ? 'Informe guardado' : 'Sin conexión: el informe se ha guardado aquí y se subirá al volver');
   }
 
+  static String? _n(double? v) => v == null ? null : (v == v.roundToDouble() ? '${v.toInt()}' : '$v');
+
   Widget _miniatura(int n) => Stack(
     children: [
       ClipRRect(
@@ -2200,6 +2216,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
       if (intentado && notas.text.trim().isEmpty) ('Cuenta qué has hecho', () {}),
       if (intentado && _minutos == -1) ('El tiempo va en minutos', () {}),
       if (intentado && _contador == -1) ('El contador va en horas, con números', () {}),
+      if (intentado && _faltaMedida) ('Falta ${plan!.medicionNombre.toLowerCase()}', () {}),
     ],
     campos: [
       Bloque('Resultado', primero: true, descripcion: m('Cómo ha ido el trabajo.'), [
@@ -2210,6 +2227,24 @@ class _FormularioInformeState extends State<FormularioInforme> {
           child: Pill(resultadosInforme[resultado], coloresResultado[resultado], punto: true),
         ),
       ]),
+      if (plan != null)
+        Bloque(
+          'Medición',
+          descripcion: [
+            if (plan!.medicionMin != null || plan!.medicionMax != null)
+              'Admitido de ${_n(plan!.medicionMin) ?? '…'} a ${_n(plan!.medicionMax) ?? '…'} ${plan!.medicionUnidad}'.trim(),
+            'Si se sale, la oficina recibe una incidencia.',
+          ].join('. '),
+          [
+            campo(
+              plan!.medicionUnidad.isEmpty ? plan!.medicionNombre : '${plan!.medicionNombre} (${plan!.medicionUnidad})',
+              medida,
+              obligatorio: resultado != 2,
+              teclado: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              error: intentado && _faltaMedida ? 'Escribe el valor medido, con números' : null,
+            ),
+          ],
+        ),
       Bloque('Qué has hecho', descripcion: 'Lo que ha pasado, lo que has cambiado y lo que queda pendiente.', [
         campo(
           industrial ? 'Trabajo realizado y mediciones' : 'Notas',

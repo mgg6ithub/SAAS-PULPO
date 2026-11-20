@@ -148,6 +148,7 @@ class _InformeState extends State<_Informe> {
           Text(i.notas, style: const TextStyle(fontSize: 14, height: 1.45)),
           if (i.material.isNotEmpty || i.minutos != null) ...[
             const SizedBox(height: 12),
+            if (i.valor != null) _dato('Medición', medidaTexto(i, widget.t)),
             if (i.material.isNotEmpty) _dato('Material', i.material),
             if (i.minutos != null) _dato('Tiempo', duracionTexto(i.minutos!)),
           ],

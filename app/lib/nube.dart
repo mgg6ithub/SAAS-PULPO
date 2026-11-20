@@ -326,7 +326,7 @@ class Nube {
   Future<List<Informe>> informes(String trabajoId) async {
     final r = await _db
         .from('informes')
-        .select('id, trabajador_id, resultado, notas, material, minutos, fotos, firma, firmante, created_at')
+        .select('id, trabajador_id, resultado, notas, material, minutos, valor, fotos, firma, firmante, created_at')
         .eq('trabajo_id', _u(trabajoId))
         .order('created_at', ascending: false);
     return [
@@ -339,11 +339,27 @@ class Nube {
           notas: x['notas'],
           material: x['material'],
           minutos: x['minutos'],
+          valor: (x['valor'] as num?)?.toDouble(),
           fotos: List<String>.from(x['fotos'] as List),
           firma: x['firma'],
           firmante: x['firmante'],
           cuando: DateTime.parse(x['created_at'] as String).toLocal(),
         ),
+    ];
+  }
+
+  /// Valores medidos en los partes de estas OT (las de un mantenimiento), del más antiguo al más reciente.
+  Future<List<(DateTime, double, String)>> mediciones(List<String> trabajoIds) async {
+    if (trabajoIds.isEmpty) return [];
+    final r = await _db
+        .from('informes')
+        .select('valor, created_at, trabajo_id')
+        .inFilter('trabajo_id', [for (final id in trabajoIds) _u(id)])
+        .not('valor', 'is', null)
+        .order('created_at');
+    return [
+      for (final x in r)
+        (DateTime.parse(x['created_at'] as String).toLocal(), (x['valor'] as num).toDouble(), x['trabajo_id'] as String),
     ];
   }
 
@@ -360,7 +376,7 @@ class Nube {
     return [for (final x in filas) Informe(
       id: x['id'], trabajoId: x['trabajo_id'], trabajadorId: x['trabajador_id'],
       resultado: x['resultado'], notas: x['notas'], material: x['material'],
-      minutos: x['minutos'], fotos: List<String>.from(x['fotos'] as List),
+      minutos: x['minutos'], valor: (x['valor'] as num?)?.toDouble(), fotos: List<String>.from(x['fotos'] as List),
       firma: x['firma'], firmante: x['firmante'],
       cuando: DateTime.parse(x['created_at'] as String).toLocal(),
     )];
@@ -397,6 +413,7 @@ class Nube {
             'notas': i.notas,
             'material': i.material,
             'minutos': i.minutos,
+            if (i.valor != null) 'valor': i.valor,
             'fotos': rutas,
             'firma': rutaFirma,
             'firmante': i.firmante,
@@ -1245,6 +1262,10 @@ class Nube {
           'activa': p.activa,
           'grupo_id': grupos.contains(p.grupoId) ? _u(p.grupoId!) : null,
           'trabajador_id': trabajadores.contains(p.trabajadorId) ? _u(p.trabajadorId!) : null,
+          'medicion_nombre': p.medicionNombre,
+          'medicion_unidad': p.medicionUnidad,
+          'medicion_min': p.medicionMin,
+          'medicion_max': p.medicionMax,
         };
       }
     }
@@ -1547,6 +1568,10 @@ Activo _activo(Map x) => Activo(
 PlanMantenimiento _plan(Map x) => PlanMantenimiento(
   grupoId: x['grupo_id'] as String?,
   trabajadorId: x['trabajador_id'] as String?,
+  medicionNombre: x['medicion_nombre'] as String? ?? '',
+  medicionUnidad: x['medicion_unidad'] as String? ?? '',
+  medicionMin: (x['medicion_min'] as num?)?.toDouble(),
+  medicionMax: (x['medicion_max'] as num?)?.toDouble(),
   color: (x['color'] as num?)?.toInt(),
   id: x['id'],
   activoId: x['activo_id'],

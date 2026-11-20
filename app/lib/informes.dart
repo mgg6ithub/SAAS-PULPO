@@ -17,9 +17,13 @@ import 'nube.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'marca.dart';
+import 'industrial/activo.dart';
+import 'industrial/activos.dart' show contadorTexto;
+import 'industrial/estadisticas.dart' show numTexto, resumenActivo;
+import 'industrial/gravedad.dart' show resultadoOt;
 import 'industrial/incidencia.dart';
 import 'industrial/mantenimientos.dart' show dondeEs;
-import 'industrial/planes.dart' show raizActivo;
+import 'industrial/planes.dart' show horasRestantesPlan, proximoPlan, raizActivo;
 
 /// Informe de un trabajo hecho por un trabajador. Con sesión vive en la tabla `informes` y sus fotos en Storage;
 /// sin sesión (demo), en memoria con las fotos en base64.
@@ -31,6 +35,9 @@ class Informe {
 
   /// Tiempo dedicado, en minutos (null = sin apuntar).
   final int? minutos;
+
+  /// Valor medido, si su mantenimiento pide medición (null = sin medir).
+  final double? valor;
 
   /// Rutas del bucket `fotos` (con sesión) o JPEG en base64 (sin sesión).
   final List<String> fotos;
@@ -47,6 +54,7 @@ class Informe {
     required this.notas,
     this.material = '',
     this.minutos,
+    this.valor,
     this.fotos = const [],
     this.firma,
     this.firmante = '',
@@ -62,6 +70,7 @@ class Informe {
     notas: notas,
     material: material,
     minutos: minutos,
+    valor: valor,
     fotos: fotos,
     firma: firma,
     firmante: firmante,
@@ -75,6 +84,14 @@ String duracionTexto(int minutos) =>
 
 const resultadosInforme = ['Todo correcto', 'Con incidencias', 'No se pudo hacer'];
 const coloresResultado = [P.verde, P.ambar, P.rojo];
+
+/// «7,2 mm/s»: el valor medido con la unidad de su mantenimiento.
+String medidaTexto(Informe i, Tarea t) {
+  final p = store.planes.where((x) => x.id == t.planId).firstOrNull;
+  final v = i.valor!;
+  final n = v == v.roundToDouble() ? '${v.toInt()}' : '$v'.replaceAll('.', ',');
+  return [n, if (p != null && p.medicionUnidad.isNotEmpty) p.medicionUnidad].join(' ');
+}
 
 /// Fotos como mucho por informe.
 const maxFotosInforme = 6;
@@ -112,6 +129,7 @@ class Informes extends ChangeNotifier {
     notas: x['notas'],
     material: x['material'],
     minutos: x['minutos'],
+    valor: (x['valor'] as num?)?.toDouble(),
     fotos: List<String>.from(x['fotos'] as List),
     firma: x['firma'],
     firmante: x['firmante'],
@@ -228,6 +246,19 @@ class Informes extends ChangeNotifier {
     return [...pendientes.reversed, ...?l?.where((i) => !pendientes.any((p) => p.id == i.id))];
   }
 
+  /// Valores medidos de un mantenimiento (en los partes de todas sus OT), del más antiguo al más reciente.
+  Future<List<(DateTime, double)>> mediciones(String planId) async {
+    final ots = [for (final t in [...store.tareas, ...store.subtareas]) if (t.planId == planId) t.id];
+    final n = store.nube;
+    if (n == null) {
+      return [
+        for (final i in _local)
+          if (i.valor != null && ots.contains(i.trabajoId)) (i.cuando, i.valor!),
+      ]..sort((a, b) => a.$1.compareTo(b.$1));
+    }
+    return [for (final (d, v, _) in await n.mediciones(ots)) (d, v)];
+  }
+
   /// Informes del trabajo ya leídos (para descargar su PDF sin esperar a que se pinten).
   Future<List<Informe>> cargar(String trabajoId) async {
     final n = store.nube;
@@ -264,6 +295,7 @@ class Informes extends ChangeNotifier {
           'notas': i.notas,
           'material': i.material,
           'minutos': i.minutos,
+          'valor': i.valor,
           'fotos': [for (final f in fotos) base64Encode(f)],
           'firma': firma == null ? null : base64Encode(firma),
           'firmante': i.firmante,
@@ -481,6 +513,11 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
           ),
         ),
         seccion('Trabajo realizado', i.notas.isEmpty ? 'Sin observaciones.' : i.notas),
+        if (i.valor != null)
+          seccion(
+            plan != null && plan.conMedicion ? plan.medicionNombre : 'Medición',
+            medidaTexto(i, t),
+          ),
         if (i.material.isNotEmpty) seccion('Material y repuestos', i.material),
         if (fotos.isNotEmpty) ...[
           pw.SizedBox(height: 14),
@@ -735,4 +772,113 @@ Future<Uint8List> incidenciaPdf(Incidencia x) async {
     ),
   );
   return doc.save();
+}
+
+/// Resumen de un activo en PDF (Estadísticas): cifras del periodo, contador, sus mantenimientos (cada cuánto,
+/// último, próximo y cuántos se han hecho), las órdenes hechas y sus incidencias.
+Future<void> descargarResumenActivo(Activo a, DateTime desde, int dias) async {
+  final r = resumenActivo(a, desde);
+  final empresa = store.nube?.nombre ?? '';
+  final doc = pw.Document(title: 'Resumen ${a.titulo}', author: empresa.isEmpty ? Marca.nombre : empresa);
+  final limpio = a.id.replaceAll('-', '').toUpperCase();
+  pw.Widget celda(String t, {bool cab = false}) => pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+    child: pw.Text(t, style: pw.TextStyle(fontSize: cab ? 8.5 : 9.5, color: cab ? _suavePdf : _tintaPdf,
+      fontWeight: cab ? pw.FontWeight.bold : pw.FontWeight.normal)),
+  );
+  pw.Widget tabla(List<String> cab, List<List<String>> filas) => pw.Table(
+    border: pw.TableBorder(horizontalInside: pw.BorderSide(color: _bordePdf, width: .6)),
+    children: [
+      pw.TableRow(children: [for (final c in cab) celda(c, cab: true)]),
+      for (final f in filas) pw.TableRow(children: [for (final c in f) celda(c)]),
+    ],
+  );
+  doc.addPage(
+    _paginaPdf(
+      logo: await _logoPdf(),
+      empresa: empresa,
+      titulo: 'Resumen del activo',
+      numero: 'ACT-${limpio.substring(0, min(8, limpio.length))}',
+      cuando: 'Últimos $dias días',
+      build: (_) => [
+        pw.Text(a.titulo, style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: _tintaPdf)),
+        if (a.descripcion.isNotEmpty) ...[
+          pw.SizedBox(height: 4),
+          pw.Text(a.descripcion, style: pw.TextStyle(fontSize: 10.5, color: _suavePdf)),
+        ],
+        pw.SizedBox(height: 14),
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: _tarjetaPdf('Periodo (del ${fecha(desde)} a hoy)', [
+                _datoPdf('Órdenes hechas', '${r.hechas}'),
+                _datoPdf('Partes con problema', '${r.conProblema}'),
+                _datoPdf('Incidencias', '${r.incidencias.length}'),
+              ]),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(
+              child: _tarjetaPdf('Estado hoy', [
+                _datoPdf('Contador', contadorTexto(a)),
+                _datoPdf('Órdenes pendientes', '${r.pendientes}'),
+                _datoPdf('Atrasadas', '${r.atrasadas}'),
+              ]),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 16),
+        _etiquetaPdf('Mantenimientos'),
+        pw.SizedBox(height: 6),
+        tabla(
+          ['Mantenimiento', 'Cada', 'Último', 'Próximo', 'Hechos'],
+          [
+            for (final (p, hechos) in r.planes)
+              [
+                p.nombre,
+                p.cada.replaceAll(' · ', ', '),
+                p.ultimo == null ? '-' : fecha(p.ultimo!),
+                switch ((proximoPlan(p), horasRestantesPlan(p))) {
+                  (final d?, _) => fecha(d),
+                  (null, final h?) => 'Faltan ${numTexto(h)} h',
+                  _ => '-',
+                },
+                '$hechos',
+              ],
+          ],
+        ),
+        if (r.realizadas.isNotEmpty) ...[
+          pw.SizedBox(height: 16),
+          _etiquetaPdf('Órdenes hechas'),
+          pw.SizedBox(height: 6),
+          tabla(
+            ['Fecha', 'Orden', 'Técnico', 'Resultado'],
+            [
+              for (final (d, t) in r.realizadas.take(40))
+                [
+                  fecha(d),
+                  t.nombre,
+                  store.trabajador(t.ejecutadoPor ?? t.trabajadorIds.firstOrNull ?? '')?.nombreCompleto ?? '-',
+                  resultadoOt(t).$1,
+                ],
+            ],
+          ),
+        ],
+        if (r.incidencias.isNotEmpty) ...[
+          pw.SizedBox(height: 16),
+          _etiquetaPdf('Incidencias'),
+          pw.SizedBox(height: 6),
+          tabla(
+            ['Fecha', 'Incidencia', 'Gravedad', 'Estado'],
+            [
+              for (final x in r.incidencias)
+                [fecha(x.creada), x.descripcion, x.gravedad.etiqueta, store.estadoIncidencia(x).etiqueta],
+            ],
+          ),
+        ],
+      ],
+    ),
+  );
+  final nombre = 'Resumen ${a.titulo} ${fecha(hoy())}'.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
+  await descargar(await doc.save(), '$nombre.pdf', 'application/pdf');
 }

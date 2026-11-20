@@ -38,6 +38,11 @@ class PlanMantenimiento {
   /// A quién va su OT: un técnico fijo o un grupo (se reparte); ninguno = sin asignar.
   String? trabajadorId, grupoId;
 
+  /// Verificación con dato: qué se mide (vacío = no pide medición), en qué unidad y entre qué límites.
+  String medicionNombre, medicionUnidad;
+  double? medicionMin, medicionMax;
+  bool get conMedicion => medicionNombre.trim().isNotEmpty;
+
   PlanMantenimiento({
     required this.id,
     required this.activoId,
@@ -63,6 +68,10 @@ class PlanMantenimiento {
     this.empresaExterna = '',
     this.trabajadorId,
     this.grupoId,
+    this.medicionNombre = '',
+    this.medicionUnidad = '',
+    this.medicionMin,
+    this.medicionMax,
   }) : prioridad = prioridad ?? PrioridadMantenimiento.values[tipo.index];
 
   /// "Cada 90 días · cada 500 h", o lo que haya.
@@ -119,6 +128,10 @@ class PlanMantenimiento {
     'empresaExterna': empresaExterna,
     'trabajadorId': trabajadorId,
     'grupoId': grupoId,
+    'medicionNombre': medicionNombre,
+    'medicionUnidad': medicionUnidad,
+    'medicionMin': medicionMin,
+    'medicionMax': medicionMax,
   };
 
   factory PlanMantenimiento.fromJson(Map<String, dynamic> j) => PlanMantenimiento(
@@ -145,6 +158,10 @@ class PlanMantenimiento {
     empresaExterna: j['empresaExterna'] as String? ?? '',
     trabajadorId: j['trabajadorId'] as String?,
     grupoId: j['grupoId'] as String?,
+    medicionNombre: j['medicionNombre'] as String? ?? '',
+    medicionUnidad: j['medicionUnidad'] as String? ?? '',
+    medicionMin: (j['medicionMin'] as num?)?.toDouble(),
+    medicionMax: (j['medicionMax'] as num?)?.toDouble(),
   );
 
   PlanMantenimiento copia() => PlanMantenimiento.fromJson(toJson());

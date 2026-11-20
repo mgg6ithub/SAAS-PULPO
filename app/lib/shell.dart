@@ -8,6 +8,7 @@ import 'marca.dart';
 import 'models.dart';
 import 'notificaciones.dart';
 import 'industrial/activos.dart';
+import 'industrial/estadisticas.dart';
 import 'industrial/incidencias.dart';
 import 'industrial/mantenimientos.dart' show abrirIncidenciaForm;
 import 'screens/cliente_detalle.dart';
@@ -28,8 +29,8 @@ import 'theme.dart';
 import 'widgets.dart';
 
 /// Secciones de la barra lateral, en orden.
-/// `incidencias` solo existe en Pultec.
-enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, incidencias, finanzas }
+/// `incidencias` y `estadisticas` solo existen en Pultec.
+enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, incidencias, estadisticas, finanzas }
 
 /// Barra lateral + página activa.
 class Shell extends StatefulWidget {
@@ -45,7 +46,7 @@ class _ShellState extends State<Shell> {
     0,
     Seccion.values.length - (industrial ? 2 : 1),
   )]) {
-    Seccion.incidencias when !industrial => Seccion.inicio,
+    Seccion.incidencias || Seccion.estadisticas when !industrial => Seccion.inicio,
     final s => s,
   };
   String? clienteId = Uri.base.queryParameters['c'];
@@ -304,6 +305,7 @@ class _ShellState extends State<Shell> {
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
     Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
     Seccion.incidencias => const IncidenciasPagina(),
+    Seccion.estadisticas => const EstadisticasPultec(),
     Seccion.finanzas => const VistaFinanzas(),
   };
 }
@@ -838,6 +840,7 @@ class _BarraState extends State<_Barra> {
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
+      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     final activo = items.indexWhere((x) => x.$3 == widget.seccion);
@@ -970,6 +973,7 @@ class _BarraInferior extends StatelessWidget {
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
+      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     return Container(
