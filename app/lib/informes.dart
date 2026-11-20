@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, LogicalKeyboardKey;
 import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -368,6 +368,84 @@ class _FotoGuardadaState extends State<FotoGuardada> {
     builder: (context, s) => s.hasData
         ? Image.memory(s.data!, width: widget.width, height: widget.height, fit: widget.fit)
         : Container(width: widget.width, height: widget.height, color: P.fondo),
+  );
+}
+
+/// Fotos a pantalla completa: flechas (y las del teclado) para pasar, Esc o la X para cerrar.
+Future<void> verFotos(BuildContext context, List<String> fotos, int inicio) => showDialog(
+  context: context,
+  barrierColor: Colors.black87,
+  builder: (_) => _VisorFotos(fotos, inicio),
+);
+
+class _VisorFotos extends StatefulWidget {
+  final List<String> fotos;
+  final int inicio;
+  const _VisorFotos(this.fotos, this.inicio);
+
+  @override
+  State<_VisorFotos> createState() => _VisorFotosState();
+}
+
+class _VisorFotosState extends State<_VisorFotos> {
+  late int n = widget.inicio;
+
+  void _ir(int d) {
+    final nuevo = (n + d).clamp(0, widget.fotos.length - 1);
+    if (nuevo != n) setState(() => n = nuevo);
+  }
+
+  Widget _flecha(IconData icono, VoidCallback? onTap) => IconButton.filled(
+    style: IconButton.styleFrom(backgroundColor: Colors.white24, foregroundColor: Colors.white),
+    onPressed: onTap,
+    icon: Icon(icono),
+  );
+
+  @override
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _ir(-1),
+      const SingleActivator(LogicalKeyboardKey.arrowRight): () => _ir(1),
+      const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.pop(context),
+    },
+    child: Focus(
+      autofocus: true,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(80, 60, 80, 60),
+                child: Center(child: FotoGuardada(widget.fotos[n], key: ValueKey(n), fit: BoxFit.contain)),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: _flecha(Icons.close_rounded, () => Navigator.pop(context)),
+          ),
+          if (widget.fotos.length > 1) ...[
+            Positioned(left: 16, top: 0, bottom: 0, child: Center(child: _flecha(Icons.chevron_left_rounded, n > 0 ? () => _ir(-1) : null))),
+            Positioned(
+              right: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(child: _flecha(Icons.chevron_right_rounded, n < widget.fotos.length - 1 ? () => _ir(1) : null)),
+            ),
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text('${n + 1} / ${widget.fotos.length}', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    ),
   );
 }
 

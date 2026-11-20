@@ -273,10 +273,10 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
     lider: Icon(Icons.report_outlined, size: 26, color: P.rojo),
     titulo: widget.original == null ? 'Crear incidencia' : 'Editar incidencia',
     // Se envía a la oficina: «Enviar» (o «Enviar cambios» al editarla).
-    textoGuardar: widget.original == null ? 'Enviar' : 'Enviar cambios',
+    textoGuardar: ocupada ? 'Enviando…' : widget.original == null ? 'Enviar' : 'Enviar cambios',
     iconoGuardar: Icons.send_rounded,
     colorGuardar: P.rojo,
-    puedeGuardar: activoId != null && descripcion.text.trim().isNotEmpty,
+    puedeGuardar: !ocupada && activoId != null && descripcion.text.trim().isNotEmpty,
     onGuardar: _guardar,
     avisos: [
       if (activoId == null) ('Te falta el activo o componente', () => _ir(claveActivo)),

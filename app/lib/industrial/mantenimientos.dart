@@ -238,6 +238,9 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
   /// Guarda la incidencia y abre su OT ya rellena: lo comunicado va a la descripción (no al título) y se
   /// pueden poner repuestos y procedimiento. Al guardarla, la incidencia pasa a «Con OT».
   Future<void> crearOt() async {
+    // Una sola OT por incidencia: si ya tiene una abierta, no se crea otra.
+    final yaTiene = store.tarea(x.trabajoId);
+    if (yaTiene != null && yaTiene.estado.abierta) return;
     if (!_guardar()) return;
     final nav = Navigator.of(context);
     final a = store.activo(x.activoId);
@@ -252,15 +255,32 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       periodicidad: Periodicidad.unica,
       criticidad: Criticidad.rutinaria,
     );
+    // Se crea ya y se enlaza a la incidencia (pasa a «Con OT» al momento, también en la lista); luego se abre
+    // para ajustarla. Así no se puede crear dos veces.
+    store.guardarTarea(ot);
+    store.guardarIncidencia(
+      x
+        ..trabajoId = ot.id
+        ..estado = EstadoIncidencia.conOt,
+    );
     nav.pop();
-    await abrirTareaForm(nav.context, null, borrador: ot);
-    if (store.tareas.any((t) => t.id == ot.id)) {
-      store.guardarIncidencia(
-        x.copia()
-          ..trabajoId = ot.id
-          ..estado = EstadoIncidencia.conOt,
-      );
+    await abrirTareaForm(nav.context, ot);
+  }
+
+  /// Con OT: la cancela (queda en el histórico) y desestima la incidencia, sin ir a la orden.
+  Future<void> cancelarOtYDesestimar() async {
+    final ot = store.tarea(x.trabajoId);
+    if (!await confirmar(
+      context,
+      '¿Cancelar su orden de trabajo y desestimar la incidencia?',
+      accion: 'Cancelar OT y desestimar',
+      nota: 'La orden queda en el histórico como cancelada.',
+    )) {
+      return;
     }
+    if (ot != null && ot.estado.abierta) store.cambiarEstado([ot], EstadoTrabajo.noRealizado);
+    x.estado = EstadoIncidencia.desestimada;
+    if (_guardar() && mounted) Navigator.pop(context);
   }
 
   /// Cerrar sin hacer nada: queda en el histórico como desestimada.
@@ -301,8 +321,10 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       titulo: existe ? 'Incidencia' : 'Nueva incidencia',
       subtitulo: existe ? 'Comunicada por ${tecnico?.nombre ?? 'la oficina'} el ${fecha(x.creada)}' : null,
       tituloDesplazado: descripcion.text,
-      extra: existe ? Pill(estado.etiqueta, estado.color, punto: true) : null,
-      bajoBotones: BotonMenu<Gravedad>(
+      // Estado y gravedad, en la misma línea.
+      bajoBotones: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (existe) ...[Pill(estado.etiqueta, estado.color, icono: estado.icono), const SizedBox(width: 12)],
+        BotonMenu<Gravedad>(
         tooltip: 'Gravedad',
         seleccionado: x.gravedad,
         onSelected: (g) => setState(() => x.gravedad = g),
@@ -320,16 +342,22 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
               Text('Gravedad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
               const SizedBox(width: 6),
               Text(x.gravedad.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 2),
+              Icon(Icons.unfold_more_rounded, size: 16, color: P.textoSuave),
             ],
           ),
         ),
       ),
+      ]),
       onGuardar: () {
         if (_guardar()) Navigator.pop(context);
       },
       avisos: [if (error != null) ('Te falta qué pasa', () {})],
+      textoBorrar: estado == EstadoIncidencia.conOt ? 'Cancelar OT y desestimar' : 'Eliminar',
       onBorrar: !existe
           ? null
+          : estado == EstadoIncidencia.conOt
+          ? cancelarOtYDesestimar
           : () async {
               store.deshacible('Has borrado una incidencia', () => store.borrarIncidencia(x.id));
               Navigator.of(context).pop();
@@ -383,10 +411,17 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final f in x.fotos)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(P.radio),
-                    child: FotoGuardada(f, width: 160, height: 120),
+                // Al pulsar, a pantalla completa (con flechas si hay varias).
+                for (final (n, f) in x.fotos.indexed)
+                  MouseRegion(
+                    cursor: SystemMouseCursors.zoomIn,
+                    child: GestureDetector(
+                      onTap: () => verFotos(context, x.fotos, n),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(P.radio),
+                        child: FotoGuardada(f, width: 160, height: 120),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -418,6 +453,15 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
         ),
         Bloque(
           'Acciones',
+          // El PDF, abajo a la izquierda (bajo el título).
+          pie: existe
+              ? BotonAccion(
+                  descargando ? 'Preparando…' : 'Descargar PDF',
+                  icono: Icons.download_rounded,
+                  tooltip: 'PDF con la incidencia, sus fotos y su resolución',
+                  onPressed: descargando ? () {} : _informe,
+                )
+              : null,
           descripcion: switch (estado) {
             EstadoIncidencia.abierta => 'Crea una OT para resolverla o desestímala si no hace falta hacer nada.',
             EstadoIncidencia.conOt => 'Se completa sola al cerrar su orden de trabajo.',
@@ -426,7 +470,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
               'Desestimada${x.cerradaEl == null ? '' : ' el ${fecha(x.cerradaEl!)}'}: no hizo falta intervenir.',
           },
           [
-            if (estado == EstadoIncidencia.abierta)
+            if (estado == EstadoIncidencia.abierta && !(ot?.estado.abierta ?? false))
               conMargen(
                 Wrap(
                   spacing: 8,
@@ -454,18 +498,6 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Enlace('Reabrir', onTap: () => setState(() => x.estado = EstadoIncidencia.abierta)),
-              ),
-            if (existe)
-              conMargen(
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: BotonAccion(
-                    descargando ? 'Preparando…' : 'Descargar PDF',
-                    icono: Icons.download_rounded,
-                    tooltip: 'PDF con la incidencia, sus fotos y su resolución',
-                    onPressed: descargando ? () {} : _informe,
-                  ),
-                ),
               ),
           ],
         ),
