@@ -100,7 +100,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   }
 
   /// Pultec: columnas opcionales de la lista de órdenes y las que se ven (se recuerdan mientras dure la sesión).
-  static const _opcionales = ['Origen', 'Activo', 'Criticidad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
+  static const _opcionales = ['Activo', 'Origen', 'Criticidad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
   static final _visibles = {'Origen', 'Activo', 'Criticidad', 'Asignado a', 'Periodicidad'};
   bool _ver(String c) => _visibles.contains(c);
 
@@ -332,8 +332,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             // Pultec: columnas a elegir con el menú del final (de serie, sin «Fecha y hora»: la fecha exacta sale al
             // pasar el ratón por el anillo del principio).
             if (industrial) ...[
-              if (medio && _ver('Origen')) const Col('Origen', ancho: 140),
               if (medio && widget.conCliente && _ver('Activo')) const Col('Activo', flex: 4),
+              if (medio && _ver('Origen')) const Col('Origen', ancho: 150),
               // Siempre «Criticidad» con su píldora (Preventivo, No crítico, Crítico), aunque haya poco sitio.
               if (_ver('Criticidad')) Col('Criticidad', ancho: apurado ? 128 : 170),
               if (medio && _ver('Asignado a')) Col('Asignado a', ancho: apurado ? 72 : 96),
@@ -437,15 +437,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                 ],
               ),
               if (industrial) ...[
-                if (medio && _ver('Origen'))
-                  Builder(builder: (_) {
-                    final (origen, color) = origenOt(t);
-                    return Row(children: [
-                      puntoTipo(color, tam: 7),
-                      const SizedBox(width: 6),
-                      Flexible(child: celdaTexto(origen, suave: true)),
-                    ]);
-                  }),
                 if (medio && widget.conCliente && _ver('Activo'))
                   Tooltip(message: store.activo(t.activoId)?.titulo ?? 'Sin activo',
                         child: Row(children: [
@@ -455,6 +446,21 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                           ],
                           Expanded(child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true)),
                         ])),
+                // Con el icono de su sitio: mantenimiento (portapapeles), incidencia (aviso) o a mano (lápiz).
+                if (medio && _ver('Origen'))
+                  Builder(builder: (_) {
+                    final (origen, color) = origenOt(t);
+                    final icono = origen == 'Mantenimiento'
+                        ? Icons.content_paste_rounded
+                        : origen == 'Incidencia'
+                        ? Icons.report_outlined
+                        : Icons.edit_outlined;
+                    return Row(children: [
+                      Icon(icono, size: 18, color: color),
+                      const SizedBox(width: 6),
+                      Flexible(child: celdaTexto(origen, suave: true)),
+                    ]);
+                  }),
                 if (_ver('Criticidad'))
                   Align(
                     alignment: Alignment.centerLeft,
