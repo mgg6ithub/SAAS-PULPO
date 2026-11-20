@@ -1565,7 +1565,11 @@ class _ActivoFormState extends State<ActivoForm> {
                           borderRadius: BorderRadius.circular(P.radioControl),
                         ),
                       ),
-                      onPressed: () => setState(() => a.icono = clave),
+                      onPressed: () {
+                        setState(() => a.icono = clave);
+                        // En Datos, el icono se guarda al momento (la ruta de arriba cambia a la vez).
+                        if (_autoguardado) _guardarYa();
+                      },
                       icon: IconoActivo(clave, size: 22),
                     ),
                   IconButton(
@@ -1580,7 +1584,10 @@ class _ActivoFormState extends State<ActivoForm> {
                     ),
                     onPressed: () async {
                       final clave = await elegirIcono(context, a.icono);
-                      if (clave != null) setState(() => a.icono = clave);
+                      if (clave != null) {
+                        setState(() => a.icono = clave);
+                        if (_autoguardado) _guardarYa();
+                      }
                     },
                     icon: const Icon(Icons.add_rounded, size: 22),
                   ),
