@@ -308,10 +308,20 @@ class _TablaPlanesState extends State<TablaPlanes> {
                             p.activa = !p.activa;
                             store.guardarPlan(p);
                           },
-                          child: Pill(
-                            p.activa ? 'Vigente' : 'Pausado',
-                            p.activa ? P.verde : P.gris,
-                            icono: p.activa ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  p.activa ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                                  size: 18,
+                                  color: p.activa ? P.verde : P.gris,
+                                ),
+                                const SizedBox(width: 4),
+                                celdaTexto(p.activa ? 'Vigente' : 'Pausado', suave: !p.activa),
+                              ],
+                            ),
                           ),
                         ),
                       ),
