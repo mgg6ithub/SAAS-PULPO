@@ -237,13 +237,44 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
     ],
   );
 
+  /// Foto con una X arriba a la derecha para quitarla.
+  Widget _conQuitar(Widget foto, String ayuda, VoidCallback quitar) => SizedBox(
+    width: 84,
+    height: 84,
+    child: Stack(
+      children: [
+        foto,
+        Positioned(
+          top: 4,
+          right: 4,
+          child: Tooltip(
+            message: ayuda,
+            child: Material(
+              color: Colors.black54,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: quitar,
+                child: const Padding(
+                  padding: EdgeInsets.all(3),
+                  child: Icon(Icons.close_rounded, size: 15, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => VentanaFormulario(
     // Sin «INCIDENCIAS» encima: el título con el icono de incidencia en rojo y el botón «Crear incidencia», rojo.
     lider: Icon(Icons.report_outlined, size: 26, color: P.rojo),
     titulo: widget.original == null ? 'Crear incidencia' : 'Editar incidencia',
-    textoGuardar: widget.original == null ? 'Crear incidencia' : 'Guardar',
-    iconoGuardar: widget.original == null ? Icons.report_outlined : null,
+    // Se envía a la oficina: «Enviar» (o «Enviar cambios» al editarla).
+    textoGuardar: widget.original == null ? 'Enviar' : 'Enviar cambios',
+    iconoGuardar: Icons.send_rounded,
     colorGuardar: P.rojo,
     puedeGuardar: activoId != null && descripcion.text.trim().isNotEmpty,
     onGuardar: _guardar,
@@ -346,42 +377,29 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
           runSpacing: 8,
           children: [
             for (final g in guardadas)
-              SizedBox(
-                width: 90,
-                child: Column(
-                  children: [
-                    ClipRRect(borderRadius: BorderRadius.circular(P.radio), child: FotoGuardada(g, width: 84, height: 84)),
-                    BotonAccion(
-                      'Quitar',
-                      tooltip: 'Quitar esta foto',
-                      onPressed: () {
-                        if (!ocupada) setState(() => guardadas.remove(g));
-                      },
-                    ),
-                  ],
-                ),
+              _conQuitar(
+                ClipRRect(borderRadius: BorderRadius.circular(P.radio), child: FotoGuardada(g, width: 84, height: 84)),
+                'Quitar esta foto',
+                () {
+                  if (!ocupada) setState(() => guardadas.remove(g));
+                },
               ),
             for (var n = 0; n < fotos.length; n++)
-              SizedBox(
-                width: 90,
-                child: Column(
-                  children: [
-                    Image.memory(
-                      fotos[n],
-                      width: 84,
-                      height: 84,
-                      fit: BoxFit.cover,
-                      semanticLabel: 'Foto ${n + 1} de la avería',
-                    ),
-                    BotonAccion(
-                      'Quitar',
-                      tooltip: 'Quitar foto ${n + 1}',
-                      onPressed: () {
-                        if (!ocupada) setState(() => fotos.removeAt(n));
-                      },
-                    ),
-                  ],
+              _conQuitar(
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(P.radio),
+                  child: Image.memory(
+                    fotos[n],
+                    width: 84,
+                    height: 84,
+                    fit: BoxFit.cover,
+                    semanticLabel: 'Foto ${n + 1} de la avería',
+                  ),
                 ),
+                'Quitar foto ${n + 1}',
+                () {
+                  if (!ocupada) setState(() => fotos.removeAt(n));
+                },
               ),
             if (_totalFotos < maxFotosInforme)
               BotonAccion(

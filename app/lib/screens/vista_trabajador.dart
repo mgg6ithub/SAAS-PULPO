@@ -115,6 +115,11 @@ Future<void> abrirVistaTrabajador(BuildContext context) {
   );
 }
 
+/// La orden tiene una incidencia que salió de ella y que la oficina aún no ha respondido (sin OT ni desestimar).
+bool esperandoIncidencia(Tarea t) => store.incidencias.any(
+  (i) => i.origenTrabajoId == t.id && store.estadoIncidencia(i) == EstadoIncidencia.abierta,
+);
+
 List<Tarea> _misTrabajos(Trabajador w) => store.tareas
     .where(
       (t) =>
@@ -1114,6 +1119,23 @@ class _AccionesOtState extends State<_AccionesOt> {
     final t = widget.t;
     if (t.estado == EstadoTrabajo.realizado || t.hechaEl(hoy())) return const SizedBox.shrink();
     final enCurso = t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.contains(widget.w.id);
+    // Con una incidencia suya de esta orden aún sin respuesta: congelada (ni empezar ni otra incidencia).
+    if (esperandoIncidencia(t)) {
+      return Tarjeta(
+        color: P.ambar.withValues(alpha: .08),
+        padding: const EdgeInsets.all(14),
+        child: Row(children: [
+          const Icon(Icons.hourglass_top_rounded, size: 20, color: P.ambar),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Esperando la respuesta de la oficina a tu incidencia sobre esta orden. Mientras tanto no se puede empezar.',
+              style: TextStyle(fontSize: 14, color: P.texto),
+            ),
+          ),
+        ]),
+      );
+    }
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -1643,7 +1665,10 @@ Text('$etiqueta: ${t.nombre}')
         child: HoverCard(padding: EdgeInsets.zero, onTap: () => widget.abrir(t),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _FilaTrabajo(t, widget.abrir, mostrarDia: true, dentroDeTarjeta: true),
-          Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo)),
+          Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: Wrap(spacing: 8, runSpacing: 6, children: [
+            PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo),
+            if (esperandoIncidencia(t)) const Pill('Esperando respuesta a tu incidencia', P.ambar, icono: Icons.hourglass_top_rounded),
+          ])),
         ])),
       ),
       (final String titulo, final int total, final Color color) => _TituloSeccion(titulo, total, color),
@@ -1672,9 +1697,10 @@ Text('$etiqueta: ${t.nombre}')
       return Padding(padding: const EdgeInsets.only(bottom: 8), child: HoverCard(padding: EdgeInsets.zero,
         onTap: () => _verIncidencia(i),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          FilaLista(lider: _IconoActivo(i.activoId), titulo: i.descripcion,
+          // Del color de su gravedad (no crítico ámbar, crítico rojo), no del de la orden de origen.
+          FilaLista(lider: _IconoActivo(i.activoId, color: i.gravedad.color), titulo: i.descripcion,
             subtitulo: '${_cuando(i.creada)}\n${dondeEs(i.activoId)}',
-            derecha: Pill(store.estadoIncidencia(i).etiqueta, store.estadoIncidencia(i).color)),
+            derecha: Pill(store.estadoIncidencia(i).etiqueta, store.estadoIncidencia(i).color, icono: store.estadoIncidencia(i).icono)),
           Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: Text(
             'Orden de origen: ${store.tarea(i.origenTrabajoId ?? '')?.nombre ?? 'Sin orden asociada'}'
             '${i.trabajoId == null ? '' : '\nOrden para resolverla: ${store.tarea(i.trabajoId!)?.nombre ?? 'Orden no disponible'}'}',
