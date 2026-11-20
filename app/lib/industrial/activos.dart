@@ -225,7 +225,7 @@ class _TablaActivos extends StatelessWidget {
         singular: componentes ? 'componente' : 'activo',
         plural: componentes ? 'componentes' : 'activos',
         borrar: store.borrarActivo,
-        nota: 'Se borran también sus componentes, mantenimientos, órdenes pendientes e incidencias. Podrás deshacerlo.',
+        nota: avisoBorrarActivos,
         builder: (context, s) => Align(
         alignment: Alignment.topCenter,
         child: Tabla(
@@ -1263,18 +1263,11 @@ class _ActivoFormState extends State<ActivoForm> {
           ? null
           : () async {
               final nav = Navigator.of(context);
-              final n = store.ramaDe(a.id).length - 1;
-              final con = n == 0
-                  ? ''
-                  : ' y sus $n ${n == 1 ? 'componente' : 'componentes'}';
-              // Solo se pregunta si se lleva por delante componentes o mantenimientos; si no, basta con «Deshacer».
-              final arrastra = n > 0 || store.planes.any((p) => p.activoId == a.id);
-              if (arrastra &&
-                  !await confirmar(
-                    context,
-                    '¿Eliminar ${a.titulo}$con y sus mantenimientos? Sus OT se quedan, sin activo.',
-                    nota: 'Podrás deshacerlo.',
-                  )) {
+              // Solo se pregunta si se lleva algo por delante (componentes, mantenimientos, OT); si no, basta con
+              // «Deshacer».
+              final aviso = avisoBorrarActivos([a.id]);
+              if (aviso != null &&
+                  !await confirmar(context, '¿Eliminar ${a.titulo}?', nota: '$aviso Podrás deshacerlo.')) {
                 return;
               }
               store.deshacible('Has borrado ${a.titulo}', () => store.borrarActivo(a.id));

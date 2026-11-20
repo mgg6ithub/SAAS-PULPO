@@ -2367,8 +2367,8 @@ class SeleccionMultiple extends StatefulWidget {
   final String singular, plural;
   final ValueChanged<String> borrar;
 
-  /// Aviso al confirmar (p. ej. qué más se borra con ellos).
-  final String? nota;
+  /// Aviso al confirmar según lo elegido (p. ej. qué más se borra con ellos).
+  final String? Function(List<String> ids)? nota;
 
   /// Acciones propias antes de «Eliminar» (p. ej. pausar mantenimientos), con los ids elegidos.
   final List<Widget> Function(List<String> ids)? acciones;
@@ -2400,7 +2400,8 @@ class _SeleccionMultipleState extends State<SeleccionMultiple> {
   Future<void> _eliminar() async {
     final ids = sel.where(widget.ids.contains).toList();
     final que = '${ids.length} ${ids.length == 1 ? widget.singular : widget.plural}';
-    if (!await confirmar(context, '¿Eliminar $que?', nota: widget.nota ?? 'Podrás deshacerlo.')) return;
+    final aviso = widget.nota?.call(ids);
+    if (!await confirmar(context, '¿Eliminar $que?', nota: [?aviso, 'Podrás deshacerlo.'].join(' '))) return;
     store.deshacible('Has borrado $que', () => ids.forEach(widget.borrar));
     _salir();
   }

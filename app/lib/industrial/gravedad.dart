@@ -24,6 +24,37 @@ TipoMantenimiento? masGrave(Iterable<Tarea> ots) {
 /// antes su mantenimiento.
 bool otDeMantenimientoVigente(Tarea t) => t.planId != null && store.planes.any((p) => p.id == t.planId && p.activa);
 
+/// «a, b y c».
+String _enumerar(List<String> xs) =>
+    xs.length <= 1 ? xs.join() : '${xs.sublist(0, xs.length - 1).join(', ')} y ${xs.last}';
+
+String _cuantos(int n, String uno, String varios) => '$n ${n == 1 ? uno : varios}';
+
+/// Qué más se borra con estos activos (componentes, mantenimientos, OT pendientes e incidencias); null si nada.
+String? avisoBorrarActivos(Iterable<String> ids) {
+  final rama = {for (final id in ids) ...store.ramaDe(id)};
+  final componentes = rama.length - ids.length;
+  final planes = store.planes.where((p) => rama.contains(p.activoId)).length;
+  final ots = [...store.tareas, ...store.subtareas].where((t) => rama.contains(t.activoId) && t.estado.abierta).length;
+  final incidencias = store.incidencias.where((x) => rama.contains(x.activoId)).length;
+  final partes = [
+    if (componentes > 0) _cuantos(componentes, 'componente', 'componentes'),
+    if (planes > 0) _cuantos(planes, 'mantenimiento', 'mantenimientos'),
+    if (ots > 0) _cuantos(ots, 'orden de trabajo pendiente', 'órdenes de trabajo pendientes'),
+    if (incidencias > 0) _cuantos(incidencias, 'incidencia', 'incidencias'),
+  ];
+  return partes.isEmpty ? null : 'Se borrarán también ${_enumerar(partes)}.';
+}
+
+/// Qué más se borra con estos mantenimientos (sus OT pendientes); null si nada.
+String? avisoBorrarPlanes(Iterable<String> ids) {
+  final set = ids.toSet();
+  final ots = [...store.tareas, ...store.subtareas].where((t) => set.contains(t.planId) && t.estado.abierta).length;
+  return ots == 0
+      ? null
+      : 'Se borrará también ${ots == 1 ? 'su orden de trabajo pendiente' : 'sus $ots órdenes de trabajo pendientes'}.';
+}
+
 /// De dónde sale la OT: de un mantenimiento (sola), de una incidencia o creada a mano.
 (String, Color) origenOt(Tarea t) => t.planId != null
     ? ('Mantenimiento', P.morado)
