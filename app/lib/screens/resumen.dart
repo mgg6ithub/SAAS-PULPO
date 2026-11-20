@@ -1615,7 +1615,8 @@ class _Kpis extends StatelessWidget {
     final items = [
       (Icons.today_rounded, 'Para hoy', hoy, P.morado, 'en agenda'),
       industrial
-          ? (Icons.person_off_outlined, 'Sin asignar', semana, P.teal, 'órdenes por asignar')
+          // Sin color, como «Sin asignar» en las columnas y filtros.
+          ? (Icons.person_off_outlined, 'Sin asignar', semana, P.gris, 'órdenes por asignar')
           : (Icons.date_range_rounded, 'Esta semana', semana, P.teal, 'próximos 7 días'),
       (
         Icons.warning_amber_rounded,

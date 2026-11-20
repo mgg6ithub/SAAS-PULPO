@@ -24,7 +24,8 @@ bool _hecha(Tarea t) => t.estado == EstadoTrabajo.realizado || t.estado == Estad
 /// Pultec: en vez de «Esta semana», «Sin técnico» (órdenes pendientes que nadie tiene asignadas).
 final _filtrosFecha = [
   ('Para hoy', P.morado, Icons.today_rounded),
-  industrial ? ('Sin asignar', P.teal, Icons.person_off_outlined) : ('Esta semana', P.teal, Icons.date_range_rounded),
+  // Pultec: «Sin asignar» sin color, igual que en las columnas.
+  industrial ? ('Sin asignar', P.gris, Icons.person_off_outlined) : ('Esta semana', P.teal, Icons.date_range_rounded),
   ('Vencidos', P.rojo, Icons.warning_amber_rounded),
   ('Hechos', P.verde, Icons.task_alt_rounded),
 ];
