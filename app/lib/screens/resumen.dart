@@ -201,6 +201,8 @@ class Resumen extends StatelessWidget {
                         ];
                         // Las dos columnas acaban a la misma altura: la carga del equipo se estira hasta el final de
                         // las órdenes (o las órdenes hasta el final de la derecha), sin huecos abajo.
+                        // Sin órdenes, ni carga del equipo ni semana: solo la tarjeta de cómo seguir, a todo el ancho.
+                        if (!hayTarea) return ordenes;
                         return alLado
                             ? IntrinsicHeight(
                                 child: Row(
