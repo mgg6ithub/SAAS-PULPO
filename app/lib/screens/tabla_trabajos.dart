@@ -296,7 +296,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4),
             if (medio && widget.conCliente) Col(m('Cliente'), flex: industrial ? 4 : 3),
             if (industrial)
-              apurado ? const Col('Crit.', ancho: 56, ayuda: 'Criticidad') : const Col('Criticidad', ancho: 170),
+              // Siempre «Criticidad» con su píldora (Preventivo, No crítico, Crítico), aunque haya poco sitio.
+              Col('Criticidad', ancho: apurado ? 128 : 170),
             if (industrial && medio) Col('Asignado a', ancho: apurado ? 72 : 96),
             if (!industrial && ancho) const Col('Periodicidad', flex: 2),
             if (industrial && ancho) const Col('Fecha y hora', ancho: 160) else const Col('Fecha y hora', flex: 3),
@@ -422,16 +423,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       ),
               if (industrial)
                 Align(
-                  // Solo el punto (poco sitio): centrado en su columna.
-                  alignment: apurado ? Alignment.center : Alignment.centerLeft,
-                  child: t.tipoMantenimiento == null
-                      ? celdaTexto('—', suave: true)
-                      : apurado
-                      ? Tooltip(
-                          message: '${t.tipoMantenimiento!.etiqueta} · ${t.tipoMantenimiento!.descripcion}',
-                          child: puntoTipo(t.tipoMantenimiento!.color, tam: 10),
-                        )
-                      : PillTipo(t.tipoMantenimiento!),
+                  alignment: Alignment.centerLeft,
+                  child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
                 ),
               if (industrial && medio)
                 t.esPlantilla
