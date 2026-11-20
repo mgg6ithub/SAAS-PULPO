@@ -570,17 +570,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   /// Mantenimientos del activo y de sus componentes; la columna Código dice de cuál es cada uno.
   Widget _mantenimientos(Activo a, List<PlanMantenimiento> planes) {
     if (planes.isEmpty) {
-      return Align(
-        alignment: Alignment.topCenter,
-        child: Tarjeta(
-          child: SizedBox(
-            width: double.infinity,
-            child: Text(
-              'Aún no hay mantenimientos. Crea lo que hay que hacerle a este ${a.padreId == null ? 'activo' : 'componente'}: cada cuánto, quién y cómo.',
-              style: TextStyle(fontSize: 13.5, color: P.textoSuave),
-            ),
-          ),
-        ),
+      return Vacio(
+        icono: Icons.content_paste_rounded,
+        titulo: 'Sin mantenimientos',
+        texto:
+            'Crea lo que hay que hacerle a este ${a.padreId == null ? 'activo' : 'componente'}: cada cuánto, quién y cómo.',
       );
     }
     if (_estadoOrden != 0) {
@@ -803,11 +797,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         runSpacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
+                          // Sin nada que estimar, no se dice nada.
+                          if (proximo != null)
                           Text.rich(
                             TextSpan(children: [
-                              TextSpan(text: proximo == null
-                                  ? 'Próximo sin estimar'
-                                  : 'Próximo ${relativo(proximo).toLowerCase()}: '),
+                              TextSpan(text: 'Próximo ${relativo(proximo).toLowerCase()}: '),
                               if (siguiente != null) ...[
                                 WidgetSpan(alignment: PlaceholderAlignment.middle,
                                   child: Padding(padding: const EdgeInsets.only(right: 5),
@@ -815,7 +809,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                       final ordenes = ordenesPendientesDePlanes([siguiente!]);
                                       return iconoAsignacion(ordenes[siguiente.id] ?? ordenes['${siguiente.activoId}|${siguiente.nombre}']);
                                     }))),
-                                TextSpan(text: '${siguiente.nombre}, ${fecha(proximo!)}',
+                                TextSpan(text: '${siguiente.nombre}, ${fecha(proximo)}',
                                   style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                               ],
                             ]),
