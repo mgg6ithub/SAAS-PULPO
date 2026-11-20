@@ -309,3 +309,54 @@ class _PintorFirma extends CustomPainter {
   @override
   bool shouldRepaint(_PintorFirma old) => false;
 }
+
+/// Icono de descarga en PDF para las filas de las tablas (una pulsación; mientras se prepara, un círculo).
+class BotonPdf extends StatefulWidget {
+  final Future<void> Function() descargar;
+  final String tooltip;
+  const BotonPdf(this.descargar, {super.key, this.tooltip = 'Descargar PDF'});
+
+  /// El parte más reciente de la OT; sin parte, lo avisa.
+  factory BotonPdf.orden(Tarea t, BuildContext context) => BotonPdf(() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ultimo = (await informes.cargar(t.id)).firstOrNull;
+    if (ultimo == null) {
+      messenger.showSnackBar(
+        const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('Esta orden aún no tiene parte')),
+      );
+      return;
+    }
+    await descargarInformePdf(ultimo, t);
+  }, tooltip: 'Descargar el parte en PDF');
+
+  @override
+  State<BotonPdf> createState() => _BotonPdfState();
+}
+
+class _BotonPdfState extends State<BotonPdf> {
+  bool preparando = false;
+
+  Future<void> _pulsar() async {
+    setState(() => preparando = true);
+    try {
+      await widget.descargar();
+    } catch (e) {
+      debugPrint('Pulpo: no se pudo crear el PDF: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
+        );
+      }
+    }
+    if (mounted) setState(() => preparando = false);
+  }
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: widget.tooltip,
+    onPressed: preparando ? null : _pulsar,
+    icon: preparando
+        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+        : Icon(Icons.download_rounded, size: 18, color: P.textoSuave),
+  );
+}

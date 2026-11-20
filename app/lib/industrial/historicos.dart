@@ -4,7 +4,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../screens/informes.dart' show InformesDelTrabajo;
+import '../screens/informes.dart' show BotonPdf, InformesDelTrabajo;
 import 'gravedad.dart';
 import 'iconos.dart';
 import 'planes.dart' show raizActivo;
@@ -175,6 +175,7 @@ class _TablaRealizadas extends StatelessWidget {
           if (medio) const Col('Ejecutado por', flex: 2),
           if (medio) const Col('Tipo', ancho: 190),
           const Col('Resultado', ancho: 170),
+          const Col('', ancho: 48, cabecera: SizedBox()),
         ],
         filas: lista.length,
         celdas: (i) {
@@ -225,6 +226,7 @@ class _TablaRealizadas extends StatelessWidget {
                 },
               ),
             ),
+            BotonPdf.orden(t, context),
           ];
         },
         // Lo hecho no se edita aquí: se ve la orden con su parte.
@@ -318,6 +320,7 @@ Future<void> verOrdenHecha(BuildContext context, Tarea t) {
                       ],
                     ),
                   ),
+                  BotonPdf.orden(t, c),
                   IconButton(
                     tooltip: 'Cerrar',
                     onPressed: () => Navigator.pop(c),

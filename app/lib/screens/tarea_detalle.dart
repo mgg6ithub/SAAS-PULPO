@@ -510,11 +510,23 @@ class _DescargarParteState extends State<_DescargarParte> {
     builder: (context, _) {
       final ultimo = informes.de(widget.t.id)?.firstOrNull;
       if (ultimo == null) return const SizedBox.shrink();
-      return BotonAccion(
-        descargando ? 'Preparando…' : 'Descargar informe',
-        icono: Icons.download_rounded,
-        tooltip: 'PDF del parte, con la incidencia original si sale de una',
-        onPressed: descargando ? () {} : () => _pdf(ultimo),
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BotonAccion(
+            'Ver parte',
+            icono: Icons.description_outlined,
+            tooltip: 'El parte firmado, con sus fotos',
+            onPressed: () => verInforme(context, ultimo, widget.t),
+          ),
+          const SizedBox(width: 8),
+          BotonAccion(
+            descargando ? 'Preparando…' : 'Descargar PDF',
+            icono: Icons.download_rounded,
+            tooltip: 'PDF del parte, con la incidencia original si sale de una',
+            onPressed: descargando ? () {} : () => _pdf(ultimo),
+          ),
+        ],
       );
     },
   );

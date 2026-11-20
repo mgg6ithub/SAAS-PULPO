@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../informes.dart' show descargarInformeIncidencia;
+import '../screens/informes.dart' show BotonPdf;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -124,6 +126,7 @@ class _TablaIncidencias extends StatelessWidget {
           if (ancho) const Col('Comunicada por', flex: 2),
           if (ancho) Col(historico ? 'Cerrada' : 'Fecha', ancho: 140),
           if (medio) const Col('Estado', ancho: 140),
+          const Col('', ancho: 48, cabecera: SizedBox()),
         ],
         filas: lista.length,
         celdas: (i) {
@@ -148,6 +151,8 @@ class _TablaIncidencias extends StatelessWidget {
                   child: Pill(est.etiqueta, est.color, punto: true),
                 ),
               ),
+            // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.
+            BotonPdf(() => descargarInformeIncidencia(x), tooltip: 'Descargar el informe en PDF'),
           ];
         },
         onTap: (i) => abrirIncidenciaForm(context, original: lista[i].$1),

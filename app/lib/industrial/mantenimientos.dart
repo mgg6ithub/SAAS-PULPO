@@ -460,7 +460,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: BotonAccion(
-                    descargando ? 'Preparando…' : 'Descargar informe',
+                    descargando ? 'Preparando…' : 'Descargar PDF',
                     icono: Icons.download_rounded,
                     tooltip: 'PDF con la incidencia, sus fotos y su resolución',
                     onPressed: descargando ? () {} : _informe,

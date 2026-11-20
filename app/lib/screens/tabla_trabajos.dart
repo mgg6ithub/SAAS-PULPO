@@ -9,6 +9,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'informes.dart' show BotonPdf;
 import '../marca.dart';
 
 /// La lista de trabajos (columnas que se redimensionan y se intercambian, selección múltiple, hover).
@@ -246,6 +247,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   Widget _tabla(List<Tarea> ts) => SegunTamano(
     clave: (box) => (box.maxWidth > widget.umbralAncho, box.maxWidth > 600, box.maxWidth > 1100),
     builder: (context, box) {
+      final conPdf = ts.any((t) => t.estado == EstadoTrabajo.realizado);
       final ancho = box.maxWidth > widget.umbralAncho;
       // Poco sitio (p. ej. media pantalla): columnas más estrechas y criticidad solo con su punto.
       final apurado = box.maxWidth <= 1100;
@@ -270,6 +272,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (!industrial && medio) const Col('Asignado a', ancho: 96),
             if (industrial && ancho) const Col('Periodicidad', ancho: 120),
             Col('Estado', ancho: industrial && apurado ? 116 : 140, derecha: true),
+            // Pultec, en el histórico: el parte en PDF con un clic.
+            if (industrial && conPdf) const Col('', ancho: 48, cabecera: SizedBox()),
             // Columna de automatizaciones (rayo), quitada de momento: las automatizaciones se replantean.
             // if (industrial && medio)
             //   const Col('Automatización', ancho: 30, derecha: true,
@@ -436,6 +440,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
 //                         ),
 //                 ),
               if (!industrial && medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
+              if (industrial && conPdf)
+                t.estado == EstadoTrabajo.realizado ? BotonPdf.orden(t, context) : const SizedBox(),
             ];
           },
         ),
