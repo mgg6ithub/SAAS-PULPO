@@ -250,8 +250,9 @@ class _ShellState extends State<Shell> {
                     listenable: Listenable.merge([store, ajustes.cambioBarra]),
                     builder: (_, _) => _Barra(seccion: seccion, compacta: compacta, onTap: ir, crear: _crear),
                   ),
-                  // Vista mejorada: el contenido, en un panel redondeado que flota sobre el gris de la barra.
-                  if (P.panelContenido)
+                  // Vista mejorada: el contenido, en un panel redondeado que flota sobre el gris de la barra. Con la
+                  // ventana estrecha (barra compacta, ya separada por su raya) va sin panel, a todo el espacio.
+                  if (P.panelContenido && !compacta)
                     Expanded(
                       child: ColoredBox(
                         color: P.barra,
