@@ -307,11 +307,19 @@ class _TablaActivosState extends State<_TablaActivos> {
                 Col(
                   'Componentes',
                   ancho: 56,
-                  cabecera: Center(
-                    child: Tooltip(
-                      message: 'Componentes',
-                      child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
-                    ),
+                  // Icono centrado (como su número) y, a la derecha, la raya que lo separa del menú de columnas.
+                  cabecera: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Tooltip(
+                        message: 'Componentes',
+                        child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(width: 1, height: 16, color: P.borde),
+                      ),
+                    ],
                   ),
                 ),
               if (medio)
