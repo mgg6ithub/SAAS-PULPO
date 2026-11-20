@@ -141,23 +141,31 @@ Widget iconoAsignacion(Tarea? ot) => Tooltip(
   if (p.cadaHoras != null && p.cadaHoras! > 0) {
     final h = horasRestantesPlan(p);
     if (h == null) return null;
-    return ((h / p.cadaHoras!).clamp(0, 1).toDouble(), h <= 0 ? 'Le toca ya' : 'Quedan ${h.round()} h de ${p.cadaHoras} h');
+    final d = proximoPlan(p);
+    final texto = h <= 0 ? 'Le toca ya' : 'Quedan ${h.round()} h de ${p.cadaHoras} h';
+    return ((h / p.cadaHoras!).clamp(0, 1).toDouble(), d == null ? texto : '$texto\n≈ ${fechaDe(d)}');
   }
   final d = fecha ?? proximoPlan(p);
   if (d == null) return null;
-  return _cicloDias(diasHasta(d), p.cadaDias ?? 30);
+  return _cicloDias(d, p.cadaDias ?? 30);
 }
 
-(double, String) _cicloDias(int quedan, int total) => (
-  (quedan / math.max(total, 1)).clamp(0, 1).toDouble(),
-  quedan < 0 ? 'Vencida hace ${-quedan} ${-quedan == 1 ? 'día' : 'días'}' : quedan == 0 ? 'Toca hoy' : 'Quedan $quedan ${quedan == 1 ? 'día' : 'días'} de $total',
-);
+/// Con la fecha exacta debajo (la lista de órdenes ya no tiene columna de fecha).
+(double, String) _cicloDias(DateTime d, int total) {
+  final quedan = diasHasta(d);
+  final texto = quedan < 0
+      ? 'Vencida hace ${-quedan} ${-quedan == 1 ? 'día' : 'días'}'
+      : quedan == 0
+      ? 'Toca hoy'
+      : 'Quedan $quedan ${quedan == 1 ? 'día' : 'días'} de $total';
+  return ((quedan / math.max(total, 1)).clamp(0, 1).toDouble(), '$texto\n${fechaDe(d)}');
+}
 
 (double, String)? cicloOt(Tarea t) {
   if (!t.estado.abierta || t.proximo == null) return null;
   final p = t.planId == null ? null : store.planes.where((x) => x.id == t.planId).firstOrNull;
   if (p != null) return cicloPlan(p, fecha: p.cadaHoras != null ? null : t.proximo);
-  return _cicloDias(diasHasta(t.proximo!), 30);
+  return _cicloDias(t.proximo!, 30);
 }
 
 /// Anillo de progreso del ciclo, de un vistazo: lleno y verde recién hecho; se vacía con los días (u horas); por
@@ -218,3 +226,5 @@ class _Anillo extends CustomPainter {
   @override
   bool shouldRepaint(covariant _Anillo old) => old.f != f || old.color != color;
 }
+
+String fechaDe(DateTime d) => fecha(d);

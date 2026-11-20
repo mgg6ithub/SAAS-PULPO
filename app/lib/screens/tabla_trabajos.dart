@@ -99,6 +99,49 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
     salirSeleccion();
   }
 
+  /// Pultec: columnas opcionales de la lista de órdenes y las que se ven (se recuerdan mientras dure la sesión).
+  static const _opcionales = ['Origen', 'Activo', 'Criticidad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
+  static final _visibles = {'Origen', 'Activo', 'Criticidad', 'Asignado a', 'Periodicidad'};
+  bool _ver(String c) => _visibles.contains(c);
+
+  /// Qué hay que hacer: la descripción de la orden o, si no tiene, la de su mantenimiento o su incidencia.
+  String _descripcion(Tarea t) {
+    if (t.descripcion.trim().isNotEmpty) return t.descripcion.trim();
+    final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+    if (plan != null && plan.descripcion.trim().isNotEmpty) return plan.descripcion.trim();
+    final x = store.incidenciaDeOt(t.id);
+    if (x != null && x.descripcion.trim().isNotEmpty) return x.descripcion.trim();
+    return t.ubicacion;
+  }
+
+  Widget _menuColumnas() => MenuAnchor(
+    alignmentOffset: const Offset(-180, 4),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      MenuItemButton(onPressed: null, child: Text('Columnas', style: TextStyle(fontSize: 12.5, color: P.textoSuave))),
+      for (final c in _opcionales)
+        MenuItemButton(
+          closeOnActivate: false,
+          leadingIcon: Icon(
+            _ver(c) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+            size: 20,
+            color: _ver(c) ? P.morado : P.textoSuave,
+          ),
+          onPressed: () => setState(() => _ver(c) ? _visibles.remove(c) : _visibles.add(c)),
+          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c)),
+        ),
+    ],
+    builder: (context, menu, _) => IconButton(
+      tooltip: 'Elegir columnas',
+      visualDensity: VisualDensity.compact,
+      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+      icon: Icon(Icons.view_column_outlined, size: 18, color: P.textoSuave),
+    ),
+  );
+
   /// Cuántos subtrabajos tiene el trabajo.
   Widget _subtrabajos(Tarea t) {
     final n = store.hijas(t.id).length;
@@ -294,18 +337,35 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4),
-            if (medio && widget.conCliente) Col(m('Cliente'), flex: industrial ? 4 : 3),
-            if (industrial)
+            // Pultec: columnas a elegir con el menú del final (de serie, sin «Fecha y hora»: la fecha exacta sale al
+            // pasar el ratón por el anillo del principio).
+            if (industrial) ...[
+              if (medio && _ver('Origen')) const Col('Origen', ancho: 140),
+              if (medio && widget.conCliente && _ver('Activo')) const Col('Activo', flex: 4),
               // Siempre «Criticidad» con su píldora (Preventivo, No crítico, Crítico), aunque haya poco sitio.
-              Col('Criticidad', ancho: apurado ? 128 : 170),
-            if (industrial && medio) Col('Asignado a', ancho: apurado ? 72 : 96),
-            if (!industrial && ancho) const Col('Periodicidad', flex: 2),
-            if (industrial && ancho) const Col('Fecha y hora', ancho: 160) else const Col('Fecha y hora', flex: 3),
-            if (!industrial && medio) const Col('Asignado a', ancho: 96),
-            if (industrial && ancho) const Col('Periodicidad', ancho: 120),
+              if (_ver('Criticidad')) Col('Criticidad', ancho: apurado ? 128 : 170),
+              if (medio && _ver('Asignado a')) Col('Asignado a', ancho: apurado ? 72 : 96),
+              if (medio && _ver('Fecha y hora')) const Col('Fecha y hora', ancho: 160),
+              if (ancho && _ver('Periodicidad')) const Col('Periodicidad', ancho: 120),
+            ] else ...[
+              if (medio && widget.conCliente) Col(m('Cliente'), flex: 3),
+              if (ancho) const Col('Periodicidad', flex: 2),
+              const Col('Fecha y hora', flex: 3),
+              if (medio) const Col('Asignado a', ancho: 96),
+            ],
             Col('Estado', ancho: industrial && apurado ? 116 : 140, derecha: true),
             // Pultec, en el histórico: el parte en PDF con un clic.
             if (industrial && conPdf) const Col('', ancho: 48, cabecera: SizedBox()),
+            // Pultec: al final, separado por una raya, el menú para elegir columnas.
+            if (industrial && medio)
+              Col(
+                'Columnas',
+                ancho: 48,
+                derecha: true,
+                cabecera: Row(
+                  children: [Container(width: 1, height: 16, color: P.borde), const Spacer(), _menuColumnas()],
+                ),
+              ),
             // Columna de automatizaciones (rayo), quitada de momento: las automatizaciones se replantean.
             // if (industrial && medio)
             //   const Col('Automatización', ancho: 30, derecha: true,
@@ -363,25 +423,14 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         celdaTexto(t.nombre, negrita: true),
-                        // Pultec: de dónde sale (mantenimiento, incidencia o a mano), con su punto de color.
-                        if (industrial)
-                          Builder(builder: (_) {
-                            final (origen, color) = origenOt(t);
-                            return Row(
-                              children: [
-                                puntoTipo(color, tam: 6),
-                                const SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    [origen, if (t.ubicacion.isNotEmpty) t.ubicacion].join(' · '),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11.5, color: P.textoSuave),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
+                        // Pultec: debajo, qué hay que hacer (la de la orden, o la de su mantenimiento o incidencia).
+                        if (industrial && _descripcion(t).isNotEmpty)
+                          Text(
+                            _descripcion(t),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: P.textoSuave),
+                          ),
                         // Pultec: sin el tipo («Otro»), que no significa nada; solo la ubicación si la hay.
                         if (!industrial)
                           Text(
@@ -395,48 +444,38 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                   ),
                 ],
               ),
-              // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
-              if (medio && widget.conCliente)
-                industrial && !t.esPlantilla
-                    ? Tooltip(message: store.activo(t.activoId)?.titulo ?? 'Sin activo',
+              if (industrial) ...[
+                if (medio && _ver('Origen'))
+                  Builder(builder: (_) {
+                    final (origen, color) = origenOt(t);
+                    return Row(children: [
+                      puntoTipo(color, tam: 7),
+                      const SizedBox(width: 6),
+                      Flexible(child: celdaTexto(origen, suave: true)),
+                    ]);
+                  }),
+                if (medio && widget.conCliente && _ver('Activo'))
+                  Tooltip(message: store.activo(t.activoId)?.titulo ?? 'Sin activo',
                         child: Row(children: [
                           if (store.activo(t.activoId) case final activo?) ...[
                             IconoActivo(activo.icono, size: 22, color: P.textoSuave),
                             const SizedBox(width: 8),
                           ],
                           Expanded(child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true)),
-                        ]))
-                    : t.esPlantilla
-                    ? Etiqueta('Plantilla', P.morado)
-                    : t.padreId == null
-                    ? SelectorCliente(t.clienteId, (id) {
-                        t.clienteId = id;
-                        store.guardarTarea(t);
-                      }, compacto: true)
-                    : c == null
-                    ? celdaTexto(m('Sin cliente'), suave: true)
-                    : Row(
-                        children: [
-                          Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
-                          const SizedBox(width: 8),
-                          Flexible(child: celdaTexto(c.nombre)),
-                        ],
-                      ),
-              if (industrial)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
-                ),
-              if (industrial && medio)
-                t.esPlantilla
-                    ? const SizedBox()
-                    : SelectorTrabajadores(
+                        ])),
+                if (_ver('Criticidad'))
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
+                  ),
+                if (medio && _ver('Asignado a'))
+                  t.esPlantilla ? const SizedBox() : SelectorTrabajadores(
                         t,
                         () => store.guardarTarea(t),
                         compacto: true,
                         ofrecerSubtrabajos: !industrial,
                       ),
-              if (!industrial && ancho) celdaTexto(t.periodicidad.etiqueta),
+                if (medio && _ver('Fecha y hora'))
               t.proximo == null
                   ? celdaTexto('', suave: true)
                   : Column(
@@ -458,16 +497,56 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         ),
                       ],
                     ),
-              if (!industrial && medio)
+                if (ancho && _ver('Periodicidad')) celdaTexto(t.periodicidad.etiqueta),
+              ] else ...[
+                // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
+                if (medio && widget.conCliente)
                 t.esPlantilla
-                    ? const SizedBox()
-                    : SelectorTrabajadores(
+                    ? Etiqueta('Plantilla', P.morado)
+                    : t.padreId == null
+                    ? SelectorCliente(t.clienteId, (id) {
+                        t.clienteId = id;
+                        store.guardarTarea(t);
+                      }, compacto: true)
+                    : c == null
+                    ? celdaTexto(m('Sin cliente'), suave: true)
+                    : Row(
+                        children: [
+                          Avatar(c.iniciales, colorPaleta(c.color), size: 20, cuadrado: true),
+                          const SizedBox(width: 8),
+                          Flexible(child: celdaTexto(c.nombre)),
+                        ],
+                      ),
+                if (ancho) celdaTexto(t.periodicidad.etiqueta),
+              t.proximo == null
+                  ? celdaTexto('', suave: true)
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fecha(t.proximo),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: vencida ? P.rojo : P.texto,
+                            fontWeight: vencida ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          [relativo(t.proximo!), ?t.horario].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11.5, color: P.textoSuave),
+                        ),
+                      ],
+                    ),
+                if (medio)
+                  t.esPlantilla ? const SizedBox() : SelectorTrabajadores(
                         t,
                         () => store.guardarTarea(t),
                         compacto: true,
                         ofrecerSubtrabajos: !industrial,
                       ),
-              if (industrial && ancho) celdaTexto(t.periodicidad.etiqueta),
+              ],
               t.esPlantilla ? pillEstado(t) : SelectorEstado(t, antesCompletar: industrial ? () => _animarCompletada(t.id) : null),
               // Celda del rayo (automatizaciones), quitada con su columna.
 //               if (industrial && medio)
@@ -486,6 +565,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (!industrial && medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
               if (industrial && conPdf)
                 t.estado == EstadoTrabajo.realizado ? BotonPdf.orden(t, context) : const SizedBox(),
+              if (industrial && medio) const SizedBox(),
             ];
           },
         ),
