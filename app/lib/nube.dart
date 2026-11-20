@@ -269,7 +269,42 @@ class Nube {
       }
       rethrow;
     }
-    await _recargar();
+    // Sin esperar a la recarga: la ventana se cierra en cuanto la base la ha guardado.
+    unawaited(_recargar());
+  }
+
+  /// Corrige una incidencia aún abierta: sube las fotos nuevas, guarda y borra del almacenamiento las quitadas.
+  Future<void> editarIncidencia(Incidencia i, List<String> conservadas, List<Uint8List> nuevas) async {
+    await _cola;
+    final rutas = <String>[];
+    final marca = DateTime.now().millisecondsSinceEpoch;
+    for (var n = 0; n < nuevas.length; n++) {
+      final ruta = '$empresaId/incidencias/${i.id}/$marca-$n.jpg';
+      await _db.storage
+          .from(_bucket)
+          .uploadBinary(ruta, nuevas[n], fileOptions: const FileOptions(contentType: 'image/jpeg'));
+      rutas.add(ruta);
+    }
+    await _db.rpc(
+      'editar_incidencia',
+      params: {
+        'p_id': i.id,
+        'p_activo': _u(i.activoId),
+        'p_descripcion': i.descripcion,
+        'p_gravedad': i.gravedad.index,
+        'p_origen': i.origenTrabajoId == null ? null : _u(i.origenTrabajoId!),
+        'p_fotos': [...conservadas, ...rutas],
+      },
+    );
+    final quitadas = i.fotos.where((f) => !conservadas.contains(f)).toList();
+    if (quitadas.isNotEmpty) {
+      try {
+        await _db.storage.from(_bucket).remove(quitadas);
+      } catch (_) {
+        /* Si no se pueden borrar, quedan sin usar: la incidencia ya no las enseña. */
+      }
+    }
+    unawaited(_recargar());
   }
 
   // ── Informes y fotos ──

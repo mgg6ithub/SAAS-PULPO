@@ -174,6 +174,12 @@ void main() {
       );
       final aviso = Incidencia(id: store.nuevoId(), activoId: activo.id, tecnicoId: tecnico.id, descripcion: 'Fuga de aceite');
       await n.crearIncidencia(aviso, '', const []);
+      await store.cargarDesdeNube(n);
+      // Abierta: quien la comunicó la corrige entera.
+      final suyaAbierta = store.incidencias.firstWhere((i) => i.id == aviso.id);
+      await n.editarIncidencia(suyaAbierta.copia()..descripcion = 'Fuga de aceite en la junta', const [], const []);
+      await store.cargarDesdeNube(n);
+      expect(store.incidencias.firstWhere((i) => i.id == aviso.id).descripcion, 'Fuga de aceite en la junta');
       await _salir(n);
 
       // ── 5. Administrador: las dos abiertas; OT para la fuga vinculada a la revisión; desestima la otra ──
@@ -210,7 +216,12 @@ void main() {
       n = await _entrar(_env['SB_TECNICO']!);
       final suya = store.tarea(arreglo.id)!;
       expect(suya.repuestos, 'Junta 40 mm');
-      expect(store.incidenciaDeOt(suya.id)?.descripcion, 'Fuga de aceite', reason: 've la incidencia original');
+      expect(store.incidenciaDeOt(suya.id)?.descripcion, 'Fuga de aceite en la junta', reason: 've la incidencia original');
+      // Con OT ya no se puede cambiar.
+      await expectLater(
+        n.editarIncidencia(store.incidenciaDeOt(suya.id)!.copia()..descripcion = 'Otra cosa', const [], const []),
+        throwsA(anything),
+      );
       store.marcarHecha(suya);
       await n.guardado;
       expect(Nube.error.value, isNull, reason: 'el técnico cierra la OT de la incidencia');

@@ -1448,7 +1448,12 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
 
   String _cuando(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}, ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
-  void _verIncidencia(Incidencia i) => abrirPanel(context, VentanaFormulario(
+  /// Abierta (nadie la ha revisado aún): se corrige entera. Con OT o cerrada: solo se ve.
+  void _verIncidencia(Incidencia i) => store.estadoIncidencia(i) == EstadoIncidencia.abierta
+      ? abrirPanel(context, AvisoIncidenciaForm(tecnicoId: widget.w.id, original: i))
+      : _verIncidenciaCerrada(i);
+
+  void _verIncidenciaCerrada(Incidencia i) => abrirPanel(context, VentanaFormulario(
     etiqueta: 'Mis incidencias', titulo: 'Incidencia enviada', soloLectura: true, onGuardar: () {},
     campos: [
       Bloque('Aviso', primero: true, [

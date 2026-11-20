@@ -13,9 +13,11 @@ import '../models.dart';
 import 'incidencia.dart';
 import 'mantenimientos.dart' show raizDe;
 
+/// Crear una incidencia (técnico) o, con [original] aún abierta, corregirla entera.
 class AvisoIncidenciaForm extends StatefulWidget {
   final String? tecnicoId, origenTrabajoId;
-  const AvisoIncidenciaForm({super.key, this.tecnicoId, this.origenTrabajoId});
+  final Incidencia? original;
+  const AvisoIncidenciaForm({super.key, this.tecnicoId, this.origenTrabajoId, this.original});
   @override
   State<AvisoIncidenciaForm> createState() => _AvisoIncidenciaFormState();
 }
@@ -24,15 +26,28 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
   late final descripcion = TextEditingController()..addListener(() => setState(() {}));
   final claveActivo = GlobalKey(), claveDescripcion = GlobalKey();
   final fotos = <Uint8List>[];
+
+  /// Editando: las fotos ya guardadas que se conservan.
+  late final guardadas = [...?widget.original?.fotos];
   String? activoId, origenTrabajoId;
   String? get tecnicoId => widget.tecnicoId ?? store.nube?.trabajadorId;
 
   @override
   void initState() {
     super.initState();
+    final o = widget.original;
+    if (o != null) {
+      descripcion.text = o.descripcion;
+      activoId = o.activoId;
+      origenTrabajoId = o.origenTrabajoId;
+      gravedad = o.gravedad;
+      return;
+    }
     origenTrabajoId = widget.origenTrabajoId;
     activoId = store.tarea(origenTrabajoId ?? '')?.activoId;
   }
+
+  int get _totalFotos => guardadas.length + fotos.length;
 
   String categoria = '';
   Gravedad gravedad = Gravedad.media;
@@ -54,7 +69,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
     if (seleccion == null || !mounted) return;
     setState(() => leyendo = true);
     try {
-      for (final f in seleccion.files.take(maxFotosInforme - fotos.length)) {
+      for (final f in seleccion.files.take(maxFotosInforme - _totalFotos)) {
         if (f.bytes == null) continue;
         final foto = await comprimirFoto(f.bytes!);
         if (mounted) setState(() => fotos.add(foto));
@@ -76,6 +91,8 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       return;
     }
     setState(() => ocupada = true);
+    final o = widget.original;
+    if (o != null) return _guardarCambios(o);
     try {
       final i = Incidencia(
         id: store.nuevoId(),
@@ -106,6 +123,33 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
           const SnackBar(
             content: Text('No se pudo guardar la incidencia. Comprueba la conexión e inténtalo de nuevo.'),
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _guardarCambios(Incidencia o) async {
+    final i = o.copia()
+      ..activoId = activoId!
+      ..origenTrabajoId = origenTrabajoId
+      ..descripcion = descripcion.text.trim()
+      ..gravedad = gravedad;
+    try {
+      final nube = store.nube;
+      if (nube != null) {
+        await nube.editarIncidencia(o, guardadas, fotos);
+      } else {
+        store.guardarIncidencia(i..fotos = [...guardadas, ...fotos.map(base64Encode)]);
+      }
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incidencia actualizada')));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => ocupada = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo guardar. Si ya la están revisando, ya no se puede cambiar.')),
         );
       }
     }
@@ -193,7 +237,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
   @override
   Widget build(BuildContext context) => VentanaFormulario(
     etiqueta: 'Incidencias',
-    titulo: 'Crear incidencia',
+    titulo: widget.original == null ? 'Crear incidencia' : 'Editar incidencia',
     onGuardar: _guardar,
     avisos: [
       if (activoId == null) ('Te falta el activo o componente', () => _ir(claveActivo)),
@@ -274,8 +318,8 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
             child: _cajaMenu(_gravedad(gravedad)),
           ),
         ),
-        const SizedBox(height: 10),
-        _campoMenu(
+        if (widget.original == null) const SizedBox(height: 10),
+        if (widget.original == null) _campoMenu(
           'Categoría',
           BotonMenu<String>(
             tooltip: '¿Qué categoría debe tener el técnico?',
@@ -293,6 +337,22 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
           spacing: 8,
           runSpacing: 8,
           children: [
+            for (final g in guardadas)
+              SizedBox(
+                width: 90,
+                child: Column(
+                  children: [
+                    ClipRRect(borderRadius: BorderRadius.circular(P.radio), child: FotoGuardada(g, width: 84, height: 84)),
+                    BotonAccion(
+                      'Quitar',
+                      tooltip: 'Quitar esta foto',
+                      onPressed: () {
+                        if (!ocupada) setState(() => guardadas.remove(g));
+                      },
+                    ),
+                  ],
+                ),
+              ),
             for (var n = 0; n < fotos.length; n++)
               SizedBox(
                 width: 90,
@@ -315,7 +375,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
                   ],
                 ),
               ),
-            if (fotos.length < maxFotosInforme)
+            if (_totalFotos < maxFotosInforme)
               BotonAccion(
                 'Añadir fotos',
                 icono: Icons.add_a_photo_outlined,
