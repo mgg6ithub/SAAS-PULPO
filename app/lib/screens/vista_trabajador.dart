@@ -204,6 +204,12 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
       final tarea = tareaId == null ? null : store.tareas.where((t) => t.id == tareaId).firstOrNull;
       // Pultec: máquinas con órdenes del técnico. Con una o ninguna no hace falta elegir.
       final maquinas = w == null || !industrial ? const <(Activo, int)>[] : _maquinasDe(w);
+      // Lo elegido la última vez se guarda en el dispositivo; hasta leerlo no se enseña la ventana.
+      if (industrial && w != null && _maquinasCargadas.add(w.id)) {
+        _cargarMaquinas(w.id).then((_) {
+          if (mounted) setState(() {});
+        });
+      }
       final elegir = industrial && eligiendo && tarea == null && maquinas.length > 1;
       final escritorio = industrial && !movil && w != null;
       Widget? contenido;
@@ -272,15 +278,31 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                   key: ValueKey(tarea?.id ?? (elegir ? 'maquinas' : pestana)),
                   child: tarea != null
                       ? _DetalleTrabajo(tarea, w)
+                      : elegir && !_maquinasLeidas.contains(w.id)
+                      ? const SizedBox.shrink()
                       : elegir
-                      ? ElegirMaquinas(
-                          w,
-                          maquinas,
-                          inicial: _maquinasElegidas[w.id] ?? const {},
-                          onListo: (sel) => setState(() {
-                            _maquinasElegidas[w.id] = sel;
-                            eligiendo = false;
-                          }),
+                      ? Builder(
+                          builder: (_) {
+                            // Las de la última vez siguen marcadas si aún tienen órdenes; las que ya no tienen
+                            // salen al final, sin marcar.
+                            final previas = _maquinasElegidas[w.id] ?? const <String>{};
+                            final conOrdenes = {for (final (a, _) in maquinas) a.id};
+                            return ElegirMaquinas(
+                              w,
+                              [
+                                ...maquinas,
+                                for (final id in previas)
+                                  if (!conOrdenes.contains(id))
+                                    if (store.activo(id) case final a?) (a, 0),
+                              ],
+                              inicial: previas.intersection(conOrdenes),
+                              onListo: (sel) => setState(() {
+                                _maquinasElegidas[w.id] = sel;
+                                _guardarMaquinas(w.id, sel);
+                                eligiendo = false;
+                              }),
+                            );
+                          },
                         )
                       : industrial
                       ? _PanelTecnico(
@@ -375,8 +397,31 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
   }
 }
 
-/// Máquinas elegidas por cada técnico al entrar (vacío = todas). Se recuerdan mientras la app está abierta.
+/// Máquinas elegidas por cada técnico al entrar (vacío = todas). Se guardan en el dispositivo, por empresa.
 final _maquinasElegidas = <String, Set<String>>{};
+
+/// Técnicos cuya selección ya se ha pedido al dispositivo y ya se ha leído.
+final _maquinasCargadas = <String>{}, _maquinasLeidas = <String>{};
+
+String _claveMaquinas(String tecnico) => 'maquinas_${store.nube?.empresaId ?? 'demo'}_$tecnico';
+
+Future<void> _cargarMaquinas(String tecnico) async {
+  try {
+    final l = (await SharedPreferences.getInstance()).getStringList(_claveMaquinas(tecnico));
+    if (l != null) _maquinasElegidas[tecnico] ??= {for (final id in l) if (store.activo(id) != null) id};
+  } catch (_) {
+    /* Sin acceso al almacenamiento: se elige de cero. */
+  }
+  _maquinasLeidas.add(tecnico);
+}
+
+Future<void> _guardarMaquinas(String tecnico, Set<String> sel) async {
+  try {
+    await (await SharedPreferences.getInstance()).setStringList(_claveMaquinas(tecnico), sel.toList());
+  } catch (_) {
+    /* Se recuerda solo mientras la app está abierta. */
+  }
+}
 
 /// La «máquina» de un activo: él mismo si es raíz o cuelga de una raíz; si es un componente más abajo,
 /// su antepasado que cuelga de la raíz (p. ej. el cilindro → el equipo hidráulico).
@@ -679,7 +724,9 @@ class _ElegirMaquinasState extends State<ElegirMaquinas> {
                 ),
                 onPressed: () => widget.onListo({...sel}),
                 child: Text(
-                  'Empezar con $ordenes órdenes',
+                  // Lo mismo que la última vez: «Seguir»; si ha cambiado algo, «Empezar».
+                  '${widget.inicial.isNotEmpty && sel.length == widget.inicial.length && sel.containsAll(widget.inicial) ? 'Seguir' : 'Empezar'} '
+                  'con $ordenes ${ordenes == 1 ? 'orden' : 'órdenes'}',
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ),
@@ -718,10 +765,14 @@ class _TarjetaMaquinaState extends State<_TarjetaMaquina> {
       child: Semantics(
         button: true,
         selected: m,
-        label: '${widget.a.nombre}, ${widget.n} órdenes',
+        label: '${widget.a.nombre}, ${widget.n == 0 ? 'sin órdenes pendientes' : '${widget.n} órdenes'}',
         child: GestureDetector(
           onTap: widget.onTap,
-          child: AnimatedContainer(
+          // Sin órdenes (ya hecho todo): más apagada, al final de la cuadrícula.
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: widget.n == 0 && !m ? .6 : 1,
+            child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -760,11 +811,12 @@ class _TarjetaMaquinaState extends State<_TarjetaMaquina> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${widget.n} ${widget.n == 1 ? 'orden' : 'órdenes'}',
+                  widget.n == 0 ? 'Sin órdenes pendientes' : '${widget.n} ${widget.n == 1 ? 'orden' : 'órdenes'}',
                   style: TextStyle(fontSize: 13, color: P.textoSuave),
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),
