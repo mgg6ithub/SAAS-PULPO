@@ -266,13 +266,20 @@ class _FilaOrden extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // El activo y, debajo, cuánto le queda (anillo; al pasar el ratón, lo que queda y la fecha).
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: SizedBox(
               width: 34,
-              child: raiz == null && activo == null
-                  ? Icon(Icons.assignment_outlined, size: 28, color: tipo.color)
-                  : IconoActivo((activo ?? raiz)!.icono, size: 30, color: tipo.color),
+              child: Column(
+                children: [
+                  raiz == null && activo == null
+                      ? Icon(Icons.assignment_outlined, size: 28, color: tipo.color)
+                      : IconoActivo((activo ?? raiz)!.icono, size: 30, color: tipo.color),
+                  const SizedBox(height: 10),
+                  AnilloCiclo(cicloOt(o), size: 20),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -308,19 +315,25 @@ class _FilaOrden extends StatelessWidget {
                     style: TextStyle(fontSize: 13.5, color: P.textoSuave, height: 1.35),
                   ),
                 ],
+                // Abajo a la derecha: de dónde sale (mantenimiento, incidencia o manual).
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Builder(builder: (_) {
+                    final (origen, color) = origenOt(o);
+                    return Row(mainAxisSize: MainAxisSize.min, children: [
+                      puntoTipo(color, tam: 7),
+                      const SizedBox(width: 6),
+                      Text(origen, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+                    ]);
+                  }),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          // Arriba a la derecha: cuánto queda (anillo) y el técnico, que se asigna desde aquí.
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnilloCiclo(cicloOt(o), size: 20),
-              const SizedBox(width: 6),
-              SelectorTrabajadores(o, () => store.guardarTarea(o), compacto: true),
-            ],
-          ),
+          // Arriba a la derecha: el técnico, que se asigna desde aquí.
+          SelectorTrabajadores(o, () => store.guardarTarea(o), compacto: true),
         ],
       ),
     );
