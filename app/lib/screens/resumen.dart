@@ -50,12 +50,17 @@ class Resumen extends StatelessWidget {
     final hayTrabajoAsignado = store.tareas.any(
       (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
     );
-    // Pultec sin nada (cuenta nueva o todo borrado): vuelve la guía, aunque ya se hiciera.
+    // Pultec: la guía sale solo hasta completarla una vez en la empresa (se recuerda). Si luego se borra todo, no
+    // vuelve: en su lugar, un aviso sencillo para empezar.
     final vacia = industrial && store.activos.isEmpty && !hayTarea;
+    final empresa = store.nube?.empresaId ?? 'local';
+    final datosPultec = [store.activos.isNotEmpty, store.planes.isNotEmpty, hayTrabajador, hayTrabajoAsignado];
+    if (industrial && !datosPultec.contains(false)) ajustes.marcarGuiaPultec(empresa);
+    // `guiaOrganizar`: la guía antigua, ya completada en este navegador, también cuenta como hecha.
+    final guiaHecha =
+        industrial && (ajustes.guiaPultecHecha(empresa) || ajustes.guiaOrganizar || !datosPultec.contains(false));
     final pasos = industrial
-        ? (ajustes.guiaOrganizar && !vacia
-              ? const [true, true, true, true]
-              : [store.activos.isNotEmpty, store.planes.isNotEmpty, hayTrabajador, hayTrabajoAsignado])
+        ? (guiaHecha ? const [true, true, true, true] : datosPultec)
         : ajustes.guiaOrganizar
         ? const [true, true, true, true]
         : [
@@ -102,7 +107,9 @@ class Resumen extends StatelessWidget {
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pultec.
-                  if (!hayTarea && (!ajustes.guiaOrganizar || vacia)) _ComoFunciona(columnas: dosCol),
+                  if (!hayTarea && (industrial ? !guiaHecha : !ajustes.guiaOrganizar)) _ComoFunciona(columnas: dosCol),
+                  // Guía ya hecha y todo borrado: sin tutorial, solo cómo empezar.
+                  if (vacia && guiaHecha) const _SinMaquinas(),
                   if (hayTarea) ...[
                     // Pultec: las cuatro cifras son de órdenes de trabajo; con su título, como «Estado de los activos».
                     // En la vista mejorada, sin título: las cifras van justo bajo la cabecera, como en la maqueta.
@@ -282,6 +289,28 @@ const _meses = [
 
 /// Para una cuenta sin trabajos: el ciclo de Pultec en tres tarjetas y qué cifras verá en Inicio.
 /// Desaparece con el primer trabajo y deja paso a las cifras y los paneles.
+/// Pultec sin máquinas, con la guía ya hecha: un estado vacío sobrio en lugar del tutorial.
+class _SinMaquinas extends StatelessWidget {
+  const _SinMaquinas();
+
+  @override
+  Widget build(BuildContext context) => Tarjeta(
+    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+    child: Vacio(
+      desplazable: false,
+      icono: Icons.layers_outlined,
+      titulo: 'Sin máquinas',
+      texto: 'Da de alta un activo y sus mantenimientos: Pultec creará las órdenes de trabajo y avisará de lo que toca.',
+      accion: BotonPrimario(
+        'Activo',
+        conIcono: true,
+        icono: Icons.add_rounded,
+        onPressed: () => abrirActivoForm(context),
+      ),
+    ),
+  );
+}
+
 class _ComoFunciona extends StatelessWidget {
   final bool columnas;
   const _ComoFunciona({required this.columnas});
@@ -1131,6 +1160,7 @@ class _HeroState extends State<_Hero> {
 
   /// Primera vez: bienvenida; con la guía a medias: lo que falta; después, el día (y por la noche, mañana).
   String get frase {
+    if (industrial && store.activos.isEmpty) return 'Aún no hay máquinas. Da de alta la primera para empezar.';
     final pasos = widget.pasos;
     final quedan = pasos.where((p) => !p).length;
     if (quedan == pasos.length) {

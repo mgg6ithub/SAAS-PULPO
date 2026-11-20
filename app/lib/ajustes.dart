@@ -57,6 +57,12 @@ class Ajustes extends ChangeNotifier {
     _prefs?.setBool('ajustes_guia_organizar', true);
   }
 
+  /// Pultec: guía de Inicio ya completada en esta empresa (no vuelve aunque se borre todo). Se guarda en el
+  /// navegador, por empresa.
+  bool guiaPultecHecha(String empresa) => _prefs?.getBool('ajustes_guia_pultec_$empresa') ?? false;
+
+  void marcarGuiaPultec(String empresa) => _prefs?.setBool('ajustes_guia_pultec_$empresa', true);
+
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     tema = ThemeMode.values[_prefs!.getInt('ajustes_tema') ?? ThemeMode.light.index];
