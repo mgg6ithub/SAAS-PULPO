@@ -66,7 +66,10 @@ class Pill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (punto) ...[
+          if (icono != null) ...[
+            Icon(icono, size: 14, color: fg),
+            const SizedBox(width: 5),
+          ] else if (punto) ...[
             Container(
               width: 6,
               height: 6,
