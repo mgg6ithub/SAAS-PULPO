@@ -2365,9 +2365,13 @@ class SeleccionMultiple extends StatefulWidget {
 
   /// Aviso al confirmar (p. ej. qué más se borra con ellos).
   final String? nota;
+
+  /// Acciones propias antes de «Eliminar» (p. ej. pausar mantenimientos), con los ids elegidos.
+  final List<Widget> Function(List<String> ids)? acciones;
   final Widget Function(BuildContext context, Seleccionable s) builder;
   const SeleccionMultiple({
     super.key,
+    this.acciones,
     required this.ids,
     required this.singular,
     required this.plural,
@@ -2419,6 +2423,9 @@ class _SeleccionMultipleState extends State<SeleccionMultiple> {
             bottom: 24,
             child: Center(
               child: BarraSeleccion(
+                acciones: n == 0 || widget.acciones == null
+                    ? const []
+                    : widget.acciones!(sel.where(widget.ids.contains).toList()),
                 seleccionados: n,
                 total: widget.ids.length,
                 nombre: widget.plural,

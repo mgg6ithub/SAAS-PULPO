@@ -239,6 +239,32 @@ class _TablaPlanesState extends State<TablaPlanes> {
         singular: 'mantenimiento',
         plural: 'mantenimientos',
         borrar: store.borrarPlan,
+        // Pausar o reanudar varios a la vez, además de eliminarlos.
+        acciones: (ids) {
+          final elegidos = ps.where((p) => ids.contains(p.id)).toList();
+          void poner(bool activa) {
+            for (final p in elegidos.where((p) => p.activa != activa)) {
+              p.activa = activa;
+              store.guardarPlan(p);
+            }
+          }
+
+          return [
+            if (elegidos.any((p) => p.activa))
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+                onPressed: () => poner(false),
+                child: const Text('Pausar'),
+              ),
+            if (elegidos.any((p) => !p.activa))
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+                onPressed: () => poner(true),
+                child: const Text('Reanudar'),
+              ),
+            const SizedBox(width: 4),
+          ];
+        },
         builder: (context, s) {
       final columnas = [
         ...s.columna,
