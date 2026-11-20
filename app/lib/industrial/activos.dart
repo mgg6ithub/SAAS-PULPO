@@ -863,7 +863,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   seleccion: vista,
                                   onChanged: (i) => setState(() => vista = i),
                                 ),
-                                if (vista == 0)
+                                // Sin mantenimientos no hay nada que filtrar.
+                                if (vista == 0 && planes.isNotEmpty)
                                   Pestanas(
                                     opciones: const ['Todos', 'Activos', 'Pausados'],
                                     iconos: const [null, Icons.play_arrow_rounded, Icons.pause_rounded],
@@ -874,7 +875,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                   ),
                               ],
                             ),
-                            if (vista == 0)
+                            if (vista == 0 && planes.isNotEmpty)
                               FiltroFlujoMantenimiento(
                                 incluirSinOrden: false,
                                 seleccion: _estadoOrden,
