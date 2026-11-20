@@ -231,17 +231,19 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                   child: ClipRect(
                     // Solo el marco cambia de tamaño en cada fotograma. Los campos conservan
                     // el ancho de destino, sin escalar texto ni repetir su maquetación.
-                    child: OverflowBox(
-                      // A la medida del contenido (si cabe): la ventana no es más alta de lo necesario.
-                      fit: OverflowBoxFit.deferToChild,
+                    // Alto a la medida del contenido (si cabe): la ventana no es más alta de lo necesario.
+                    child: UnconstrainedBox(
+                      constrainedAxis: Axis.vertical,
                       alignment: Alignment.topLeft,
-                      minWidth: ancho,
-                      maxWidth: ancho,
-                      child: SingleChildScrollView(
-                        controller: scroll,
-                        padding: EdgeInsets.fromLTRB(16, 0, 16, 14),
-                        child: RepaintBoundary(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                      clipBehavior: Clip.hardEdge,
+                      child: SizedBox(
+                        width: ancho,
+                        child: SingleChildScrollView(
+                          controller: scroll,
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                          child: RepaintBoundary(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
+                          ),
                         ),
                       ),
                     ),
