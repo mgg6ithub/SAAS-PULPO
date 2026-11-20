@@ -139,15 +139,15 @@ class Resumen extends StatelessWidget {
                                   .length
                             : semana.length,
                         vencidas: vencidas.length,
-                        // Pultec: «Completados», todas las órdenes realizadas.
+                        // Pultec: «Histórico», las órdenes cerradas (completadas y canceladas), como su pestaña.
                         hechas: industrial
-                            ? activas.where((t) => t.estado == EstadoTrabajo.realizado).length
+                            ? activas.where((t) => !t.estado.abierta).length
                             : hechas30,
                         dosCol: dosCol,
                         columnas: kpis,
                         // Abre Órdenes de trabajo con ese filtro (Para hoy, Sin técnico, Vencidos, Hechos).
                         onTap: (f) {
-                          // Pultec: «Completados» abre el histórico; el resto, lo pendiente con su filtro.
+                          // Pultec: «Histórico» abre el histórico; el resto, lo pendiente con su filtro.
                           historicoTrabajos.value = industrial && f == 4;
                           filtroFechaTrabajos.value = industrial && f == 4 ? 0 : f;
                           filtroCriticidadTrabajos.value = 0;
@@ -173,8 +173,10 @@ class Resumen extends StatelessWidget {
                           },
                         );
                         final lado = [
-                          _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
-                          const SizedBox(height: 16),
+                          // «Acciones pendientes» quitada en Pultec: repetía las cifras de arriba (vencidos, sin
+                          // asignar) y llevaba a Órdenes de trabajo sin más.
+                          // _Pendientes(vencidas: vencidas, sinTrabajador: sinTrabajador, onIr: onIr),
+                          // const SizedBox(height: 16),
                           _CargaTrabajadores(onTrabajador: onTrabajador),
                           const SizedBox(height: 16),
                           _EstaSemana(onIr: onIr),
@@ -1515,7 +1517,7 @@ class _Kpis extends StatelessWidget {
         vencidas == 0 ? '¡todo al día!' : 'requieren atención',
       ),
       industrial
-          ? (Icons.task_alt_rounded, 'Completados', hechas, P.verde, 'órdenes realizadas')
+          ? (Icons.task_alt_rounded, 'Histórico', hechas, P.verde, 'órdenes cerradas')
           : (Icons.task_alt_rounded, 'Hechos', hechas, P.verde, 'últimos 30 días'),
     ];
     if (P.mejorada) {
