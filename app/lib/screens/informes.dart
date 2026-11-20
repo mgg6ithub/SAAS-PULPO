@@ -142,7 +142,7 @@ class _InformeState extends State<_Informe> {
             children: [
               // «Todo correcto» no hace falta decirlo en Pultec.
               if (!industrial || i.resultado != 0)
-                Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], punto: true),
+                Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], icono: iconosResultado[i.resultado]),
               Text(
                 [
                   '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',

@@ -152,7 +152,7 @@ class Mantenimientos extends StatelessWidget {
               if (ancho)
                 Align(alignment: Alignment.centerLeft, child: Pill(x.gravedad.etiqueta, x.gravedad.color, punto: true)),
               if (ancho) celdaTexto(relativo(DateUtils.dateOnly(x.creada)), suave: true),
-              if (medio) Align(alignment: Alignment.centerLeft, child: Pill(x.estado.etiqueta, x.estado.color)),
+              if (medio) Align(alignment: Alignment.centerLeft, child: Pill(x.estado.etiqueta, x.estado.color, icono: x.estado.icono)),
             ];
           },
           onTap: (i) => abrirIncidenciaForm(context, original: lista[i]),

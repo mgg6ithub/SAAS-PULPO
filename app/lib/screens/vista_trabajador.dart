@@ -1491,8 +1491,10 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
   Widget _filtros() {
     final n = [tipo, if (fecha != 0) fecha, if (vista != 2) estado, if (vista == 2) resultado]
       .where((x) => x != null).length;
-    MenuItemButton opcion(String nombre, bool marcado, VoidCallback elegir, {Color? color}) => MenuItemButton(
-      leadingIcon: color == null ? null : Icon(Icons.circle, size: 8, color: color),
+    MenuItemButton opcion(String nombre, bool marcado, VoidCallback elegir, {Color? color, IconData? icono}) => MenuItemButton(
+      leadingIcon: icono != null
+          ? Icon(icono, size: 18, color: P.textoSuave)
+          : color == null ? null : Icon(Icons.circle, size: 8, color: color),
       trailingIcon: marcado ? Icon(Icons.check_rounded, size: 18, color: P.morado) : null,
       onPressed: () => setState(elegir), child: Text(nombre),
     );
@@ -1515,12 +1517,12 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
         ],
         if (vista == 1) SubmenuButton(menuChildren: [
           opcion('Todos los estados', estado == null, () => estado = null),
-          for (final e in EstadoIncidencia.values) opcion(e.etiqueta, estado == e.index, () => estado = e.index),
+          for (final e in EstadoIncidencia.values) opcion(e.etiqueta, estado == e.index, () => estado = e.index, icono: e.icono),
         ], child: const Text('Estado de la incidencia')),
         if (vista == 2) SubmenuButton(menuChildren: [
           opcion('Todos los resultados', resultado == null, () => resultado = null),
           for (final (i, nombre) in ['Completadas', 'Con incidencias', 'No se pudo hacer'].indexed)
-            opcion(nombre, resultado == i, () => resultado = i, color: coloresResultado[i]),
+            opcion(nombre, resultado == i, () => resultado = i, icono: iconosResultado[i]),
         ], child: const Text('Resultado del parte')),
         const Divider(),
         MenuItemButton(onPressed: () => setState(() {
@@ -1745,7 +1747,7 @@ Text('$etiqueta: ${t.nombre}')
             Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
               if (tipo != null) Pill(tipo.etiqueta, tipo.color, punto: true),
               if (x != null) Pill('De incidencia', P.rojo, icono: Icons.report_outlined),
-              if (i.resultado != 0) Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], punto: true),
+              if (i.resultado != 0) Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], icono: iconosResultado[i.resultado]),
               if (i.minutos != null)
                 Text(duracionTexto(i.minutos!), style: TextStyle(color: P.textoSuave, fontSize: 13)),
               if (i.fotos.isNotEmpty)
@@ -2377,7 +2379,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
         const SizedBox(height: 6),
         Align(
           alignment: Alignment.centerLeft,
-          child: Pill(resultadosInforme[resultado], coloresResultado[resultado], punto: true),
+          child: Pill(resultadosInforme[resultado], coloresResultado[resultado], icono: iconosResultado[resultado]),
         ),
       ]),
       if (plan != null)

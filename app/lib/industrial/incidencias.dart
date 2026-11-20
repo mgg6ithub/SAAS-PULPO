@@ -71,7 +71,8 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
               ),
               Pestanas(
                 opciones: ['Todas', for (final e in estados) e.etiqueta],
-                colores: [null, for (final e in estados) e.color],
+                iconos: [null, for (final e in estados) e.icono],
+                coloresIconos: [null, for (final e in estados) e.color],
                 seleccion: estado,
                 compactas: true,
                 onChanged: (i) => setState(() => estado = i),
@@ -158,7 +159,7 @@ class _TablaIncidencias extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Tooltip(
                   message: ot == null ? '' : 'OT: ${ot.nombre}',
-                  child: Pill(est.etiqueta, est.color, punto: true),
+                  child: Pill(est.etiqueta, est.color, icono: est.icono),
                 ),
               ),
             // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.

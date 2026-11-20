@@ -85,6 +85,9 @@ String duracionTexto(int minutos) =>
 const resultadosInforme = ['Todo correcto', 'Con incidencias', 'No se pudo hacer'];
 const coloresResultado = [P.verde, P.ambar, P.rojo];
 
+/// Icono de cada resultado del parte (sin puntos de color, que son de la criticidad).
+const iconosResultado = [Icons.task_alt_rounded, Icons.report_outlined, Icons.block_rounded];
+
 /// «7,2 mm/s»: el valor medido con la unidad de su mantenimiento.
 String medidaTexto(Informe i, Tarea t) {
   final p = store.planes.where((x) => x.id == t.planId).firstOrNull;

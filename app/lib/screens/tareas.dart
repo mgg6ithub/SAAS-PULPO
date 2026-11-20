@@ -222,7 +222,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                             ],
                             // «Todos» aparte, a la derecha del todo.
                             Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                            _ChipTipo('Todos', P.textoSuave, fecha == 0, () => filtroFechaTrabajos.value = 0),
+                            _ChipTipo('Todos', P.textoSuave, fecha == 0, () => filtroFechaTrabajos.value = 0, punto: false),
                           ],
                         )
                       : Row(
