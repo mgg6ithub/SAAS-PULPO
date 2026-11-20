@@ -2083,7 +2083,10 @@ Widget pillEstado(Tarea t) {
 /// Todos los consejos de Pultec usan este estilo.
 class Consejo extends StatelessWidget {
   final String texto;
-  const Consejo(this.texto, {super.key});
+
+  /// A la derecha, p. ej. un enlace para hacerlo.
+  final Widget? accion;
+  const Consejo(this.texto, {super.key, this.accion});
 
   @override
   Widget build(BuildContext context) => Tarjeta(
@@ -2096,6 +2099,7 @@ class Consejo extends StatelessWidget {
         Expanded(
           child: Text(texto, style: TextStyle(color: P.moradoOscuro, fontSize: 13)),
         ),
+        if (accion != null) ...[const SizedBox(width: 12), accion!],
       ],
     ),
   );

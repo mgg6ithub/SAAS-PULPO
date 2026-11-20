@@ -259,6 +259,14 @@ class _TareasPaginaState extends State<TareasPagina> {
                   ))),
                 ]),
               ],
+              // Pultec: que se entienda de dónde salen las órdenes que se repiten.
+              if (industrial && !historicoTrabajos.value) ...[
+                const SizedBox(height: 12),
+                const Consejo(
+                  'Las órdenes que se repiten se crean solas: crea un mantenimiento en su activo (Activos, el activo, '
+                  '+ Mantenimiento) y Pultec generará cada orden cuando toque. Aquí, crea solo las órdenes sueltas.',
+                ),
+              ],
               if (pestana == 1) ...[
                 const SizedBox(height: 12),
                 Consejo(

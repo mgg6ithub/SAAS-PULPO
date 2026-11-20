@@ -853,6 +853,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           // Pendientes) a la derecha, con la misma separación que entre las pestañas y la tabla.
           if (pestana == 2) ...[
             const SizedBox(height: 16),
+            // Lo que no se ve a primera vista: las órdenes que se repiten salen solas de los mantenimientos.
+            if (!_historicoOt) ...[
+              Consejo(
+                '¿Se repite cada cierto tiempo? Crea un mantenimiento y Pultec creará su orden de trabajo cada vez que '
+                'toque. Aquí, crea solo las órdenes sueltas.',
+                accion: Enlace('Crear mantenimiento', onTap: () => abrirPlanForm(context, activoId: a.id)),
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               children: [
                 Pestanas(
