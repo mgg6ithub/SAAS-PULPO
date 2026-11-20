@@ -493,7 +493,7 @@ class _OrdenesTecnicoState extends State<_OrdenesTecnico> {
         Align(
           alignment: Alignment.centerLeft,
           child: Pestanas(
-            opciones: ['Pendientes · ${pendientes.length}', 'Histórico'],
+            opciones: ['Pendientes ${pendientes.length}', 'Histórico'],
             iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
             seleccion: vista,
             onChanged: (i) => setState(() => vista = i),

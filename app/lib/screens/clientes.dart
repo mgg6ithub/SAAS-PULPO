@@ -69,7 +69,7 @@ class _ClientesState extends State<Clientes> {
                       izquierda: [
                         TituloVista(m('Clientes')),
                         Pestanas(
-                          opciones: ['Todos · ${store.clientes.length}', 'Activos', 'Inactivos'],
+                          opciones: ['Todos ${store.clientes.length}', 'Activos', 'Inactivos'],
                           seleccion: filtro,
                           onChanged: (i) => setState(() => filtro = i),
                         ),

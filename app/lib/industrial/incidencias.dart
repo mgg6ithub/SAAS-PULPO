@@ -61,7 +61,7 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
             izquierda: [
               const TituloVista('Incidencias'),
               Pestanas(
-                opciones: ['Pendientes · $pendientes', 'Histórico · ${todas.length - pendientes}'],
+                opciones: ['Pendientes $pendientes', 'Histórico ${todas.length - pendientes}'],
                 iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
                 seleccion: historico ? 1 : 0,
                 onChanged: (i) => setState(() {

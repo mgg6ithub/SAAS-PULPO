@@ -130,7 +130,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                   // Pultec, de momento sin plantillas: solo la lista de órdenes de trabajo.
                   if (!industrial)
                     Pestanas(
-                      opciones: ['Todos · $nTrabajos', 'Plantillas · ${store.plantillas.length}'],
+                      opciones: ['Todos $nTrabajos', 'Plantillas ${store.plantillas.length}'],
                       seleccion: pestana,
                       onChanged: (i) => setState(() => pestana = i),
                     ),
@@ -162,8 +162,8 @@ class _TareasPaginaState extends State<TareasPagina> {
                     children: [
                       Pestanas(
                       opciones: [
-                        'Pendientes · ${store.tareas.where((t) => !t.esPlantilla && !_hecha(t)).length}',
-                        'Histórico · ${store.tareas.where((t) => !t.esPlantilla && _hecha(t)).length}',
+                        'Pendientes ${store.tareas.where((t) => !t.esPlantilla && !_hecha(t)).length}',
+                        'Histórico ${store.tareas.where((t) => !t.esPlantilla && _hecha(t)).length}',
                       ],
                       iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
                       seleccion: historicoTrabajos.value ? 1 : 0,
@@ -187,15 +187,23 @@ class _TareasPaginaState extends State<TareasPagina> {
               if (!(industrial && historicoTrabajos.value)) ...[
                 const SizedBox(height: huecoVista),
                 Row(children: [
-                  Expanded(child: SingleChildScrollView(
+                  // Pultec: el activo a la izquierda del todo; los filtros, a la derecha (en espejo: «Todos» al final).
+                  if (industrial) ...[
+                    ConstrainedBox(constraints: const BoxConstraints(maxWidth: 210), child: SelectorActivo(_activoFiltro,
+                      (id) => setState(() => _activoFiltro = id), filtro: true)),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(child: Align(
+                  alignment: industrial ? Alignment.centerRight : Alignment.centerLeft,
+                  child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  reverse: industrial,
                   child: industrial
                       ? Row(
-                          // Pultec: «Todos» y un solo filtro a la vez; al tocar el marcado, vuelve a «Todos».
+                          // Pultec: un solo filtro a la vez; al tocar el marcado, vuelve a «Todos».
                           children: [
-                            // (número de filtro, etiqueta, color, icono); sin «Hechos»: lo cubre «Completados».
+                            // (número de filtro, etiqueta, color, icono); sin «Hechos»: lo cubre el histórico.
                             for (final (i, nombre, color, icono) in [
-                              (0, 'Todos', P.textoSuave, null),
                               for (final (j, (n, c, ic)) in _filtrosFecha.indexed)
                                 if (j != 3) (j + 1, n, c, ic),
                               (7, 'Automatizaciones', P.ambar, Icons.bolt_rounded),
@@ -206,18 +214,13 @@ class _TareasPaginaState extends State<TareasPagina> {
                                 fecha == i,
                                 () => filtroFechaTrabajos.value = fecha == i ? 0 : i,
                                 icono: icono,
-                                punto: i != 0,
+                                punto: true,
                               ),
                               const SizedBox(width: 6),
-                              // «Todos» aparte del resto.
-                              if (i == 0)
-                                Container(
-                                  width: 1,
-                                  height: 20,
-                                  color: P.borde,
-                                  margin: const EdgeInsets.only(right: 6),
-                                ),
                             ],
+                            // «Todos» aparte, a la derecha del todo.
+                            Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
+                            _ChipTipo('Todos', P.textoSuave, fecha == 0, () => filtroFechaTrabajos.value = 0),
                           ],
                         )
                       : Row(
@@ -252,12 +255,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                             _ChipNueva(() => _editarEtiqueta(null)),
                           ],
                         ),
-                  )),
-                  if (industrial) ...[
-                    const SizedBox(width: 12),
-                    ConstrainedBox(constraints: const BoxConstraints(maxWidth: 210), child: SelectorActivo(_activoFiltro,
-                      (id) => setState(() => _activoFiltro = id), filtro: true)),
-                  ],
+                  ))),
                 ]),
               ],
               if (pestana == 1) ...[
