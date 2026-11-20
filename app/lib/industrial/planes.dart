@@ -160,17 +160,17 @@ class _TablaPlanesState extends State<TablaPlanes> {
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
-    'Código': Col('Código', ancho: 130),
+    'Código': Col('Código', flex: 2),
     'Componente': Col('Componente', flex: 2),
     'Prioridad': Col('Prioridad', ancho: 150),
-    'Cada cuánto': Col('Cada cuánto', ancho: 120),
-    'Horas restantes': Col('Horas restantes', ancho: 120, derecha: true),
-    'Fecha': Col('Fecha', ancho: 140),
-    'Último hecho': Col('Último hecho', ancho: 120),
+    'Cada cuánto': Col('Cada cuánto', flex: 2),
+    'Horas restantes': Col('Horas restantes', flex: 2, derecha: true),
+    'Fecha': Col('Fecha', flex: 2),
+    'Último hecho': Col('Último hecho', flex: 2),
     'Categoría': Col('Categoría', flex: 2),
     'Duración': Col('Duración', ancho: 100),
     'Repuestos': Col('Repuestos', flex: 3),
-    'Orden de trabajo': Col('Orden de trabajo', ancho: 230),
+    'Orden de trabajo': Col('Orden de trabajo', flex: 3),
   };
 
   /// Cabecera de la última columna: pausar todos los mantenimientos del activo (y sus componentes) o reanudarlos, p. ej.
@@ -308,9 +308,9 @@ class _TablaPlanesState extends State<TablaPlanes> {
         builder: (context, s) {
       final columnas = [
         ...s.columna,
-        const Col('Mantenimiento', flex: 4),
+        const Col('Mantenimiento', flex: 5),
         // Activo (play) o pausado (pausa); en la cabecera, pausar o reanudar todos.
-        if (medio) Col('Vigencia', ancho: 130, cabecera: _pausarTodos()),
+        if (medio) Col('Vigencia', flex: 2, cabecera: _pausarTodos()),
         for (final c in vistas) _cols[c]!,
         // Separado de lo anterior por una raya fina.
         if (medio)
