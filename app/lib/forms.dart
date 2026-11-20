@@ -102,7 +102,11 @@ class VentanaFormulario extends StatefulWidget {
 
   /// Solo al desarrollar: «Rellenar» abajo a la izquierda pone datos de prueba (nombres que no se repiten).
   final VoidCallback? onRellenar;
+
+  /// Con lo obligatorio sin rellenar, Guardar sale apagado (gris); al completarlo, se enciende en morado.
+  final bool puedeGuardar;
   const VentanaFormulario({
+    this.puedeGuardar = true,
     this.onRellenar,
     this.sinPie = false,
     super.key,
@@ -438,7 +442,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
           ),
           const SizedBox(width: 8),
         ],
-        if (!widget.sinPie) FilledButton(onPressed: widget.onGuardar, child: const Text('Guardar')),
+        if (!widget.sinPie)
+          FilledButton(onPressed: widget.puedeGuardar ? widget.onGuardar : null, child: const Text('Guardar')),
       ],
     ),
   );
@@ -1213,6 +1218,8 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
+    // Guardar, apagado hasta que tenga nombre.
+    puedeGuardar: nombre.text.trim().isNotEmpty,
     onRellenar: widget.original == null ? _rellenar : null,
     etiqueta: m('Trabajadores'),
     titulo: widget.original == null ? m('Nuevo trabajador') : (widget.incrustada ? 'Ficha' : m('Editar trabajador')),
@@ -1709,6 +1716,8 @@ class _TareaFormState extends State<TareaForm> {
     // Técnico, día, hora, criticidad… (lo que no es texto) llegan con setState: también se guardan solos.
     _programarGuardado();
     return VentanaFormulario(
+      // Guardar, apagado hasta que tenga nombre (y en Pultec, su día).
+      puedeGuardar: nombre.text.trim().isNotEmpty && (!industrial || t.esPlantilla || t.proximo != null),
       sinPie: _autoguardado,
       // Datos de prueba (solo al desarrollar): nombre que no esté ya, activo, tipo y fecha.
       onRellenar: industrial && nueva && !t.esPlantilla
