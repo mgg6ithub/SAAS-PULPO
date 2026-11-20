@@ -144,7 +144,6 @@ class TablaPlanes extends StatefulWidget {
 class _TablaPlanesState extends State<TablaPlanes> {
   /// Columnas opcionales, en su orden, y las que se ven (se recuerdan mientras dure la sesión).
   static const _opcionales = [
-    'Estado',
     'Código',
     'Orden de trabajo',
     // 'Prioridad', // Aparcada para el futuro.
@@ -157,11 +156,10 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Duración',
     'Repuestos',
   ];
-  static const _porDefecto = {'Estado', 'Código', 'Cada cuánto', 'Horas restantes', 'Fecha', 'Orden de trabajo'};
+  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Fecha', 'Orden de trabajo'};
   static final _visibles = {..._porDefecto};
 
   static const _cols = {
-    'Estado': Col('Estado', ancho: 110),
     'Código': Col('Código', ancho: 130),
     'Componente': Col('Componente', flex: 2),
     'Prioridad': Col('Prioridad', ancho: 150),
@@ -175,24 +173,15 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Orden de trabajo': Col('Orden de trabajo', ancho: 230),
   };
 
-  /// Cabecera de «Estado»: pausar todos los mantenimientos del activo (y sus componentes) o reanudarlos, p. ej.
+  /// Cabecera de la última columna: pausar todos los mantenimientos del activo (y sus componentes) o reanudarlos, p. ej.
   /// si una máquina se deja de usar unos meses.
   Widget _pausarTodos() {
     final rama = store.ramaDe(widget.activoId);
     final todos = store.planes.where((p) => rama.contains(p.activoId)).toList();
     final pausar = todos.any((p) => p.activa);
-    return Row(
-      children: [
-        Text(
-          'Estado',
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: P.mejorada ? FontWeight.w600 : FontWeight.w500,
-            color: P.textoSuave,
-          ),
-        ),
-        const SizedBox(width: 2),
-        IconButton(
+    return Align(
+      alignment: Alignment.centerRight,
+      child: IconButton(
           tooltip: pausar ? 'Pausar todos los mantenimientos de este activo' : 'Reanudar todos sus mantenimientos',
           visualDensity: VisualDensity.compact,
           onPressed: todos.isEmpty
@@ -211,8 +200,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
             size: 18,
             color: pausar ? P.textoSuave : P.verde,
           ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -312,8 +300,10 @@ class _TablaPlanesState extends State<TablaPlanes> {
       final columnas = [
         ...s.columna,
         const Col('Mantenimiento', flex: 4),
-        for (final c in vistas) c == 'Estado' ? Col('Estado', ancho: 110, cabecera: _pausarTodos()) : _cols[c]!,
+        for (final c in vistas) _cols[c]!,
         if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
+        // Al final: vigente (play) o pausado (pausa); en la cabecera, pausar o reanudar todos.
+        if (medio) Col('Pausa', ancho: 48, derecha: true, cabecera: _pausarTodos()),
       ];
       // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
       final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 70.0 * c.flex));
@@ -335,38 +325,6 @@ class _TablaPlanesState extends State<TablaPlanes> {
               final otPendienteDe = ots[p.id] ?? ots['${p.activoId}|${p.nombre}'];
               Widget celda(String c) {
                 switch (c) {
-                  case 'Estado':
-                    // Pausado: no crea más órdenes (las que ya hay siguen); al reanudarlo, crea la suya.
-                    return Align(
-                      alignment: Alignment.centerLeft,
-                      child: Tooltip(
-                        message: p.activa
-                            ? 'Pausar: al completar su orden no se creará la siguiente'
-                            : 'Reanudar: vuelve a crear sus órdenes',
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () {
-                            p.activa = !p.activa;
-                            store.guardarPlan(p);
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  p.activa ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                                  size: 18,
-                                  color: p.activa ? P.verde : P.gris,
-                                ),
-                                const SizedBox(width: 4),
-                                celdaTexto(p.activa ? 'Vigente' : 'Pausado', suave: !p.activa),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
                   case 'Código':
                     return celdaTexto(nodo == null ? '—' : (nodo.tag.isEmpty ? nodo.nombre : nodo.tag), suave: true);
                   case 'Componente':
@@ -470,6 +428,26 @@ class _TablaPlanesState extends State<TablaPlanes> {
                 ),
                 for (final c in vistas) celda(c),
                 if (medio) const SizedBox(),
+                // Pausado: no crea más órdenes (las que ya hay siguen); al reanudarlo, crea la suya.
+                if (medio)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      tooltip: p.activa
+                          ? 'Vigente · pausar: al completar su orden no se creará la siguiente'
+                          : 'Pausado · reanudar: vuelve a crear sus órdenes',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        p.activa = !p.activa;
+                        store.guardarPlan(p);
+                      },
+                      icon: Icon(
+                        p.activa ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                        size: 18,
+                        color: p.activa ? P.verde : P.gris,
+                      ),
+                    ),
+                  ),
               ];
             },
           ),
