@@ -449,14 +449,15 @@ class _PrimerosPasos extends StatelessWidget {
   _pasosPultec(bool hayTrabajador) => [
     (
       'Da de alta tu primera máquina',
-      'Un activo: un camión, un compresor, una prensa… Dentro, sus componentes con su tag, fabricante y modelo.',
+      'Un camión, un compresor, una prensa… Pon su contador de horas y cuánto se usa: así Pultec sabe cuándo le '
+          'toca cada mantenimiento por horas.',
       (Marca.iconoCliente, 'Activos', 'Nuevo activo', Seccion.clientes, (c) async => abrirActivoForm(c)),
       null,
     ),
     (
       'Crea su primer mantenimiento',
-      'Qué hay que hacerle y cada cuánto (días u horas de uso). Pultec crea la orden de trabajo sola y la siguiente '
-          'al completarla.',
+      'Dentro del activo, «+ Mantenimiento»: qué hay que hacer y cada cuánto (días u horas). Pultec crea su orden '
+          'de trabajo para la fecha que toca y, al completarla, la siguiente.',
       (
         Marca.iconoCliente,
         'Activos',

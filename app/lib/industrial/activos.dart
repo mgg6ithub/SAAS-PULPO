@@ -1129,7 +1129,7 @@ class _ActivoFormState extends State<ActivoForm> {
       key: _claveMantenimiento,
       child: Bloque(
         'Contador y uso',
-        descripcion: 'Con ellos se estiman los mantenimientos por horas de este activo o componente.',
+        descripcion: 'Para estimar los mantenimientos por horas.',
         [
           dos(
             CampoFecha(
@@ -1363,6 +1363,8 @@ class _ActivoFormState extends State<ActivoForm> {
             ),
           ],
         ),
+        // Primero el contador: con él se estiman los mantenimientos por horas.
+        _mantenimiento(),
         Bloque('Ficha técnica', descripcion: 'Los datos de la placa.', [
           dos(campo('Fabricante', fabricante), campo('Modelo', modelo)),
           campo('Número de serie', serie),
@@ -1373,7 +1375,6 @@ class _ActivoFormState extends State<ActivoForm> {
               hint: 'Limpieza de tanques, transporte…',
             ),
         ]),
-        _mantenimiento(),
         Bloque('Repuestos', descripcion: 'Piezas y consumibles que usa.', [
           campo('Repuestos', repuestos, lineas: 3),
         ]),
