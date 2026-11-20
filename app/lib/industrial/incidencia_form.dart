@@ -9,7 +9,9 @@ import '../informes.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../models.dart';
 import 'incidencia.dart';
+import 'mantenimientos.dart' show raizDe;
 
 class AvisoIncidenciaForm extends StatefulWidget {
   final String? tecnicoId, origenTrabajoId;
@@ -155,6 +157,12 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
     ],
   );
 
+  /// La OT es de la máquina del activo elegido (sin activo, todas valen).
+  bool _deLaMaquina(Tarea t) {
+    final r = raizDe(activoId);
+    return r == null || store.ramaDe(r.id).contains(t.activoId);
+  }
+
   Widget _categoria(String c) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -200,7 +208,12 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SelectorActivo(activoId, (id) => setState(() => activoId = id)),
+                SelectorActivo(activoId, (id) => setState(() {
+                  activoId = id;
+                  // La orden relacionada tiene que ser de esa máquina.
+                  final origen = store.tarea(origenTrabajoId);
+                  if (origen != null && !_deLaMaquina(origen)) origenTrabajoId = null;
+                })),
                 if (intentado && activoId == null)
                   Text('Te falta el activo o componente', style: TextStyle(color: P.rojo, fontSize: 12)),
               ],
@@ -218,7 +231,8 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
             seleccionado: origenTrabajoId ?? '',
             opciones: [
               ('', const Text('Sin orden asociada')),
-              for (final t in store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(tecnicoId)))
+              // Solo las de la máquina elegida (y sus componentes).
+              for (final t in store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(tecnicoId) && _deLaMaquina(t)))
                 (t.id, Text(t.nombre, maxLines: 2, overflow: TextOverflow.ellipsis)),
             ],
             onSelected: (id) => setState(() {

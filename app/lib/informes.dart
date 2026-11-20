@@ -17,6 +17,8 @@ import 'nube.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'marca.dart';
+import 'industrial/incidencia.dart';
+import 'industrial/mantenimientos.dart' show dondeEs;
 import 'industrial/planes.dart' show raizActivo;
 
 /// Informe de un trabajo hecho por un trabajador. Con sesión vive en la tabla `informes` y sus fotos en Storage;
@@ -226,6 +228,13 @@ class Informes extends ChangeNotifier {
     return [...pendientes.reversed, ...?l?.where((i) => !pendientes.any((p) => p.id == i.id))];
   }
 
+  /// Informes del trabajo ya leídos (para descargar su PDF sin esperar a que se pinten).
+  Future<List<Informe>> cargar(String trabajoId) async {
+    final n = store.nube;
+    if (n == null) return de(trabajoId)!;
+    return _de[trabajoId] ?? await n.informes(trabajoId);
+  }
+
   /// Guarda el informe [i] (sin id) y sube sus fotos, ya comprimidas, y la firma. Sin conexión lo guarda
   /// en el dispositivo y lo sube al volver: devuelve false.
   Future<bool> crear(Informe i, {List<Uint8List> fotos = const [], Uint8List? firma}) async {
@@ -340,72 +349,26 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
   final w = store.trabajadores.where((x) => x.id == i.trabajadorId).firstOrNull;
   final fotos = await Future.wait(i.fotos.map(bytesFoto));
   final firma = i.firma == null ? null : await bytesFoto(i.firma!);
-  Uint8List? logo;
-  try {
-    logo = (await rootBundle.load(industrial ? 'assets/ipultec.png' : 'assets/pulpo.png')).buffer.asUint8List();
-  } catch (_) {}
+  final logo = await _logoPdf();
   final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
   final raiz = industrial ? raizActivo(t.activoId) : null;
   final componente = industrial ? store.activo(t.activoId) : null;
   final empresa = store.nube?.nombre ?? '';
   final numero = 'OT-${t.id.replaceAll('-', '').toUpperCase().substring(0, min(8, t.id.replaceAll('-', '').length))}';
+  // OT que resuelve una incidencia: el parte lleva también lo que se comunicó y sus fotos.
+  final incidencia = industrial ? store.incidenciaDeOt(t.id) : null;
+  final fotosIncidencia = incidencia == null ? const <Uint8List>[] : await Future.wait(incidencia.fotos.map(bytesFoto));
 
   final doc = pw.Document(title: 'Parte ${t.nombre}', author: empresa.isEmpty ? Marca.nombre : empresa);
-  final marca = PdfColor.fromInt(P.morado.toARGB32());
   final marcaSuave = PdfColor.fromInt(Color.alphaBlend(P.morado.withValues(alpha: .08), Colors.white).toARGB32());
   final tinta = PdfColor.fromInt(0xFF111827);
   final suave = PdfColor.fromInt(0xFF6B7280);
-  final borde = PdfColor.fromInt(0xFFE5E7EB);
   final base = [P.verde, P.ambar, P.rojo][i.resultado.clamp(0, 2)];
   final colorResultado = PdfColor.fromInt(base.toARGB32());
   // El PDF no mezcla la transparencia: el fondo claro se calcula ya mezclado con el blanco.
   final fondoResultado = PdfColor.fromInt(Color.alphaBlend(base.withValues(alpha: .12), Colors.white).toARGB32());
 
-  pw.Widget etiqueta(String texto) => pw.Text(
-    texto.toUpperCase(),
-    style: pw.TextStyle(fontSize: 7.5, color: suave, fontWeight: pw.FontWeight.bold, letterSpacing: .8),
-  );
-
-  pw.Widget dato(String nombre, String valor) => pw.Padding(
-    padding: const pw.EdgeInsets.only(bottom: 7),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(nombre, style: pw.TextStyle(fontSize: 8.5, color: suave)),
-        pw.SizedBox(height: 1.5),
-        pw.Text(valor.isEmpty ? '-' : valor, style: pw.TextStyle(fontSize: 10.5, color: tinta)),
-      ],
-    ),
-  );
-
-  pw.Widget tarjeta(String titulo, List<pw.Widget> hijos) => pw.Container(
-    padding: const pw.EdgeInsets.fromLTRB(14, 12, 14, 6),
-    decoration: pw.BoxDecoration(
-      border: pw.Border.all(color: borde, width: .8),
-      borderRadius: pw.BorderRadius.circular(6),
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [etiqueta(titulo), pw.SizedBox(height: 8), ...hijos],
-    ),
-  );
-
-  pw.Widget seccion(String titulo, String texto) => pw.Padding(
-    padding: const pw.EdgeInsets.only(top: 14),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        etiqueta(titulo),
-        pw.SizedBox(height: 6),
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.all(12),
-          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFF9FAFB), borderRadius: pw.BorderRadius.circular(6)),
-          child: pw.Text(texto, style: pw.TextStyle(fontSize: 10.5, color: tinta, lineSpacing: 2.5)),
-        ),
-      ],
-    ),
-  );
+  const etiqueta = _etiquetaPdf, dato = _datoPdf, tarjeta = _tarjetaPdf, seccion = _seccionPdf;
 
   pw.Widget firmaBloque(String titulo, String nombre, {Uint8List? imagen}) => pw.Expanded(
     child: pw.Column(
@@ -429,65 +392,12 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
   );
 
   doc.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.fromLTRB(40, 36, 40, 36),
-      // Cabecera: logo y marca a la izquierda; empresa, número y fecha a la derecha; raya del color de la marca.
-      header: (context) => pw.Column(
-        children: [
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              if (logo != null) ...[pw.Image(pw.MemoryImage(logo), width: 34, height: 34), pw.SizedBox(width: 10)],
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    Marca.nombre,
-                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: marca),
-                  ),
-                  if (empresa.isNotEmpty) pw.Text(empresa, style: pw.TextStyle(fontSize: 9.5, color: suave)),
-                ],
-              ),
-              pw.Spacer(),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    industrial ? 'Parte de orden de trabajo' : m('Parte de trabajo'),
-                    style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: tinta),
-                  ),
-                  pw.SizedBox(height: 2),
-                  pw.Text(numero, style: pw.TextStyle(fontSize: 9, color: suave)),
-                  pw.Text(
-                    '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
-                    style: pw.TextStyle(fontSize: 9, color: suave),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 10),
-          pw.Container(height: 2, color: marca),
-          pw.SizedBox(height: 18),
-        ],
-      ),
-      footer: (context) => pw.Padding(
-        padding: const pw.EdgeInsets.only(top: 12),
-        child: pw.Row(
-          children: [
-            pw.Text(
-              'Generado con ${Marca.nombre} el ${fecha(DateTime.now())}',
-              style: pw.TextStyle(fontSize: 8, color: suave),
-            ),
-            pw.Spacer(),
-            pw.Text(
-              'Página ${context.pageNumber} de ${context.pagesCount}',
-              style: pw.TextStyle(fontSize: 8, color: suave),
-            ),
-          ],
-        ),
-      ),
+    _paginaPdf(
+      logo: logo,
+      empresa: empresa,
+      titulo: industrial ? 'Parte de orden de trabajo' : m('Parte de trabajo'),
+      numero: numero,
+      cuando: '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
       build: (_) => [
         // Título de la orden y su descripción, con el resultado a la derecha.
         pw.Row(
@@ -522,6 +432,10 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
             ),
           ],
         ),
+        if (incidencia != null) ...[
+          seccion('Incidencia original', '${incidencia.descripcion}\n\n${_comunicada(incidencia)}'),
+          if (fotosIncidencia.isNotEmpty) ...[pw.SizedBox(height: 8), _fotosPdf(fotosIncidencia)],
+        ],
         pw.SizedBox(height: 18),
         // Dos tarjetas: la orden y dónde se hizo.
         pw.Row(
@@ -572,18 +486,7 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
           pw.SizedBox(height: 14),
           etiqueta('Fotos'),
           pw.SizedBox(height: 8),
-          pw.Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final f in fotos)
-                pw.ClipRRect(
-                  horizontalRadius: 6,
-                  verticalRadius: 6,
-                  child: pw.Image(pw.MemoryImage(f), width: 253, height: 180, fit: pw.BoxFit.cover),
-                ),
-            ],
-          ),
+          _fotosPdf(fotos),
         ],
         pw.SizedBox(height: 28),
         // Firmas: el técnico que lo hizo y quien lo da por bueno.
@@ -595,6 +498,239 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
             firmaBloque(industrial ? 'Firma del responsable' : m('Conforme, el cliente'), i.firmante, imagen: firma),
           ],
         ),
+      ],
+    ),
+  );
+  return doc.save();
+}
+
+// ── Piezas comunes de los PDF (parte de OT e informe de incidencia) ──
+final _tintaPdf = PdfColor.fromInt(0xFF111827);
+final _suavePdf = PdfColor.fromInt(0xFF6B7280);
+final _bordePdf = PdfColor.fromInt(0xFFE5E7EB);
+
+pw.Widget _etiquetaPdf(String texto) => pw.Text(
+  texto.toUpperCase(),
+  style: pw.TextStyle(fontSize: 7.5, color: _suavePdf, fontWeight: pw.FontWeight.bold, letterSpacing: .8),
+);
+
+pw.Widget _datoPdf(String nombre, String valor) => pw.Padding(
+  padding: const pw.EdgeInsets.only(bottom: 7),
+  child: pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      pw.Text(nombre, style: pw.TextStyle(fontSize: 8.5, color: _suavePdf)),
+      pw.SizedBox(height: 1.5),
+      pw.Text(valor.isEmpty ? '-' : valor, style: pw.TextStyle(fontSize: 10.5, color: _tintaPdf)),
+    ],
+  ),
+);
+
+pw.Widget _tarjetaPdf(String titulo, List<pw.Widget> hijos) => pw.Container(
+  padding: const pw.EdgeInsets.fromLTRB(14, 12, 14, 6),
+  decoration: pw.BoxDecoration(
+    border: pw.Border.all(color: _bordePdf, width: .8),
+    borderRadius: pw.BorderRadius.circular(6),
+  ),
+  child: pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [_etiquetaPdf(titulo), pw.SizedBox(height: 8), ...hijos],
+  ),
+);
+
+pw.Widget _seccionPdf(String titulo, String texto) => pw.Padding(
+  padding: const pw.EdgeInsets.only(top: 14),
+  child: pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      _etiquetaPdf(titulo),
+      pw.SizedBox(height: 6),
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFF9FAFB), borderRadius: pw.BorderRadius.circular(6)),
+        child: pw.Text(texto, style: pw.TextStyle(fontSize: 10.5, color: _tintaPdf, lineSpacing: 2.5)),
+      ),
+    ],
+  ),
+);
+
+pw.Widget _fotosPdf(List<Uint8List> fotos) => pw.Wrap(
+  spacing: 8,
+  runSpacing: 8,
+  children: [
+    for (final f in fotos)
+      pw.ClipRRect(
+        horizontalRadius: 6,
+        verticalRadius: 6,
+        child: pw.Image(pw.MemoryImage(f), width: 253, height: 180, fit: pw.BoxFit.cover),
+      ),
+  ],
+);
+
+/// Página A4 de todos los PDF: cabecera con logo, marca y empresa a la izquierda; título, número y fecha a la
+/// derecha; raya del color de la marca. Pie con la fecha de generación y la página.
+pw.MultiPage _paginaPdf({
+  required Uint8List? logo,
+  required String empresa,
+  required String titulo,
+  required String numero,
+  required String cuando,
+  required List<pw.Widget> Function(pw.Context) build,
+}) {
+  final marca = PdfColor.fromInt(P.morado.toARGB32());
+  return pw.MultiPage(
+    pageFormat: PdfPageFormat.a4,
+    margin: const pw.EdgeInsets.fromLTRB(40, 36, 40, 36),
+    header: (context) => pw.Column(
+      children: [
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            if (logo != null) ...[pw.Image(pw.MemoryImage(logo), width: 34, height: 34), pw.SizedBox(width: 10)],
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(Marca.nombre, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: marca)),
+                if (empresa.isNotEmpty) pw.Text(empresa, style: pw.TextStyle(fontSize: 9.5, color: _suavePdf)),
+              ],
+            ),
+            pw.Spacer(),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text(titulo, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: _tintaPdf)),
+                pw.SizedBox(height: 2),
+                pw.Text(numero, style: pw.TextStyle(fontSize: 9, color: _suavePdf)),
+                pw.Text(cuando, style: pw.TextStyle(fontSize: 9, color: _suavePdf)),
+              ],
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 10),
+        pw.Container(height: 2, color: marca),
+        pw.SizedBox(height: 18),
+      ],
+    ),
+    footer: (context) => pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 12),
+      child: pw.Row(
+        children: [
+          pw.Text('Generado con ${Marca.nombre} el ${fecha(DateTime.now())}', style: pw.TextStyle(fontSize: 8, color: _suavePdf)),
+          pw.Spacer(),
+          pw.Text('Página ${context.pageNumber} de ${context.pagesCount}', style: pw.TextStyle(fontSize: 8, color: _suavePdf)),
+        ],
+      ),
+    ),
+    build: build,
+  );
+}
+
+Future<Uint8List?> _logoPdf() async {
+  try {
+    return (await rootBundle.load(industrial ? 'assets/ipultec.png' : 'assets/pulpo.png')).buffer.asUint8List();
+  } catch (_) {
+    return null;
+  }
+}
+
+/// «Comunicada por Ana el 18/11/2026.»
+String _comunicada(Incidencia x) =>
+    'Comunicada por ${(x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombreCompleto ?? 'la oficina'} el ${fecha(x.creada)}.';
+
+/// Informe de una incidencia: con OT y parte, el parte de la OT (que ya lleva la incidencia y sus fotos); si no,
+/// la incidencia, sus fotos y en qué quedó.
+Future<void> descargarInformeIncidencia(Incidencia x) async {
+  final ot = store.tarea(x.trabajoId);
+  final parte = ot == null ? null : (await informes.cargar(ot.id)).firstOrNull;
+  final bytes = parte != null ? await informePdf(parte, ot!) : await incidenciaPdf(x);
+  final nombre = 'Incidencia ${dondeEs(x.activoId)} ${fecha(x.creada)}'.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
+  await descargar(bytes, '$nombre.pdf', 'application/pdf');
+}
+
+/// La incidencia en PDF (sin parte de OT): qué se comunicó, quién y cuándo, fotos y resolución.
+Future<Uint8List> incidenciaPdf(Incidencia x) async {
+  final fotos = await Future.wait(x.fotos.map(bytesFoto));
+  final estado = store.estadoIncidencia(x);
+  final ot = store.tarea(x.trabajoId);
+  final plan = store.planes.where((p) => p.id == x.planId).firstOrNull;
+  final raiz = raizActivo(x.activoId);
+  final componente = store.activo(x.activoId);
+  final empresa = store.nube?.nombre ?? '';
+  final limpio = x.id.replaceAll('-', '').toUpperCase();
+  final numero = 'INC-${limpio.substring(0, min(8, limpio.length))}';
+  final color = PdfColor.fromInt(estado.color.toARGB32());
+  final fondo = PdfColor.fromInt(Color.alphaBlend(estado.color.withValues(alpha: .12), Colors.white).toARGB32());
+  final doc = pw.Document(title: 'Incidencia $numero', author: empresa.isEmpty ? Marca.nombre : empresa);
+  doc.addPage(
+    _paginaPdf(
+      logo: await _logoPdf(),
+      empresa: empresa,
+      titulo: 'Informe de incidencia',
+      numero: numero,
+      cuando: '${fecha(x.creada)} ${hhmm(x.creada.hour * 60 + x.creada.minute)}',
+      build: (_) => [
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Text(
+                x.descripcion.isEmpty ? 'Sin descripción' : x.descripcion,
+                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: _tintaPdf),
+              ),
+            ),
+            pw.SizedBox(width: 16),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: pw.BoxDecoration(color: fondo, borderRadius: pw.BorderRadius.circular(20)),
+              child: pw.Text(
+                estado.etiqueta,
+                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: color),
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 18),
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: _tarjetaPdf('Incidencia', [
+                _datoPdf('Número', numero),
+                _datoPdf('Gravedad', x.gravedad.etiqueta),
+                _datoPdf('Comunicada por', (x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombreCompleto ?? 'Oficina'),
+                _datoPdf('Fecha', fecha(x.creada)),
+              ]),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(
+              child: _tarjetaPdf('Activo', [
+                _datoPdf('Activo', raiz?.titulo ?? '-'),
+                if (componente != null && componente.id != raiz?.id) _datoPdf('Componente', componente.titulo),
+                if (plan != null) _datoPdf('Mantenimiento vinculado', plan.nombre),
+              ]),
+            ),
+          ],
+        ),
+        if (fotos.isNotEmpty) ...[
+          pw.SizedBox(height: 14),
+          _etiquetaPdf('Fotos'),
+          pw.SizedBox(height: 8),
+          _fotosPdf(fotos),
+        ],
+        _seccionPdf('Resolución', switch (estado) {
+          EstadoIncidencia.abierta => 'Pendiente de revisión.',
+          EstadoIncidencia.desestimada =>
+            'Desestimada${x.cerradaEl == null ? '' : ' el ${fecha(x.cerradaEl!)}'}: no hizo falta intervenir.',
+          _ when ot != null => [
+            'Orden de trabajo: ${ot.nombre}',
+            if (estado == EstadoIncidencia.completada)
+              'Completada${ot.ultimo == null ? '' : ' el ${fecha(ot.ultimo!)}'}.'
+            else
+              'Pendiente${ot.proximo == null ? '' : ', prevista el ${fecha(ot.proximo!)}'}.',
+          ].join('\n'),
+          _ => estado.etiqueta,
+        }),
       ],
     ),
   );

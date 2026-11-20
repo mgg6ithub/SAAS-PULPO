@@ -223,7 +223,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       widget.original?.copia() ??
       Incidencia(id: store.nuevoId(), activoId: widget.activoId ?? store.hijosDe(null).firstOrNull?.id ?? '');
   late final descripcion = TextEditingController(text: x.descripcion)..addListener(() => setState(() {}));
-  bool intentoGuardar = false;
+  bool intentoGuardar = false, descargando = false;
 
   String? get error => intentoGuardar && descripcion.text.trim().isEmpty ? 'Cuenta qué pasa' : null;
 
@@ -235,13 +235,16 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
     return true;
   }
 
-  /// Guarda la incidencia y abre su OT ya rellena; al guardarla, la incidencia pasa a «Con OT».
+  /// Guarda la incidencia y abre su OT ya rellena: lo comunicado va a la descripción (no al título) y se
+  /// pueden poner repuestos y procedimiento. Al guardarla, la incidencia pasa a «Con OT».
   Future<void> crearOt() async {
     if (!_guardar()) return;
     final nav = Navigator.of(context);
+    final a = store.activo(x.activoId);
     final ot = Tarea(
       id: store.nuevoId(),
-      nombre: x.descripcion,
+      nombre: 'Reparar ${a == null ? 'activo' : a.nombre.isEmpty ? a.tag : a.nombre}',
+      descripcion: x.descripcion,
       activoId: x.activoId,
       plantilla: false,
       tipoMantenimiento: x.gravedad.tipo,
@@ -260,14 +263,45 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
     }
   }
 
+  /// Cerrar sin hacer nada: queda en el histórico como desestimada.
+  void desestimar() {
+    x.estado = EstadoIncidencia.desestimada;
+    if (_guardar()) Navigator.pop(context);
+  }
+
+  Future<void> _informe() async {
+    setState(() => descargando = true);
+    try {
+      await descargarInformeIncidencia(x);
+    } catch (e) {
+      debugPrint('Pultec: no se pudo crear el PDF de la incidencia: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
+        );
+      }
+    }
+    if (mounted) setState(() => descargando = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final existe = widget.original != null;
-    final ot = store.tareas.where((t) => t.id == x.trabajoId).firstOrNull;
+    final estado = store.estadoIncidencia(x);
+    final ot = store.tarea(x.trabajoId);
+    final origen = store.tarea(x.origenTrabajoId);
+    final tecnico = x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!);
+    // Mantenimientos de la máquina (y sus componentes) a los que se puede vincular.
+    final raiz = raizDe(x.activoId);
+    final rama = raiz == null ? const <String>{} : store.ramaDe(raiz.id).toSet();
+    final planes = store.planes.where((p) => rama.contains(p.activoId)).toList()
+      ..sort((a, b) => a.nombre.compareTo(b.nombre));
     return VentanaFormulario(
       etiqueta: dondeEs(x.activoId).isEmpty ? 'Incidencias' : dondeEs(x.activoId),
       titulo: existe ? 'Incidencia' : 'Nueva incidencia',
+      subtitulo: existe ? 'Comunicada por ${tecnico?.nombre ?? 'la oficina'} el ${fecha(x.creada)}' : null,
       tituloDesplazado: descripcion.text,
+      extra: existe ? Pill(estado.etiqueta, estado.color, punto: true) : null,
       bajoBotones: BotonMenu<Gravedad>(
         tooltip: 'Gravedad',
         seleccionado: x.gravedad,
@@ -317,7 +351,14 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
                     ),
                   ),
               ],
-              onChanged: (id) => setState(() => x.activoId = id!),
+              onChanged: (id) => setState(() {
+                x.activoId = id!;
+                // El mantenimiento vinculado tiene que ser de la misma máquina.
+                final r = raizDe(id);
+                if (r == null || !store.ramaDe(r.id).contains(store.planes.where((p) => p.id == x.planId).firstOrNull?.activoId)) {
+                  x.planId = null;
+                }
+              }),
             ),
           ),
           campo(
@@ -328,6 +369,13 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
             error: error,
             obligatorio: true,
           ),
+          if (origen != null)
+            FilaLista(
+              lider: puntoTipo(origen.tipoMantenimiento?.color ?? P.gris),
+              titulo: origen.nombre,
+              subtitulo: 'Orden en la que se detectó',
+              onTap: () => abrirTareaForm(context, origen),
+            ),
         ]),
         if (x.fotos.isNotEmpty)
           Bloque('Fotos de la incidencia', [
@@ -343,27 +391,84 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
               ],
             ),
           ]),
-        Bloque('Estado', descripcion: 'Abierta hasta que tenga una OT; cerrada cuando esté arreglada.', [
-          conMargen(
-            Pestanas(
-              opciones: [for (final e in EstadoIncidencia.values) e.etiqueta],
-              seleccion: x.estado.index,
-              onChanged: (i) => setState(() => x.estado = EstadoIncidencia.values[i]),
+        Bloque(
+          'Mantenimiento vinculado',
+          descripcion: 'Al completarse la incidencia, este mantenimiento vuelve a contar desde cero.',
+          [
+            conMargen(
+              DropdownButtonFormField<String?>(
+                isExpanded: true,
+                initialValue: planes.any((p) => p.id == x.planId) ? x.planId : null,
+                decoration: const InputDecoration(labelText: 'Mantenimiento'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Sin vincular')),
+                  for (final p in planes)
+                    DropdownMenuItem(
+                      value: p.id,
+                      child: Text(
+                        p.activoId == raiz?.id ? p.nombre : '${p.nombre}, ${store.activo(p.activoId)?.nombre ?? ''}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (id) => setState(() => x.planId = id),
+              ),
             ),
-          ),
-          if (ot != null)
-            FilaLista(
-              lider: puntoTipo(ot.tipoMantenimiento?.color ?? P.gris),
-              titulo: ot.nombre,
-              subtitulo: [ot.estado.etiqueta, if (ot.proximo != null) fecha(ot.proximo!)].join(' · '),
-              onTap: () => abrirTareaForm(context, ot),
-            )
-          else
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Enlace('Crear OT', onTap: crearOt),
-            ),
-        ]),
+          ],
+        ),
+        Bloque(
+          'Acciones',
+          descripcion: switch (estado) {
+            EstadoIncidencia.abierta => 'Crea una OT para resolverla o desestímala si no hace falta hacer nada.',
+            EstadoIncidencia.conOt => 'Se completa sola al cerrar su orden de trabajo.',
+            EstadoIncidencia.completada => 'Resuelta con su orden de trabajo.',
+            EstadoIncidencia.desestimada =>
+              'Desestimada${x.cerradaEl == null ? '' : ' el ${fecha(x.cerradaEl!)}'}: no hizo falta intervenir.',
+          },
+          [
+            if (estado == EstadoIncidencia.abierta)
+              conMargen(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    BotonPrimario('Crear OT', icono: Icons.assignment_outlined, conIcono: true, onPressed: crearOt),
+                    BotonAccion('Desestimar', onPressed: desestimar, tooltip: 'Cerrarla sin hacer nada'),
+                  ],
+                ),
+              ),
+            if (ot != null)
+              FilaLista(
+                lider: puntoTipo(ot.tipoMantenimiento?.color ?? P.gris),
+                titulo: ot.nombre,
+                subtitulo: [
+                  ot.estado.etiqueta,
+                  if (ot.estado == EstadoTrabajo.realizado && ot.ultimo != null)
+                    fecha(ot.ultimo!)
+                  else if (ot.proximo != null)
+                    fecha(ot.proximo!),
+                ].join(', '),
+                onTap: () => abrirTareaForm(context, ot),
+              ),
+            if (estado == EstadoIncidencia.desestimada)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Enlace('Reabrir', onTap: () => setState(() => x.estado = EstadoIncidencia.abierta)),
+              ),
+            if (existe)
+              conMargen(
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: BotonAccion(
+                    descargando ? 'Preparando…' : 'Descargar informe',
+                    icono: Icons.download_rounded,
+                    tooltip: 'PDF con la incidencia, sus fotos y su resolución',
+                    onPressed: descargando ? () {} : _informe,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }

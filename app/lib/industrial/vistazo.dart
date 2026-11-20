@@ -2,7 +2,6 @@ import '../screens/tareas.dart' show pasaFechaTrabajo;
 
 import 'package:flutter/material.dart';
 
-import '../forms.dart' show abrirTareaForm;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -11,7 +10,7 @@ import 'activo.dart';
 import 'iconos.dart';
 import 'gravedad.dart';
 import 'incidencia.dart';
-import 'mantenimientos.dart' show abrirIncidenciaForm;
+import 'mantenimientos.dart' show abrirIncidenciaForm, dondeEs;
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
 
@@ -453,41 +452,18 @@ class _Columna extends StatelessWidget {
   );
 }
 
-/// Inicio de Pultec: partes con incidencia o que no se pudieron hacer y que nadie ha dado aún por
-/// solucionados. Cada uno: «Solucionada» con un clic o «Crear orden» para arreglarlo. Sin ninguna, no se ve.
+/// Inicio de Pultec: incidencias abiertas (comunicadas por un técnico o salidas de un parte con incidencia o
+/// sin hacer) que nadie ha revisado aún. «Revisar» abre la incidencia para crear su OT o desestimarla; todas
+/// quedan después en la sección Incidencias. Sin ninguna, no se ve.
 class IncidenciasAbiertas extends StatelessWidget {
   final ValueChanged<String> onAbrir;
   const IncidenciasAbiertas({super.key, required this.onAbrir});
 
-  Future<void> _crearOrden(BuildContext context, Tarea t) async {
-    final id = store.nuevoId();
-    await abrirTareaForm(
-      context,
-      null,
-      borrador: Tarea(
-        id: id,
-        nombre: t.resultado == 2 ? t.nombre : 'Arreglar: ${t.nombre}',
-        activoId: t.activoId,
-        plantilla: false,
-        proximo: hoy(),
-        tipoMantenimiento: t.resultado == 2 ? t.tipoMantenimiento : TipoMantenimiento.correctivoNoCritico,
-        criticidad: Criticidad.rutinaria,
-      ),
-    );
-    // Con su orden creada, la incidencia queda atendida.
-    if (store.tarea(id) != null) {
-      t.resultadoResuelto = true;
-      store.guardarTarea(t);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final lista = [...store.tareas, ...store.subtareas].where(incidenciaAbierta).toList()
-      ..sort((a, b) => (b.ultimo ?? b.proximo ?? hoy()).compareTo(a.ultimo ?? a.proximo ?? hoy()));
-    final avisos = store.incidencias.where((i) => i.estado == EstadoIncidencia.abierta).toList()
+    final avisos = store.incidencias.where((i) => store.estadoIncidencia(i) == EstadoIncidencia.abierta).toList()
       ..sort((a, b) => b.creada.compareTo(a.creada));
-    if (lista.isEmpty && avisos.isEmpty) return const SizedBox.shrink();
+    if (avisos.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 32),
       child: Column(
@@ -507,51 +483,28 @@ class IncidenciasAbiertas extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                '${lista.length + avisos.length}',
-                style: TextStyle(color: P.rojo, fontSize: 20, fontWeight: FontWeight.w600),
-              ),
+              Text('${avisos.length}', style: TextStyle(color: P.rojo, fontSize: 20, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 14),
-          const Consejo(
-            'Solucionada retira el aviso sin completar la orden. Crear orden prepara otra intervención; el trabajo original conserva su resultado.',
-          ),
-          const SizedBox(height: 10),
           Tarjeta(
             padding: EdgeInsets.zero,
             child: Column(
               children: [
-                for (final aviso in avisos) ...[
-                  Material(
-                    color: P.superficie,
-                    child: ListTile(
-                      leading: Icon(Icons.report_outlined, color: aviso.gravedad.color),
-                      title: Text(aviso.descripcion, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('${store.activo(aviso.activoId)?.titulo ?? 'Activo'} · Pendiente de revisión'),
-                      onTap: () => abrirIncidenciaForm(context, original: aviso),
-                      trailing: TextButton(
-                        onPressed: () => abrirIncidenciaForm(context, original: aviso),
-                        child: const Text('Revisar'),
-                      ),
-                    ),
-                  ),
-                  Divider(height: 1, color: P.borde),
-                ],
-                for (final (i, t) in lista.indexed) ...[
-                  if (i > 0) Divider(height: 1, color: P.borde),
+                for (final (n, aviso) in avisos.indexed) ...[
+                  if (n > 0) Divider(height: 1, color: P.borde),
                   Builder(
                     builder: (context) {
-                      final a = _raiz(t.activoId);
-                      final (texto, color) = resultadoOt(t);
+                      final a = _raiz(aviso.activoId);
+                      final quien = aviso.tecnicoId == null ? null : store.trabajador(aviso.tecnicoId!);
                       return InkWell(
-                        onTap: () => onAbrir(t.id),
+                        onTap: () => abrirIncidenciaForm(context, original: aviso),
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
                           child: Row(
                             children: [
                               if (a != null) ...[
-                                IconoActivo(a.icono, size: 24, color: color),
+                                IconoActivo(a.icono, size: 24, color: aviso.gravedad.color),
                                 const SizedBox(width: 14),
                               ],
                               Expanded(
@@ -559,41 +512,41 @@ class IncidenciasAbiertas extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      a?.titulo ?? 'Sin activo',
+                                      dondeEs(aviso.activoId),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(color: P.textoSuave, fontSize: 12.5),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      t.nombre,
-                                      maxLines: 1,
+                                      aviso.descripcion,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                                     ),
                                     const SizedBox(height: 4),
-                                    Pill(texto, color, punto: true),
+                                    Row(
+                                      children: [
+                                        Pill(aviso.gravedad.etiqueta, aviso.gravedad.color, punto: true),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            '${quien?.nombre ?? 'Oficina'}, ${relativo(DateUtils.dateOnly(aviso.creada)).toLowerCase()}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Tooltip(
-                                message: 'Retira el aviso; no completa la orden ni reinicia el mantenimiento.',
-                                child: TextButton(
-                                  onPressed: () async {
-                                    if (!await confirmar(
-                                      context,
-                                      '¿Dar el aviso por solucionado? La orden conserva su resultado y el mantenimiento no se reinicia.',
-                                    ))
-                                      return;
-                                    t.resultadoResuelto = true;
-                                    store.guardarTarea(t);
-                                  },
-                                  child: const Text('Solucionada'),
-                                ),
+                              TextButton(
+                                onPressed: () => abrirIncidenciaForm(context, original: aviso),
+                                child: const Text('Revisar'),
                               ),
-                              const SizedBox(width: 6),
-                              BotonCrearOrden(() => _crearOrden(context, t)),
                             ],
                           ),
                         ),

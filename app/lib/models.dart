@@ -347,6 +347,9 @@ class Tarea {
   /// OT industrial: breve descripción de lo que hay que hacer (al salir de un mantenimiento, la suya).
   String descripcion;
 
+  /// OT industrial: repuestos necesarios y cómo se hace (al salir de un mantenimiento, los suyos).
+  String repuestos, procedimiento;
+
   /// Equipo del cliente sobre el que se hace (ascensor, caldera…); null = sin equipo.
   String? equipoId;
 
@@ -426,6 +429,8 @@ class Tarea {
     this.ubicacion = '',
     this.notas = '',
     this.descripcion = '',
+    this.repuestos = '',
+    this.procedimiento = '',
     this.instalacion,
     this.ultimo,
     this.proximo,
@@ -501,6 +506,8 @@ class Tarea {
     'ubicacion': ubicacion,
     'notas': notas,
     'descripcion': descripcion,
+    if (repuestos.isNotEmpty) 'repuestos': repuestos,
+    if (procedimiento.isNotEmpty) 'procedimiento': procedimiento,
     'instalacion': _f(instalacion),
     'ultimo': _f(ultimo),
     'proximo': _f(proximo),
@@ -546,6 +553,8 @@ class Tarea {
     ubicacion: _s(j, 'ubicacion'),
     notas: _s(j, 'notas'),
     descripcion: _s(j, 'descripcion'),
+    repuestos: _s(j, 'repuestos'),
+    procedimiento: _s(j, 'procedimiento'),
     instalacion: _d(j, 'instalacion'),
     ultimo: _d(j, 'ultimo'),
     proximo: _d(j, 'proximo'),

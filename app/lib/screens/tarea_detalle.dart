@@ -8,6 +8,9 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'informes.dart';
+import '../informes.dart';
+import '../industrial/incidencia.dart';
+import '../industrial/mantenimientos.dart' show abrirIncidenciaForm;
 import 'tabla_trabajos.dart';
 import 'tarea_automatizaciones.dart';
 import '../marca.dart';
@@ -334,6 +337,7 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
     final plan = store.planes.where((p) => p.id == t.planId).firstOrNull;
     final color = (t.tipoMantenimiento ?? TipoMantenimiento.preventivo).color;
     final hecha = t.estado == EstadoTrabajo.realizado;
+    final incidencia = store.incidenciaDeOt(t.id);
     // Avisos «Sin hora» / «Sin técnico», aparcados: en esta versión basta con el día.
     // final avisos = [if (t.inicioMin == null) 'Sin hora', if (t.trabajadorIds.isEmpty) 'Sin técnico'];
     const avisos = <String>[];
@@ -365,6 +369,8 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
             ),
             titulo: t.nombre.isEmpty ? 'Sin nombre' : t.nombre,
             subtitulo: t.descripcion.isEmpty ? null : t.descripcion,
+            // Con parte: su informe en PDF (con la incidencia original y sus fotos si sale de una).
+            acciones: [_DescargarParte(t)],
           ),
           const SizedBox(height: 16),
           Row(
@@ -382,9 +388,26 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
                       lider: activo == null ? null : IconoActivo(activo.icono, size: 18, color: P.textoSuave),
                     ),
                     const _Flecha(),
-                    _Eslabon('Mantenimiento', plan?.nombre ?? 'Sin mantenimiento', lider: puntoTipo(color)),
+                    // Sale de una incidencia: activo → incidencia → orden → solucionada.
+                    if (incidencia != null)
+                      _Eslabon(
+                        'Incidencia',
+                        incidencia.descripcion.isEmpty ? 'Sin descripción' : incidencia.descripcion,
+                        lider: puntoTipo(incidencia.gravedad.color),
+                        onTap: () => abrirIncidenciaForm(context, original: incidencia),
+                      )
+                    else
+                      _Eslabon('Mantenimiento', plan?.nombre ?? 'Sin mantenimiento', lider: puntoTipo(color)),
                     const _Flecha(),
                     _Eslabon('Orden de trabajo', t.nombre.isEmpty ? 'Sin nombre' : t.nombre, actual: true),
+                    if (incidencia != null) ...[
+                      const _Flecha(),
+                      _Eslabon(
+                        'Estado',
+                        hecha ? 'Solucionada' : 'Pendiente',
+                        lider: puntoTipo(hecha ? P.verde : P.textoSuave),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -415,10 +438,15 @@ class _Eslabon extends StatelessWidget {
   final String etiqueta, nombre;
   final Widget? lider;
   final bool actual;
-  const _Eslabon(this.etiqueta, this.nombre, {this.lider, this.actual = false});
+  final VoidCallback? onTap;
+  const _Eslabon(this.etiqueta, this.nombre, {this.lider, this.actual = false, this.onTap});
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => onTap == null
+      ? _caja()
+      : MouseRegion(cursor: SystemMouseCursors.click, child: GestureDetector(onTap: onTap, child: _caja()));
+
+  Widget _caja() => Container(
     constraints: const BoxConstraints(maxWidth: 320),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
@@ -446,6 +474,49 @@ class _Eslabon extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+/// «Descargar parte»: el PDF del último parte de la OT. Sin parte, no se ve.
+class _DescargarParte extends StatefulWidget {
+  final Tarea t;
+  const _DescargarParte(this.t);
+
+  @override
+  State<_DescargarParte> createState() => _DescargarParteState();
+}
+
+class _DescargarParteState extends State<_DescargarParte> {
+  bool descargando = false;
+
+  Future<void> _pdf(Informe i) async {
+    setState(() => descargando = true);
+    try {
+      await descargarInformePdf(i, widget.t);
+    } catch (e) {
+      debugPrint('Pultec: no se pudo crear el PDF: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
+        );
+      }
+    }
+    if (mounted) setState(() => descargando = false);
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: informes,
+    builder: (context, _) {
+      final ultimo = informes.de(widget.t.id)?.firstOrNull;
+      if (ultimo == null) return const SizedBox.shrink();
+      return BotonAccion(
+        descargando ? 'Preparando…' : 'Descargar informe',
+        icono: Icons.download_rounded,
+        tooltip: 'PDF del parte, con la incidencia original si sale de una',
+        onPressed: descargando ? () {} : () => _pdf(ultimo),
+      );
+    },
   );
 }
 

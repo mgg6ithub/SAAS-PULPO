@@ -772,6 +772,19 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
+  /// Estado de la incidencia según su OT: con la OT cerrada, completada; sin OT, abierta. Así se ve bien al
+  /// momento, sin esperar a que la base (que hace lo mismo) lo devuelva.
+  EstadoIncidencia estadoIncidencia(Incidencia x) {
+    if (!x.estado.pendiente) return x.estado;
+    final ot = x.trabajoId == null ? null : tarea(x.trabajoId!);
+    if (ot == null) return x.trabajoId == null ? EstadoIncidencia.abierta : x.estado;
+    return ot.estado == EstadoTrabajo.realizado ? EstadoIncidencia.completada : EstadoIncidencia.conOt;
+  }
+
+  /// Incidencia que resuelve esta OT (null = la OT no sale de una incidencia).
+  Incidencia? incidenciaDeOt(String? otId) =>
+      otId == null ? null : incidencias.where((x) => x.trabajoId == otId).firstOrNull;
+
   void borrarIncidencia(String id) {
     incidencias.removeWhere((x) => x.id == id);
     _cambio();

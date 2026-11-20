@@ -1331,6 +1331,8 @@ class Nube {
         'ubicacion': t.ubicacion,
         'notas': t.notas,
         if (industrial) 'descripcion': t.descripcion,
+        if (industrial) 'repuestos': t.repuestos,
+        if (industrial) 'procedimiento': t.procedimiento,
         'instalacion': _dia(t.instalacion),
         'ultimo': _dia(t.ultimo),
         'proximo': _dia(t.proximo),
@@ -1390,6 +1392,7 @@ class Nube {
         'descripcion': x.descripcion,
         'gravedad': x.gravedad.index,
         'estado': x.estado.index,
+        'plan_id': s.planes.any((p) => p.id == x.planId && activos.contains(p.activoId)) ? _u(x.planId!) : null,
       };
     }
     return r;
@@ -1539,6 +1542,8 @@ Incidencia _incidencia(Map x) => Incidencia(
   tecnicoId: x['tecnico_id'],
   origenTrabajoId: x['origen_trabajo_id'],
   creadaPor: x['creada_por'],
+  planId: x['plan_id'],
+  cerradaEl: x['cerrada_el'] == null ? null : DateTime.parse(x['cerrada_el'] as String).toLocal(),
   descripcion: x['descripcion'],
   gravedad: Gravedad.values[x['gravedad'] as int],
   estado: EstadoIncidencia.values[x['estado'] as int],
@@ -1585,6 +1590,8 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       ubicacion: x['ubicacion'],
       notas: x['notas'],
       descripcion: x['descripcion'] as String? ?? '',
+      repuestos: x['repuestos'] as String? ?? '',
+      procedimiento: x['procedimiento'] as String? ?? '',
       instalacion: _fecha(x['instalacion']),
       ultimo: _fecha(x['ultimo']),
       proximo: _fecha(x['proximo']),

@@ -16,18 +16,28 @@ extension GravedadX on Gravedad {
       this == Gravedad.grave ? TipoMantenimiento.correctivoCritico : TipoMantenimiento.correctivoNoCritico;
 }
 
-/// `conOt`: ya tiene una OT que la arregla ([Incidencia.trabajoId]).
-enum EstadoIncidencia { abierta, conOt, cerrada }
+/// `conOt`: ya tiene una OT que la arregla ([Incidencia.trabajoId]); `completada`: esa OT se cerró;
+/// `desestimada`: se cerró sin hacer nada.
+enum EstadoIncidencia { abierta, conOt, completada, desestimada }
 
 extension EstadoIncidenciaX on EstadoIncidencia {
-  String get etiqueta => const ['Abierta', 'Con OT', 'Cerrada'][index];
-  Color get color => [P.rojo, P.azul, P.gris][index];
+  String get etiqueta => const ['Abierta', 'Con OT', 'Completada', 'Desestimada'][index];
+  Color get color => [P.rojo, P.azul, P.verde, P.gris][index];
+
+  /// Abierta o con OT: aún hay algo que hacer.
+  bool get pendiente => index < 2;
 }
 
 /// Aviso de avería de un activo o componente de Pultec, con su gravedad y fotos. Puede acabar en una OT.
 class Incidencia {
   String id, activoId, descripcion;
   String? trabajoId, tecnicoId, origenTrabajoId, creadaPor;
+
+  /// Mantenimiento vinculado: al completarse la incidencia, la base reinicia su contador.
+  String? planId;
+
+  /// Cuándo se completó o se desestimó.
+  DateTime? cerradaEl;
   Gravedad gravedad;
   EstadoIncidencia estado;
   List<String> fotos;
@@ -40,6 +50,8 @@ class Incidencia {
     this.tecnicoId,
     this.origenTrabajoId,
     this.creadaPor,
+    this.planId,
+    this.cerradaEl,
     this.descripcion = '',
     this.gravedad = Gravedad.media,
     this.estado = EstadoIncidencia.abierta,
@@ -55,6 +67,8 @@ class Incidencia {
     'tecnicoId': tecnicoId,
     'origenTrabajoId': origenTrabajoId,
     'creadaPor': creadaPor,
+    'planId': planId,
+    'cerradaEl': cerradaEl?.toIso8601String(),
     'descripcion': descripcion,
     'gravedad': gravedad.index,
     'estado': estado.index,
@@ -69,6 +83,8 @@ class Incidencia {
     tecnicoId: j['tecnicoId'] as String?,
     origenTrabajoId: j['origenTrabajoId'] as String?,
     creadaPor: j['creadaPor'] as String?,
+    planId: j['planId'] as String?,
+    cerradaEl: j['cerradaEl'] == null ? null : DateTime.parse(j['cerradaEl'] as String),
     descripcion: j['descripcion'] as String? ?? '',
     gravedad: Gravedad.values[j['gravedad'] as int? ?? 1],
     estado: EstadoIncidencia.values[j['estado'] as int? ?? 0],

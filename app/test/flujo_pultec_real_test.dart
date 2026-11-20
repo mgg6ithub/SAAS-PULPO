@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulpo/industrial/activo.dart';
+import 'package:pulpo/industrial/incidencia.dart';
 import 'package:pulpo/industrial/plan.dart';
 import 'package:pulpo/informes.dart';
 import 'package:pulpo/models.dart';
@@ -161,6 +162,67 @@ void main() {
       ], reason: 'el admin ve el parte');
       // La lectura del contador que apuntó el técnico llega al activo.
       expect(store.activo(activo.id)!.horas, 2958, reason: 'contador apuntado por el técnico');
+      await _salir(n);
+
+      // ── 4. Técnico: un parte con incidencia y una incidencia comunicada ──
+      n = await _entrar(_env['SB_TECNICO']!);
+      expect(
+        await informes.crear(
+          Informe(trabajoId: otRevision.single.id, trabajadorId: tecnico.id, resultado: 1, notas: 'Ruido en el rodamiento'),
+        ),
+        isTrue,
+      );
+      final aviso = Incidencia(id: store.nuevoId(), activoId: activo.id, tecnicoId: tecnico.id, descripcion: 'Fuga de aceite');
+      await n.crearIncidencia(aviso, '', const []);
+      await _salir(n);
+
+      // ── 5. Administrador: las dos abiertas; OT para la fuga vinculada a la revisión; desestima la otra ──
+      n = await _entrar(_env['SB_ADMIN']!);
+      final delParte = store.incidencias.firstWhere((i) => i.origenTrabajoId == otRevision.single.id);
+      expect(delParte.descripcion, contains('Ruido en el rodamiento'), reason: 'el parte deja su incidencia');
+      expect(store.estadoIncidencia(delParte), EstadoIncidencia.abierta);
+      expect(store.estadoIncidencia(store.incidencias.firstWhere((i) => i.id == aviso.id)), EstadoIncidencia.abierta);
+      final arreglo = Tarea(
+        id: store.nuevoId(),
+        nombre: 'Reparar Activo test',
+        descripcion: 'Fuga de aceite',
+        activoId: activo.id,
+        plantilla: false,
+        tipoMantenimiento: TipoMantenimiento.correctivoNoCritico,
+        proximo: h,
+        periodicidad: Periodicidad.unica,
+        criticidad: Criticidad.rutinaria,
+        repuestos: 'Junta 40 mm',
+        procedimiento: 'Cambiar la junta',
+        trabajadorIds: [tecnico.id],
+      );
+      store.guardarTarea(arreglo);
+      store.guardarIncidencia(store.incidencias.firstWhere((i) => i.id == aviso.id).copia()
+        ..trabajoId = arreglo.id
+        ..planId = revision.id
+        ..estado = EstadoIncidencia.conOt);
+      store.guardarIncidencia(delParte.copia()..estado = EstadoIncidencia.desestimada);
+      await n.guardado;
+      expect(Nube.error.value, isNull, reason: 'OT de la incidencia guardada');
+      await _salir(n);
+
+      // ── 6. Técnico: ve la OT con su incidencia y la cierra ──
+      n = await _entrar(_env['SB_TECNICO']!);
+      final suya = store.tarea(arreglo.id)!;
+      expect(suya.repuestos, 'Junta 40 mm');
+      expect(store.incidenciaDeOt(suya.id)?.descripcion, 'Fuga de aceite', reason: 've la incidencia original');
+      store.marcarHecha(suya);
+      await n.guardado;
+      expect(Nube.error.value, isNull, reason: 'el técnico cierra la OT de la incidencia');
+      await _salir(n);
+
+      // ── 7. Administrador: la incidencia, completada sola; la revisión, reiniciada; la otra, desestimada ──
+      n = await _entrar(_env['SB_ADMIN']!);
+      final hecha = store.incidencias.firstWhere((i) => i.id == aviso.id);
+      expect(hecha.estado, EstadoIncidencia.completada, reason: 'la base la completa al cerrar su OT');
+      expect(hecha.cerradaEl, isNotNull);
+      expect(store.planes.firstWhere((p) => p.id == revision.id).ultimo, h, reason: 'la revisión vuelve a contar');
+      expect(store.incidencias.firstWhere((i) => i.id == delParte.id).estado, EstadoIncidencia.desestimada);
       await _salir(n);
     });
   },

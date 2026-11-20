@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import '../models.dart';
+import '../store.dart';
+import 'incidencia.dart';
 
 /// OT que aún cuenta para el estado de un activo: activa y sin terminar.
 bool otPendiente(Tarea t) =>
@@ -29,8 +31,9 @@ TipoMantenimiento? masGrave(Iterable<Tarea> ots) {
         : ('Pendiente', P.textoSuave),
 };
 
-/// Incidencia de un parte (con incidencia o sin poder hacerse) que aún nadie ha dado por solucionada.
-bool incidenciaAbierta(Tarea t) => !t.esPlantilla && (t.resultado ?? 0) > 0 && !t.resultadoResuelto;
+/// La OT dejó una incidencia (parte con incidencia o sin hacer, o comunicada desde ella) aún sin resolver.
+bool incidenciaAbierta(Tarea t) =>
+    !t.esPlantilla && store.incidencias.any((i) => i.origenTrabajoId == t.id && store.estadoIncidencia(i).pendiente);
 
 /// Estado de preparación de una OT, sin confundirlo con su tipo de mantenimiento.
 Widget iconoAsignacion(Tarea? ot) => Tooltip(

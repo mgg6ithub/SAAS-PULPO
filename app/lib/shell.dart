@@ -8,6 +8,8 @@ import 'marca.dart';
 import 'models.dart';
 import 'notificaciones.dart';
 import 'industrial/activos.dart';
+import 'industrial/incidencias.dart';
+import 'industrial/mantenimientos.dart' show abrirIncidenciaForm;
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
 import 'screens/clientes.dart';
@@ -26,7 +28,8 @@ import 'theme.dart';
 import 'widgets.dart';
 
 /// Secciones de la barra lateral, en orden.
-enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, finanzas }
+/// `incidencias` solo existe en Pultec.
+enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, incidencias, finanzas }
 
 /// Barra lateral + página activa.
 class Shell extends StatefulWidget {
@@ -38,11 +41,13 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   // ?s=1 abre directamente una sección (útil para enlaces y capturas).
-  Seccion seccion =
-      Seccion.values[(int.tryParse(Uri.base.queryParameters['s'] ?? '') ?? 0).clamp(
-        0,
-        Seccion.values.length - (industrial ? 2 : 1),
-      )];
+  Seccion seccion = switch (Seccion.values[(int.tryParse(Uri.base.queryParameters['s'] ?? '') ?? 0).clamp(
+    0,
+    Seccion.values.length - (industrial ? 2 : 1),
+  )]) {
+    Seccion.incidencias when !industrial => Seccion.inicio,
+    final s => s,
+  };
   String? clienteId = Uri.base.queryParameters['c'];
   String? trabajadorId = Uri.base.queryParameters['t'];
   String? tareaId;
@@ -101,6 +106,7 @@ class _ShellState extends State<Shell> {
       Seccion.clientes when industrial => (nuevoEnActivo ?? abrirActivoForm)(context),
       Seccion.clientes => abrirClienteForm(context),
       Seccion.trabajadores => abrirTrabajadorForm(context),
+      Seccion.incidencias => abrirIncidenciaForm(context),
       Seccion.finanzas => abrirDocumento(context, Documento(vence: masDias(hoy(), 30))),
       _ => abrirTareaForm(context, null),
     };
@@ -297,6 +303,7 @@ class _ShellState extends State<Shell> {
     Seccion.clientes => industrial ? Activos() : Clientes(onAbrir: (id) => setState(() => clienteId = id)),
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
     Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
+    Seccion.incidencias => const IncidenciasPagina(),
     Seccion.finanzas => const VistaFinanzas(),
   };
 }
@@ -826,6 +833,7 @@ class _BarraState extends State<_Barra> {
       (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), Seccion.planificacion, vencidas),
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
+      if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
@@ -954,6 +962,7 @@ class _BarraInferior extends StatelessWidget {
       (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), Seccion.planificacion, vencidas),
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
+      if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];

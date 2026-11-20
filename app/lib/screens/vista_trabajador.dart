@@ -1205,14 +1205,15 @@ class _FilaTrabajo extends StatelessWidget {
         titulo: t.nombre,
         subtitulo: [
           if (industrial) dondeEs(t.activoId) else if (cliente != null) cliente.nombre,
-          if (mostrarDia && t.proximo != null) relativo(t.proximo!).toLowerCase(),
+          // Pultec: el día va en su insignia de la derecha.
+          if (mostrarDia && !industrial && t.proximo != null) relativo(t.proximo!).toLowerCase(),
         ].where((x) => x.isNotEmpty).join(', '),
         derecha: industrial && esMovil(context)
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Pill(t.estado.etiqueta, t.estado.color, punto: true),
+                  _PillDia(t),
                   const SizedBox(height: 4),
                   Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
                 ],
@@ -1220,7 +1221,7 @@ class _FilaTrabajo extends StatelessWidget {
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (industrial) ...[Pill(t.estado.etiqueta, t.estado.color, punto: true), const SizedBox(width: 12)],
+                  if (industrial) ...[_PillDia(t), const SizedBox(width: 12)],
                   Text(t.horario ?? 'Sin hora', style: TextStyle(fontSize: 13, color: P.textoSuave)),
                   if (marcable && !industrial) ...[const SizedBox(width: 6), _MarcaHecho(t)],
                 ],
@@ -1228,6 +1229,27 @@ class _FilaTrabajo extends StatelessWidget {
         onTap: () => abrir(t),
       ),
     );
+  }
+}
+
+/// Pultec: cuándo toca la orden, claro de un vistazo y sin el rojo de «Pendiente»: atrasada (aviso rojo con
+/// los días), hoy (morado), en curso (azul) o el día en gris.
+class _PillDia extends StatelessWidget {
+  final Tarea t;
+  const _PillDia(this.t);
+
+  @override
+  Widget build(BuildContext context) {
+    if (t.hechaEl(hoy()) || t.estado == EstadoTrabajo.realizado) return Pill('Hecha', P.verde, punto: true);
+    if (t.estado == EstadoTrabajo.enCurso) return Pill('En curso', P.azul, punto: true);
+    final p = t.proximo;
+    if (p == null) return Pill('Sin fecha', P.textoSuave);
+    final d = diasHasta(p);
+    if (d < 0) return Pill('Atrasada ${-d} ${d == -1 ? 'día' : 'días'}', P.rojo, icono: Icons.warning_amber_rounded);
+    if (d == 0) return Pill('Hoy', P.morado, punto: true);
+    if (d == 1) return Pill('Mañana', P.textoSuave);
+    final dia = _dias[p.weekday - 1];
+    return Pill('${dia[0].toUpperCase()}${dia.substring(1, 3)} ${p.day}/${p.month}', P.textoSuave);
   }
 }
 
@@ -1426,7 +1448,7 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
       Bloque('Aviso', primero: true, [
         Text(i.descripcion), const SizedBox(height: 12),
         Text('Enviada el ${_cuando(i.creada)}'),
-        const SizedBox(height: 8), Pill(i.estado.etiqueta, i.estado.color),
+        const SizedBox(height: 8), Pill(store.estadoIncidencia(i).etiqueta, store.estadoIncidencia(i).color),
       ]),
       Bloque('Activo', [Row(children: [
         _IconoActivo(i.activoId), const SizedBox(width: 8), Expanded(child: Text(dondeEs(i.activoId))),
@@ -1513,7 +1535,10 @@ Text('$etiqueta: ${t.nombre}')
     return ListView.builder(itemCount: filas.length, itemBuilder: (_, n) => switch (filas[n]) {
       final Tarea t => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Tarjeta(padding: EdgeInsets.zero, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Las atrasadas, con fondo de aviso.
+        child: Tarjeta(padding: EdgeInsets.zero,
+          color: t.proximo != null && diasHasta(t.proximo!) < 0 ? Color.alphaBlend(P.rojo.withValues(alpha: .06), P.superficie) : null,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _FilaTrabajo(t, widget.abrir, mostrarDia: true),
           Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo)),
         ])),
@@ -1528,7 +1553,7 @@ Text('$etiqueta: ${t.nombre}')
 
   Widget _listaIncidencias(List<Incidencia> avisos) {
     final lista = avisos.where((i) => _coincide(i.descripcion, i.activoId, i.gravedad.tipo, i.creada)
-      && (estado == null || i.estado.index == estado)).toList();
+      && (estado == null || store.estadoIncidencia(i).index == estado)).toList();
     if (lista.isEmpty) return _vacio('No tienes incidencias enviadas con estos filtros');
     return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) {
       final i = lista[n];
@@ -1536,7 +1561,7 @@ Text('$etiqueta: ${t.nombre}')
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           FilaLista(lider: _IconoActivo(i.activoId), titulo: i.descripcion,
             subtitulo: '${_cuando(i.creada)}\n${dondeEs(i.activoId)}',
-            derecha: Pill(i.estado.etiqueta, i.estado.color), onTap: () => _verIncidencia(i)),
+            derecha: Pill(store.estadoIncidencia(i).etiqueta, store.estadoIncidencia(i).color), onTap: () => _verIncidencia(i)),
           Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: Text(
             'Orden de origen: ${store.tarea(i.origenTrabajoId ?? '')?.nombre ?? 'Sin orden asociada'}'
             '${i.trabajoId == null ? '' : '\nOrden para resolverla: ${store.tarea(i.trabajoId!)?.nombre ?? 'Orden no disponible'}'}',
@@ -1826,6 +1851,10 @@ class _DetalleTrabajo extends StatelessWidget {
     final hecha = t.hechaEl(hoy());
     final lista = informes.de(t.id);
     final maquina = [t.marca, t.modelo].where((x) => x.isNotEmpty).join(' ');
+    final plan = industrial ? store.planes.where((p) => p.id == t.planId).firstOrNull : null;
+    final procedimiento = t.procedimiento.isNotEmpty ? t.procedimiento : plan?.procedimiento ?? '';
+    final repuestos = t.repuestos.isNotEmpty ? t.repuestos : plan?.repuestos ?? '';
+    final incidencia = industrial ? store.incidenciaDeOt(t.id) : null;
     return ListView(
       children: [
         Row(
@@ -1872,6 +1901,7 @@ class _DetalleTrabajo extends StatelessWidget {
               t.horario ?? 'Sin hora',
             ].join(', ')),
             if (maquina.isNotEmpty) _dato('Máquina', maquina),
+            if (t.descripcion.isNotEmpty) _dato('Descripción', t.descripcion),
             if (t.notas.isNotEmpty) _dato('Notas', t.notas),
             if (t.competencias.isNotEmpty)
               Padding(
@@ -1884,6 +1914,46 @@ class _DetalleTrabajo extends StatelessWidget {
               ),
           ],
         ),
+        // Pultec: cómo se hace y qué hace falta (los de la OT o, si no tiene, los de su mantenimiento).
+        if (procedimiento.isNotEmpty || repuestos.isNotEmpty) ...[
+          const SizedBox(height: huecoVista),
+          SeccionTarjeta(
+            titulo: 'Procedimiento y repuestos',
+            children: [
+              if (procedimiento.isNotEmpty) _dato('Procedimiento', procedimiento),
+              if (repuestos.isNotEmpty) _dato('Repuestos', repuestos),
+            ],
+          ),
+        ],
+        // Sale de una incidencia: lo que se comunicó, quién, cuándo y sus fotos.
+        if (incidencia != null) ...[
+          const SizedBox(height: huecoVista),
+          SeccionTarjeta(
+            titulo: 'Incidencia original',
+            children: [
+              _dato('Qué pasa', incidencia.descripcion),
+              _dato('Comunicada', [
+                (incidencia.tecnicoId == null ? null : store.trabajador(incidencia.tecnicoId!))?.nombre ?? 'Oficina',
+                fecha(incidencia.creada),
+              ].join(', ')),
+              if (incidencia.fotos.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 4, 18, 14),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final f in incidencia.fotos)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(P.radio),
+                          child: FotoGuardada(f, width: 140, height: 105),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
         const SizedBox(height: huecoVista),
         SeccionTarjeta(
           titulo: 'Informes',
@@ -2033,6 +2103,19 @@ class _FormularioInformeState extends State<FormularioInforme> {
         }
       }
       if (resultado == 2) store.guardarTarea(widget.t);
+      // Con incidencia o sin hacer queda una incidencia abierta. Con sesión la crea la base al recibir el parte.
+      if (resultado > 0 && store.nube == null && widget.t.activoId != null) {
+        store.guardarIncidencia(Incidencia(
+          id: store.nuevoId(),
+          activoId: widget.t.activoId!,
+          tecnicoId: widget.w.id,
+          origenTrabajoId: widget.t.id,
+          descripcion: [
+            resultado == 1 ? 'Con incidencias en «${widget.t.nombre}»' : 'No se pudo hacer «${widget.t.nombre}»',
+            if (notas.text.trim().isNotEmpty) notas.text.trim(),
+          ].join(': '),
+        ));
+      }
     }
     if (widget.cerrarOt && resultado != 2) {
       store.marcarHecha(widget.t);

@@ -1498,6 +1498,8 @@ class _TareaFormState extends State<TareaForm> {
   late final ubicacion = TextEditingController(text: t.ubicacion);
   late final notas = TextEditingController(text: t.notas);
   late final descripcion = TextEditingController(text: t.descripcion);
+  late final repuestos = TextEditingController(text: t.repuestos);
+  late final procedimiento = TextEditingController(text: t.procedimiento);
   late final precio = TextEditingController(
     text: t.precio == 0 ? '' : t.precio.toStringAsFixed(2).replaceAll('.', ',').replaceAll(',00', ''),
   );
@@ -1568,6 +1570,8 @@ class _TareaFormState extends State<TareaForm> {
       ..ubicacion = ubicacion.text.trim()
       ..notas = notas.text.trim()
       ..descripcion = descripcion.text.trim()
+      ..repuestos = repuestos.text.trim()
+      ..procedimiento = procedimiento.text.trim()
       ..precio = double.tryParse(precio.text.trim().replaceAll(',', '.')) ?? 0;
     if (industrial && !t.esPlantilla) {
       t.competencias = [];
@@ -1881,6 +1885,8 @@ class _TareaFormState extends State<TareaForm> {
                 campo('Número de serie', serie),
                 CampoFecha('Fecha de instalación', t.instalacion, (d) => setState(() => t.instalacion = d)),
               ),
+            if (industrial) campo('Procedimiento', procedimiento, hint: 'Cómo se hace, paso a paso', lineas: 3),
+            if (industrial) campo('Repuestos', repuestos, hint: 'Junta tórica 40 mm, aceite ISO 46…', lineas: 2),
             campo('Notas / observaciones', notas, lineas: 3),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
