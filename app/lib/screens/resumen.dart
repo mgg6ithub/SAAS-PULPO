@@ -108,8 +108,10 @@ class Resumen extends StatelessWidget {
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pultec.
                   if (!hayTarea && (industrial ? !guiaHecha : !ajustes.guiaOrganizar)) _ComoFunciona(columnas: dosCol),
                   // Guía ya hecha y sin órdenes (todo borrado, o solo activos): sin tutorial, solo cómo seguir.
-                  if (industrial && !hayTarea && guiaHecha) const _SinMaquinas(),
-                  if (hayTarea) ...[
+                  if (industrial && !hayTarea && guiaHecha && !P.mejorada) const _SinMaquinas(),
+                  // Pultec con la guía hecha: el panel siempre, aunque esté vacío (cifras a cero y, en lugar de las
+                  // órdenes, cómo seguir), para que Inicio no se quede en blanco.
+                  if (hayTarea || (industrial && guiaHecha && P.mejorada)) ...[
                     // Pultec: las cuatro cifras son de órdenes de trabajo; con su título, como «Estado de los activos».
                     // En la vista mejorada, sin título: las cifras van justo bajo la cabecera, como en la maqueta.
                     if (industrial && !P.mejorada) ...[
@@ -170,12 +172,14 @@ class Resumen extends StatelessWidget {
                     ),
                     // Vista mejorada de Pultec: a la izquierda las órdenes por criticidad; a la derecha, lo pendiente
                     // y la carga del equipo.
-                    if (industrial && P.mejorada && store.activos.isNotEmpty) ...[
-                      AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
-                      const SizedBox(height: 24),
-                      IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
+                    if (industrial && P.mejorada && (store.activos.isNotEmpty || !hayTarea)) ...[
+                      if (hayTarea) ...[
+                        AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
+                        const SizedBox(height: 24),
+                        IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
+                      ],
                       () {
-                        final ordenes = OrdenesPorCriticidad(
+                        final ordenes = !hayTarea ? const _SinMaquinas() : OrdenesPorCriticidad(
                           enColumnas: dosCol,
                           onAbrir: onTarea ?? (_) {},
                           onVerMas: (f) {
