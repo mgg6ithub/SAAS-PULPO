@@ -177,7 +177,8 @@ class Resumen extends StatelessWidget {
                         AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                         const SizedBox(height: 24),
                         IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
-                      ],
+                      ] else
+                        const SizedBox(height: 16),
                       () {
                         final ordenes = !hayTarea ? const _SinMaquinas() : OrdenesPorCriticidad(
                           enColumnas: dosCol,
@@ -1391,7 +1392,7 @@ extension on _HeroState {
     if (!industrial) return Padding(padding: const EdgeInsets.only(bottom: 4), child: texto);
     // Alto justo para el texto y las pastillas: menos hueco hasta las cifras.
     return SizedBox(
-      height: 172,
+      height: 150,
       child: Stack(
         clipBehavior: Clip.none,
         children: [

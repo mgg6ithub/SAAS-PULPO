@@ -78,6 +78,14 @@ class Ajustes extends ChangeNotifier {
     guiaItinerario = _prefs!.getBool('ajustes_guia_itinerario') ?? false;
     guiaOrganizar = _prefs!.getBool('ajustes_guia_organizar') ?? false;
     mejorada = _prefs!.getBool('ajustes_vista_mejorada') ?? true;
+    // Para volver a probar la guía de Inicio: abrir la app con «?reiniciarGuia» la deja sin hacer.
+    if (Uri.base.queryParameters.containsKey('reiniciarGuia')) {
+      for (final k in _prefs!.getKeys().where((k) => k.startsWith('ajustes_guia')).toList()) {
+        await _prefs!.remove(k);
+      }
+      guiaItinerario = false;
+      guiaOrganizar = false;
+    }
   }
 
   void ponerMejorada(bool v) {
