@@ -287,7 +287,7 @@ class _FilaOrden extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Arriba, dos etiquetas iguales: el activo y de dónde sale la orden.
+                // Arriba, el activo.
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
@@ -303,21 +303,6 @@ class _FilaOrden extends StatelessWidget {
                           style: TextStyle(fontSize: 12.5, color: P.textoSuave, fontWeight: FontWeight.w500),
                         ),
                       ),
-                    Builder(builder: (_) {
-                      final (origen, color) = origenOt(o);
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(6)),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          puntoTipo(color, tam: 6),
-                          const SizedBox(width: 5),
-                          Text(
-                            origen,
-                            style: TextStyle(fontSize: 12.5, color: P.textoSuave, fontWeight: FontWeight.w500),
-                          ),
-                        ]),
-                      );
-                    }),
                   ],
                 ),
                 const SizedBox(height: 4),
