@@ -10,6 +10,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../marca.dart';
+import '../industrial/planes.dart' show raizActivo;
 
 /// Punto del color del resultado: sustituye al icono en las filas de informes.
 Widget puntoResultado(int resultado) => Container(
@@ -64,7 +65,10 @@ class InformesDelTrabajo extends StatelessWidget {
 Future<void> verInforme(BuildContext context, Informe i, Tarea t) => showDialog(
   context: context,
   builder: (c) => Dialog(
-    child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: _Informe(i, t)),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: industrial ? 720 : 560, maxHeight: MediaQuery.sizeOf(c).height * .9),
+      child: _Informe(i, t),
+    ),
   ),
 );
 
@@ -86,7 +90,7 @@ class _InformeState extends State<_Informe> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 80,
+          width: 110,
           child: Text(etiqueta, style: TextStyle(color: P.textoSuave, fontSize: 13)),
         ),
         Expanded(child: Text(valor, style: const TextStyle(fontSize: 13.5))),
@@ -128,13 +132,17 @@ class _InformeState extends State<_Informe> {
             widget.t.nombre,
             style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700),
           ),
+          if (industrial && widget.t.descripcion.isNotEmpty)
+            Text(widget.t.descripcion, style: TextStyle(color: P.textoSuave, fontSize: 13.5)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], punto: true),
+              // «Todo correcto» no hace falta decirlo en Pultec.
+              if (!industrial || i.resultado != 0)
+                Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], punto: true),
               Text(
                 [
                   '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
@@ -144,7 +152,52 @@ class _InformeState extends State<_Informe> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          // Pultec: los mismos datos que el PDF (dónde, qué orden, de dónde sale y lo que pasó).
+          if (industrial) ...[
+            const SizedBox(height: 16),
+            Builder(builder: (_) {
+              final t = widget.t;
+              final raiz = raizActivo(t.activoId);
+              final comp = store.activo(t.activoId);
+              final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+              final x = store.incidenciaDeOt(t.id);
+              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _dato('Activo', raiz?.titulo ?? '-'),
+                if (comp != null && comp.id != raiz?.id) _dato('Componente', comp.titulo),
+                if (t.tipoMantenimiento != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(children: [
+                      SizedBox(width: 110, child: Text('Criticidad', style: TextStyle(color: P.textoSuave, fontSize: 13))),
+                      Pill(t.tipoMantenimiento!.etiqueta, t.tipoMantenimiento!.color, punto: true),
+                    ]),
+                  ),
+                _dato('Origen', x != null ? 'Incidencia' : plan != null ? 'Mantenimiento «${plan.nombre}»' : 'Manual'),
+                if (t.proximo != null) _dato('Fecha prevista', fecha(t.proximo)),
+                const SizedBox(height: 12),
+                Text('Historial', style: TextStyle(color: P.textoSuave, fontSize: 12, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                for (final (cuando, texto) in cronologiaOt(t, i))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 6, right: 8),
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(color: P.morado, shape: BoxShape.circle),
+                      ),
+                      if (cuando.isNotEmpty)
+                        SizedBox(width: 120, child: Text(cuando, style: TextStyle(color: P.textoSuave, fontSize: 13))),
+                      Expanded(child: Text(texto, style: const TextStyle(fontSize: 13.5))),
+                    ]),
+                  ),
+                const SizedBox(height: 6),
+                Text('Trabajo realizado', style: TextStyle(color: P.textoSuave, fontSize: 12, fontWeight: FontWeight.w700)),
+              ]);
+            }),
+          ],
+          const SizedBox(height: 8),
           Text(i.notas, style: const TextStyle(fontSize: 14, height: 1.45)),
           if (i.material.isNotEmpty || i.minutos != null) ...[
             const SizedBox(height: 12),
@@ -168,10 +221,13 @@ class _InformeState extends State<_Informe> {
           ],
           if (i.firma != null) ...[
             const SizedBox(height: 16),
-            Text(m('Conforme, el cliente'), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
+            Text(industrial ? 'Firma del técnico' : m('Conforme, el cliente'), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
             const SizedBox(height: 4),
             FotoGuardada(i.firma!, width: 220, height: 88, fit: BoxFit.contain),
-            if (i.firmante.isNotEmpty) Text(i.firmante, style: const TextStyle(fontSize: 13.5)),
+            if (industrial && w != null)
+              Text(w.nombreCompleto, style: const TextStyle(fontSize: 13.5))
+            else if (i.firmante.isNotEmpty)
+              Text(i.firmante, style: const TextStyle(fontSize: 13.5)),
           ],
           const SizedBox(height: 20),
           Row(
