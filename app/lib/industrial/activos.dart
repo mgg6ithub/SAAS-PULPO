@@ -849,29 +849,35 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                           spacing: 12,
                           runSpacing: 8,
                           children: [
-                            Pestanas(
-                              opciones: [
-                                'Mantenimientos · ${planes.length}',
-                                // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
-                                '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
+                            // Mantenimientos/componentes y, pegada, la vigencia; la asignación, a la derecha.
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: [
+                                Pestanas(
+                                  opciones: [
+                                    'Mantenimientos · ${planes.length}',
+                                    // Dentro de un activo, sus componentes; dentro de un componente, sus subcomponentes.
+                                    '${a.padreId == null ? 'Componentes' : 'Subcomponentes'} · ${componentes.length}',
+                                  ],
+                                  iconos: const [
+                                    Icons.content_paste_rounded,
+                                    Icons.account_tree_outlined,
+                                  ],
+                                  seleccion: vista,
+                                  onChanged: (i) => setState(() => vista = i),
+                                ),
+                                if (vista == 0)
+                                  Pestanas(
+                                    opciones: const ['Todos', 'Activos', 'Pausados'],
+                                    iconos: const [null, Icons.play_arrow_rounded, Icons.pause_rounded],
+                                    coloresIconos: const [null, P.verde, P.gris],
+                                    seleccion: _vigencia,
+                                    compactas: true,
+                                    onChanged: (i) => setState(() => _vigencia = i),
+                                  ),
                               ],
-                              iconos: const [
-                                Icons.content_paste_rounded,
-                                Icons.account_tree_outlined,
-                              ],
-                              seleccion: vista,
-                              onChanged: (i) => setState(() => vista = i),
                             ),
-                            // En medio, la vigencia; a la derecha del todo, la asignación.
-                            if (vista == 0)
-                              Pestanas(
-                                opciones: const ['Todos', 'Activos', 'Pausados'],
-                                iconos: const [null, Icons.play_arrow_rounded, Icons.pause_rounded],
-                                coloresIconos: const [null, P.verde, P.gris],
-                                seleccion: _vigencia,
-                                compactas: true,
-                                onChanged: (i) => setState(() => _vigencia = i),
-                              ),
                             if (vista == 0)
                               FiltroFlujoMantenimiento(
                                 incluirSinOrden: false,
