@@ -1,5 +1,6 @@
 import 'industrial/tipo_mantenimiento.dart';
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -191,7 +192,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 ),
               ),
             ),
-            if (!widget.soloLectura && !widget.sinPie) ...[const Divider(), _pie()],
+            // Sin pie (se guarda solo): solo queda, si lo hay, el botón de borrar o cancelar.
+            if (!widget.soloLectura && (!widget.sinPie || widget.onBorrar != null)) ...[const Divider(), _pie()],
           ],
         ),
       );
@@ -424,8 +426,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                   ),
                 ),
         ),
-        // En móvil sobra «Cancelar»: ya está la X de arriba.
-        if ((!widget.incrustada && !_movil) || widget.onCancelar != null) ...[
+        // En móvil sobra «Cancelar»: ya está la X de arriba. Sin pie (se guarda solo), ni Cancelar ni Guardar.
+        if (!widget.sinPie && ((!widget.incrustada && !_movil) || widget.onCancelar != null)) ...[
           TextButton(
             style: TextButton.styleFrom(foregroundColor: P.textoSuave),
             onPressed: widget.onCancelar ?? () => Navigator.pop(context),
@@ -433,7 +435,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
           ),
           const SizedBox(width: 8),
         ],
-        FilledButton(onPressed: widget.onGuardar, child: const Text('Guardar')),
+        if (!widget.sinPie) FilledButton(onPressed: widget.onGuardar, child: const Text('Guardar')),
       ],
     ),
   );
@@ -1612,10 +1614,64 @@ class _TareaFormState extends State<TareaForm> {
     }
   });
 
+  /// En la ficha de una orden de Pultec no hay Guardar: cada cambio se guarda solo (si es válido), un momento
+  /// después de dejar de escribir.
+  bool get _autoguardado => industrial && widget.incrustada && !nueva && !t.esPlantilla;
+  Timer? _espera;
+  late String _guardado = jsonEncode(t.toJson());
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in [nombre, marca, modelo, serie, ubicacion, notas, descripcion, repuestos, procedimiento, precio]) {
+      c.addListener(_programarGuardado);
+    }
+    if (_autoguardado) {
+      _volcar();
+      _guardado = jsonEncode(t.toJson());
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_espera?.isActive ?? false) _guardarYa();
+    super.dispose();
+  }
+
+  void _programarGuardado() {
+    if (!_autoguardado) return;
+    _espera?.cancel();
+    _espera = Timer(const Duration(milliseconds: 700), _guardarYa);
+  }
+
+  void _guardarYa() {
+    _espera?.cancel();
+    // Recién borrada o cancelada desde otro sitio, o sin lo mínimo: no se guarda.
+    if (store.tarea(t.id) == null || nombre.text.trim().isEmpty || t.proximo == null) return;
+    _volcar();
+    final ahora = jsonEncode(t.toJson());
+    if (ahora == _guardado) return;
+    _guardado = ahora;
+    store.guardarTarea(t);
+  }
+
   void guardar() {
     setState(() => intentoGuardar = true);
     if (error != null) return _irA(_claveNombre);
     if (errorHorario != null) return _irA(_claveCuando);
+    _volcar();
+    store.guardarTarea(t);
+    if (widget.incrustada) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('${t.nombre} guardado')));
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  /// Pasa lo escrito en los campos a la orden.
+  void _volcar() {
     t
       ..nombre = nombre.text.trim()
       ..marca = marca.text.trim()
@@ -1632,14 +1688,6 @@ class _TareaFormState extends State<TareaForm> {
       t.periodicidad = Periodicidad.unica;
       if (t.inicioMin == null && !t.conFranja) t.inicioMin = 8 * 60;
     }
-    store.guardarTarea(t);
-    if (widget.incrustada) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('${t.nombre} guardado')));
-    } else {
-      Navigator.pop(context);
-    }
   }
 
   /// Arriba a la derecha: la criticidad (en Pultec, preventivo, correctivo no crítico o crítico, igual que en los mantenimientos).
@@ -1655,7 +1703,10 @@ class _TareaFormState extends State<TareaForm> {
     final aptos = store.trabajadores.where((w) => store.esApto(w, t)).length;
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
 
+    // Técnico, día, hora, criticidad… (lo que no es texto) llegan con setState: también se guardan solos.
+    _programarGuardado();
     return VentanaFormulario(
+      sinPie: _autoguardado,
       // Datos de prueba (solo al desarrollar): nombre que no esté ya, activo, tipo y fecha.
       onRellenar: industrial && nueva && !t.esPlantilla
           ? () => setState(() {

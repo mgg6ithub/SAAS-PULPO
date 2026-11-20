@@ -372,7 +372,10 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
             // Con parte: su informe en PDF (con la incidencia original y sus fotos si sale de una).
             acciones: [_DescargarParte(t)],
           ),
-          const SizedBox(height: 16),
+          // Raya bajo el nombre y la descripción; la cadena (activo → mantenimiento → orden), justo encima del bloque.
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -418,7 +421,7 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
               ],
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Expanded(
             child: TareaForm(
               key: ValueKey('${t.id}-$version'),
