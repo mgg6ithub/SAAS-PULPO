@@ -747,6 +747,9 @@ class Store extends ChangeNotifier {
     activos.removeWhere((a) => rama.contains(a.id));
     planes.removeWhere((p) => rama.contains(p.activoId));
     incidencias.removeWhere((x) => rama.contains(x.activoId));
+    // Sus OT por hacer se van con él; las hechas quedan en el histórico.
+    tareas.removeWhere((t) => rama.contains(t.activoId) && t.estado.abierta);
+    subtareas.removeWhere((t) => rama.contains(t.activoId) && t.estado.abierta);
     for (final t in [...tareas, ...subtareas].where((t) => rama.contains(t.activoId))) {
       t.activoId = null;
     }
@@ -764,6 +767,9 @@ class Store extends ChangeNotifier {
 
   void borrarPlan(String id) {
     planes.removeWhere((p) => p.id == id);
+    // Su OT por hacer se va con él; las hechas quedan en el histórico.
+    tareas.removeWhere((t) => t.planId == id && t.estado.abierta);
+    subtareas.removeWhere((t) => t.planId == id && t.estado.abierta);
     _cambio();
   }
 

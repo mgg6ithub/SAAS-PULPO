@@ -225,7 +225,7 @@ class _TablaActivos extends StatelessWidget {
         singular: componentes ? 'componente' : 'activo',
         plural: componentes ? 'componentes' : 'activos',
         borrar: store.borrarActivo,
-        nota: 'Se borran también sus componentes, mantenimientos e incidencias. Podrás deshacerlo.',
+        nota: 'Se borran también sus componentes, mantenimientos, órdenes pendientes e incidencias. Podrás deshacerlo.',
         builder: (context, s) => Align(
         alignment: Alignment.topCenter,
         child: Tabla(
