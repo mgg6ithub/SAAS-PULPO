@@ -1215,6 +1215,9 @@ class Vacio extends StatelessWidget {
   final String? titulo;
   final Widget? accion;
 
+  /// Color del icono (por defecto, gris suave), p. ej. rojo en Incidencias.
+  final Color? color;
+
   /// Con scroll si no cabe (por defecto). Sin él, se puede medir su alto natural (p. ej. dentro de un
   /// IntrinsicHeight, que no admite listas desplazables).
   final bool desplazable;
@@ -1224,6 +1227,7 @@ class Vacio extends StatelessWidget {
     required this.texto,
     this.titulo,
     this.accion,
+    this.color,
     this.desplazable = true,
   });
 
@@ -1240,7 +1244,7 @@ class Vacio extends StatelessWidget {
             decoration: P.mejorada
                 ? BoxDecoration(color: P.hover, shape: BoxShape.circle)
                 : BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(18)),
-            child: Icon(icono, color: P.textoSuave.withValues(alpha: P.mejorada ? .9 : .6), size: 28),
+            child: Icon(icono, color: color ?? P.textoSuave.withValues(alpha: P.mejorada ? .9 : .6), size: 28),
           ),
           const SizedBox(height: 14),
           if (titulo != null) ...[

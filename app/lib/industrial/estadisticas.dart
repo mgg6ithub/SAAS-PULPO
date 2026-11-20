@@ -655,7 +655,7 @@ class _PorEquipo extends StatelessWidget {
     }
     final filas = porMaquina.entries.toList()..sort((a, b) => b.value.length.compareTo(a.value.length));
     if (filas.isEmpty) {
-      return const Vacio(icono: Icons.report_outlined, titulo: 'Sin incidencias', texto: 'Ninguna máquina ha tenido incidencias en este periodo.');
+      return const Vacio(icono: Icons.report_outlined, color: P.rojo, titulo: 'Sin incidencias', texto: 'Ninguna máquina ha tenido incidencias en este periodo.');
     }
     final maximo = filas.first.value.length;
     return SegunTamano(

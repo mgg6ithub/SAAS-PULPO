@@ -763,6 +763,7 @@ class Store extends ChangeNotifier {
 
   void borrarPlan(String id) {
     planes.removeWhere((p) => p.id == id);
+    incidencias.removeWhere((x) => x.planId == id);
     // Todas sus OT se van con él (no quedan sueltas como «Manual»).
     _quitarTareas((t) => t.planId == id);
     _cambio();
@@ -998,6 +999,8 @@ class Store extends ChangeNotifier {
     };
     tareas.removeWhere((t) => ids.contains(t.id));
     subtareas.removeWhere((t) => ids.contains(t.id));
+    // Y las incidencias ligadas a esas OT (la que resolvían o de la que salieron).
+    incidencias.removeWhere((x) => ids.contains(x.trabajoId) || ids.contains(x.origenTrabajoId));
   }
 
   void borrarTarea(String id) {

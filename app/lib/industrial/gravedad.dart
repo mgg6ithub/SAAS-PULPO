@@ -49,10 +49,15 @@ String? avisoBorrarActivos(Iterable<String> ids) {
 /// Qué más se borra con estos mantenimientos (sus OT pendientes); null si nada.
 String? avisoBorrarPlanes(Iterable<String> ids) {
   final set = ids.toSet();
-  final ots = [...store.tareas, ...store.subtareas].where((t) => set.contains(t.planId)).length;
-  return ots == 0
-      ? null
-      : 'Se borrará${ots == 1 ? ' también su orden de trabajo' : 'n también sus $ots órdenes de trabajo'}, también del calendario y del histórico.';
+  final otIds = {for (final t in [...store.tareas, ...store.subtareas]) if (set.contains(t.planId)) t.id};
+  final incidencias = store.incidencias
+      .where((x) => set.contains(x.planId) || otIds.contains(x.trabajoId) || otIds.contains(x.origenTrabajoId))
+      .length;
+  final partes = [
+    if (otIds.isNotEmpty) _cuantos(otIds.length, 'orden de trabajo', 'órdenes de trabajo'),
+    if (incidencias > 0) _cuantos(incidencias, 'incidencia', 'incidencias'),
+  ];
+  return partes.isEmpty ? null : 'Se borrarán también ${_enumerar(partes)}, también del calendario y del histórico.';
 }
 
 /// De dónde sale la OT: de un mantenimiento (sola), de una incidencia o creada a mano.

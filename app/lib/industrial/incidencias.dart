@@ -97,6 +97,7 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
             child: lista.isEmpty
                 ? Vacio(
                     icono: Icons.report_outlined,
+                    color: P.rojo,
                     titulo: historico ? 'Sin incidencias cerradas' : 'Sin incidencias pendientes',
                     texto: historico
                         ? 'Aquí quedan las incidencias completadas con su OT y las desestimadas.'
