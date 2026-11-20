@@ -524,7 +524,23 @@ class _PlanFormState extends State<PlanForm> {
   late final PlanMantenimiento p =
       widget.original?.copia() ?? PlanMantenimiento(id: store.nuevoId(), activoId: widget.activoId);
   late final nombre = TextEditingController(text: p.nombre)..addListener(() => setState(() {}));
-  late final dias = TextEditingController(text: p.cadaDias?.toString() ?? '')..addListener(_alCambiarDias);
+  // Nuevo: cada 30 días de entrada (lo más habitual), para no tener que calcular nada.
+  late final dias = TextEditingController(
+    text: p.cadaDias?.toString() ?? (widget.original == null && p.cadaHoras == null && p.proximo == null ? '30' : ''),
+  )..addListener(_alCambiarDias);
+
+  /// Atajos de «cada cuánto» (en días); si el número no es uno de ellos, «Personalizado» con su campo.
+  static const _atajos = <(int, String)>[
+    (1, 'Cada día'),
+    (7, 'Cada semana'),
+    (15, 'Cada 15 días'),
+    (30, 'Cada mes (30 días)'),
+    (60, 'Cada 2 meses'),
+    (90, 'Cada trimestre (90 días)'),
+    (180, 'Cada 6 meses'),
+    (365, 'Cada año'),
+  ];
+  late bool _personalizado = int.tryParse(dias.text) != null && !_atajos.any((a) => '${a.$1}' == dias.text.trim());
   late final horasC = TextEditingController(text: p.cadaHoras?.toString() ?? '')..addListener(() => setState(() {}));
   late final contador = TextEditingController(text: p.ultimoHoras == null ? '' : '${p.ultimoHoras}')
     ..addListener(() => setState(() {}));
@@ -697,17 +713,50 @@ class _PlanFormState extends State<PlanForm> {
                 ),
               ),
               switch (modo) {
-                0 => campo('Cada cuántos días', dias, hint: '90', error: errorCada, obligatorio: true),
+                // Por días: una lista de atajos (cada mes, cada 2 meses…) y, al final, «Personalizado».
+                0 => conMargen(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      etiqueta('Cada cuánto'),
+                      BotonMenu<int>(
+                        relleno: EdgeInsets.zero,
+                        tooltip: 'Cada cuánto se repite',
+                        seleccionado: _personalizado ? -1 : int.tryParse(dias.text.trim()) ?? -1,
+                        opciones: [
+                          for (final (n, texto) in _atajos) (n, Text(texto)),
+                          (-1, const Text('Personalizado…')),
+                        ],
+                        onSelected: (n) => setState(() {
+                          _personalizado = n == -1;
+                          if (n > 0) dias.text = '$n';
+                        }),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            errorText: _personalizado ? null : errorCada,
+                            suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+                          ),
+                          child: Text(
+                            _personalizado
+                                ? 'Personalizado'
+                                : _atajos.where((a) => '${a.$1}' == dias.text.trim()).firstOrNull?.$2 ?? 'Elegir',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 1 => campo('Cada cuántas horas', horasC, hint: '500', error: errorCada, obligatorio: true),
                 _ => CampoFecha('Fecha', p.proximo, (d) => setState(() => p.proximo = d)),
               },
             ),
+            if (modo == 0 && _personalizado)
+              dos(campo('Cada cuántos días', dias, hint: '45', error: errorCada, obligatorio: true), const SizedBox()),
             if (estimacion case final e?)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Text(e, style: TextStyle(fontSize: 13, color: P.textoSuave)),
               ),
-            const SizedBox(height: 16),
             dos(
               CampoFecha('Último hecho', p.ultimo, (d) {
                 p.ultimo = d;
@@ -715,15 +764,17 @@ class _PlanFormState extends State<PlanForm> {
               }, hasta: hoy()),
               modo == 2 ? const SizedBox() : CampoFecha('Próximo', p.proximo, (d) => setState(() => p.proximo = d)),
             ),
-            dos(
-              campo(
-                'Contador en el último (h)',
-                contador,
-                teclado: const TextInputType.numberWithOptions(decimal: true),
-                hint: '0',
+            // El contador del último solo importa por horas.
+            if (modo == 1)
+              dos(
+                campo(
+                  'Contador en el último (h)',
+                  contador,
+                  teclado: const TextInputType.numberWithOptions(decimal: true),
+                  hint: '0',
+                ),
+                const SizedBox(),
               ),
-              const SizedBox(),
-            ),
           ],
         ),
         Bloque('Quién y cuánto', descripcion: 'A quién va su orden de trabajo (un técnico o un grupo) y cuánto dura.', [
