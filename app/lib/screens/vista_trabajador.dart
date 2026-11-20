@@ -120,12 +120,9 @@ List<Tarea> _misTrabajos(Trabajador w) => store.tareas
       (t) =>
           !t.esPlantilla &&
           t.activa &&
-          (t.trabajadorIds.contains(w.id) ||
-              (industrial &&
-                  t.tipoMantenimiento != null &&
-                  t.trabajadorIds.isEmpty &&
-                  t.competencias.every(w.competencias.contains) &&
-                  (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso))),
+          // Solo las asignadas a él: las que no tienen técnico no le salen a nadie (antes, en Pultec, les salían a
+          // todos los que podían hacerlas).
+          t.trabajadorIds.contains(w.id),
     )
     .toList();
 
