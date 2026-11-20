@@ -122,8 +122,45 @@ class _TareasPaginaState extends State<TareasPagina> {
                   // Solo el título: sin icono grande ni frase de relleno debajo.
                   TituloVista(m('Trabajos')),
                   // Pultec: pendientes y, aparte, el histórico de las hechas (para que no sea una lista sin fin).
-                  if (industrial)
+                  // Pultec: buscador y vista junto al título si caben (si no, bajan debajo).
+                  if (industrial) ...[
+                    Buscador(hint: 'Buscar orden de trabajo…', width: 280, onChanged: (v) => setState(() => q = v)),
+                    SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
+                  ],
+                  // Pultec, de momento sin plantillas: solo la lista de órdenes de trabajo.
+                  if (!industrial)
                     Pestanas(
+                      opciones: ['Todos · $nTrabajos', 'Plantillas · ${store.plantillas.length}'],
+                      seleccion: pestana,
+                      onChanged: (i) => setState(() => pestana = i),
+                    ),
+                ],
+                derecha: [
+                  if (!industrial) Buscador(
+                    hint: industrial ? 'Buscar orden de trabajo…' : 'Buscar trabajo…',
+                    width: 280,
+                    onChanged: (v) => setState(() => q = v),
+                  ),
+                  if (!industrial) SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
+                ],
+                principal: BotonPrimario(
+                  pestana == 1 ? 'Nueva plantilla' : m('Nuevo trabajo'),
+                  conIcono: industrial,
+                  tecla: 'N',
+                  onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
+                ),
+              ),
+              // Pultec: Pendientes / Histórico a la izquierda y la criticidad a la derecha del todo.
+              if (industrial) ...[
+                const SizedBox(height: huecoVista),
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    runSpacing: 8,
+                    spacing: 12,
+                    children: [
+                      Pestanas(
                       opciones: [
                         'Pendientes · ${store.tareas.where((t) => !t.esPlantilla && !_hecha(t)).length}',
                         'Histórico · ${store.tareas.where((t) => !t.esPlantilla && _hecha(t)).length}',
@@ -135,8 +172,6 @@ class _TareasPaginaState extends State<TareasPagina> {
                         filtroFechaTrabajos.value = 0;
                       },
                     ),
-                  // Pultec: la criticidad como filtro, igual que en los mantenimientos de un activo.
-                  if (industrial)
                     Pestanas(
                       opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
                       colores: [null, for (final t in TipoMantenimiento.values) t.color],
@@ -144,29 +179,10 @@ class _TareasPaginaState extends State<TareasPagina> {
                       compactas: true,
                       onChanged: (i) => filtroCriticidadTrabajos.value = i,
                     ),
-                  // Pultec, de momento sin plantillas: solo la lista de órdenes de trabajo.
-                  if (!industrial)
-                    Pestanas(
-                      opciones: ['Todos · $nTrabajos', 'Plantillas · ${store.plantillas.length}'],
-                      seleccion: pestana,
-                      onChanged: (i) => setState(() => pestana = i),
-                    ),
-                ],
-                derecha: [
-                  Buscador(
-                    hint: industrial ? 'Buscar orden de trabajo…' : 'Buscar trabajo…',
-                    width: 280,
-                    onChanged: (v) => setState(() => q = v),
+                    ],
                   ),
-                  SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
-                ],
-                principal: BotonPrimario(
-                  pestana == 1 ? 'Nueva plantilla' : m('Nuevo trabajo'),
-                  conIcono: industrial,
-                  tecla: 'N',
-                  onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                 ),
-              ),
+              ],
               // En el histórico no hacen falta los filtros de lo pendiente.
               if (!(industrial && historicoTrabajos.value)) ...[
                 const SizedBox(height: huecoVista),

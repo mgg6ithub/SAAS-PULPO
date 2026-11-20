@@ -1391,29 +1391,21 @@ extension on _HeroState {
           ),
       ],
     );
-    if (!industrial) return Padding(padding: const EdgeInsets.only(bottom: 4), child: texto);
-    // Alto justo para el texto y las pastillas: menos hueco hasta las cifras.
-    return SizedBox(
-      height: 150,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Foto de la planta quitada de momento (pedido 20/11/2026). Ocupaba algo más de la mitad derecha, hasta los
-          // bordes de arriba y de la derecha, y se fundía con el fondo; el texto iba encima.
-          // Positioned(
-          //   top: -margenPagina.top - 16,
-          //   right: -margenPagina.right - 12,
-          //   bottom: -10,
-          //   left: 0,
-          //   child: const Align(
-          //     alignment: Alignment.centerRight,
-          //     child: FractionallySizedBox(widthFactor: .6, heightFactor: 1, child: FotoPlanta()),
-          //   ),
-          // ),
-          Positioned.fill(child: Align(alignment: Alignment.topLeft, child: texto)),
-        ],
-      ),
-    );
+    // Sin la foto de la planta, a su alto natural (un alto fijo desbordaba si la frase ocupaba dos líneas). Con ella
+    // volvería un Stack con la foto a la derecha y el texto encima:
+    // Foto de la planta quitada de momento (pedido 20/11/2026). Ocupaba algo más de la mitad derecha, hasta los
+    // bordes de arriba y de la derecha, y se fundía con el fondo; el texto iba encima.
+    // Positioned(
+    //   top: -margenPagina.top - 16,
+    //   right: -margenPagina.right - 12,
+    //   bottom: -10,
+    //   left: 0,
+    //   child: const Align(
+    //     alignment: Alignment.centerRight,
+    //     child: FractionallySizedBox(widthFactor: .6, heightFactor: 1, child: FotoPlanta()),
+    //   ),
+    // ),
+    return Padding(padding: const EdgeInsets.only(bottom: 4), child: texto);
   }
 }
 
