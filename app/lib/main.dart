@@ -42,7 +42,7 @@ Future<void> main() async {
     await Nube.iniciar();
     await Nube.recordarInvitacion(Uri.base.queryParameters['invitacion']);
   }
-  if (industrial) ponerPestana('favicon-ipultec.png', Marca.nombre);
+  if (industrial) ponerPestana('favicon.png', Marca.nombre);
   runApp(PultecApp(local: local));
 }
 
