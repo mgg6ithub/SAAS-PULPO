@@ -2695,7 +2695,12 @@ class SelectorEstado extends StatelessWidget {
                       ? Icons.block_rounded
                       : Icons.radio_button_unchecked_rounded,
                   size: 18,
-                  color: e == EstadoTrabajo.realizado ? P.verde : P.textoSuave,
+                  // Completada en verde y cancelada en rojo; pendiente, neutro.
+                  color: e == EstadoTrabajo.realizado
+                      ? P.verde
+                      : e == EstadoTrabajo.noRealizado
+                      ? P.rojo
+                      : P.textoSuave,
                 )
               : Container(
                   width: 8,
@@ -2714,7 +2719,12 @@ class SelectorEstado extends StatelessWidget {
               message: e == EstadoTrabajo.noRealizado && otDeMantenimientoVigente(t)
                   ? 'Es de un mantenimiento vigente: pausa antes el mantenimiento'
                   : '',
-              child: Text(e.etiqueta),
+              child: Text(
+                e.etiqueta,
+                style: e == EstadoTrabajo.noRealizado
+                    ? TextStyle(color: P.rojo.withValues(alpha: otDeMantenimientoVigente(t) ? .45 : 1))
+                    : null,
+              ),
             ),
           ),
         ),

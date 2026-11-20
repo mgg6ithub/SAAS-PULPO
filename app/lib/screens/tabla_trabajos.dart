@@ -156,7 +156,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                             ? Icons.block_rounded
                             : Icons.radio_button_unchecked_rounded,
                         size: 18,
-                        color: P.textoSuave,
+                        color: e == EstadoTrabajo.noRealizado ? P.rojo : P.textoSuave,
                       )
                     : Container(
                         width: 8,
