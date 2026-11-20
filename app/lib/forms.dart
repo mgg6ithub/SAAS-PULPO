@@ -2877,14 +2877,19 @@ class SelectorTrabajadores extends StatelessWidget {
                 abierto: menu.isOpen,
                 compacta: true,
                 onTap: () => menu.isOpen ? menu.close() : menu.open(),
+                // El técnico, destacado: avatar algo mayor y su nombre en negrita; sin nadie, el aviso en gris.
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AvataresTrabajadores(t.trabajadorIds, size: 22),
-                  if (elegidos.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    Flexible(child: Text(elegidos.map((w) => w.nombre).join(', '),
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12.5))),
-                  ],
+                  AvataresTrabajadores(t.trabajadorIds, size: 26),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(
+                    elegidos.isEmpty ? textoSinAsignar : elegidos.map((w) => w.nombre).join(', '),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: elegidos.isEmpty ? FontWeight.w500 : FontWeight.w600,
+                      color: elegidos.isEmpty ? P.textoSuave : P.texto,
+                    ),
+                  )),
                 ]),
               ),
             )

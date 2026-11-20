@@ -896,12 +896,6 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             TextSpan(children: [
                               TextSpan(text: 'Próximo ${relativo(proximo).toLowerCase()}: '),
                               if (siguiente != null) ...[
-                                WidgetSpan(alignment: PlaceholderAlignment.middle,
-                                  child: Padding(padding: const EdgeInsets.only(right: 5),
-                                    child: Builder(builder: (_) {
-                                      final ordenes = ordenesPendientesDePlanes([siguiente!]);
-                                      return iconoAsignacion(ordenes[siguiente.id] ?? ordenes['${siguiente.activoId}|${siguiente.nombre}']);
-                                    }))),
                                 TextSpan(text: '${siguiente.nombre}, ${fecha(proximo)}',
                                   style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                               ],
