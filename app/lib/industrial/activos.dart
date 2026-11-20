@@ -896,12 +896,15 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                             TextSpan(children: [
                               TextSpan(text: 'Próximo ${relativo(proximo).toLowerCase()}: '),
                               if (siguiente != null) ...[
-                                // Si su orden tiene técnico: persona en un círculo; si no, tachada.
+                                // Si su orden tiene técnico: persona en verde; si no, tachada en gris (sin círculo).
                                 WidgetSpan(alignment: PlaceholderAlignment.middle,
                                   child: Padding(padding: const EdgeInsets.only(right: 5),
                                     child: Builder(builder: (_) {
                                       final ordenes = ordenesPendientesDePlanes([siguiente!]);
-                                      return iconoAsignacion(ordenes[siguiente.id] ?? ordenes['${siguiente.activoId}|${siguiente.nombre}']);
+                                      final ot = ordenes[siguiente.id] ?? ordenes['${siguiente.activoId}|${siguiente.nombre}'];
+                                      final asignada = ot != null && ot.trabajadorIds.isNotEmpty;
+                                      return Icon(asignada ? Icons.person_outline_rounded : Icons.person_off_outlined,
+                                        size: 18, color: asignada ? P.verde : P.textoSuave);
                                     }))),
                                 TextSpan(text: '${siguiente.nombre}, ${fecha(proximo)}',
                                   style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
