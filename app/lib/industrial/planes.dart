@@ -175,6 +175,47 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Orden de trabajo': Col('Orden de trabajo', ancho: 230),
   };
 
+  /// Cabecera de «Estado»: pausar todos los mantenimientos del activo (y sus componentes) o reanudarlos, p. ej.
+  /// si una máquina se deja de usar unos meses.
+  Widget _pausarTodos() {
+    final rama = store.ramaDe(widget.activoId);
+    final todos = store.planes.where((p) => rama.contains(p.activoId)).toList();
+    final pausar = todos.any((p) => p.activa);
+    return Row(
+      children: [
+        Text(
+          'Estado',
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: P.mejorada ? FontWeight.w600 : FontWeight.w500,
+            color: P.textoSuave,
+          ),
+        ),
+        const SizedBox(width: 2),
+        IconButton(
+          tooltip: pausar ? 'Pausar todos los mantenimientos de este activo' : 'Reanudar todos sus mantenimientos',
+          visualDensity: VisualDensity.compact,
+          onPressed: todos.isEmpty
+              ? null
+              : () => store.deshacible(
+                  pausar ? 'Has pausado sus mantenimientos' : 'Has reanudado sus mantenimientos',
+                  () {
+                    for (final p in todos.where((p) => p.activa == pausar)) {
+                      p.activa = !pausar;
+                      store.guardarPlan(p);
+                    }
+                  },
+                ),
+          icon: Icon(
+            pausar ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            size: 18,
+            color: pausar ? P.textoSuave : P.verde,
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Botón de la última columna: menú con todas las columnas para marcar o desmarcar.
   Widget _menuColumnas() => MenuAnchor(
     alignmentOffset: const Offset(-200, 4),
@@ -271,7 +312,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
       final columnas = [
         ...s.columna,
         const Col('Mantenimiento', flex: 4),
-        for (final c in vistas) _cols[c]!,
+        for (final c in vistas) c == 'Estado' ? Col('Estado', ancho: 110, cabecera: _pausarTodos()) : _cols[c]!,
         if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
       ];
       // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
