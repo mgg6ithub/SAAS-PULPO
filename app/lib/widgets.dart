@@ -183,8 +183,11 @@ class HoverCard extends StatefulWidget {
   final double? width;
   /// Seleccionada (p. ej. la cifra que filtra la lista): borde morado fijo.
   final bool marcado;
+
+  /// Tarjeta de aviso (p. ej. una orden atrasada): fondo y borde suaves de este color.
+  final Color? tinte;
   const HoverCard({super.key, required this.child, this.onTap, this.padding = const EdgeInsets.all(16), this.width,
-    this.marcado = false});
+    this.marcado = false, this.tinte});
 
   @override
   State<HoverCard> createState() => _HoverCardState();
@@ -209,9 +212,15 @@ class _HoverCardState extends State<HoverCard> {
           padding: widget.padding,
           // Como los cuadraditos de la landing: blanco, borde fino y sin sombra; al pasar, el borde se tiñe.
           decoration: BoxDecoration(
-            color: P.superficie,
+            color: widget.tinte == null ? P.superficie : Color.alphaBlend(widget.tinte!.withValues(alpha: .06), P.superficie),
             borderRadius: BorderRadius.circular(P.radio),
-            border: Border.all(color: widget.marcado ? P.morado : activo ? P.morado.withValues(alpha: .45) : P.borde),
+            border: Border.all(
+              color: widget.marcado
+                  ? P.morado
+                  : activo
+                  ? P.morado.withValues(alpha: .45)
+                  : widget.tinte?.withValues(alpha: .35) ?? P.borde,
+            ),
             boxShadow: P.sombra,
           ),
           child: widget.child,
@@ -620,6 +629,9 @@ class BotonPrimario extends StatelessWidget {
 
   /// Muestra el icono delante del texto también en escritorio (por defecto solo se ve en móvil).
   final bool conIcono;
+
+  /// Relleno (null = el morado de siempre); p. ej. rojo para «Crear incidencia».
+  final Color? color;
   const BotonPrimario(
     this.texto, {
     super.key,
@@ -627,6 +639,7 @@ class BotonPrimario extends StatelessWidget {
     required this.onPressed,
     this.tecla,
     this.conIcono = false,
+    this.color,
   });
 
   @override
@@ -637,7 +650,7 @@ class BotonPrimario extends StatelessWidget {
             style: IconButton.styleFrom(
               fixedSize: const Size(40, 40),
               minimumSize: const Size(40, 40),
-              backgroundColor: P.morado,
+              backgroundColor: color ?? P.morado,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
             ),
             onPressed: onPressed,
@@ -645,6 +658,7 @@ class BotonPrimario extends StatelessWidget {
           ),
         )
       : FilledButton(
+          style: color == null ? null : FilledButton.styleFrom(backgroundColor: color),
           onPressed: onPressed,
           child: Row(
             mainAxisSize: MainAxisSize.min,

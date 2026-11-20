@@ -236,7 +236,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                           ? SizedBox(
                               height: 40,
                               child: FilledButton.icon(
-                                style: FilledButton.styleFrom(backgroundColor: P.morado),
+                                style: FilledButton.styleFrom(backgroundColor: P.rojo),
                                 onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
                                 icon: const Icon(Icons.report_outlined, size: 19),
                                 label: const Text('Crear incidencia'),
@@ -246,6 +246,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                               'Crear incidencia',
                               icono: Icons.report_outlined,
                               conIcono: true,
+                              color: P.rojo,
                               onPressed: () => abrirPanel(context, AvisoIncidenciaForm(tecnicoId: w.id)),
                             )
                     : null,
@@ -494,7 +495,7 @@ class _BarraTecnico extends StatelessWidget {
               height: 42,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: P.morado,
+                  backgroundColor: P.rojo,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
                 ),
                 onPressed: onIncidencia,
@@ -620,12 +621,12 @@ class _ElegirMaquinasState extends State<ElegirMaquinas> {
         ),
         const SizedBox(height: 6),
         Text(
-          '¿En qué máquinas vas a trabajar?',
+          '¿En qué activos vas a trabajar?',
           style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w600, color: P.texto),
         ),
         const SizedBox(height: 4),
         Text(
-          'Solo verás las órdenes de las que marques. Puedes cambiarlo cuando quieras.',
+          'Solo verás las órdenes de los que marques. Puedes cambiarlo cuando quieras.',
           style: TextStyle(fontSize: 14, color: P.textoSuave),
         ),
         const SizedBox(height: 18),
@@ -656,7 +657,7 @@ class _ElegirMaquinasState extends State<ElegirMaquinas> {
         Row(
           children: [
             BotonAccion(
-              todas ? 'Quitar todas' : 'Marcar todas',
+              todas ? 'Quitar todos' : 'Marcar todos',
               icono: todas ? Icons.remove_done_rounded : Icons.done_all_rounded,
               onPressed: () => setState(() {
                 if (todas) {
@@ -667,7 +668,8 @@ class _ElegirMaquinasState extends State<ElegirMaquinas> {
               }),
             ),
             const Spacer(),
-            SizedBox(
+            // Sin activos marcados no hay botón: primero se elige en qué se trabaja.
+            if (sel.isNotEmpty) SizedBox(
               height: 44,
               child: FilledButton(
                 style: FilledButton.styleFrom(
@@ -677,7 +679,7 @@ class _ElegirMaquinasState extends State<ElegirMaquinas> {
                 ),
                 onPressed: () => widget.onListo({...sel}),
                 child: Text(
-                  sel.isEmpty ? 'Ver todas mis órdenes ($ordenes)' : 'Empezar con $ordenes órdenes',
+                  'Empezar con $ordenes órdenes',
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ),
@@ -1187,7 +1189,10 @@ class _FilaTrabajo extends StatelessWidget {
   final Tarea t;
   final ValueChanged<Tarea> abrir;
   final bool mostrarDia;
-  const _FilaTrabajo(this.t, this.abrir, {this.mostrarDia = false});
+
+  /// Dentro de una tarjeta que ya se abre entera al pulsarla (sin hover propio de la fila).
+  final bool dentroDeTarjeta;
+  const _FilaTrabajo(this.t, this.abrir, {this.mostrarDia = false, this.dentroDeTarjeta = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1227,7 +1232,7 @@ class _FilaTrabajo extends StatelessWidget {
                   if (marcable && !industrial) ...[const SizedBox(width: 6), _MarcaHecho(t)],
                 ],
               ),
-        onTap: () => abrir(t),
+        onTap: dentroDeTarjeta ? null : () => abrir(t),
       ),
     );
   }
@@ -1481,8 +1486,8 @@ Text('$etiqueta: ${t.nombre}')
       _CifrasTecnico(widget.w, pendientes, filtro: vista == 0 ? fecha : 0,
         // Las máquinas elegidas al entrar, a la derecha del saludo; al pulsar se vuelven a elegir.
         accion: widget.onMaquinas == null ? null : BotonAccion(
-          sel.isEmpty ? 'Todas las máquinas' : '${sel.length} ${sel.length == 1 ? 'máquina' : 'máquinas'}',
-          icono: Icons.precision_manufacturing_outlined, tooltip: 'Cambiar las máquinas en las que trabajas',
+          sel.isEmpty ? 'Todos los activos' : '${sel.length} ${sel.length == 1 ? 'activo' : 'activos'}',
+          icono: Icons.precision_manufacturing_outlined, tooltip: 'Cambiar los activos en los que trabajas',
           onPressed: widget.onMaquinas!),
         onFiltro: (f) => setState(() {
           if (vista != 0) _vista(0);
@@ -1536,11 +1541,12 @@ Text('$etiqueta: ${t.nombre}')
     return ListView.builder(itemCount: filas.length, itemBuilder: (_, n) => switch (filas[n]) {
       final Tarea t => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        // Las atrasadas, con fondo de aviso.
-        child: Tarjeta(padding: EdgeInsets.zero,
-          color: t.proximo != null && diasHasta(t.proximo!) < 0 ? Color.alphaBlend(P.rojo.withValues(alpha: .06), P.superficie) : null,
+        // Toda la tarjeta se abre y se marca al pasar el ratón (borde morado, como en el administrador);
+        // las atrasadas, con fondo y borde de aviso.
+        child: HoverCard(padding: EdgeInsets.zero, onTap: () => widget.abrir(t),
+          tinte: t.proximo != null && diasHasta(t.proximo!) < 0 ? P.rojo : null,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _FilaTrabajo(t, widget.abrir, mostrarDia: true),
+          _FilaTrabajo(t, widget.abrir, mostrarDia: true, dentroDeTarjeta: true),
           Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo)),
         ])),
       ),
