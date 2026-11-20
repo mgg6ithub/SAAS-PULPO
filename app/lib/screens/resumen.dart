@@ -18,6 +18,7 @@ import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos, histori
 import '../marca.dart';
 import '../nube.dart' show Nube;
 import '../industrial/activos.dart' show abrirActivoForm;
+import '../industrial/planes.dart' show abrirPlanForm;
 // import '../industrial/foto_planta.dart'; // Foto de Inicio quitada de momento.
 import '../industrial/vistazo.dart';
 
@@ -49,7 +50,13 @@ class Resumen extends StatelessWidget {
     final hayTrabajoAsignado = store.tareas.any(
       (t) => !t.esPlantilla && t.trabajadorIds.any((id) => store.trabajador(id)?.activo == true),
     );
-    final pasos = ajustes.guiaOrganizar
+    // Pultec sin nada (cuenta nueva o todo borrado): vuelve la guía, aunque ya se hiciera.
+    final vacia = industrial && store.activos.isEmpty && !hayTarea;
+    final pasos = industrial
+        ? (ajustes.guiaOrganizar && !vacia
+              ? const [true, true, true, true]
+              : [store.activos.isNotEmpty, store.planes.isNotEmpty, hayTrabajador, hayTrabajoAsignado])
+        : ajustes.guiaOrganizar
         ? const [true, true, true, true]
         : [
             industrial ? store.activos.isNotEmpty : store.clientes.isNotEmpty,
@@ -95,7 +102,7 @@ class Resumen extends StatelessWidget {
                   const SizedBox(height: 16),
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pultec.
-                  if (!hayTarea && !ajustes.guiaOrganizar) _ComoFunciona(columnas: dosCol),
+                  if (!hayTarea && (!ajustes.guiaOrganizar || vacia)) _ComoFunciona(columnas: dosCol),
                   if (hayTarea) ...[
                     // Pultec: las cuatro cifras son de órdenes de trabajo; con su título, como «Estado de los activos».
                     // En la vista mejorada, sin título: las cifras van justo bajo la cabecera, como en la maqueta.
@@ -437,6 +444,51 @@ class _PrimerosPasos extends StatelessWidget {
   final ValueChanged<Seccion> onIr;
   const _PrimerosPasos(this.hechos, {required this.onIr});
 
+  /// Pasos de Pultec: máquina, su mantenimiento (la OT se crea sola), un técnico y asignarle la orden.
+  List<(String, String, (IconData, String, String, Seccion, Future<void> Function(BuildContext))?, Widget?)>
+  _pasosPultec(bool hayTrabajador) => [
+    (
+      'Da de alta tu primera máquina',
+      'Un activo: un camión, un compresor, una prensa… Dentro, sus componentes con su tag, fabricante y modelo.',
+      (Marca.iconoCliente, 'Activos', 'Nuevo activo', Seccion.clientes, (c) async => abrirActivoForm(c)),
+      null,
+    ),
+    (
+      'Crea su primer mantenimiento',
+      'Qué hay que hacerle y cada cuánto (días u horas de uso). Pultec crea la orden de trabajo sola y la siguiente '
+          'al completarla.',
+      (
+        Marca.iconoCliente,
+        'Activos',
+        'Mantenimiento',
+        Seccion.clientes,
+        (c) async {
+          final a = store.activos.where((a) => a.padreId == null).firstOrNull;
+          if (a != null) await abrirPlanForm(c, activoId: a.id);
+        },
+      ),
+      null,
+    ),
+    (
+      'Añade un técnico',
+      'Quién hace los mantenimientos y de qué categoría es. Con eso Pultec le asigna sus órdenes.',
+      (
+        Marca.iconoTrabajador,
+        'Técnicos',
+        'Nuevo técnico',
+        Seccion.trabajadores,
+        (c) async => abrirTrabajadorForm(c, null, const []),
+      ),
+      null,
+    ),
+    (
+      'Asigna la orden a un técnico',
+      'En Órdenes de trabajo, elige quién la hace. Le llegará a su móvil con todo lo que necesita.',
+      (Marca.iconoTrabajo, 'Órdenes de trabajo', 'Asignar', Seccion.tareas, (c) async {}),
+      null,
+    ),
+  ];
+
   /// Deja el itinerario en la semana del último trabajo, para organizar el día en que cae.
   Future<void> _semanaDelTrabajo(BuildContext context) async {
     final t = store.tareas.where((t) => !t.esPlantilla).lastOrNull;
@@ -456,7 +508,7 @@ class _PrimerosPasos extends StatelessWidget {
     // (título, explicación, ruta en la app, botón). Los pasos de crear no se hacen aquí: la ruta es un botón
     // que lleva a su sección y abre el formulario, para que se aprenda dónde está. Ver el itinerario: su botón.
     final hayTrabajador = store.trabajadores.any((w) => w.activo);
-    final pasos = [
+    final pasos = industrial ? _pasosPultec(hayTrabajador) : [
       industrial
           ? (
               'Da de alta tu primera máquina',
