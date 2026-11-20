@@ -31,11 +31,13 @@ void ponerTurnos(Activo r, DateTime d, int n) => n <= 0 ? r.turnos.remove(_dia(d
 
 /// Horas de hoy: las del activo principal. Uso planificado: la lectura más los turnos marcados desde entonces;
 /// si no, la lectura más el ritmo de uso por los días pasados.
+/// De quién son las horas y el ritmo: el componente con contador propio; si no, su activo principal. Igual que la
+/// base (`private.contador_de`).
+Activo contadorDe(Activo a) => a.contadorPropio && a.padreId != null ? a : (raizActivo(a.id) ?? a);
+
 double horasHoy(Activo a) {
-  final r = raizActivo(a.id) ?? a;
-  // La lectura: la del componente si tiene contador propio; si no, la del principal. El ritmo, siempre el del
-  // principal. Igual que la base (`private.horas_hoy`).
-  final l = a.contadorPropio && a.padreId != null ? a : r;
+  final r = contadorDe(a);
+  final l = r;
   final desde = l.fechaLectura;
   if (r.usoPlanificado) {
     var t = 0;
@@ -51,7 +53,7 @@ double horasHoy(Activo a) {
 /// (jornadas previstas); si no, días naturales. Igual que la base (`private.dias_hasta_aviso`).
 int diasHastaAviso(String activoId, DateTime d) {
   final a = store.activo(activoId);
-  final r = a == null ? null : raizActivo(a.id) ?? a;
+  final r = a == null ? null : contadorDe(a);
   if (r == null || !r.usoPlanificado) return diasHasta(d);
   var n = 0;
   for (var x = masDias(hoy(), 1); !x.isAfter(d); x = masDias(x, 1)) {
@@ -69,7 +71,7 @@ DateTime? proximoPlan(PlanMantenimiento p) {
   if (p.cadaHoras == null) return null;
   final a = store.activo(p.activoId);
   if (a == null) return null;
-  final r = raizActivo(a.id) ?? a;
+  final r = contadorDe(a);
   var quedan = p.cadaHoras! - (horasHoy(a) - (p.ultimoHoras ?? 0));
   if (quedan <= 0) return hoy();
   if (r.usoPlanificado) {

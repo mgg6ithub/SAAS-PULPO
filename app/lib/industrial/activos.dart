@@ -227,7 +227,7 @@ class _TablaActivosState extends State<_TablaActivos> {
 
   /// Cómo trabaja: horas al día o a la semana, o por turnos (el ritmo es siempre el del activo principal).
   String _uso(Activo a) {
-    final r = raizActivo(a.id) ?? a;
+    final r = contadorDe(a);
     if (r.usoPlanificado) return 'Por turnos';
     if (r.horasUso <= 0) return '—';
     return r.usoSemanal ? '${horas(r.horasUso)} / semana' : '${horas(r.horasUso)} / día';
@@ -420,7 +420,7 @@ String horas(double h) => h == 0 ? '—' : '${h % 1 == 0 ? h.toInt() : h} h';
 
 /// Contador de hoy del activo (el de su activo principal) y cómo avanza: «1.240 h, +8 h al día».
 String contadorTexto(Activo a) {
-  final r = raizActivo(a.id) ?? a;
+  final r = contadorDe(a);
   final h = horasHoy(a);
   final redondo = h.round() == h ? h.toInt().toString() : h.toStringAsFixed(1);
   if (r.usoPlanificado) return '$redondo h, por turnos';
@@ -1221,16 +1221,20 @@ class _ActivoFormState extends State<ActivoForm> {
         key: _claveMantenimiento,
         child: Bloque(
           'Contador',
-          descripcion: 'Para estimar los mantenimientos por horas. Sube al ritmo de su activo principal.',
+          descripcion: 'Para estimar sus mantenimientos por horas (p. ej. una correa cada 100 h).',
           [
             _menu<bool>(
               'Contador',
               tooltip: 'El de su activo principal o uno propio, si este componente lleva otras horas',
               valor: a.contadorPropio,
               opciones: {false: 'El $principal', true: 'Propio'},
-              onSelected: (v) => setState(() => a.contadorPropio = v),
+              onSelected: (v) => setState(() {
+                a.contadorPropio = v;
+                // Su ritmo es fijo (por día o por semana): los turnos se marcan solo en los activos principales.
+                if (v) a.usoPlanificado = false;
+              }),
             ),
-            if (a.contadorPropio)
+            if (a.contadorPropio) ...[
               dos(
                 CampoFecha(
                   'Fecha de la lectura',
@@ -1245,8 +1249,24 @@ class _ActivoFormState extends State<ActivoForm> {
                   hint: '0',
                   error: errores['actual'],
                 ),
-              )
-            else if (r != null)
+              ),
+              dos(
+                _menu<bool>(
+                  'Ritmo de uso',
+                  tooltip: 'Cuántas horas suma su contador',
+                  valor: a.usoSemanal,
+                  opciones: const {false: 'Media por día natural', true: 'Total por semana'},
+                  onSelected: (v) => setState(() => a.usoSemanal = v),
+                ),
+                campo(
+                  a.usoSemanal ? 'Horas de uso por semana' : 'Horas de uso por día',
+                  ritmo,
+                  teclado: const TextInputType.numberWithOptions(decimal: true),
+                  hint: 'Sin indicar',
+                  error: errores['uso'],
+                ),
+              ),
+            ] else if (r != null)
               Text(
                 '${horas(horasHoy(r))} hoy.',
                 style: TextStyle(fontSize: 13.5, color: P.textoSuave),
