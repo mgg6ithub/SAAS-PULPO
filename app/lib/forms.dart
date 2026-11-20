@@ -145,15 +145,18 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
       if (d != desplazado) setState(() => desplazado = d);
     });
 
+  /// Solo los que tienen Guardar abajo apartan la campana; los que se guardan solos (sin pie), no.
+  late final bool _cuenta = !widget.sinPie;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => formulariosAbiertos.value++);
+    if (_cuenta) WidgetsBinding.instance.addPostFrameCallback((_) => formulariosAbiertos.value++);
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) => formulariosAbiertos.value--);
+    if (_cuenta) WidgetsBinding.instance.addPostFrameCallback((_) => formulariosAbiertos.value--);
     scroll.dispose();
     super.dispose();
   }
