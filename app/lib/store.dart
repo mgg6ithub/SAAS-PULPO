@@ -747,12 +747,8 @@ class Store extends ChangeNotifier {
     activos.removeWhere((a) => rama.contains(a.id));
     planes.removeWhere((p) => rama.contains(p.activoId));
     incidencias.removeWhere((x) => rama.contains(x.activoId));
-    // Sus OT por hacer se van con él; las hechas quedan en el histórico.
-    tareas.removeWhere((t) => rama.contains(t.activoId) && t.estado.abierta);
-    subtareas.removeWhere((t) => rama.contains(t.activoId) && t.estado.abierta);
-    for (final t in [...tareas, ...subtareas].where((t) => rama.contains(t.activoId))) {
-      t.activoId = null;
-    }
+    // Todas sus OT (pendientes, hechas y canceladas) se van con él: del calendario, del técnico y del histórico.
+    _quitarTareas((t) => rama.contains(t.activoId));
     _cambio();
   }
 
@@ -767,9 +763,8 @@ class Store extends ChangeNotifier {
 
   void borrarPlan(String id) {
     planes.removeWhere((p) => p.id == id);
-    // Su OT por hacer se va con él; las hechas quedan en el histórico.
-    tareas.removeWhere((t) => t.planId == id && t.estado.abierta);
-    subtareas.removeWhere((t) => t.planId == id && t.estado.abierta);
+    // Todas sus OT se van con él (no quedan sueltas como «Manual»).
+    _quitarTareas((t) => t.planId == id);
     _cambio();
   }
 
@@ -994,6 +989,15 @@ class Store extends ChangeNotifier {
       h.clienteId = t.clienteId;
       _compartirCliente(h);
     }
+  }
+
+  /// Quita de una vez las tareas que cumplen [cual] y sus subtrabajos (sin avisar: lo hace quien llama).
+  void _quitarTareas(bool Function(Tarea t) cual) {
+    final ids = {
+      for (final t in [...tareas, ...subtareas].where(cual)) ...[t.id, for (final h in descendientes(t.id)) h.id],
+    };
+    tareas.removeWhere((t) => ids.contains(t.id));
+    subtareas.removeWhere((t) => ids.contains(t.id));
   }
 
   void borrarTarea(String id) {

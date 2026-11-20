@@ -448,8 +448,9 @@ String _maquinaDe(String id) {
 }
 
 /// La orden o incidencia entra con las máquinas elegidas (sin activo o sin elegir nada, siempre).
+/// Las máquinas elegidas que ya no existen (borradas) no cuentan: si no queda ninguna, se ven todas.
 bool _enMaquinas(String? activoId, Set<String> sel) =>
-    sel.isEmpty || activoId == null || sel.contains(_maquinaDe(activoId));
+    !sel.any((id) => store.activo(id) != null) || activoId == null || sel.contains(_maquinaDe(activoId));
 
 /// Máquinas con órdenes pendientes del técnico y cuántas tiene en cada una (las de más órdenes primero).
 List<(Activo, int)> _maquinasDe(Trabajador w) {
