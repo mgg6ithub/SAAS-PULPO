@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:convert';
 
@@ -743,6 +744,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 12, runSpacing: 8,
               children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                 Pestanas(
             // El histórico va dentro de Órdenes de trabajo (Pendientes / Histórico), no en otra pestaña.
             opciones: const [
@@ -755,6 +759,29 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               pestana = i;
             }),
           ),
+                    const SizedBox(width: 8),
+                    // Borrar el activo (o componente) desde aquí: Datos ya no tiene pie con «Eliminar».
+                    Tooltip(
+                      message: a.padreId == null ? 'Eliminar el activo' : 'Eliminar el componente',
+                      child: Material(
+                        color: P.superficie,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          side: BorderSide(color: P.borde),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          onTap: () => borrarActivoConAviso(context, a),
+                          child: const SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: Icon(Icons.delete_outline_rounded, size: 20, color: P.rojo),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 if (pestana == 2)
                   Wrap(
                     spacing: 12,
@@ -916,9 +943,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       border: Border.all(color: P.borde),
                     ),
                     child: ActivoForm(
-                      key: ValueKey(
-                        '${a.id}-$vuelta-${jsonEncode(a.toJson())}',
-                      ),
+                      // Clave estable: se guarda sola al escribir y no debe rehacerse (perdería el foco).
+                      key: ValueKey('${a.id}-$vuelta'),
                       original: a,
                       incrustada: true,
                       onTerminar: () => setState(() => vuelta++),
@@ -962,6 +988,17 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       ),
     );
   }
+}
+
+/// Borra el activo (con sus componentes, mantenimientos, OT e incidencias). Solo pregunta si se lleva algo por
+/// delante; si no, basta con «Deshacer». Devuelve si se ha borrado.
+Future<bool> borrarActivoConAviso(BuildContext context, Activo a) async {
+  final aviso = avisoBorrarActivos([a.id]);
+  if (aviso != null && !await confirmar(context, '¿Eliminar ${a.titulo}?', nota: '$aviso Podrás deshacerlo.')) {
+    return false;
+  }
+  store.deshacible('Has borrado ${a.titulo}', () => store.borrarActivo(a.id));
+  return true;
 }
 
 Future<void> abrirActivoForm(
@@ -1020,7 +1057,22 @@ class _ActivoFormState extends State<ActivoForm> {
   bool intentoGuardar = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Cualquier campo escrito reprograma el guardado (los demás cambios pasan por build).
+    for (final c in [tag, nombre, fabricante, modelo, serie, division, descripcion, horasC, ultimoContador, ritmo,
+        repuestos, turnoC, notas]) {
+      c.addListener(_programarGuardado);
+    }
+    if (_autoguardado) {
+      _volcar();
+      _guardado = jsonEncode(a.toJson());
+    }
+  }
+
+  @override
   void dispose() {
+    if (_espera?.isActive ?? false) _guardarYa();
     for (final c in [
       tag,
       nombre,
@@ -1202,10 +1254,8 @@ class _ActivoFormState extends State<ActivoForm> {
       ? 'Ponle un tag o un nombre'
       : null;
 
-  void guardar() {
-    setState(() => intentoGuardar = true);
-    if (error != null) return _irA(_claveIdentificacion);
-    if (_erroresMantenimiento.isNotEmpty) return _irA(_claveMantenimiento);
+  /// Pasa lo escrito en los campos al activo.
+  void _volcar() {
     a
       ..tag = tag.text.trim()
       ..nombre = nombre.text.trim()
@@ -1225,6 +1275,37 @@ class _ActivoFormState extends State<ActivoForm> {
       ..horasUso = _valor(ritmo, vacio: 0) ?? 0
       ..repuestos = repuestos.text.trim()
       ..notas = notas.text.trim();
+  }
+
+  /// En la pestaña Datos no hay botón de guardar: cada cambio se guarda solo (en cuanto es válido), un momento
+  /// después de dejar de escribir.
+  bool get _autoguardado => widget.incrustada && widget.original != null && !widget.soloLectura;
+  Timer? _espera;
+  late String _guardado = jsonEncode(a.toJson());
+
+  void _programarGuardado() {
+    if (!_autoguardado) return;
+    _espera?.cancel();
+    _espera = Timer(const Duration(milliseconds: 700), _guardarYa);
+  }
+
+  void _guardarYa() {
+    _espera?.cancel();
+    // Recién borrado (papelera): no se vuelve a crear.
+    if (store.activo(a.id) == null) return;
+    if (error != null || _erroresMantenimiento.isNotEmpty) return;
+    _volcar();
+    final ahora = jsonEncode(a.toJson());
+    if (ahora == _guardado) return;
+    _guardado = ahora;
+    store.guardarActivo(a);
+  }
+
+  void guardar() {
+    setState(() => intentoGuardar = true);
+    if (error != null) return _irA(_claveIdentificacion);
+    if (_erroresMantenimiento.isNotEmpty) return _irA(_claveMantenimiento);
+    _volcar();
     store.guardarActivo(a);
     if (widget.incrustada) {
       widget.onTerminar?.call();
@@ -1237,9 +1318,13 @@ class _ActivoFormState extends State<ActivoForm> {
   Widget build(BuildContext context) {
     final existe = widget.original != null;
     final padre = store.activo(a.padreId);
+    // Icono, ritmo, fecha… (lo que no es texto) llegan con setState: también se guardan solos.
+    _programarGuardado();
 
     final que = componente ? 'componente' : 'activo';
     return VentanaFormulario(
+      sinPie: _autoguardado,
+      lider: existe ? Icon(Icons.edit_outlined, size: 20, color: P.textoSuave) : null,
       incrustada: widget.incrustada,
       soloLectura: widget.soloLectura,
       onCancelar: widget.incrustada ? widget.onTerminar : null,
@@ -1256,18 +1341,11 @@ class _ActivoFormState extends State<ActivoForm> {
         if (intentoGuardar && _erroresMantenimiento.isNotEmpty)
           (_erroresMantenimiento.values.first, () => _irA(_claveMantenimiento)),
       ],
-      onBorrar: !existe
+      onBorrar: !existe || _autoguardado
           ? null
           : () async {
               final nav = Navigator.of(context);
-              // Solo se pregunta si se lleva algo por delante (componentes, mantenimientos, OT); si no, basta con
-              // «Deshacer».
-              final aviso = avisoBorrarActivos([a.id]);
-              if (aviso != null &&
-                  !await confirmar(context, '¿Eliminar ${a.titulo}?', nota: '$aviso Podrás deshacerlo.')) {
-                return;
-              }
-              store.deshacible('Has borrado ${a.titulo}', () => store.borrarActivo(a.id));
+              if (!await borrarActivoConAviso(context, a)) return;
               if (widget.incrustada) {
                 widget.onTerminar?.call();
               } else {

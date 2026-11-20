@@ -93,7 +93,11 @@ class VentanaFormulario extends StatefulWidget {
 
   /// Incrustada: cancela lo que se estaba editando (sale «Cancelar» junto a Guardar).
   final VoidCallback? onCancelar;
+
+  /// Incrustada sin pie (sin Guardar, Cancelar ni Eliminar): se guarda sola al cambiar un campo.
+  final bool sinPie;
   const VentanaFormulario({
+    this.sinPie = false,
     super.key,
     required this.titulo,
     this.subtitulo,
@@ -181,7 +185,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 ),
               ),
             ),
-            if (!widget.soloLectura) ...[const Divider(), _pie()],
+            if (!widget.soloLectura && !widget.sinPie) ...[const Divider(), _pie()],
           ],
         ),
       );
