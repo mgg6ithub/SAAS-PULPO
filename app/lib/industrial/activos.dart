@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../ajustes.dart';
 import '../forms.dart';
 import '../marca.dart';
 import '../models.dart';
@@ -854,8 +855,9 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           if (pestana == 2) ...[
             const SizedBox(height: 16),
             // Lo que no se ve a primera vista: las órdenes que se repiten salen solas de los mantenimientos.
-            if (!_historicoOt) ...[
+            if (!_historicoOt && !ajustes.consejoCerrado('ot_activo_mantenimiento')) ...[
               Consejo(
+                clave: 'ot_activo_mantenimiento',
                 '¿Se repite cada cierto tiempo? Crea un mantenimiento y Pultec creará su orden de trabajo cada vez que '
                 'toque. Aquí, crea solo las órdenes sueltas.',
                 // Va a Resumen (donde están los mantenimientos) y abre el de crear uno.

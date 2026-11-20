@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ajustes.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
@@ -260,9 +261,10 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ]),
               ],
               // Pultec: que se entienda de dónde salen las órdenes que se repiten.
-              if (industrial && !historicoTrabajos.value) ...[
+              if (industrial && !historicoTrabajos.value && !ajustes.consejoCerrado('ot_mantenimiento')) ...[
                 const SizedBox(height: 12),
                 const Consejo(
+                  clave: 'ot_mantenimiento',
                   'Las órdenes que se repiten se crean solas: crea un mantenimiento en su activo (Activos, el activo, '
                   '+ Mantenimiento) y Pultec generará cada orden cuando toque. Aquí, crea solo las órdenes sueltas.',
                 ),

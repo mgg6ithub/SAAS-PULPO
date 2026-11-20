@@ -57,6 +57,14 @@ class Ajustes extends ChangeNotifier {
     _prefs?.setBool('ajustes_guia_organizar', true);
   }
 
+  /// Consejos cerrados con su X (no vuelven a salir en este navegador).
+  bool consejoCerrado(String clave) => _prefs?.getBool('ajustes_consejo_$clave') ?? false;
+
+  void cerrarConsejo(String clave) {
+    _prefs?.setBool('ajustes_consejo_$clave', true);
+    notifyListeners();
+  }
+
   /// Pultec: guía de Inicio ya completada en esta empresa (no vuelve aunque se borre todo). Se guarda en el
   /// navegador, por empresa.
   bool guiaPultecHecha(String empresa) => _prefs?.getBool('ajustes_guia_pultec_$empresa') ?? false;

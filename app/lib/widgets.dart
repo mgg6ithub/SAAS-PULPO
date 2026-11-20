@@ -2086,22 +2086,40 @@ class Consejo extends StatelessWidget {
 
   /// A la derecha, p. ej. un enlace para hacerlo.
   final Widget? accion;
-  const Consejo(this.texto, {super.key, this.accion});
+
+  /// Para recordar que se ha cerrado (por defecto, el propio texto).
+  final String? clave;
+  const Consejo(this.texto, {super.key, this.accion, this.clave});
 
   @override
-  Widget build(BuildContext context) => Tarjeta(
-    color: P.moradoSuave,
-    padding: const EdgeInsets.all(12),
-    child: Row(
-      children: [
-        Icon(Icons.lightbulb_outline_rounded, color: P.morado, size: 18),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(texto, style: TextStyle(color: P.moradoOscuro, fontSize: 13)),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: ajustes,
+    builder: (context, _) {
+      final id = clave ?? texto.hashCode.toString();
+      // Cerrado con su X: ya no sale.
+      if (ajustes.consejoCerrado(id)) return const SizedBox.shrink();
+      return Tarjeta(
+        color: P.moradoSuave,
+        padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
+        child: Row(
+          children: [
+            Icon(Icons.lightbulb_outline_rounded, color: P.morado, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(texto, style: TextStyle(color: P.moradoOscuro, fontSize: 13)),
+            ),
+            if (accion != null) ...[const SizedBox(width: 12), accion!],
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'No volver a mostrar',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => ajustes.cerrarConsejo(id),
+              icon: Icon(Icons.close_rounded, size: 18, color: P.moradoOscuro.withValues(alpha: .7)),
+            ),
+          ],
         ),
-        if (accion != null) ...[const SizedBox(width: 12), accion!],
-      ],
-    ),
+      );
+    },
   );
 }
 
