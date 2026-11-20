@@ -1579,6 +1579,7 @@ Incidencia _incidencia(Map x) => Incidencia(
   creadaPor: x['creada_por'],
   planId: x['plan_id'],
   cerradaEl: x['cerrada_el'] == null ? null : DateTime.parse(x['cerrada_el'] as String).toLocal(),
+  editadaEl: x['editada_el'] == null ? null : DateTime.parse(x['editada_el'] as String).toLocal(),
   descripcion: x['descripcion'],
   gravedad: Gravedad.values[x['gravedad'] as int],
   estado: EstadoIncidencia.values[x['estado'] as int],

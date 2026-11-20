@@ -38,6 +38,9 @@ class Incidencia {
 
   /// Cuándo se completó o se desestimó.
   DateTime? cerradaEl;
+
+  /// Última corrección de quien la comunicó (null = nunca editada).
+  DateTime? editadaEl;
   Gravedad gravedad;
   EstadoIncidencia estado;
   List<String> fotos;
@@ -52,6 +55,7 @@ class Incidencia {
     this.creadaPor,
     this.planId,
     this.cerradaEl,
+    this.editadaEl,
     this.descripcion = '',
     this.gravedad = Gravedad.media,
     this.estado = EstadoIncidencia.abierta,
@@ -69,6 +73,7 @@ class Incidencia {
     'creadaPor': creadaPor,
     'planId': planId,
     'cerradaEl': cerradaEl?.toIso8601String(),
+    'editadaEl': editadaEl?.toIso8601String(),
     'descripcion': descripcion,
     'gravedad': gravedad.index,
     'estado': estado.index,
@@ -85,6 +90,7 @@ class Incidencia {
     creadaPor: j['creadaPor'] as String?,
     planId: j['planId'] as String?,
     cerradaEl: j['cerradaEl'] == null ? null : DateTime.parse(j['cerradaEl'] as String),
+    editadaEl: j['editadaEl'] == null ? null : DateTime.parse(j['editadaEl'] as String),
     descripcion: j['descripcion'] as String? ?? '',
     gravedad: Gravedad.values[j['gravedad'] as int? ?? 1],
     estado: EstadoIncidencia.values[j['estado'] as int? ?? 0],

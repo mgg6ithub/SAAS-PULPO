@@ -180,6 +180,7 @@ void main() {
       await n.editarIncidencia(suyaAbierta.copia()..descripcion = 'Fuga de aceite en la junta', const [], const []);
       await store.cargarDesdeNube(n);
       expect(store.incidencias.firstWhere((i) => i.id == aviso.id).descripcion, 'Fuga de aceite en la junta');
+      expect(store.incidencias.firstWhere((i) => i.id == aviso.id).editadaEl, isNotNull, reason: 'avisa de la corrección');
       await _salir(n);
 
       // ── 5. Administrador: las dos abiertas; OT para la fuga vinculada a la revisión; desestima la otra ──

@@ -114,7 +114,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
         Navigator.pop(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Incidencia enviada. El responsable decidirá si crea una orden.')));
+        ).showSnackBar(const SnackBar(content: Text('Incidencia enviada. Si se te ha olvidado algo, puedes editarla mientras siga abierta.')));
       }
     } catch (_) {
       if (mounted) {

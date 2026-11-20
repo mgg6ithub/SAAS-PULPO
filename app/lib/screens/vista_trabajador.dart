@@ -1565,8 +1565,16 @@ Text('$etiqueta: ${t.nombre}')
     final lista = avisos.where((i) => _coincide(i.descripcion, i.activoId, i.gravedad.tipo, i.creada)
       && (estado == null || store.estadoIncidencia(i).index == estado)).toList();
     if (lista.isEmpty) return _vacio('No tienes incidencias enviadas con estos filtros');
-    return ListView.builder(itemCount: lista.length, itemBuilder: (_, n) {
-      final i = lista[n];
+    // Con alguna abierta, arriba el consejo de que aún se puede corregir.
+    final consejo = lista.any((i) => store.estadoIncidencia(i) == EstadoIncidencia.abierta);
+    return ListView.builder(itemCount: lista.length + (consejo ? 1 : 0), itemBuilder: (_, n) {
+      if (consejo && n == 0) {
+        return const Padding(
+          padding: EdgeInsets.only(bottom: 10),
+          child: Consejo('¿Se te ha olvidado algo? Toca una incidencia abierta para cambiarla. Cuando le asignen una OT ya no se podrá editar.'),
+        );
+      }
+      final i = lista[n - (consejo ? 1 : 0)];
       // Igual que las órdenes: la tarjeta entera se pulsa y se marca al pasar el ratón.
       return Padding(padding: const EdgeInsets.only(bottom: 8), child: HoverCard(padding: EdgeInsets.zero,
         onTap: () => _verIncidencia(i),

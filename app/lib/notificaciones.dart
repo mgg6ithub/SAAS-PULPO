@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'industrial/incidencia.dart';
+import 'industrial/mantenimientos.dart' show abrirIncidenciaForm;
 import 'marca.dart';
 import 'models.dart';
 import 'store.dart';
@@ -19,6 +20,9 @@ class Aviso {
   final DateTime cuando;
   final bool urgente;
   final String? tareaId, activoId;
+
+  /// Aviso de una incidencia: al pulsarlo se abre para revisarla.
+  final Incidencia? incidencia;
   const Aviso({
     required this.id,
     required this.titulo,
@@ -28,6 +32,7 @@ class Aviso {
     this.urgente = false,
     this.tareaId,
     this.activoId,
+    this.incidencia,
   });
 }
 
@@ -63,7 +68,7 @@ List<Aviso> avisosAhora() {
     );
   }
   for (final i in store.incidencias) {
-    if (i.estado != EstadoIncidencia.abierta || i.creada.isBefore(masDias(h, -_dias))) continue;
+    if (store.estadoIncidencia(i) != EstadoIncidencia.abierta || i.creada.isBefore(masDias(h, -_dias))) continue;
     lista.add(
       Aviso(
         id: 'inc-${i.id}',
@@ -72,9 +77,23 @@ List<Aviso> avisosAhora() {
         color: P.rojo,
         urgente: true,
         cuando: i.creada,
-        activoId: i.activoId,
+        incidencia: i,
       ),
     );
+    // Si quien la comunicó la corrige, otro aviso (uno por cada corrección).
+    final e = i.editadaEl;
+    if (e != null && !e.isBefore(masDias(h, -_dias))) {
+      lista.add(
+        Aviso(
+          id: 'inc-${i.id}-editada-${e.millisecondsSinceEpoch}',
+          titulo: '${_tecnico(i.tecnicoId)} modificó una incidencia',
+          detalle: [_activo(i.activoId), i.descripcion].where((x) => x.isNotEmpty).join(': '),
+          color: P.ambar,
+          cuando: e,
+          incidencia: i,
+        ),
+      );
+    }
   }
   final sinTecnico = store.tareas
       .where(
@@ -186,7 +205,9 @@ class _NotificacionesState extends State<Notificaciones> {
       abierto = false;
     });
     _guardar();
-    if (a.tareaId != null) {
+    if (a.incidencia != null) {
+      abrirIncidenciaForm(context, original: a.incidencia);
+    } else if (a.tareaId != null) {
       widget.onTarea(a.tareaId!);
     } else if (a.activoId != null) {
       widget.onActivo(a.activoId!);
