@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
+import '../industrial/activo.dart' show Activo;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -385,12 +386,19 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    _Eslabon(
-                      'Activo',
-                      activo?.titulo ?? 'Sin activo',
-                      lider: activo == null ? null : IconoActivo(activo.icono, size: 18, color: P.textoSuave),
-                    ),
-                    const _Flecha(),
+                    // Todo el árbol: el activo principal y, si la orden es de un componente, cada componente hasta él.
+                    if (activo == null) ...[
+                      const _Eslabon('Activo', 'Sin activo'),
+                      const _Flecha(),
+                    ] else
+                      for (final (i, x) in _ruta(activo).indexed) ...[
+                        _Eslabon(
+                          i == 0 ? 'Activo' : (i == 1 ? 'Componente' : 'Subcomponente'),
+                          i == 0 ? x.titulo : (x.nombre.trim().isEmpty ? x.tag : x.nombre),
+                          lider: IconoActivo(x.icono, size: 18, color: P.textoSuave),
+                        ),
+                        const _Flecha(),
+                      ],
                     // Sale de una incidencia: activo → incidencia → orden → solucionada.
                     if (incidencia != null)
                       _Eslabon(
@@ -567,4 +575,15 @@ class _Flecha extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Icon(Icons.arrow_forward_rounded, size: 16, color: P.textoSuave);
+}
+
+
+/// De la máquina principal al activo o componente [a] (incluido).
+List<Activo> _ruta(Activo a) {
+  final ruta = <Activo>[];
+  final vistos = <String>{};
+  for (Activo? x = a; x != null && vistos.add(x.id); x = store.activo(x.padreId)) {
+    ruta.insert(0, x);
+  }
+  return ruta;
 }
