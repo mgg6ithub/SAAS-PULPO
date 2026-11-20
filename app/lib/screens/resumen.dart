@@ -108,8 +108,8 @@ class Resumen extends StatelessWidget {
                   if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pultec.
                   if (!hayTarea && (industrial ? !guiaHecha : !ajustes.guiaOrganizar)) _ComoFunciona(columnas: dosCol),
-                  // Guía ya hecha y todo borrado: sin tutorial, solo cómo empezar.
-                  if (vacia && guiaHecha) const _SinMaquinas(),
+                  // Guía ya hecha y sin órdenes (todo borrado, o solo activos): sin tutorial, solo cómo seguir.
+                  if (industrial && !hayTarea && guiaHecha) const _SinMaquinas(),
                   if (hayTarea) ...[
                     // Pultec: las cuatro cifras son de órdenes de trabajo; con su título, como «Estado de los activos».
                     // En la vista mejorada, sin título: las cifras van justo bajo la cabecera, como en la maqueta.
@@ -289,26 +289,45 @@ const _meses = [
 
 /// Para una cuenta sin trabajos: el ciclo de Pultec en tres tarjetas y qué cifras verá en Inicio.
 /// Desaparece con el primer trabajo y deja paso a las cifras y los paneles.
-/// Pultec sin máquinas, con la guía ya hecha: un estado vacío sobrio en lugar del tutorial.
+/// Pultec sin órdenes de trabajo, con la guía ya hecha: un estado vacío sobrio en lugar del tutorial. Sin
+/// máquinas, invita a dar de alta la primera; con máquinas, a crear su primer mantenimiento.
 class _SinMaquinas extends StatelessWidget {
   const _SinMaquinas();
 
   @override
-  Widget build(BuildContext context) => Tarjeta(
-    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-    child: Vacio(
-      desplazable: false,
-      icono: Icons.layers_outlined,
-      titulo: 'Sin máquinas',
-      texto: 'Da de alta un activo y sus mantenimientos: Pultec creará las órdenes de trabajo y avisará de lo que toca.',
-      accion: BotonPrimario(
-        'Activo',
-        conIcono: true,
-        icono: Icons.add_rounded,
-        onPressed: () => abrirActivoForm(context),
-      ),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final primera = store.activos.where((a) => a.padreId == null).firstOrNull;
+    return Tarjeta(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      child: primera == null
+          ? Vacio(
+              desplazable: false,
+              icono: Icons.layers_outlined,
+              titulo: 'Sin máquinas',
+              texto:
+                  'Da de alta un activo y sus mantenimientos: Pultec creará las órdenes de trabajo y avisará de lo que toca.',
+              accion: BotonPrimario(
+                'Activo',
+                conIcono: true,
+                icono: Icons.add_rounded,
+                onPressed: () => abrirActivoForm(context),
+              ),
+            )
+          : Vacio(
+              desplazable: false,
+              icono: Icons.assignment_outlined,
+              titulo: 'Sin órdenes de trabajo',
+              texto:
+                  'Crea un mantenimiento en una máquina y Pultec generará sus órdenes de trabajo para cuando toque.',
+              accion: BotonPrimario(
+                'Mantenimiento',
+                conIcono: true,
+                icono: Icons.add_rounded,
+                onPressed: () => abrirPlanForm(context, activoId: primera.id),
+              ),
+            ),
+    );
+  }
 }
 
 class _ComoFunciona extends StatelessWidget {
@@ -1161,6 +1180,9 @@ class _HeroState extends State<_Hero> {
   /// Primera vez: bienvenida; con la guía a medias: lo que falta; después, el día (y por la noche, mañana).
   String get frase {
     if (industrial && store.activos.isEmpty) return 'Aún no hay máquinas. Da de alta la primera para empezar.';
+    if (industrial && !store.tareas.any((t) => !t.esPlantilla)) {
+      return 'Aún no hay órdenes de trabajo. Crea un mantenimiento y Pultec las generará solo.';
+    }
     final pasos = widget.pasos;
     final quedan = pasos.where((p) => !p).length;
     if (quedan == pasos.length) {
