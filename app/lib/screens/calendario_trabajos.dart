@@ -992,8 +992,11 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
 
   void _alResaltar() {
     if (otResaltada.value != widget.visita.tarea.id) {
-      if (_porResalte && portal.isShowing && otResaltada.value != null) _cerrar();
-      _porResalte = false;
+      // Al apagarse el aro (null) la ficha sigue abierta; al resaltar otra, se cierra.
+      if (otResaltada.value != null && _porResalte) {
+        if (portal.isShowing) _cerrar();
+        _porResalte = false;
+      }
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
