@@ -1035,11 +1035,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   }
 }
 
-/// Borra el activo (con sus componentes, mantenimientos, OT e incidencias). Solo pregunta si se lleva algo por
-/// delante; si no, basta con «Deshacer». Devuelve si se ha borrado.
+/// Borra el activo (con sus componentes, mantenimientos, OT e incidencias). Siempre pregunta antes y dice qué más
+/// se lleva por delante. Devuelve si se ha borrado.
 Future<bool> borrarActivoConAviso(BuildContext context, Activo a) async {
   final aviso = avisoBorrarActivos([a.id]);
-  if (aviso != null && !await confirmar(context, '¿Eliminar ${a.titulo}?', nota: '$aviso Podrás deshacerlo.')) {
+  final que = a.padreId == null ? 'el activo' : 'el componente';
+  if (!await confirmar(context, '¿Eliminar $que ${a.titulo}?', nota: [?aviso, 'Podrás deshacerlo.'].join(' '))) {
     return false;
   }
   store.deshacible('Has borrado ${a.titulo}', () => store.borrarActivo(a.id));
