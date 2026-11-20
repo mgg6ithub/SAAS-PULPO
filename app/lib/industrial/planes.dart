@@ -666,20 +666,6 @@ class _PlanFormState extends State<PlanForm> {
               nav.pop();
             },
       campos: [
-        // Al crearlo: con su orden de trabajo (lo normal) o solo el mantenimiento, pausado hasta reanudarlo (▶).
-        if (!existe)
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Crear su orden de trabajo', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(
-              p.activa
-                  ? 'Se crea ya, para la fecha que toque.'
-                  : 'Se guarda pausado, sin orden. Al reanudarlo (▶) se crea su orden.',
-              style: TextStyle(fontSize: 13, color: P.textoSuave),
-            ),
-            value: p.activa,
-            onChanged: (v) => setState(() => p.activa = v),
-          ),
         Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
           campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
@@ -823,6 +809,29 @@ class _PlanFormState extends State<PlanForm> {
             if (p.subcontratado) campo('Empresa externa y contacto', empresaExterna, hint: 'Grúas Norte · 600 000 000'),
           ],
         ),
+        // Al crearlo, al final y encendido: lo que hace un mantenimiento (crear sus órdenes solo). Apagado, se guarda
+        // pausado y sin orden hasta reanudarlo (▶).
+        if (!existe)
+          Bloque(
+            'Órdenes de trabajo',
+            descripcion: 'Un mantenimiento crea sus órdenes de trabajo solo.',
+            [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Crear las órdenes de trabajo automáticamente', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  p.activa
+                      ? 'Cada vez que toque este mantenimiento, Pultec creará su orden de trabajo para este activo, sin '
+                            'que tengas que hacerlo tú. La primera se crea ya, para la fecha que toque.'
+                      : 'Se guarda pausado: no se crea ninguna orden de trabajo hasta que lo reanudes (▶) en la lista '
+                            'de mantenimientos.',
+                  style: TextStyle(fontSize: 13, color: P.textoSuave, height: 1.4),
+                ),
+                value: p.activa,
+                onChanged: (v) => setState(() => p.activa = v),
+              ),
+            ],
+          ),
       ],
     );
   }

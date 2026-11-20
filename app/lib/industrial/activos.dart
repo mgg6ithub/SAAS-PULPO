@@ -858,7 +858,19 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               Consejo(
                 '¿Se repite cada cierto tiempo? Crea un mantenimiento y Pultec creará su orden de trabajo cada vez que '
                 'toque. Aquí, crea solo las órdenes sueltas.',
-                accion: Enlace('Crear mantenimiento', onTap: () => abrirPlanForm(context, activoId: a.id)),
+                // Va a Resumen (donde están los mantenimientos) y abre el de crear uno.
+                accion: TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: P.morado),
+                  onPressed: () {
+                    setState(() {
+                      pestana = 0;
+                      vista = 0;
+                    });
+                    abrirPlanForm(context, activoId: a.id);
+                  },
+                  icon: const Icon(Icons.content_paste_rounded, size: 18),
+                  label: const Text('Crear mantenimiento'),
+                ),
               ),
               const SizedBox(height: 12),
             ],
