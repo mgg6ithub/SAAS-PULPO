@@ -195,7 +195,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     // Mismo ancho centrada y acoplada: al cambiar de modo solo se mueve el marco y los campos no se
     // recolocan (cambiar de ancho rehacía todo el formulario de golpe y daba un tirón).
     final ancho = _movil ? pantalla.width : min(760.0, pantalla.width - 48);
-    final alto = acoplada ? pantalla.height : min(pantalla.height * .9, 900.0);
+    // Flotante: como mucho este alto; si el formulario es corto, la ventana se queda a su medida.
+    final alto = acoplada ? pantalla.height : min(pantalla.height * .88, 820.0);
     var left = lado < 0 ? 0.0 : pantalla.width - ancho;
     var top = 0.0;
     if (!acoplada) {
@@ -211,28 +212,34 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
           left: left,
           top: top,
           width: ancho,
-          height: alto,
-          child: Material(
+          height: acoplada ? alto : null,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: alto),
+            child: Material(
             color: P.superficie,
             elevation: 24,
             shadowColor: Colors.black45,
             borderRadius: BorderRadius.circular(acoplada ? 0 : 14),
             clipBehavior: Clip.antiAlias,
             child: Column(
+              mainAxisSize: acoplada ? MainAxisSize.max : MainAxisSize.min,
               children: [
                 _cabecera(),
                 const Divider(),
-                Expanded(
+                Flexible(
+                  fit: acoplada ? FlexFit.tight : FlexFit.loose,
                   child: ClipRect(
                     // Solo el marco cambia de tamaño en cada fotograma. Los campos conservan
                     // el ancho de destino, sin escalar texto ni repetir su maquetación.
                     child: OverflowBox(
+                      // A la medida del contenido (si cabe): la ventana no es más alta de lo necesario.
+                      fit: OverflowBoxFit.deferToChild,
                       alignment: Alignment.topLeft,
                       minWidth: ancho,
                       maxWidth: ancho,
                       child: SingleChildScrollView(
                         controller: scroll,
-                        padding: EdgeInsets.fromLTRB(_movil ? 16 : 22, 2, _movil ? 16 : 22, 20),
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 14),
                         child: RepaintBoundary(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
                         ),
@@ -244,6 +251,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 _pie(),
               ],
             ),
+          ),
           ),
         ),
       ],
@@ -272,7 +280,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
             // A la derecha, sitio para los botones de ventana (y la criticidad debajo, si la hay).
             padding: EdgeInsets.fromLTRB(
-              _movil ? 16 : 22,
+              16,
               widget.incrustada ? 10 : (acoplada ? 16 : 4),
               widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : (_movil ? 56 : 120)),
               widget.incrustada ? 10 : 8,
@@ -381,7 +389,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
   );
 
   Widget _pie() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
     child: Row(
       children: [
         if (widget.onBorrar != null)
@@ -586,13 +594,13 @@ class Bloque extends StatelessWidget {
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 190, child: cabeza),
-                  const SizedBox(width: 24),
+                  SizedBox(width: 170, child: cabeza),
+                  const SizedBox(width: 18),
                   Expanded(child: campos),
                 ],
               );
         return Container(
-          padding: EdgeInsets.only(top: primero ? 12 : 16, bottom: 6),
+          padding: EdgeInsets.only(top: primero ? 10 : 14, bottom: 4),
           decoration: BoxDecoration(
             border: primero ? null : Border(top: BorderSide(color: P.borde)),
           ),
