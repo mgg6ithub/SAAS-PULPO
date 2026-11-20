@@ -248,7 +248,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                         width: ancho,
                         child: SingleChildScrollView(
                           controller: scroll,
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                          padding: const EdgeInsets.fromLTRB(20, 2, 20, 16),
                           child: RepaintBoundary(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
                           ),
@@ -290,8 +290,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
             // A la derecha, sitio para los botones de ventana (y la criticidad debajo, si la hay).
             padding: EdgeInsets.fromLTRB(
-              12,
-              widget.incrustada ? 10 : (acoplada ? 12 : 2),
+              20,
+              widget.incrustada ? 10 : (acoplada ? 12 : 4),
               widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : (_movil ? 56 : 120)),
               widget.incrustada ? 10 : 8,
             ),
@@ -399,7 +399,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
   );
 
   Widget _pie() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
     child: Row(
       children: [
         if (widget.onBorrar != null)
@@ -593,11 +593,11 @@ class Bloque extends StatelessWidget {
           children: [
             Text(
               titulo,
-              style: TextStyle(fontFamily: P.titulos, fontSize: 15.5, fontWeight: FontWeight.w700),
+              style: TextStyle(fontFamily: P.titulos, fontSize: 16.5, fontWeight: FontWeight.w700),
             ),
             if (descripcion != null) ...[
               const SizedBox(height: 4),
-              Text(descripcion!, style: TextStyle(fontSize: 12.5, color: P.textoSuave, height: 1.4)),
+              Text(descripcion!, style: TextStyle(fontSize: 14, color: P.textoSuave, height: 1.4)),
             ],
             if (pie != null) ...[const SizedBox(height: 14), pie!],
           ],
@@ -618,7 +618,7 @@ class Bloque extends StatelessWidget {
                 ],
               );
         return Container(
-          padding: EdgeInsets.only(top: primero ? 6 : 12, bottom: 2),
+          padding: EdgeInsets.only(top: primero ? 10 : 16, bottom: 6),
           decoration: BoxDecoration(
             border: primero ? null : Border(top: BorderSide(color: P.borde)),
           ),
