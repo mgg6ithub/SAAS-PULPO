@@ -2256,11 +2256,12 @@ class SelectorActivo extends StatelessWidget {
         child: filtro ? TextButton(
           onPressed: () => menu.isOpen ? menu.close() : menu.open(),
           style: TextButton.styleFrom(
-            minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 10),
+            // Mismo alto (40) y radio que el buscador y las pestañas de su barra.
+            minimumSize: const Size(0, 40), fixedSize: const Size.fromHeight(40), padding: const EdgeInsets.symmetric(horizontal: 12),
             foregroundColor: valor == null ? P.textoSuave : P.morado,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             side: BorderSide(color: P.borde),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
           ),
           child: Directionality(textDirection: TextDirection.ltr, child: Row(mainAxisSize: MainAxisSize.min, children: [
             IconoActivo(store.activo(valor)?.icono ?? 'brazo', size: 18, color: P.textoSuave),
