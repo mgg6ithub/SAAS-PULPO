@@ -987,10 +987,20 @@ class _EventoCalendarioState extends State<_EventoCalendario> {
   }
 
   /// «Ver el próximo mantenimiento»: además del aro, se abre su ficha como al pasar el ratón.
+  /// La ficha se abrió por el resalte (no por el ratón): se cierra al pasar al siguiente.
+  bool _porResalte = false;
+
   void _alResaltar() {
-    if (otResaltada.value != widget.visita.tarea.id) return;
+    if (otResaltada.value != widget.visita.tarea.id) {
+      if (_porResalte && portal.isShowing && otResaltada.value != null) _cerrar();
+      _porResalte = false;
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && otResaltada.value == widget.visita.tarea.id && !portal.isShowing) _abrir(fijar: true);
+      if (mounted && otResaltada.value == widget.visita.tarea.id && !portal.isShowing) {
+        _abrir(fijar: true);
+        _porResalte = true;
+      }
     });
   }
 

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../ajustes.dart';
 import '../models.dart';
@@ -71,11 +72,36 @@ class _PlanificacionState extends State<Planificacion> {
   /// El mapa ya se ha mostrado alguna vez: desde entonces se queda montado (solo se oculta).
   bool mapaVisto = false;
   @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_teclaEspacio);
+  }
+
+  @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_teclaEspacio);
     anchoMapa.dispose();
     _organizarRect.dispose();
     super.dispose();
   }
+
+  /// Espacio = prismáticos (siguiente mantenimiento). No al escribir, con Ctrl/Cmd/Alt ni con un diálogo encima.
+  bool _teclaEspacio(KeyEvent e) {
+    if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.space || !mounted) return false;
+    if (!industrial || vista != 1) return false;
+    final teclado = HardwareKeyboard.instance;
+    if (teclado.isControlPressed || teclado.isMetaPressed || teclado.isAltPressed) return false;
+    final foco = primaryFocus?.context;
+    if (foco?.findAncestorStateOfType<EditableTextState>() != null) return false;
+    // Con un diálogo encima, no (la ficha flotante del calendario no cuenta: no es otra ruta).
+    final ruta = foco == null ? null : ModalRoute.of(foco);
+    if (ruta != null && ruta != ModalRoute.of(context)) return false;
+    _verProximo();
+    return true;
+  }
+
+  /// Último mantenimiento enseñado con los prismáticos: el siguiente toque va al que viene después.
+  String? _ultimoVisto;
 
   /// Panel lateral con los trabajos sin técnico.
   bool sinAsignar = false;
@@ -90,14 +116,25 @@ class _PlanificacionState extends State<Planificacion> {
 
   DateTime get lunes => lunesDe(dia);
 
-  /// Salta al día del próximo mantenimiento pendiente (o, si no hay ninguno por venir, del más antiguo vencido) y
-  /// resalta su bloque en el calendario.
+  /// Prismáticos (o Espacio): recorre los mantenimientos pendientes en orden de fecha, uno a uno. El primero es el
+  /// próximo desde hoy; cada pulsación va al siguiente y, tras el último, vuelve al primero. Salta a su día, lo
+  /// resalta y abre su ficha.
   void _verProximo() {
     final abiertas = store.tareas
         .where((t) => !t.esPlantilla && t.activa && t.estado.abierta && t.proximo != null)
         .toList()
-      ..sort((a, b) => a.proximo!.compareTo(b.proximo!));
-    final t = abiertas.where((t) => diasHasta(t.proximo!) >= 0).firstOrNull ?? abiertas.firstOrNull;
+      ..sort((a, b) {
+        final c = a.proximo!.compareTo(b.proximo!);
+        return c != 0 ? c : (a.inicioMin ?? 0).compareTo(b.inicioMin ?? 0);
+      });
+    // Primero los de hoy en adelante; los vencidos, al final de la vuelta.
+    final lista = [
+      ...abiertas.where((t) => diasHasta(t.proximo!) >= 0),
+      ...abiertas.where((t) => diasHasta(t.proximo!) < 0),
+    ];
+    final anterior = lista.indexWhere((t) => t.id == _ultimoVisto);
+    final t = lista.isEmpty ? null : lista[(anterior + 1) % lista.length];
+    _ultimoVisto = t?.id;
     if (t == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('No hay mantenimientos pendientes')),
@@ -289,7 +326,7 @@ class _PlanificacionState extends State<Planificacion> {
                   // Pultec: ir al próximo mantenimiento, pegado a la izquierda del «+».
                   if (industrial && vista == 1) ...[
                     Tooltip(
-                      message: 'Ver el próximo mantenimiento',
+                      message: 'Ver el siguiente mantenimiento (Espacio)',
                       child: Material(
                         color: P.superficie,
                         shape: RoundedRectangleBorder(
