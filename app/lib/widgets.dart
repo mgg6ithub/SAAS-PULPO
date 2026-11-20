@@ -2336,6 +2336,99 @@ class BarraSeleccion extends StatelessWidget {
   );
 }
 
+/// Lo que una [Tabla] necesita para la selección múltiple: el botón de la cabecera, la columna y la casilla
+/// de cada fila, y qué hace tocar una fila (marcarla si se está seleccionando; si no, abrirla).
+class Seleccionable {
+  final bool activo;
+  final Set<String> ids;
+  final VoidCallback _modo;
+  final ValueChanged<String> _alternar;
+  const Seleccionable._(this.activo, this.ids, this._modo, this._alternar);
+
+  Widget get cabecera => BotonSeleccionLista(activo: activo, onTap: _modo);
+  List<Col> get columna => activo ? const [Col('', ancho: 36, cabecera: SizedBox())] : const [];
+  List<Widget> casilla(String id) => activo ? [CirculoSeleccion(ids.contains(id))] : const [];
+  void tocar(String id, VoidCallback abrir) => activo ? _alternar(id) : abrir();
+}
+
+/// Selección múltiple de una lista vertical, como en Órdenes de trabajo y Técnicos: [builder] pinta la
+/// tabla con el [Seleccionable] y aquí va la barra flotante para seleccionar todo y eliminar.
+class SeleccionMultiple extends StatefulWidget {
+  /// Ids de las filas visibles, en orden.
+  final List<String> ids;
+  final String singular, plural;
+  final ValueChanged<String> borrar;
+
+  /// Aviso al confirmar (p. ej. qué más se borra con ellos).
+  final String? nota;
+  final Widget Function(BuildContext context, Seleccionable s) builder;
+  const SeleccionMultiple({
+    super.key,
+    required this.ids,
+    required this.singular,
+    required this.plural,
+    required this.borrar,
+    required this.builder,
+    this.nota,
+  });
+
+  @override
+  State<SeleccionMultiple> createState() => _SeleccionMultipleState();
+}
+
+class _SeleccionMultipleState extends State<SeleccionMultiple> {
+  bool activo = false;
+  final sel = <String>{};
+
+  void _salir() => setState(() {
+    activo = false;
+    sel.clear();
+  });
+
+  Future<void> _eliminar() async {
+    final ids = sel.where(widget.ids.contains).toList();
+    final que = '${ids.length} ${ids.length == 1 ? widget.singular : widget.plural}';
+    if (!await confirmar(context, '¿Eliminar $que?', nota: widget.nota ?? 'Podrás deshacerlo.')) return;
+    store.deshacible('Has borrado $que', () => ids.forEach(widget.borrar));
+    _salir();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = sel.where(widget.ids.contains).length;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        widget.builder(
+          context,
+          Seleccionable._(
+            activo,
+            sel,
+            () => activo ? _salir() : setState(() => activo = true),
+            (id) => setState(() => sel.contains(id) ? sel.remove(id) : sel.add(id)),
+          ),
+        ),
+        if (activo)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 24,
+            child: Center(
+              child: BarraSeleccion(
+                seleccionados: n,
+                total: widget.ids.length,
+                nombre: widget.plural,
+                onTodos: () => setState(() => n == widget.ids.length ? sel.clear() : sel.addAll(widget.ids)),
+                onEliminar: _eliminar,
+                onSalir: _salir,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 // ── Rendimiento ──────────────────────────────────────────
 
 /// Como LayoutBuilder, pero solo vuelve a construir su contenido cuando cambia [clave] (un umbral,

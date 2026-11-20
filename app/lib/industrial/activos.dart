@@ -220,10 +220,18 @@ class _TablaActivos extends StatelessWidget {
       final ancho = box.maxWidth > 980;
       // Móvil: el activo y el punto de su estado.
       final medio = box.maxWidth > 600;
-      return Align(
+      return SeleccionMultiple(
+        ids: [for (final a in activos) a.id],
+        singular: componentes ? 'componente' : 'activo',
+        plural: componentes ? 'componentes' : 'activos',
+        borrar: store.borrarActivo,
+        nota: 'Se borran también sus componentes, mantenimientos e incidencias. Podrás deshacerlo.',
+        builder: (context, s) => Align(
         alignment: Alignment.topCenter,
         child: Tabla(
+          seleccionCabecera: s.cabecera,
           columnas: [
+            ...s.columna,
             Col(componentes ? 'Componente' : 'Activo', flex: componentes ? 3 : 6),
             if (componentes) const Col('Tag', flex: 2),
             if (ancho) const Col('Fabricante y modelo', flex: 2),
@@ -250,6 +258,7 @@ class _TablaActivos extends StatelessWidget {
           celdas: (i) {
             final a = activos[i];
             return [
+              ...s.casilla(a.id),
               Row(
                 children: [
                   // Sin color: la criticidad es de los mantenimientos, no del activo.
@@ -321,7 +330,7 @@ class _TablaActivos extends StatelessWidget {
                 celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
             ];
           },
-          onTap: (i) => onAbrir(activos[i].id),
+          onTap: (i) => s.tocar(activos[i].id, () => onAbrir(activos[i].id)),
           pie: pieTabla(
             activos.length,
             componentes
@@ -329,6 +338,7 @@ class _TablaActivos extends StatelessWidget {
                 : (activos.length == 1 ? 'activo' : 'activos'),
           ),
         ),
+      ),
       );
     },
   );

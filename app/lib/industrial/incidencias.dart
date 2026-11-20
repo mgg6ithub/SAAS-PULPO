@@ -120,8 +120,15 @@ class _TablaIncidencias extends StatelessWidget {
     clave: (box) => (box.maxWidth > 980, box.maxWidth > 640),
     builder: (context, box) {
       final ancho = box.maxWidth > 980, medio = box.maxWidth > 640;
-      return Tabla(
+      return SeleccionMultiple(
+        ids: [for (final e in lista) e.$1.id],
+        singular: 'incidencia',
+        plural: 'incidencias',
+        borrar: store.borrarIncidencia,
+        builder: (context, s) => Tabla(
+        seleccionCabecera: s.cabecera,
         columnas: [
+          ...s.columna,
           const Col('Incidencia', flex: 4),
           if (medio) const Col('Activo', flex: 3),
           if (ancho) const Col('Comunicada por', flex: 2),
@@ -134,6 +141,7 @@ class _TablaIncidencias extends StatelessWidget {
           final (x, est) = lista[i];
           final ot = store.tarea(x.trabajoId);
           return [
+            ...s.casilla(x.id),
             Row(
               children: [
                 Tooltip(message: x.gravedad.etiqueta, child: puntoTipo(x.gravedad.color, tam: 10)),
@@ -156,8 +164,9 @@ class _TablaIncidencias extends StatelessWidget {
             if (medio) BotonPdf(() => descargarInformeIncidencia(x), tooltip: 'Descargar el informe en PDF'),
           ];
         },
-        onTap: (i) => abrirIncidenciaForm(context, original: lista[i].$1),
+        onTap: (i) => s.tocar(lista[i].$1.id, () => abrirIncidenciaForm(context, original: lista[i].$1)),
         pie: pieTabla(lista.length, lista.length == 1 ? 'incidencia' : 'incidencias'),
+      ),
       );
     },
   );

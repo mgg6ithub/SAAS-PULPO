@@ -232,7 +232,14 @@ class _TablaPlanesState extends State<TablaPlanes> {
         for (final c in _opcionales)
           if (medio ? _visibles.contains(c) : c == 'Fecha') c,
       ];
+      return SeleccionMultiple(
+        ids: [for (final p in ps) p.id],
+        singular: 'mantenimiento',
+        plural: 'mantenimientos',
+        borrar: store.borrarPlan,
+        builder: (context, s) {
       final columnas = [
+        ...s.columna,
         const Col('Mantenimiento', flex: 4),
         for (final c in vistas) _cols[c]!,
         if (medio) Col('Columnas', ancho: 40, derecha: true, cabecera: _menuColumnas()),
@@ -244,9 +251,10 @@ class _TablaPlanesState extends State<TablaPlanes> {
         child: Align(
           alignment: Alignment.topCenter,
           child: Tabla(
+            seleccionCabecera: s.cabecera,
             columnas: columnas,
             filas: ps.length,
-            onTap: (i) => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]),
+            onTap: (i) => s.tocar(ps[i].id, () => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i])),
             pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
             resaltar: (i) => ps[i].id == planDestacado.value ? P.morado : null,
             celdas: (i) {
@@ -331,6 +339,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
               }
 
               return [
+                ...s.casilla(p.id),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
@@ -362,6 +371,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
             },
           ),
         ),
+      );
+        },
       );
     },
   );
