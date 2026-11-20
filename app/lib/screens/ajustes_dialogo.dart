@@ -35,7 +35,11 @@ class _Ajustes extends StatefulWidget {
   State<_Ajustes> createState() => _AjustesState();
 }
 
+/// Versión que se enseña en Ajustes (la de pubspec.yaml).
+const versionApp = '1.0.0';
+
 class _AjustesState extends State<_Ajustes> {
+  static const _altoFila = 40.0, _huecoFila = 4.0;
   int elegida = 0;
 
   List<_Seccion> get _secciones => [
@@ -191,40 +195,84 @@ class _AjustesState extends State<_Ajustes> {
                     ),
                     const SizedBox(height: 14),
                   ],
-                  for (final (i, (ic, c, n, _)) in secciones.indexed)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      // Como la barra lateral de la app: la elegida, en blanco con borde fino e icono morado.
-                      child: Material(
-                        color: i == elegida ? P.superficie : Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(P.radioControl),
-                          side: BorderSide(color: i == elegida ? P.borde : Colors.transparent),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(P.radioControl),
-                          hoverColor: P.hover,
-                          onTap: () => setState(() => elegida = i),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                            child: Row(
-                              children: [
-                                Icon(ic, size: 20, color: i == elegida ? c : P.textoSuave),
-                                const SizedBox(width: 10),
-                                Text(
-                                  n,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: i == elegida ? FontWeight.w600 : FontWeight.w500,
-                                    color: P.texto,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  // Como la barra lateral de la app: un único fondo blanco que se desliza a la elegida; las filas,
+                  // sin onda, solo cambian de color.
+                  Stack(
+                    children: [
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeOutCubic,
+                        top: elegida * (_altoFila + _huecoFila),
+                        left: 0,
+                        right: 0,
+                        height: _altoFila,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: P.seleccionBarra,
+                            borderRadius: BorderRadius.circular(P.radioControl),
+                            boxShadow: P.sombraSeleccionBarra,
                           ),
                         ),
                       ),
+                      Column(
+                        children: [
+                          for (final (i, (ic, _, n, _)) in secciones.indexed)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: _huecoFila),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(P.radioControl),
+                                mouseCursor: SystemMouseCursors.click,
+                                splashFactory: NoSplash.splashFactory,
+                                highlightColor: Colors.transparent,
+                                hoverColor: P.hoverBarra,
+                                onTap: () => setState(() => elegida = i),
+                                child: SizedBox(
+                                  height: _altoFila,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Row(
+                                      children: [
+                                        TweenAnimationBuilder<Color?>(
+                                          tween: ColorTween(end: i == elegida ? P.iconoBarraElegido : P.textoBarraSuave),
+                                          duration: const Duration(milliseconds: 200),
+                                          builder: (_, c, _) => Icon(ic, size: 20, color: c),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        AnimatedDefaultTextStyle(
+                                          duration: const Duration(milliseconds: 200),
+                                          style: TextStyle(
+                                            fontFamily: P.titulos,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: i == elegida ? P.textoBarraElegido : P.textoBarra,
+                                          ),
+                                          child: Text(n),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  // Abajo del todo: la app y su versión.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: [
+                        const LogoPultec(size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${Marca.nombre} · versión $versionApp',
+                          style: TextStyle(fontSize: 12, color: P.textoSuave),
+                        ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),
