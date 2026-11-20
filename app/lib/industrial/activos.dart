@@ -72,10 +72,18 @@ Widget _flechaActivo(bool adelante, VoidCallback? pulsar) => IconButton(
   icon: Icon(adelante ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded, size: 20),
 );
 
-Widget _raizActivos() => Row(mainAxisSize: MainAxisSize.min, children: [
-  Icon(Marca.iconoCliente, size: 24, color: P.textoSuave),
-  const SizedBox(width: 4),
-  const Text('Activos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+/// «Activos» al principio de la ruta: grande si es donde estás (la lista); si no, pequeño como los pasos anteriores.
+Widget _raizActivos({bool actual = false}) => Row(mainAxisSize: MainAxisSize.min, children: [
+  Icon(Marca.iconoCliente, size: actual ? 28 : 18, color: actual ? P.texto : P.textoSuave),
+  SizedBox(width: actual ? 6 : 4),
+  Text(
+    'Activos',
+    style: TextStyle(
+      fontSize: actual ? 22 : 15,
+      fontWeight: actual ? FontWeight.w700 : FontWeight.w500,
+      letterSpacing: actual ? -.4 : 0,
+    ),
+  ),
 ]);
 
 /// Sección «Activos» de Pultec: las máquinas con el color de su estado; al abrir una, su árbol de componentes.
@@ -553,15 +561,17 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  IconoActivo(activo.icono, size: 24, color: P.textoSuave),
-                                  const SizedBox(width: 4),
+                                  // Donde estás, grande y en negro; lo de antes, más pequeño y en gris.
+                                  IconoActivo(activo.icono, size: actual ? 28 : 18, color: actual ? P.texto : P.textoSuave),
+                                  SizedBox(width: actual ? 6 : 4),
                                   Text(
                                 texto.isEmpty ? 'Activo' : texto,
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: actual ? 22 : 15,
                                   fontWeight: actual
-                                      ? FontWeight.w600
+                                      ? FontWeight.w700
                                       : FontWeight.w400,
+                                  letterSpacing: actual ? -.4 : 0,
                                 ),
                                   ),
                                 ],
@@ -731,7 +741,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       return Activos(onAbrir: _abrir, navegacion: SizedBox(height: 40, child: Row(mainAxisSize: MainAxisSize.min, children: [
         _flechaActivo(false, null),
         _flechaActivo(true, _posicion + 1 < _historial.length ? () => _recorrer(1) : null),
-        const SizedBox(width: 4), _raizActivos(),
+        const SizedBox(width: 4), _raizActivos(actual: true),
       ])));
     }
     elegido = a.id;
