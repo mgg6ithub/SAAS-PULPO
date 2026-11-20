@@ -1348,7 +1348,17 @@ class _NombreEmpresaState extends State<_NombreEmpresa> {
     focusNode: _foco,
     style: widget.estilo,
     maxLines: 1,
-    decoration: const InputDecoration.collapsed(hintText: 'Nombre de la empresa'),
+    // Sin caja: ni borde (tampoco al pasar el ratón o escribir), ni fondo, ni márgenes del tema.
+    decoration: const InputDecoration(
+      hintText: 'Nombre de la empresa',
+      isCollapsed: true,
+      contentPadding: EdgeInsets.zero,
+      filled: false,
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      hoverColor: Colors.transparent,
+    ),
     onChanged: (_) {
       _espera?.cancel();
       _espera = Timer(const Duration(milliseconds: 800), _guardar);
