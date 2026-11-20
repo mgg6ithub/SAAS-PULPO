@@ -90,6 +90,24 @@ class _PlanificacionState extends State<Planificacion> {
 
   DateTime get lunes => lunesDe(dia);
 
+  /// Salta al día del próximo mantenimiento pendiente (o, si no hay ninguno por venir, del más antiguo vencido) y
+  /// resalta su bloque en el calendario.
+  void _verProximo() {
+    final abiertas = store.tareas
+        .where((t) => !t.esPlantilla && t.activa && t.estado.abierta && t.proximo != null)
+        .toList()
+      ..sort((a, b) => a.proximo!.compareTo(b.proximo!));
+    final t = abiertas.where((t) => diasHasta(t.proximo!) >= 0).firstOrNull ?? abiertas.firstOrNull;
+    if (t == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('No hay mantenimientos pendientes')),
+      );
+      return;
+    }
+    setState(() => dia = t.proximo!);
+    resaltarOt(t.id);
+  }
+
   bool get _guiaOrganizarVisible {
     // Pultec: sin Organizar (de momento), así que tampoco su guía.
     if (industrial) return false;
@@ -190,7 +208,8 @@ class _PlanificacionState extends State<Planificacion> {
     );
     // Más sitio para el calendario y el mapa: márgenes estrechos y una sola barra compacta.
     final pagina = Padding(
-      padding: vista == 1 ? const EdgeInsets.fromLTRB(12, 12, 12, 0) : margenPagina,
+      // Con margen abajo: la última fila del calendario no toca el borde.
+      padding: vista == 1 ? const EdgeInsets.fromLTRB(12, 12, 12, 12) : margenPagina,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -289,9 +308,31 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                   if (vista == 1) const SizedBox(width: 8),
                   // Organizar: organiza el día que estás viendo.
-                  // Pultec: Organizar quitado de momento.
+                  // Pultec: Organizar quitado de momento; en su sitio, ir al próximo mantenimiento.
                   if (!industrial)
                     BotonPultec(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
+                  if (industrial && vista == 1) ...[
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Ver el próximo mantenimiento',
+                      child: Material(
+                        color: P.superficie,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          side: BorderSide(color: P.borde),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          onTap: _verProximo,
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: Center(child: Prismaticos(size: 20, color: P.morado)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   // Pultec, sin rutas: sin mapa ni su botón.
                   if (Marca.mapa && vista == 1) ...[
                     const SizedBox(width: 8),

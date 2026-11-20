@@ -294,7 +294,7 @@ class _MesCalendario extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 3),
                 child: SizedBox(
                   height: alto - 3,
-                  child: _EventoCalendario(v, compacto: true, onDetalle: onDetalle),
+                  child: _Resaltable(v.tarea.id, _EventoCalendario(v, compacto: true, onDetalle: onDetalle)),
                 ),
               ),
             if (lista.length > capacidad)
@@ -480,7 +480,7 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
                                                     ),
                                                   ),
                                                 )
-                                              : _EventoCalendario(v, compacto: true, onDetalle: widget.onDetalle),
+                                              : _Resaltable(v.tarea.id, _EventoCalendario(v, compacto: true, onDetalle: widget.onDetalle)),
                                         ),
                                       ),
                                 ],
@@ -585,7 +585,7 @@ class _SemanaCalendarioState extends State<_SemanaCalendario> {
             top: v.inicio! / 60 * hora + 1,
             width: w - 6,
             height: min(1440 - v.inicio!, max(24, v.fin! - v.inicio!)) / 60 * hora - 2,
-            child: _EventoCalendario(v, onDetalle: widget.onDetalle),
+            child: _Resaltable(v.tarea.id, _EventoCalendario(v, onDetalle: widget.onDetalle)),
           ),
       if (exceso)
         Positioned(
@@ -769,7 +769,7 @@ class _DiaCalendarioState extends State<_DiaCalendario> {
                                   width: f.sinHora
                                       ? max(hora * 1.5, v.tarea.duracionMin / 60 * hora - 4)
                                       : max(hora / 2 - 4, (v.fin! - v.inicio!) / 60 * hora - 4),
-                                  child: _EventoCalendario(v, onDetalle: widget.onDetalle),
+                                  child: _Resaltable(v.tarea.id, _EventoCalendario(v, onDetalle: widget.onDetalle)),
                                 ),
                             ],
                           ),
@@ -858,6 +858,89 @@ class _RejillaCalendario extends CustomPainter {
       fondo != old.fondo ||
       borde != old.borde ||
       ahora.minute != old.ahora.minute;
+}
+
+/// Orden resaltada en el calendario (p. ej. con «Ver el próximo mantenimiento»): su bloque lleva un aro morado.
+final otResaltada = ValueNotifier<String?>(null);
+
+Timer? _quitarResalte;
+
+/// Resalta [id] unos segundos.
+void resaltarOt(String id) {
+  otResaltada.value = id;
+  _quitarResalte?.cancel();
+  _quitarResalte = Timer(const Duration(seconds: 5), () => otResaltada.value = null);
+}
+
+/// Bloque de una orden con su aro morado si es la resaltada.
+class _Resaltable extends StatelessWidget {
+  final String id;
+  final Widget child;
+  const _Resaltable(this.id, this.child);
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<String?>(
+    valueListenable: otResaltada,
+    child: child,
+    builder: (context, resaltada, child) => AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      foregroundDecoration: resaltada == id
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: P.morado, width: 2),
+            )
+          : null,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: resaltada == id
+            ? [BoxShadow(color: P.morado.withValues(alpha: .35), blurRadius: 12, spreadRadius: 1)]
+            : null,
+      ),
+      child: child,
+    ),
+  );
+}
+
+/// Prismáticos (no hay en Material): dos lentes redondas unidas por un puente.
+class Prismaticos extends StatelessWidget {
+  final double size;
+  final Color color;
+  const Prismaticos({super.key, this.size = 20, required this.color});
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _PrismaticosPainter(color));
+}
+
+class _PrismaticosPainter extends CustomPainter {
+  final Color color;
+  const _PrismaticosPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size s) {
+    final w = s.width, h = s.height;
+    final p = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * .09
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final r = w * .2;
+    // Lentes.
+    canvas.drawCircle(Offset(w * .26, h * .68), r, p);
+    canvas.drawCircle(Offset(w * .74, h * .68), r, p);
+    // Cuerpos hacia arriba.
+    canvas.drawLine(Offset(w * .08, h * .64), Offset(w * .2, h * .2), p);
+    canvas.drawLine(Offset(w * .2, h * .2), Offset(w * .38, h * .2), p);
+    canvas.drawLine(Offset(w * .44, h * .62), Offset(w * .38, h * .2), p);
+    canvas.drawLine(Offset(w * .92, h * .64), Offset(w * .8, h * .2), p);
+    canvas.drawLine(Offset(w * .8, h * .2), Offset(w * .62, h * .2), p);
+    canvas.drawLine(Offset(w * .56, h * .62), Offset(w * .62, h * .2), p);
+    // Puente.
+    canvas.drawLine(Offset(w * .44, h * .5), Offset(w * .56, h * .5), p);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PrismaticosPainter old) => old.color != color;
 }
 
 class _EventoCalendario extends StatefulWidget {
