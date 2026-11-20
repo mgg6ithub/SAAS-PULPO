@@ -175,7 +175,7 @@ class Resumen extends StatelessWidget {
                     if (industrial && P.mejorada && (store.activos.isNotEmpty || !hayTarea)) ...[
                       if (hayTarea) ...[
                         AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
                       ] else
                         const SizedBox(height: 16),
@@ -203,6 +203,14 @@ class Resumen extends StatelessWidget {
                         // las órdenes (o las órdenes hasta el final de la derecha), sin huecos abajo.
                         // Sin órdenes, ni carga del equipo ni semana: solo la tarjeta de cómo seguir, a todo el ancho.
                         if (!hayTarea) return ordenes;
+                        // Nada en los próximos 7 días: la carga del equipo y la semana saldrían vacías. En su lugar,
+                        // cómo funciona Pultec (tres etapas con su barrita de color), debajo de las órdenes.
+                        if (semana.isEmpty) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [ordenes, const SizedBox(height: 16), _ComoFunciona(columnas: dosCol)],
+                          );
+                        }
                         return alLado
                             ? IntrinsicHeight(
                                 child: Row(
