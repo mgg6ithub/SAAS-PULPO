@@ -266,6 +266,9 @@ class Trabajador {
   /// Pultec: grupo al que pertenece (null = ninguno).
   String? grupoId;
 
+  /// Pultec: activos (máquinas) que eligió al entrar la última vez; van con su cuenta.
+  List<String> activosElegidos;
+
   /// Foto en PNG base64 (vacío = sin foto).
   String foto;
   List<String> competencias;
@@ -294,7 +297,9 @@ class Trabajador {
     this.salidaLat,
     this.salidaLng,
     this.grupoId,
-  }) : competencias = competencias ?? [];
+    List<String>? activosElegidos,
+  }) : competencias = competencias ?? [],
+       activosElegidos = activosElegidos ?? [];
 
   String get nombreCompleto => '$nombre $apellidos'.trim();
 
@@ -315,6 +320,7 @@ class Trabajador {
     'salidaLat': salidaLat,
     'salidaLng': salidaLng,
     'grupoId': grupoId,
+    if (activosElegidos.isNotEmpty) 'activosElegidos': activosElegidos,
   };
 
   factory Trabajador.fromJson(Map<String, dynamic> j) => Trabajador(
@@ -333,6 +339,7 @@ class Trabajador {
     salida: _s(j, 'salida'),
     salidaLat: (j['salidaLat'] as num?)?.toDouble(),
     salidaLng: (j['salidaLng'] as num?)?.toDouble(),
+    activosElegidos: List<String>.from(j['activosElegidos'] as List? ?? []),
     grupoId: j['grupoId'] as String?,
   );
 

@@ -230,6 +230,11 @@ void main() {
       store.marcarHecha(suya);
       await n.guardado;
       expect(Nube.error.value, isNull, reason: 'el técnico cierra la OT de la incidencia');
+      // Los activos en los que trabaja van con su cuenta, no con el dispositivo.
+      await n.guardarActivosElegidos(tecnico.id, [activo.id]);
+      await _salir(n);
+      n = await _entrar(_env['SB_TECNICO']!);
+      expect(store.trabajador(tecnico.id)!.activosElegidos, [activo.id], reason: 'otro dispositivo ve lo mismo');
       await _salir(n);
 
       // ── 7. Administrador: la incidencia, completada sola; la revisión, reiniciada; la otra, desestimada ──

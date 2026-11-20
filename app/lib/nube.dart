@@ -225,6 +225,12 @@ class Nube {
     await _db.rpc('guardar_mi_perfil', params: {'p_empresa': empresaId, 'p_foto': foto, 'p_telefono': telefono});
   }
 
+  /// Activos en los que trabaja el técnico: van con su cuenta (los ve igual en cualquier dispositivo).
+  Future<void> guardarActivosElegidos(String trabajadorId, List<String> activos) async {
+    await _cola;
+    await _db.rpc('guardar_activos_elegidos', params: {'p_trabajador': _u(trabajadorId), 'p_activos': activos});
+  }
+
   /// Asigna la OT libre al técnico y la inicia bajo bloqueo en el servidor.
   Future<void> empezarOt(String trabajoId) async {
     await _cola;
@@ -1537,6 +1543,8 @@ Trabajador _trabajador(Map x) => Trabajador(
   salidaLng: (x['salida_lng'] as num?)?.toDouble(),
   color: (x['color'] as num).toInt(),
   grupoId: x['grupo_id'] as String?,
+  // Solo se lee: lo guarda el técnico con `guardarActivosElegidos` (la sincronización no lo pisa).
+  activosElegidos: List<String>.from(x['activos_elegidos'] as List? ?? []),
 );
 
 Activo _activo(Map x) => Activo(

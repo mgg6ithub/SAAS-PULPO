@@ -397,18 +397,23 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
   }
 }
 
-/// Máquinas elegidas por cada técnico al entrar (vacío = todas). Se guardan en el dispositivo, por empresa.
+/// Máquinas elegidas por cada técnico al entrar (vacío = todas). Van con su cuenta (`activos_elegidos`); sin
+/// sesión (demo), en el dispositivo.
 final _maquinasElegidas = <String, Set<String>>{};
 
-/// Técnicos cuya selección ya se ha pedido al dispositivo y ya se ha leído.
+/// Técnicos cuya selección ya se ha pedido y ya se ha leído.
 final _maquinasCargadas = <String>{}, _maquinasLeidas = <String>{};
 
-String _claveMaquinas(String tecnico) => 'maquinas_${store.nube?.empresaId ?? 'demo'}_$tecnico';
+String _claveMaquinas(String tecnico) => 'maquinas_demo_$tecnico';
 
 Future<void> _cargarMaquinas(String tecnico) async {
   try {
-    final l = (await SharedPreferences.getInstance()).getStringList(_claveMaquinas(tecnico));
-    if (l != null) _maquinasElegidas[tecnico] ??= {for (final id in l) if (store.activo(id) != null) id};
+    final l = store.nube != null
+        ? store.trabajador(tecnico)?.activosElegidos
+        : (await SharedPreferences.getInstance()).getStringList(_claveMaquinas(tecnico));
+    if (l != null && l.isNotEmpty) {
+      _maquinasElegidas[tecnico] ??= {for (final id in l) if (store.activo(id) != null) id};
+    }
   } catch (_) {
     /* Sin acceso al almacenamiento: se elige de cero. */
   }
@@ -417,9 +422,15 @@ Future<void> _cargarMaquinas(String tecnico) async {
 
 Future<void> _guardarMaquinas(String tecnico, Set<String> sel) async {
   try {
-    await (await SharedPreferences.getInstance()).setStringList(_claveMaquinas(tecnico), sel.toList());
-  } catch (_) {
-    /* Se recuerda solo mientras la app está abierta. */
+    final n = store.nube;
+    if (n != null) {
+      store.trabajador(tecnico)?.activosElegidos = sel.toList();
+      await n.guardarActivosElegidos(tecnico, sel.toList());
+    } else {
+      await (await SharedPreferences.getInstance()).setStringList(_claveMaquinas(tecnico), sel.toList());
+    }
+  } catch (e) {
+    debugPrint('Pultec: no se pudieron guardar los activos elegidos: $e');
   }
 }
 
