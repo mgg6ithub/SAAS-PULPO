@@ -1241,6 +1241,9 @@ class Nube {
           'uso_horas': a.horasUso,
           'uso_semanal': a.usoSemanal,
           'uso_planificado': a.usoPlanificado,
+          // Solo si lo tiene: así no falla el guardado mientras la base no tenga la columna (migración
+          // 20261120190000_contador_propio).
+          if (a.contadorPropio) 'contador_propio': true,
           'horas_turno': a.horasTurno,
           'turnos': a.turnos,
           'lectura_fecha': a.fechaLectura.toIso8601String().substring(0, 10),
@@ -1577,6 +1580,7 @@ Activo _activo(Map x) => Activo(
   horasUso: (x['uso_horas'] as num?)?.toDouble() ?? 0,
   usoSemanal: x['uso_semanal'] as bool? ?? false,
   usoPlanificado: x['uso_planificado'] as bool? ?? false,
+  contadorPropio: x['contador_propio'] as bool? ?? false,
   horasTurno: (x['horas_turno'] as num?)?.toDouble() ?? 8,
   turnos: {for (final e in ((x['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
   fechaLectura: DateTime.tryParse(x['lectura_fecha'] as String? ?? ''),

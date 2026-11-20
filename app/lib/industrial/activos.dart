@@ -1164,20 +1164,47 @@ class _ActivoFormState extends State<ActivoForm> {
   /// Los mantenimientos van aparte (Resumen → Mantenimientos).
   Widget _mantenimiento() {
     final errores = intentoGuardar ? _erroresMantenimiento : <String, String>{};
-    // Un componente cuenta las horas de su activo principal.
+    // Un componente usa el contador de su activo principal o uno propio (p. ej. unas ruedas cambiadas), que
+    // sube al mismo ritmo que el principal.
     if (componente) {
       final r = raizActivo(a.padreId);
-      return Bloque(
-        'Contador y uso',
-        descripcion: 'Las horas son las de su activo principal.',
-        [
-          Text(
-            r == null
-                ? 'Usa el contador del activo del que cuelga.'
-                : 'Usa el contador de ${r.titulo}: ${horas(horasHoy(r))} hoy.',
-            style: TextStyle(fontSize: 13.5, color: P.textoSuave),
-          ),
-        ],
+      final principal = r == null ? 'del activo principal' : 'de ${r.titulo}';
+      return KeyedSubtree(
+        key: _claveMantenimiento,
+        child: Bloque(
+          'Contador',
+          descripcion: 'Para estimar los mantenimientos por horas. Sube al ritmo de su activo principal.',
+          [
+            _menu<bool>(
+              'Contador',
+              tooltip: 'El de su activo principal o uno propio, si este componente lleva otras horas',
+              valor: a.contadorPropio,
+              opciones: {false: 'El $principal', true: 'Propio'},
+              onSelected: (v) => setState(() => a.contadorPropio = v),
+            ),
+            if (a.contadorPropio)
+              dos(
+                CampoFecha(
+                  'Fecha de la lectura',
+                  a.fechaLectura,
+                  (d) => setState(() => a.fechaLectura = d),
+                  hasta: hoy(),
+                ),
+                campo(
+                  'Contador actual (h)',
+                  horasC,
+                  teclado: const TextInputType.numberWithOptions(decimal: true),
+                  hint: '0',
+                  error: errores['actual'],
+                ),
+              )
+            else if (r != null)
+              Text(
+                '${horas(horasHoy(r))} hoy.',
+                style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+              ),
+          ],
+        ),
       );
     }
     return KeyedSubtree(

@@ -26,6 +26,10 @@ class Activo {
   /// Uso planificado a mano: turnos por día (`aaaa-mm-dd` → 1 o 2) de [horasTurno] horas cada uno,
   /// en vez del ritmo fijo de [horasUso]. Solo en activos principales: los componentes usan el suyo.
   bool usoPlanificado;
+
+  /// Componente con su propio contador (p. ej. unas ruedas nuevas): sus horas parten de su lectura y suben al
+  /// ritmo de su activo principal. Si no, usa el contador del principal.
+  bool contadorPropio;
   double horasTurno;
   Map<String, int> turnos;
 
@@ -56,6 +60,7 @@ class Activo {
     this.horasUso = 0,
     this.usoSemanal = false,
     this.usoPlanificado = false,
+    this.contadorPropio = false,
     this.horasTurno = 8,
     Map<String, int>? turnos,
     DateTime? fechaLectura,
@@ -120,6 +125,7 @@ class Activo {
     'horasUso': horasUso,
     'usoSemanal': usoSemanal,
     'usoPlanificado': usoPlanificado,
+    if (contadorPropio) 'contadorPropio': true,
     'horasTurno': horasTurno,
     'turnos': turnos,
     'fechaLectura': fechaLectura.toIso8601String(),
@@ -150,6 +156,7 @@ class Activo {
     horasUso: (j['horasUso'] as num?)?.toDouble() ?? 0,
     usoSemanal: j['usoSemanal'] as bool? ?? false,
     usoPlanificado: j['usoPlanificado'] as bool? ?? false,
+    contadorPropio: j['contadorPropio'] as bool? ?? false,
     horasTurno: (j['horasTurno'] as num?)?.toDouble() ?? 8,
     turnos: {for (final e in ((j['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
     fechaLectura: DateTime.tryParse(j['fechaLectura'] as String? ?? ''),

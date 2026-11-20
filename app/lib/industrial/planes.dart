@@ -33,15 +33,18 @@ void ponerTurnos(Activo r, DateTime d, int n) => n <= 0 ? r.turnos.remove(_dia(d
 /// si no, la lectura más el ritmo de uso por los días pasados.
 double horasHoy(Activo a) {
   final r = raizActivo(a.id) ?? a;
-  final desde = r.fechaLectura;
+  // La lectura: la del componente si tiene contador propio; si no, la del principal. El ritmo, siempre el del
+  // principal. Igual que la base (`private.horas_hoy`).
+  final l = a.contadorPropio && a.padreId != null ? a : r;
+  final desde = l.fechaLectura;
   if (r.usoPlanificado) {
     var t = 0;
     for (var d = masDias(desde, 1); !d.isAfter(hoy()); d = masDias(d, 1)) {
       t += turnosDe(r, d);
     }
-    return r.horas + t * r.horasTurno;
+    return l.horas + t * r.horasTurno;
   }
-  return r.horas + r.usoDiario * diasHasta(desde).abs().clamp(0, 36500);
+  return l.horas + r.usoDiario * diasHasta(desde).abs().clamp(0, 36500);
 }
 
 /// Días que faltan para [d] a efectos del aviso previo: con uso planificado por turnos, solo los días con turnos
