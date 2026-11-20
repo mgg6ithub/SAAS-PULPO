@@ -105,7 +105,15 @@ class VentanaFormulario extends StatefulWidget {
 
   /// Con lo obligatorio sin rellenar, Guardar sale apagado (gris); al completarlo, se enciende en morado.
   final bool puedeGuardar;
+
+  /// Botón de guardar propio (p. ej. «Crear incidencia» en rojo con su icono); por defecto, «Guardar».
+  final String textoGuardar;
+  final IconData? iconoGuardar;
+  final Color? colorGuardar;
   const VentanaFormulario({
+    this.textoGuardar = 'Guardar',
+    this.iconoGuardar,
+    this.colorGuardar,
     this.puedeGuardar = true,
     this.onRellenar,
     this.sinPie = false,
@@ -443,7 +451,18 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
           const SizedBox(width: 8),
         ],
         if (!widget.sinPie)
-          FilledButton(onPressed: widget.puedeGuardar ? widget.onGuardar : null, child: const Text('Guardar')),
+          widget.iconoGuardar == null
+              ? FilledButton(
+                  style: widget.colorGuardar == null ? null : FilledButton.styleFrom(backgroundColor: widget.colorGuardar),
+                  onPressed: widget.puedeGuardar ? widget.onGuardar : null,
+                  child: Text(widget.textoGuardar),
+                )
+              : FilledButton.icon(
+                  style: widget.colorGuardar == null ? null : FilledButton.styleFrom(backgroundColor: widget.colorGuardar),
+                  onPressed: widget.puedeGuardar ? widget.onGuardar : null,
+                  icon: Icon(widget.iconoGuardar, size: 18),
+                  label: Text(widget.textoGuardar),
+                ),
       ],
     ),
   );
@@ -2531,10 +2550,10 @@ class _PanelActivosState extends State<_PanelActivos> {
               ),
             ),
           ),
-          Flexible(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 380),
-              child: ListView(
+          // Alto máximo fijo (el menú no da alto acotado: un Flexible aquí colgaba la app).
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 380),
+            child: ListView(
                 shrinkWrap: true,
                 padding: const EdgeInsets.only(bottom: 6),
                 children: busqueda.isNotEmpty
@@ -2571,7 +2590,6 @@ class _PanelActivosState extends State<_PanelActivos> {
                         for (final a in hijos[null] ?? const <Activo>[]) _activo(a, 0, {}),
                       ],
               ),
-            ),
           ),
         ],
       ),

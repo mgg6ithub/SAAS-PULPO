@@ -236,8 +236,13 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
 
   @override
   Widget build(BuildContext context) => VentanaFormulario(
-    etiqueta: 'Incidencias',
+    // Sin «INCIDENCIAS» encima: el título con el icono de incidencia en rojo y el botón «Crear incidencia», rojo.
+    lider: Icon(Icons.report_outlined, size: 26, color: P.rojo),
     titulo: widget.original == null ? 'Crear incidencia' : 'Editar incidencia',
+    textoGuardar: widget.original == null ? 'Crear incidencia' : 'Guardar',
+    iconoGuardar: widget.original == null ? Icons.report_outlined : null,
+    colorGuardar: P.rojo,
+    puedeGuardar: activoId != null && descripcion.text.trim().isNotEmpty,
     onGuardar: _guardar,
     avisos: [
       if (activoId == null) ('Te falta el activo o componente', () => _ir(claveActivo)),
