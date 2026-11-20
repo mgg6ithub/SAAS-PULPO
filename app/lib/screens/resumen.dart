@@ -16,6 +16,7 @@ import 'planificacion.dart';
 import 'tarea_card.dart';
 import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos, historicoTrabajos;
 import '../marca.dart';
+import '../nube.dart' show Nube;
 import '../industrial/activos.dart' show abrirActivoForm;
 // import '../industrial/foto_planta.dart'; // Foto de Inicio quitada de momento.
 import '../industrial/vistazo.dart';
@@ -1223,17 +1224,21 @@ extension on _HeroState {
       children: [
         Text(this.fecha, style: TextStyle(color: P.textoSuave, fontSize: 14, fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
-        Text(
-          saludo,
-          style: TextStyle(
+        Builder(builder: (_) {
+          final estilo = TextStyle(
             fontFamily: P.titulos,
             fontSize: 32,
             fontWeight: FontWeight.w800,
             letterSpacing: -1,
             height: 1.1,
             color: P.texto,
-          ),
-        ),
+          );
+          // Pultec: el nombre de la empresa se cambia escribiendo encima; se guarda solo.
+          final nube = store.nube;
+          return industrial && nube != null && nube.esAdmin
+              ? _NombreEmpresa(nube, estilo)
+              : Text(saludo, style: estilo);
+        }),
         const SizedBox(height: 8),
         Text(frase, style: TextStyle(color: P.textoSuave, fontSize: 16)),
         const SizedBox(height: 18),
@@ -1271,7 +1276,7 @@ extension on _HeroState {
     if (!industrial) return Padding(padding: const EdgeInsets.only(bottom: 4), child: texto);
     // Alto justo para el texto y las pastillas: menos hueco hasta las cifras.
     return SizedBox(
-      height: 192,
+      height: 172,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -1292,6 +1297,64 @@ extension on _HeroState {
       ),
     );
   }
+}
+
+/// Título de Inicio en Pultec: el nombre de la empresa, editable en el sitio (cursor de texto, sin subrayado ni
+/// botón de guardar). Se guarda solo al dejar de escribir un momento o al salir del campo.
+class _NombreEmpresa extends StatefulWidget {
+  final Nube nube;
+  final TextStyle estilo;
+  const _NombreEmpresa(this.nube, this.estilo);
+
+  @override
+  State<_NombreEmpresa> createState() => _NombreEmpresaState();
+}
+
+class _NombreEmpresaState extends State<_NombreEmpresa> {
+  late final _texto = TextEditingController(text: widget.nube.nombre);
+  final _foco = FocusNode();
+  Timer? _espera;
+
+  @override
+  void initState() {
+    super.initState();
+    _foco.addListener(() {
+      if (!_foco.hasFocus) _guardar();
+    });
+  }
+
+  void _guardar() {
+    _espera?.cancel();
+    final nuevo = _texto.text.trim();
+    // Vacío no vale: vuelve el nombre de antes.
+    if (nuevo.isEmpty) {
+      _texto.text = widget.nube.nombre;
+      return;
+    }
+    if (nuevo != widget.nube.nombre) widget.nube.renombrar(nuevo);
+  }
+
+  @override
+  void dispose() {
+    _guardar();
+    _texto.dispose();
+    _foco.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: _texto,
+    focusNode: _foco,
+    style: widget.estilo,
+    maxLines: 1,
+    decoration: const InputDecoration.collapsed(hintText: 'Nombre de la empresa'),
+    onChanged: (_) {
+      _espera?.cancel();
+      _espera = Timer(const Duration(milliseconds: 800), _guardar);
+    },
+    onSubmitted: (_) => _foco.unfocus(),
+  );
 }
 
 /// Margen interior del bloque del saludo; la fecha de encima entra lo mismo para alinearse con él.

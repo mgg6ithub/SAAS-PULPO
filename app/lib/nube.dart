@@ -67,8 +67,8 @@ class Nube {
 
   final String empresaId;
 
-  /// Nombre de la empresa, para enseñarlo en Mi cuenta.
-  final String nombre;
+  /// Nombre de la empresa, para enseñarlo en Mi cuenta (se cambia en el sitio desde Inicio).
+  String nombre;
 
   /// A qué se dedica (clave de [tiposEmpresa]): una empresa nueva arranca solo con sus plantillas.
   final String tipo;
@@ -653,6 +653,12 @@ class Nube {
   /// Nombre, tipo, CIF, dirección, teléfono, logo, icono y color de una empresa de la cuenta.
   static Future<Map<String, dynamic>> datosEmpresa(String id) =>
       _db.from('empresas').select('nombre, tipo, cif, direccion, telefono, logo, icono, color').eq('id', id).single();
+
+  /// Cambia el nombre de la empresa abierta sin volver a abrirla (se escribe en el título de Inicio).
+  Future<void> renombrar(String nuevo) async {
+    nombre = nuevo;
+    await _db.from('empresas').update({'nombre': nuevo}).eq('id', empresaId);
+  }
 
   static Future<void> guardarEmpresa(String id, Map<String, dynamic> datos) async {
     await _db.from('empresas').update(datos).eq('id', id);
