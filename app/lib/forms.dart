@@ -240,7 +240,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                         width: ancho,
                         child: SingleChildScrollView(
                           controller: scroll,
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                           child: RepaintBoundary(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.campos),
                           ),
@@ -282,14 +282,14 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
             // Compacta: una sola fila con avatar, título, colores y botones; el espacio, para los datos.
             // A la derecha, sitio para los botones de ventana (y la criticidad debajo, si la hay).
             padding: EdgeInsets.fromLTRB(
-              16,
-              widget.incrustada ? 10 : (acoplada ? 16 : 4),
+              12,
+              widget.incrustada ? 10 : (acoplada ? 12 : 2),
               widget.incrustada ? 12 : (widget.bajoBotones != null ? 240 : (_movil ? 56 : 120)),
               widget.incrustada ? 10 : 8,
             ),
             child: Column(
               children: [
-                if (!acoplada && !widget.incrustada) const SizedBox(height: 8),
+                if (!acoplada && !widget.incrustada) const SizedBox(height: 6),
                 Row(
                   children: [
                     if (widget.lider != null) ...[widget.lider!, const SizedBox(width: 12)],
@@ -391,7 +391,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
   );
 
   Widget _pie() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     child: Row(
       children: [
         if (widget.onBorrar != null)
@@ -603,7 +603,7 @@ class Bloque extends StatelessWidget {
                 ],
               );
         return Container(
-          padding: EdgeInsets.only(top: primero ? 10 : 14, bottom: 4),
+          padding: EdgeInsets.only(top: primero ? 6 : 12, bottom: 2),
           decoration: BoxDecoration(
             border: primero ? null : Border(top: BorderSide(color: P.borde)),
           ),

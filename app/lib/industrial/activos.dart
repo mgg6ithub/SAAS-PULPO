@@ -210,19 +210,85 @@ List<(Activo, int)> arbolActivos() {
   return r;
 }
 
-class _TablaActivos extends StatelessWidget {
+class _TablaActivos extends StatefulWidget {
   final List<Activo> activos;
   final ValueChanged<String> onAbrir;
   final bool componentes;
   const _TablaActivos(this.activos, this.onAbrir, {this.componentes = false});
 
   @override
+  State<_TablaActivos> createState() => _TablaActivosState();
+}
+
+class _TablaActivosState extends State<_TablaActivos> {
+  /// Columnas que el usuario puede añadir (de serie no salen); se recuerdan mientras dure la sesión.
+  static const _opcionales = ['Fabricante y modelo', 'Número de serie', 'División'];
+  static final _visibles = <String>{};
+
+  /// Cómo trabaja: horas al día o a la semana, o por turnos (el ritmo es siempre el del activo principal).
+  String _uso(Activo a) {
+    final r = raizActivo(a.id) ?? a;
+    if (r.usoPlanificado) return 'Por turnos';
+    if (r.horasUso <= 0) return '—';
+    return r.usoSemanal ? '${horas(r.horasUso)} / semana' : '${horas(r.horasUso)} / día';
+  }
+
+  String _opcional(Activo a, String c) => switch (c) {
+    'Fabricante y modelo' => [a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '),
+    'Número de serie' => a.numeroSerie,
+    _ => a.division,
+  };
+
+  /// Raya vertical fina delante de una cabecera (separa los componentes y el menú de columnas).
+  Widget _conRaya(Widget hijo) => Row(
+    children: [
+      Container(width: 1, height: 20, color: P.borde),
+      const Spacer(),
+      hijo,
+    ],
+  );
+
+  /// Último botón de la cabecera: menú para añadir o quitar columnas, como en Órdenes de trabajo.
+  Widget _menuColumnas() => MenuAnchor(
+    alignmentOffset: const Offset(-180, 4),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      MenuItemButton(
+        onPressed: null,
+        child: Text('Columnas', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+      ),
+      for (final c in _opcionales)
+        MenuItemButton(
+          closeOnActivate: false,
+          leadingIcon: Icon(
+            _visibles.contains(c) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+            size: 20,
+            color: _visibles.contains(c) ? P.morado : P.textoSuave,
+          ),
+          onPressed: () => setState(() => _visibles.contains(c) ? _visibles.remove(c) : _visibles.add(c)),
+          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c)),
+        ),
+    ],
+    builder: (context, menu, _) => IconButton(
+      tooltip: 'Elegir columnas',
+      visualDensity: VisualDensity.compact,
+      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+      icon: Icon(Icons.view_column_outlined, size: 18, color: P.textoSuave),
+    ),
+  );
+
+  @override
   Widget build(BuildContext context) => SegunTamano(
     clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
     builder: (context, box) {
       final ancho = box.maxWidth > 980;
-      // Móvil: el activo y el punto de su estado.
+      // Móvil: el activo y lo justo.
       final medio = box.maxWidth > 600;
+      final activos = widget.activos, componentes = widget.componentes;
+      final extra = [for (final c in _opcionales) if (ancho && _visibles.contains(c)) c];
       return SeleccionMultiple(
         ids: [for (final a in activos) a.id],
         singular: componentes ? 'componente' : 'activo',
@@ -230,118 +296,100 @@ class _TablaActivos extends StatelessWidget {
         borrar: store.borrarActivo,
         nota: avisoBorrarActivos,
         builder: (context, s) => Align(
-        alignment: Alignment.topCenter,
-        child: Tabla(
-          seleccionCabecera: s.cabecera,
-          columnas: [
-            ...s.columna,
-            Col(componentes ? 'Componente' : 'Activo', flex: componentes ? 3 : 6),
-            if (componentes) const Col('Tag', flex: 2),
-            if (ancho) const Col('Fabricante y modelo', flex: 2),
-            if (ancho) const Col('División', ancho: 80),
-            if (ancho) const Col('Horas totales', ancho: 120, derecha: true),
-            if (medio) const Col('Mantenimientos', ancho: 130, derecha: true),
-            if (medio) const Col('Próximo mantenimiento', ancho: 160),
-            if (medio)
-              Col(
-                'Componentes',
-                ancho: 32,
-                derecha: true,
-                cabecera: Tooltip(
-                  message: 'Componentes',
-                  child: Icon(
-                    Icons.account_tree_outlined,
-                    size: 18,
-                    color: P.textoSuave,
+          alignment: Alignment.topCenter,
+          child: Tabla(
+            seleccionCabecera: s.cabecera,
+            // Lo que importa: activo, tag, cómo trabaja, horas, mantenimientos y el próximo; luego lo que el
+            // usuario añada, los componentes y el menú de columnas.
+            columnas: [
+              ...s.columna,
+              Col(componentes ? 'Componente' : 'Activo', flex: 5),
+              const Col('Tag', flex: 2),
+              if (ancho) const Col('Uso', flex: 2),
+              if (ancho) const Col('Horas totales', flex: 2, derecha: true),
+              if (medio) const Col('Mantenimientos', flex: 2, derecha: true),
+              if (medio) const Col('Próximo mantenimiento', flex: 3),
+              for (final c in extra) Col(c, flex: 2),
+              if (medio)
+                Col(
+                  'Componentes',
+                  ancho: 56,
+                  derecha: true,
+                  cabecera: _conRaya(
+                    Tooltip(
+                      message: 'Componentes',
+                      child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
+                    ),
                   ),
                 ),
-              ),
-          ],
-          filas: activos.length,
-          celdas: (i) {
-            final a = activos[i];
-            return [
-              ...s.casilla(a.id),
-              Row(
-                children: [
-                  // Sin color: la criticidad es de los mantenimientos, no del activo.
-                  IconoActivo(a.icono, color: P.textoSuave, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    // Subcomponentes: el nombre aquí y el tag en su propia columna.
-                    child: a.descripcion.isEmpty
-                        ? celdaTexto(
-                            componentes && a.nombre.isNotEmpty
-                                ? a.nombre
-                                : a.titulo,
-                            negrita: true,
-                          )
-                        // Con descripción: debajo del nombre, como en los mantenimientos.
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                celdaTexto(
-                                  componentes && a.nombre.isNotEmpty
-                                      ? a.nombre
-                                      : a.titulo,
-                                  negrita: true,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  a.descripcion,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: P.textoSuave,
-                                    height: 1.3,
+              if (medio) Col('Columnas', ancho: 52, derecha: true, cabecera: _conRaya(_menuColumnas())),
+            ],
+            filas: activos.length,
+            celdas: (i) {
+              final a = activos[i];
+              final nombre = a.nombre.isNotEmpty ? a.nombre : a.titulo;
+              return [
+                ...s.casilla(a.id),
+                Row(
+                  children: [
+                    // Sin color: la criticidad es de los mantenimientos, no del activo.
+                    IconoActivo(a.icono, color: P.textoSuave, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: a.descripcion.isEmpty
+                          ? celdaTexto(nombre, negrita: true)
+                          // Con descripción: debajo del nombre, como en los mantenimientos.
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  celdaTexto(nombre, negrita: true),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    a.descripcion,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 12.5, color: P.textoSuave, height: 1.3),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                  ),
-                ],
-              ),
-              if (componentes)
+                    ),
+                  ],
+                ),
                 celdaTexto(a.tag.isEmpty ? '—' : a.tag, suave: true),
-              if (ancho)
-                celdaTexto(
-                  [a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '),
-                  suave: true,
-                ),
-              if (ancho) celdaTexto(a.division, suave: true),
-              if (ancho)
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: celdaTexto(horas(horasHoy(a)), suave: true),
-                ),
-              if (medio)
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: celdaTexto('${planesRama(a.id).length}', suave: true),
-                ),
-              if (medio)
-                Tooltip(
-                  message: 'El más cercano de sus mantenimientos y los de sus componentes.',
-                  child: celdaTexto(proximaFecha(a), suave: true),
-                ),
-              if (medio)
-                celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
-            ];
-          },
-          onTap: (i) => s.tocar(activos[i].id, () => onAbrir(activos[i].id)),
-          pie: pieTabla(
-            activos.length,
-            componentes
-                ? (activos.length == 1 ? 'componente' : 'componentes')
-                : (activos.length == 1 ? 'activo' : 'activos'),
+                if (ancho) celdaTexto(_uso(a), suave: true),
+                if (ancho)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: celdaTexto(horas(horasHoy(a)), suave: true),
+                  ),
+                if (medio)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: celdaTexto('${planesRama(a.id).length}', suave: true),
+                  ),
+                if (medio)
+                  Tooltip(
+                    message: 'El más cercano de sus mantenimientos y los de sus componentes.',
+                    child: celdaTexto(proximaFecha(a), suave: true),
+                  ),
+                for (final c in extra) celdaTexto(_opcional(a, c).isEmpty ? '—' : _opcional(a, c), suave: true),
+                if (medio) celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
+                if (medio) const SizedBox(),
+              ];
+            },
+            onTap: (i) => s.tocar(activos[i].id, () => widget.onAbrir(activos[i].id)),
+            pie: pieTabla(
+              activos.length,
+              componentes
+                  ? (activos.length == 1 ? 'componente' : 'componentes')
+                  : (activos.length == 1 ? 'activo' : 'activos'),
+            ),
           ),
         ),
-      ),
       );
     },
   );
