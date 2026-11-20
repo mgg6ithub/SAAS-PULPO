@@ -666,6 +666,20 @@ class _PlanFormState extends State<PlanForm> {
               nav.pop();
             },
       campos: [
+        // Al crearlo: con su orden de trabajo (lo normal) o solo el mantenimiento, pausado hasta reanudarlo (▶).
+        if (!existe)
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Crear su orden de trabajo', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              p.activa
+                  ? 'Se crea ya, para la fecha que toque.'
+                  : 'Se guarda pausado, sin orden. Al reanudarlo (▶) se crea su orden.',
+              style: TextStyle(fontSize: 13, color: P.textoSuave),
+            ),
+            value: p.activa,
+            onChanged: (v) => setState(() => p.activa = v),
+          ),
         Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
           campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
