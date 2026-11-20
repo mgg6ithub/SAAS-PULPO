@@ -91,6 +91,8 @@ class _PlanificacionState extends State<Planificacion> {
   DateTime get lunes => lunesDe(dia);
 
   bool get _guiaOrganizarVisible {
+    // Pultec: sin Organizar (de momento), así que tampoco su guía.
+    if (industrial) return false;
     return !ajustes.guiaOrganizar &&
         ajustes.guiaItinerario &&
         store.tareas.any((t) => !t.esPlantilla) &&
@@ -287,7 +289,9 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                   if (vista == 1) const SizedBox(width: 8),
                   // Organizar: organiza el día que estás viendo.
-                  BotonPultec(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
+                  // Pultec: Organizar quitado de momento.
+                  if (!industrial)
+                    BotonPultec(key: _organizarGuiaKey, dia: dia, onHecho: () => setState(() => mapa = Marca.mapa)),
                   // Pultec, sin rutas: sin mapa ni su botón.
                   if (Marca.mapa && vista == 1) ...[
                     const SizedBox(width: 8),
