@@ -574,7 +574,8 @@ class AvisosPreparacion extends StatelessWidget {
     final avisos = [
       for (final p in store.planes)
         if (p.activa && p.avisoDias != null)
-          if (proximoPlan(p) case final d? when diasHasta(d) <= p.avisoDias!) (p, d),
+          // En activos por turnos, la antelación son jornadas previstas, no días de calendario.
+          if (proximoPlan(p) case final d? when diasHastaAviso(p.activoId, d) <= p.avisoDias!) (p, d),
     ]..sort((a, b) => a.$2.compareTo(b.$2));
     if (avisos.isEmpty) return const SizedBox.shrink();
     return Padding(

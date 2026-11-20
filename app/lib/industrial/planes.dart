@@ -44,6 +44,19 @@ double horasHoy(Activo a) {
   return r.horas + r.usoDiario * diasHasta(desde).abs().clamp(0, 36500);
 }
 
+/// Días que faltan para [d] a efectos del aviso previo: con uso planificado por turnos, solo los días con turnos
+/// (jornadas previstas); si no, días naturales. Igual que la base (`private.dias_hasta_aviso`).
+int diasHastaAviso(String activoId, DateTime d) {
+  final a = store.activo(activoId);
+  final r = a == null ? null : raizActivo(a.id) ?? a;
+  if (r == null || !r.usoPlanificado) return diasHasta(d);
+  var n = 0;
+  for (var x = masDias(hoy(), 1); !x.isAfter(d); x = masDias(x, 1)) {
+    if (turnosDe(r, x) > 0) n++;
+  }
+  return n;
+}
+
 /// Cuándo toca un mantenimiento: su fecha o, por horas, la estimada con el uso de su activo principal
 /// (planificado: el primer día del calendario en que se alcanzan las horas; null si no llega a planificarse).
 DateTime? proximoPlan(PlanMantenimiento p) {
