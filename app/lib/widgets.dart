@@ -665,7 +665,13 @@ class BotonPrimario extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (conIcono) ...[Icon(icono, size: 18), const SizedBox(width: 6)],
+              // El «+» y el nombre, separados por una raya fina que no llega a los bordes del botón.
+              if (conIcono) ...[
+                Icon(icono, size: 18),
+                const SizedBox(width: 9),
+                Container(width: 1, height: 16, color: Colors.white.withValues(alpha: .35)),
+                const SizedBox(width: 9),
+              ],
               Text(_etiqueta),
               if (tecla != null) ...[
                 const SizedBox(width: 10),
