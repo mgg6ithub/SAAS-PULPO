@@ -239,15 +239,6 @@ class _TablaActivosState extends State<_TablaActivos> {
     _ => a.division,
   };
 
-  /// Raya vertical fina delante de una cabecera (separa los componentes y el menú de columnas).
-  Widget _conRaya(Widget hijo) => Row(
-    children: [
-      Container(width: 1, height: 20, color: P.borde),
-      const Spacer(),
-      hijo,
-    ],
-  );
-
   /// Último botón de la cabecera: menú para añadir o quitar columnas, como en Órdenes de trabajo.
   Widget _menuColumnas() => MenuAnchor(
     alignmentOffset: const Offset(-180, 4),
@@ -310,19 +301,25 @@ class _TablaActivosState extends State<_TablaActivos> {
               if (medio) const Col('Mantenimientos', flex: 2, derecha: true),
               if (medio) const Col('Próximo mantenimiento', flex: 3),
               for (final c in extra) Col(c, flex: 2),
+              // La tabla ya pone su raya entre columnas: el icono, centrado; el menú, pegado a la derecha.
               if (medio)
                 Col(
                   'Componentes',
                   ancho: 56,
-                  derecha: true,
-                  cabecera: _conRaya(
-                    Tooltip(
+                  cabecera: Center(
+                    child: Tooltip(
                       message: 'Componentes',
                       child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
                     ),
                   ),
                 ),
-              if (medio) Col('Columnas', ancho: 52, derecha: true, cabecera: _conRaya(_menuColumnas())),
+              if (medio)
+                Col(
+                  'Columnas',
+                  ancho: 36,
+                  derecha: true,
+                  cabecera: Align(alignment: Alignment.centerRight, child: _menuColumnas()),
+                ),
             ],
             filas: activos.length,
             celdas: (i) {
@@ -377,7 +374,7 @@ class _TablaActivosState extends State<_TablaActivos> {
                     child: celdaTexto(proximaFecha(a), suave: true),
                   ),
                 for (final c in extra) celdaTexto(_opcional(a, c).isEmpty ? '—' : _opcional(a, c), suave: true),
-                if (medio) celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true),
+                if (medio) Center(child: celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true)),
                 if (medio) const SizedBox(),
               ];
             },
