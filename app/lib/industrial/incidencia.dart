@@ -29,7 +29,8 @@ extension EstadoIncidenciaX on EstadoIncidencia {
     Icons.report_outlined,
     Icons.assignment_outlined,
     Icons.task_alt_rounded,
-    Icons.block_rounded,
+    // Desestimada: la incidencia tachada (el círculo tachado es de las OT canceladas).
+    Icons.report_off_outlined,
   ][index];
 
   /// Abierta o con OT: aún hay algo que hacer.

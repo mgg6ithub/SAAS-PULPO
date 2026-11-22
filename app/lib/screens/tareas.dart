@@ -83,6 +83,9 @@ class _TareasPaginaState extends State<TareasPagina> {
   String? _activoFiltro;
   bool lista = true;
 
+  /// Pultec, en el histórico: false las completadas (de serie), true solo las canceladas.
+  bool _canceladas = false;
+
   void _alCambiarFecha() => setState(() => pestana = 0);
 
   /// Llegando con «Ver OT»: sin búsqueda ni filtros, para que la OT marcada se vea seguro.
@@ -129,6 +132,10 @@ class _TareasPaginaState extends State<TareasPagina> {
           if (tipo != null && t.tipo != tipo) return false;
           if (industrial && rama != null && !rama.contains(t.activoId)) return false;
           if (industrial && !t.esPlantilla && _hecha(t) != historicoTrabajos.value) return false;
+          if (industrial && !t.esPlantilla && historicoTrabajos.value &&
+              (t.estado == EstadoTrabajo.noRealizado) != _canceladas) {
+            return false;
+          }
           if (!pasaFechaTrabajo(t, fecha)) return false;
           if (criticidad != 0 && t.tipoMantenimiento?.index != criticidad - 1) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
@@ -191,18 +198,36 @@ class _TareasPaginaState extends State<TareasPagina> {
                     runSpacing: 8,
                     spacing: 12,
                     children: [
-                      Pestanas(
-                      opciones: [
-                        'Pendientes ${store.tareas.where((t) => !t.esPlantilla && !_hecha(t)).length}',
-                        'Histórico ${store.tareas.where((t) => !t.esPlantilla && _hecha(t)).length}',
-                      ],
-                      iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
-                      seleccion: historicoTrabajos.value ? 1 : 0,
-                      onChanged: (i) {
-                        historicoTrabajos.value = i == 1;
-                        filtroFechaTrabajos.value = 0;
-                      },
-                    ),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Pestanas(
+                            opciones: [
+                              'Pendientes ${store.tareas.where((t) => !t.esPlantilla && !_hecha(t)).length}',
+                              'Histórico ${store.tareas.where((t) => !t.esPlantilla && _hecha(t)).length}',
+                            ],
+                            iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                            coloresIconos: [null, P.verde],
+                            seleccion: historicoTrabajos.value ? 1 : 0,
+                            onChanged: (i) {
+                              _canceladas = false;
+                              historicoTrabajos.value = i == 1;
+                              filtroFechaTrabajos.value = 0;
+                            },
+                          ),
+                          // Histórico: de serie, las completadas; un botón enseña solo las canceladas (en rojo).
+                          if (historicoTrabajos.value)
+                            BotonAccion(
+                              'Canceladas',
+                              icono: Icons.block_rounded,
+                              tooltip: _canceladas ? 'Volver a las completadas' : 'Ver solo las canceladas',
+                              color: _canceladas ? P.rojo : null,
+                              onPressed: () => setState(() => _canceladas = !_canceladas),
+                            ),
+                        ],
+                      ),
                     Pestanas(
                       opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
                       colores: [null, for (final t in TipoMantenimiento.values) t.color],
