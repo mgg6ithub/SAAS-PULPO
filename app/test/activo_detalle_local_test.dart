@@ -115,7 +115,7 @@ void main() {
         await pintar(tester, ancho);
         expect(find.text('Motor'), findsOneWidget);
         expect(find.text('Plan de mantenimiento'), findsNothing);
-        for (final tab in ['Datos', 'Órdenes de trabajo', 'Histórico']) {
+        for (final tab in ['Información', 'Órdenes de trabajo', 'Histórico']) {
           await tester.tap(find.text(tab).first);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: tab);
@@ -128,7 +128,7 @@ void main() {
 
     testWidgets('elige un icono industrial y lo conserva en la ficha del activo', (tester) async {
       await pintar(tester, 980);
-      await tester.tap(find.text('Datos'));
+      await tester.tap(find.text('Información'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Editar'));
       await tester.pumpAndSettle();
@@ -186,7 +186,7 @@ void main() {
       await tester.tap(find.text('Motor'));
       await tester.pumpAndSettle();
       expect(find.text('Componente de CAM-01 · Camión'), findsOneWidget);
-      await tester.tap(find.text('Datos'));
+      await tester.tap(find.text('Información'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Editar'));
       await tester.pumpAndSettle();

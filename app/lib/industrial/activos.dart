@@ -825,9 +825,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   children: [
                 Pestanas(
             // El histórico va dentro de Órdenes de trabajo (Pendientes / Histórico), no en otra pestaña.
+            // «Vista general»: mantenimientos, componentes y sus cifras; «Información»: la ficha del activo.
             opciones: const [
-              'Resumen',
-              'Datos',
+              'Vista general',
+              'Información',
               'Órdenes de trabajo',
             ],
             seleccion: pestana,

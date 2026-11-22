@@ -181,9 +181,9 @@ void main() {
       expect(find.text('Camión - CAM-01'), findsOneWidget);
       await tester.tap(find.text('Camión - CAM-01'));
       await tester.pumpAndSettle();
-      expect(find.text('Resumen'), findsOneWidget);
+      expect(find.text('Vista general'), findsOneWidget);
       if (ancho > 1000) {
-        expect(find.text('Datos'), findsOneWidget);
+        expect(find.text('Información'), findsOneWidget);
         // Dentro de un activo: «Componentes»; el botón de arriba cambia con el selector.
         expect(find.text('Mantenimiento'), findsOneWidget);
         await tester.tap(find.text('Componentes · 1'));
