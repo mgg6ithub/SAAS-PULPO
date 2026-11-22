@@ -171,13 +171,11 @@ class _TablaIncidencias extends StatelessWidget {
             if (ancho) celdaTexto((x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombre ?? 'Oficina', suave: true),
             if (ancho) celdaTexto(relativo(DateUtils.dateOnly(historico ? x.cerradaEl ?? x.creada : x.creada)), suave: true),
             if (medio)
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
                   Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
-                  // Con su OT por hacer: debajo, en gris, «Ver OT» lleva a ella en Órdenes de trabajo.
-                  if (ot != null && est == EstadoIncidencia.conOt) EnlaceVerOt(ot.id),
+                  // Con su OT por hacer: a la derecha, en gris, «Ver» lleva a ella en Órdenes de trabajo.
+                  if (ot != null && est == EstadoIncidencia.conOt) ...[const SizedBox(width: 6), EnlaceVerOt(ot.id)],
                 ],
               ),
             // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.
@@ -192,7 +190,7 @@ class _TablaIncidencias extends StatelessWidget {
   );
 }
 
-/// «👁 Ver OT» en tono neutro: va a Órdenes de trabajo con la OT de la incidencia marcada.
+/// «👁 Ver» en tono neutro: va a Órdenes de trabajo con la OT de la incidencia marcada.
 class EnlaceVerOt extends StatelessWidget {
   final String otId;
   const EnlaceVerOt(this.otId, {super.key});
@@ -210,7 +208,7 @@ class EnlaceVerOt extends StatelessWidget {
           children: [
             Icon(Icons.visibility_outlined, size: 15, color: P.textoSuave),
             const SizedBox(width: 5),
-            Text('Ver OT', style: TextStyle(fontSize: 12.5, color: P.textoSuave, fontWeight: FontWeight.w500)),
+            Text('Ver', style: TextStyle(fontSize: 12.5, color: P.textoSuave, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
