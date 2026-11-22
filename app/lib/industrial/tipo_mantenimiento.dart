@@ -53,7 +53,7 @@ class MenuTipoMantenimiento extends StatelessWidget {
         children: [
           puntoTipo(valor.color),
           const SizedBox(width: 8),
-          Text('Tipo', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+          Text('Gravedad', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
           const SizedBox(width: 6),
           Text(valor.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(width: 4),

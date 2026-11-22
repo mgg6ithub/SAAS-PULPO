@@ -70,7 +70,7 @@ class Mantenimientos extends StatelessWidget {
             if (medio) const Col('Activo', flex: 3),
             if (ancho) const Col('Técnico', flex: 2),
             if (medio) const Col('Fecha', ancho: 150),
-            if (ancho) const Col('Tipo', ancho: 210),
+            if (ancho) const Col('Gravedad', ancho: 210),
           ],
           filas: ots.length,
           celdas: (i) {

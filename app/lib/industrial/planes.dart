@@ -1028,7 +1028,16 @@ class SelectorAsignacionPlan extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: () => menu.isOpen ? menu.close() : menu.open(),
         child: InputDecorator(
-          decoration: InputDecoration(suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave)),
+          decoration: InputDecoration(
+            suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
+            // Sin nadie, borde ámbar como el de técnicos de la OT: no es obligatorio, pero conviene elegirlo.
+            enabledBorder: w == null && g == null
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(P.radioControl),
+                    borderSide: BorderSide(color: P.ambar, width: 1.4),
+                  )
+                : null,
+          ),
           child: Text(
             w != null
                 ? w.nombreCompleto

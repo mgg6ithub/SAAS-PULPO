@@ -1939,7 +1939,8 @@ class _TareaFormState extends State<TareaForm> {
                             ),
                         ],
                       )),
-                      SelectorTrabajadores(t, () => setState(() {})),
+                      // Pultec: sin técnico, borde ámbar (no es obligatorio, pero conviene elegirlo).
+                      SelectorTrabajadores(t, () => setState(() {}), avisoVacio: industrial),
                     ],
                   ),
                 ),
