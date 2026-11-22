@@ -284,16 +284,18 @@ class _Filtro<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final texto = opciones.where((o) => o.$1 == valor).firstOrNull?.$2 ?? todos;
-    return BotonMenu<T?>(
+    // Por posición (-1 = «Todos»): un menú con valor null lo toma como cerrar sin elegir y «Todos» no hacía nada.
+    final elegido = opciones.indexWhere((o) => o.$1 == valor);
+    return BotonMenu<int>(
       resaltarHover: false,
       relleno: EdgeInsets.zero,
       tooltip: todos,
-      seleccionado: valor,
-      onSelected: onChanged,
+      seleccionado: elegido,
+      onSelected: (i) => onChanged(i < 0 ? null : opciones[i].$1),
       opciones: [
-        (null, Text(todos)),
-        for (final (v, t) in opciones)
-          (v, Row(mainAxisSize: MainAxisSize.min, children: [
+        (-1, Text(todos)),
+        for (final (i, (v, t)) in opciones.indexed)
+          (i, Row(mainAxisSize: MainAxisSize.min, children: [
             if (iconoOpcion != null) ...[iconoOpcion!(v), const SizedBox(width: 8)],
             Flexible(child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis)),
           ])),
