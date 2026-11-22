@@ -163,7 +163,7 @@ class _TablaIncidencias extends StatelessWidget {
                 ),
               ),
             // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.
-            if (medio) BotonPdf(() => descargarInformeIncidencia(x), tooltip: 'Descargar el informe en PDF'),
+            if (medio) BotonPdf(() => descargarInformeIncidencia(context, x), tooltip: 'Descargar el informe en PDF'),
           ];
         },
         onTap: (i) => s.tocar(lista[i].$1.id, () => abrirIncidenciaForm(context, original: lista[i].$1)),

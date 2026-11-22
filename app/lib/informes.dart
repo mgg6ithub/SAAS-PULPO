@@ -24,6 +24,7 @@ import 'industrial/gravedad.dart' show resultadoOt;
 import 'industrial/incidencia.dart';
 import 'industrial/mantenimientos.dart' show dondeEs;
 import 'industrial/planes.dart' show horasRestantesPlan, proximoPlan, raizActivo;
+import 'screens/vista_previa_pdf.dart' show revisarPdf;
 
 /// Informe de un trabajo hecho por un trabajador. Con sesión vive en la tabla `informes` y sus fotos en Storage;
 /// sin sesión (demo), en memoria con las fotos en base64.
@@ -449,18 +450,54 @@ class _VisorFotosState extends State<_VisorFotos> {
   );
 }
 
-/// Descarga el informe en PDF, para mandárselo al cliente.
-Future<void> descargarInformePdf(Informe i, Tarea t) async {
-  final nombre = 'Parte ${t.nombre} ${fecha(i.cuando)}'.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
-  await descargar(await informePdf(i, t), '$nombre.pdf', 'application/pdf');
+/// Lo que el administrador puede retocar del PDF antes de descargarlo. Solo cambia el PDF: la orden, el parte y
+/// la incidencia guardados se quedan como estaban.
+class EdicionPdf {
+  String titulo, descripcion, cuerpo, material, notas;
+  final List<Uint8List> fotos;
+  EdicionPdf({
+    required this.titulo,
+    this.descripcion = '',
+    this.cuerpo = '',
+    this.material = '',
+    this.notas = '',
+    List<Uint8List>? fotos,
+  }) : fotos = fotos ?? [];
+}
+
+String _nombreArchivo(String texto) => '${texto.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '')}.pdf';
+
+/// Revisa el parte en PDF (vista previa editable) y lo descarga, para mandárselo al cliente.
+Future<void> descargarInformePdf(BuildContext context, Informe i, Tarea t, {String? archivo}) async {
+  final e = EdicionPdf(
+    titulo: t.nombre,
+    descripcion: t.descripcion,
+    cuerpo: i.notas,
+    material: i.material,
+    fotos: await Future.wait(i.fotos.map(bytesFoto)),
+  );
+  if (!context.mounted) return;
+  await revisarPdf(
+    context,
+    titulo: industrial ? 'Parte de orden de trabajo' : m('Parte de trabajo'),
+    archivo: archivo ?? _nombreArchivo('Parte ${t.nombre} ${fecha(i.cuando)}'),
+    edicion: e,
+    nombreCuerpo: 'Trabajo realizado',
+    conMaterial: true,
+    generar: (e) => informePdf(i, t, e: e),
+  );
 }
 
 /// El informe en PDF, como plantilla profesional: cabecera con el logo y la empresa, número y fecha; bloques
 /// con la orden y el activo; ejecución con el resultado en color; trabajo, material, fotos y firmas; pie con página.
-Future<Uint8List> informePdf(Informe i, Tarea t) async {
+/// Con [e], lo retocado en la vista previa en lugar de lo guardado.
+Future<Uint8List> informePdf(Informe i, Tarea t, {EdicionPdf? e}) async {
   final cliente = store.cliente(t.clienteId);
   final w = store.trabajadores.where((x) => x.id == i.trabajadorId).firstOrNull;
-  final fotos = await Future.wait(i.fotos.map(bytesFoto));
+  final fotos = e?.fotos ?? await Future.wait(i.fotos.map(bytesFoto));
+  final titulo = e?.titulo ?? t.nombre, descripcion = e?.descripcion ?? t.descripcion;
+  final notas = e?.cuerpo ?? i.notas, material = e?.material ?? i.material, extra = e?.notas ?? '';
+  final tecnicos = [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombreCompleto];
   final firma = i.firma == null ? null : await bytesFoto(i.firma!);
   final logo = await _logoPdf();
   final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
@@ -521,12 +558,12 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    t.nombre,
+                    titulo,
                     style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: tinta),
                   ),
-                  if (t.descripcion.isNotEmpty) ...[
+                  if (descripcion.isNotEmpty) ...[
                     pw.SizedBox(height: 4),
-                    pw.Text(t.descripcion, style: pw.TextStyle(fontSize: 11, color: suave)),
+                    pw.Text(descripcion, style: pw.TextStyle(fontSize: 11, color: suave)),
                   ],
                 ],
               ),
@@ -566,16 +603,15 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
                   dato('Origen', incidencia != null ? 'Incidencia' : plan != null ? 'Mantenimiento' : 'Manual'),
                 if (plan != null) dato('Mantenimiento', [plan.nombre, if (plan.cada.isNotEmpty) plan.cada].join(', ')),
                 if (t.proximo != null || t.ultimo != null) dato('Fecha prevista', fecha(t.proximo ?? t.ultimo)),
+                if (industrial && tecnicos.isNotEmpty) dato('Asignada a', tecnicos.join(', ')),
+                if (industrial)
+                  _datoPuntoPdf('Resultado', resultadosInforme[i.resultado.clamp(0, 2)], base),
               ]),
             ),
             pw.SizedBox(width: 12),
             pw.Expanded(
               child: industrial
-                  ? tarjeta('Activo', [
-                      dato('Activo', raiz?.titulo ?? '-'),
-                      if (componente != null && componente.id != raiz?.id) dato('Componente', componente.titulo),
-                      if (t.ubicacion.isNotEmpty) dato('Ubicación', t.ubicacion),
-                    ])
+                  ? tarjeta('Activo', _datosActivoPdf(raiz, componente, t.ubicacion))
                   : tarjeta(m('Cliente'), [
                       dato(m('Cliente'), cliente?.nombre ?? '-'),
                       dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '-')),
@@ -606,13 +642,14 @@ Future<Uint8List> informePdf(Informe i, Tarea t) async {
           pw.SizedBox(height: 8),
           for (final (cuando, texto) in cronologiaOt(t, i)) _pasoPdf(cuando, texto),
         ],
-        seccion('Trabajo realizado', i.notas.isEmpty ? 'Sin observaciones.' : i.notas),
+        seccion('Trabajo realizado', notas.isEmpty ? 'Sin observaciones.' : notas),
         if (i.valor != null)
           seccion(
             plan != null && plan.conMedicion ? plan.medicionNombre : 'Medición',
             medidaTexto(i, t),
           ),
-        if (i.material.isNotEmpty) seccion('Material y repuestos', i.material),
+        if (material.isNotEmpty) seccion('Material y repuestos', material),
+        if (extra.isNotEmpty) seccion('Notas', extra),
         if (fotos.isNotEmpty) ...[
           pw.SizedBox(height: 14),
           etiqueta('Fotos'),
@@ -845,21 +882,70 @@ Future<Uint8List?> _logoPdf() async {
 String _comunicada(Incidencia x) =>
     'Comunicada por ${(x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombreCompleto ?? 'la oficina'} el ${fecha(x.creada)}.';
 
-/// Informe de una incidencia: con OT y parte, el parte de la OT (que ya lleva la incidencia y sus fotos); si no,
-/// la incidencia, sus fotos y en qué quedó.
-Future<void> descargarInformeIncidencia(Incidencia x) async {
-  final ot = store.tarea(x.trabajoId);
-  final parte = ot == null ? null : (await informes.cargar(ot.id)).firstOrNull;
-  final bytes = parte != null ? await informePdf(parte, ot!) : await incidenciaPdf(x);
-  final nombre = 'Incidencia ${dondeEs(x.activoId)} ${fecha(x.creada)}'.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
-  await descargar(bytes, '$nombre.pdf', 'application/pdf');
+/// Datos del activo para las tarjetas del PDF: activo, componente, tag, fabricante y modelo, número de serie,
+/// división y ubicación (solo los que tiene).
+List<pw.Widget> _datosActivoPdf(Activo? raiz, Activo? componente, String ubicacion) {
+  final fabricante = [?raiz?.fabricante, ?raiz?.modelo].where((s) => s.isNotEmpty).join(' ');
+  return [
+    _datoPdf('Activo', raiz?.titulo ?? '-'),
+    if (componente != null && componente.id != raiz?.id) _datoPdf('Componente', componente.titulo),
+    if (fabricante.isNotEmpty) _datoPdf('Fabricante y modelo', fabricante),
+    if (raiz != null && raiz.numeroSerie.isNotEmpty) _datoPdf('Número de serie', raiz.numeroSerie),
+    if (raiz != null && raiz.division.isNotEmpty) _datoPdf('División', raiz.division),
+    if (ubicacion.isNotEmpty) _datoPdf('Ubicación', ubicacion),
+  ];
 }
 
-/// La incidencia en PDF (sin parte de OT): qué se comunicó, quién y cuándo, fotos y resolución.
-Future<Uint8List> incidenciaPdf(Incidencia x) async {
-  final fotos = await Future.wait(x.fotos.map(bytesFoto));
+String _quien(String? id) => (id == null ? null : store.trabajador(id))?.nombreCompleto ?? 'la oficina';
+
+/// En qué quedó la incidencia, en texto (se puede retocar antes de descargar).
+String _resolucionIncidencia(Incidencia x) {
+  final ot = store.tarea(x.trabajoId);
+  return switch (store.estadoIncidencia(x)) {
+    EstadoIncidencia.abierta => 'Pendiente de revisión por la oficina.',
+    EstadoIncidencia.desestimada =>
+      'Desestimada${x.cerradaEl == null ? '' : ' el ${fecha(x.cerradaEl!)}'}: no hizo falta intervenir.',
+    final estado when ot != null => estado == EstadoIncidencia.completada
+        ? 'Resuelta con la orden de trabajo «${ot.nombre}»${ot.ultimo == null ? '' : ', completada el ${fecha(ot.ultimo!)}'}.'
+        : 'Se ha creado la orden de trabajo «${ot.nombre}» para resolverla'
+              '${ot.proximo == null ? '' : ', prevista para el ${fecha(ot.proximo!)}'}.',
+    final estado => estado.etiqueta,
+  };
+}
+
+/// Revisa el informe de una incidencia (vista previa editable) y lo descarga. Con OT y parte, el parte de la OT
+/// (que ya lleva la incidencia y sus fotos); si no, la incidencia, sus fotos y en qué quedó.
+Future<void> descargarInformeIncidencia(BuildContext context, Incidencia x) async {
+  final ot = store.tarea(x.trabajoId);
+  final parte = ot == null ? null : (await informes.cargar(ot.id)).firstOrNull;
+  if (!context.mounted) return;
+  final archivo = _nombreArchivo('Incidencia ${dondeEs(x.activoId)} ${fecha(x.creada)}');
+  if (parte != null) return descargarInformePdf(context, parte, ot!, archivo: archivo);
+  final e = EdicionPdf(
+    titulo: 'Incidencia en ${raizActivo(x.activoId)?.titulo ?? 'el activo'}',
+    descripcion: x.descripcion,
+    cuerpo: _resolucionIncidencia(x),
+    fotos: await Future.wait(x.fotos.map(bytesFoto)),
+  );
+  if (!context.mounted) return;
+  await revisarPdf(
+    context,
+    titulo: 'Informe de incidencia',
+    archivo: archivo,
+    edicion: e,
+    nombreDescripcion: 'Qué ocurre',
+    nombreCuerpo: 'Resolución',
+    generar: (e) => incidenciaPdf(x, e: e),
+  );
+}
+
+/// La incidencia en PDF (sin parte de OT): qué pasó y dónde, quién y cuándo la comunicó, fotos, la orden que la
+/// resuelve, el historial y en qué quedó. Con [e], lo retocado en la vista previa.
+Future<Uint8List> incidenciaPdf(Incidencia x, {EdicionPdf? e}) async {
+  final fotos = e?.fotos ?? await Future.wait(x.fotos.map(bytesFoto));
   final estado = store.estadoIncidencia(x);
   final ot = store.tarea(x.trabajoId);
+  final origen = store.tarea(x.origenTrabajoId);
   final plan = store.planes.where((p) => p.id == x.planId).firstOrNull;
   final raiz = raizActivo(x.activoId);
   final componente = store.activo(x.activoId);
@@ -868,6 +954,25 @@ Future<Uint8List> incidenciaPdf(Incidencia x) async {
   final numero = 'INC-${limpio.substring(0, min(8, limpio.length))}';
   final color = PdfColor.fromInt(estado.color.toARGB32());
   final fondo = PdfColor.fromInt(Color.alphaBlend(estado.color.withValues(alpha: .12), Colors.white).toARGB32());
+  final marcaSuave = PdfColor.fromInt(Color.alphaBlend(P.morado.withValues(alpha: .08), Colors.white).toARGB32());
+  String cuando(DateTime d) => '${fecha(d)} ${hhmm(d.hour * 60 + d.minute)}';
+  final titulo = e?.titulo ?? 'Incidencia en ${raiz?.titulo ?? 'el activo'}';
+  final descripcion = e?.descripcion ?? x.descripcion;
+  final resolucion = e?.cuerpo ?? _resolucionIncidencia(x);
+  final notas = e?.notas ?? '';
+  final tecnicosOt = ot == null ? const <String>[] : [for (final id in ot.trabajadorIds) ?store.trabajador(id)?.nombreCompleto];
+  final otLimpio = ot?.id.replaceAll('-', '').toUpperCase() ?? '';
+  // Lo que pasó, en orden: de la avería comunicada a la orden (o a desestimarla).
+  final historial = <(String, String)>[
+    (cuando(x.creada), 'Comunicada por ${_quien(x.tecnicoId)}${origen == null ? '' : ' durante la orden «${origen.nombre}»'}.'),
+    if (x.editadaEl != null) (cuando(x.editadaEl!), 'Corregida por quien la comunicó.'),
+    if (ot != null) ('', 'Se crea la orden de trabajo «${ot.nombre}»${ot.proximo == null ? '' : ', prevista para el ${fecha(ot.proximo!)}'}.'),
+    if (tecnicosOt.isNotEmpty) ('', 'Asignada a ${tecnicosOt.join(', ')}.'),
+    if (estado == EstadoIncidencia.completada)
+      (x.cerradaEl == null ? '' : cuando(x.cerradaEl!), 'Incidencia resuelta.'),
+    if (estado == EstadoIncidencia.desestimada)
+      (x.cerradaEl == null ? '' : cuando(x.cerradaEl!), 'Desestimada por la oficina.'),
+  ];
   final doc = pw.Document(title: 'Incidencia $numero', author: empresa.isEmpty ? Marca.nombre : empresa);
   doc.addPage(
     _paginaPdf(
@@ -875,28 +980,24 @@ Future<Uint8List> incidenciaPdf(Incidencia x) async {
       empresa: empresa,
       titulo: 'Informe de incidencia',
       numero: numero,
-      cuando: '${fecha(x.creada)} ${hhmm(x.creada.hour * 60 + x.creada.minute)}',
+      cuando: cuando(x.creada),
       build: (_) => [
+        // Título con el estado a la derecha, como el parte de la OT.
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Expanded(
-              child: pw.Text(
-                x.descripcion.isEmpty ? 'Sin descripción' : x.descripcion,
-                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: _tintaPdf),
-              ),
+              child: pw.Text(titulo, style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: _tintaPdf)),
             ),
             pw.SizedBox(width: 16),
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: pw.BoxDecoration(color: fondo, borderRadius: pw.BorderRadius.circular(20)),
-              child: pw.Text(
-                estado.etiqueta,
-                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: color),
-              ),
+              child: pw.Text(estado.etiqueta, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: color)),
             ),
           ],
         ),
+        _seccionPdf('Qué ocurre', descripcion.isEmpty ? 'Sin descripción.' : descripcion),
         pw.SizedBox(height: 18),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -904,40 +1005,58 @@ Future<Uint8List> incidenciaPdf(Incidencia x) async {
             pw.Expanded(
               child: _tarjetaPdf('Incidencia', [
                 _datoPdf('Número', numero),
-                _datoPdf('Gravedad', x.gravedad.etiqueta),
-                _datoPdf('Comunicada por', (x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombreCompleto ?? 'Oficina'),
-                _datoPdf('Fecha', fecha(x.creada)),
-              ]),
-            ),
-            pw.SizedBox(width: 12),
-            pw.Expanded(
-              child: _tarjetaPdf('Activo', [
-                _datoPdf('Activo', raiz?.titulo ?? '-'),
-                if (componente != null && componente.id != raiz?.id) _datoPdf('Componente', componente.titulo),
+                _datoPuntoPdf('Gravedad', x.gravedad.etiqueta, x.gravedad.color),
+                _datoPdf('Comunicada por', _quien(x.tecnicoId)),
+                _datoPdf('Fecha y hora', cuando(x.creada)),
+                if (origen != null) _datoPdf('Detectada durante', origen.nombre),
                 if (plan != null) _datoPdf('Mantenimiento vinculado', plan.nombre),
               ]),
             ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(child: _tarjetaPdf('Activo', _datosActivoPdf(raiz, componente, ''))),
           ],
         ),
+        if (ot != null) ...[
+          pw.SizedBox(height: 12),
+          // La orden que la resuelve, en una franja suave del color de la marca.
+          pw.Container(
+            padding: const pw.EdgeInsets.fromLTRB(14, 12, 14, 6),
+            decoration: pw.BoxDecoration(color: marcaSuave, borderRadius: pw.BorderRadius.circular(6)),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _etiquetaPdf('Orden de trabajo'),
+                pw.SizedBox(height: 8),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(flex: 2, child: _datoPdf(ot.nombre, 'OT-${otLimpio.substring(0, min(8, otLimpio.length))}')),
+                    pw.Expanded(child: _datoPdf('Estado', ot.estado.etiqueta)),
+                    pw.Expanded(
+                      child: _datoPdf(
+                        ot.estado == EstadoTrabajo.realizado ? 'Completada el' : 'Prevista',
+                        fecha(ot.estado == EstadoTrabajo.realizado ? ot.ultimo : ot.proximo),
+                      ),
+                    ),
+                    pw.Expanded(flex: 2, child: _datoPdf('Asignada a', tecnicosOt.join(', '))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
         if (fotos.isNotEmpty) ...[
           pw.SizedBox(height: 14),
           _etiquetaPdf('Fotos'),
           pw.SizedBox(height: 8),
           _fotosPdf(fotos),
         ],
-        _seccionPdf('Resolución', switch (estado) {
-          EstadoIncidencia.abierta => 'Pendiente de revisión.',
-          EstadoIncidencia.desestimada =>
-            'Desestimada${x.cerradaEl == null ? '' : ' el ${fecha(x.cerradaEl!)}'}: no hizo falta intervenir.',
-          _ when ot != null => [
-            'Orden de trabajo: ${ot.nombre}',
-            if (estado == EstadoIncidencia.completada)
-              'Completada${ot.ultimo == null ? '' : ' el ${fecha(ot.ultimo!)}'}.'
-            else
-              'Pendiente${ot.proximo == null ? '' : ', prevista el ${fecha(ot.proximo!)}'}.',
-          ].join('\n'),
-          _ => estado.etiqueta,
-        }),
+        pw.SizedBox(height: 16),
+        _etiquetaPdf('Historial'),
+        pw.SizedBox(height: 8),
+        for (final (c, texto) in historial) _pasoPdf(c, texto),
+        _seccionPdf('Resolución', resolucion.isEmpty ? '-' : resolucion),
+        if (notas.isNotEmpty) _seccionPdf('Notas', notas),
       ],
     ),
   );

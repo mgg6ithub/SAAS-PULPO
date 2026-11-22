@@ -292,7 +292,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
   Future<void> _informe() async {
     setState(() => descargando = true);
     try {
-      await descargarInformeIncidencia(x);
+      await descargarInformeIncidencia(context, x);
     } catch (e) {
       debugPrint('Pultec: no se pudo crear el PDF de la incidencia: $e');
       if (mounted) {

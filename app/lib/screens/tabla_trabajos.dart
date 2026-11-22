@@ -313,7 +313,10 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
     clave: (box) => (box.maxWidth > widget.umbralAncho, box.maxWidth > 600, box.maxWidth > 1100),
     builder: (context, box) {
       // El PDF con un clic solo si cabe (en estrecho, desde la ficha de la orden).
-      final conPdf = box.maxWidth > 980 && ts.any((t) => t.estado == EstadoTrabajo.realizado);
+      // Mientras se selecciona, en su sitio van los círculos de selección.
+      final conPdf = !seleccionando && box.maxWidth > 980 && ts.any((t) => t.estado == EstadoTrabajo.realizado);
+      // El anillo del ciclo solo si alguna orden lo tiene (las hechas no): si no, el nombre va al principio.
+      final conAnillo = industrial && ts.any((t) => cicloOt(t) != null);
       final ancho = box.maxWidth > widget.umbralAncho;
       // Poco sitio (p. ej. media pantalla): columnas más estrechas y criticidad solo con su punto.
       final apurado = box.maxWidth <= 1100;
@@ -346,8 +349,9 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (medio) const Col('Asignado a', ancho: 96),
             ],
             Col('Estado', ancho: industrial && apurado ? 116 : 140, derecha: true),
-            // Pultec, en el histórico: el parte en PDF con un clic.
-            if (industrial && conPdf) const Col('', ancho: 48, cabecera: SizedBox()),
+            // Pultec, en el histórico: el parte en PDF con un clic (sin título, va la primera: bajo el botón de
+            // selección, como los círculos al seleccionar).
+            if (industrial && conPdf) const Col('', ancho: 36, cabecera: SizedBox()),
             // Pultec: al final, separado por una raya, el menú para elegir columnas.
             if (industrial && medio)
               Col(
@@ -408,7 +412,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               Row(
                 children: [
                   // Pultec: cuánto le queda al ciclo, de un vistazo.
-                  if (industrial) ...[AnilloCiclo(cicloOt(t)), const SizedBox(width: 10)],
+                  if (conAnillo) ...[AnilloCiclo(cicloOt(t)), const SizedBox(width: 10)],
                   if (!industrial) ...[BarraTipo(t.tipo, alto: 28, color: t.colorBloque), const SizedBox(width: 10)],
                   Flexible(
                     child: Column(
@@ -563,7 +567,10 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
 //                 ),
               if (!industrial && medio && ts.any((x) => store.hijas(x.id).isNotEmpty)) _subtrabajos(t),
               if (industrial && conPdf)
-                t.estado == EstadoTrabajo.realizado ? BotonPdf.orden(t, context) : const SizedBox(),
+                t.estado == EstadoTrabajo.realizado
+                    // Mismo eje que el botón de selección de la cabecera (8 px del borde, la fila tiene 18 - 4).
+                    ? Transform.translate(offset: const Offset(-6, 0), child: BotonPdf.orden(t, context, compacto: true))
+                    : const SizedBox(),
               if (industrial && medio) const SizedBox(),
             ];
           },

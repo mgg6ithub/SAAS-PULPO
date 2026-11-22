@@ -101,7 +101,7 @@ class _InformeState extends State<_Informe> {
   Future<void> _pdf() async {
     setState(() => descargando = true);
     try {
-      await descargarInformePdf(widget.i, widget.t);
+      await descargarInformePdf(context, widget.i, widget.t);
     } catch (e) {
       debugPrint('Pultec: no se pudo crear el PDF: $e');
       if (mounted) {
@@ -371,10 +371,13 @@ class _PintorFirma extends CustomPainter {
 class BotonPdf extends StatefulWidget {
   final Future<void> Function() descargar;
   final String tooltip;
-  const BotonPdf(this.descargar, {super.key, this.tooltip = 'Descargar PDF'});
+
+  /// 32 × 32, como el botón de selección de las tablas (para ir justo debajo de él).
+  final bool compacto;
+  const BotonPdf(this.descargar, {super.key, this.tooltip = 'Descargar PDF', this.compacto = false});
 
   /// El parte más reciente de la OT; sin parte, lo avisa.
-  factory BotonPdf.orden(Tarea t, BuildContext context) => BotonPdf(() async {
+  factory BotonPdf.orden(Tarea t, BuildContext context, {bool compacto = false}) => BotonPdf(compacto: compacto, () async {
     final messenger = ScaffoldMessenger.of(context);
     final ultimo = (await informes.cargar(t.id)).firstOrNull;
     if (ultimo == null) {
@@ -383,7 +386,7 @@ class BotonPdf extends StatefulWidget {
       );
       return;
     }
-    await descargarInformePdf(ultimo, t);
+    if (context.mounted) await descargarInformePdf(context, ultimo, t);
   }, tooltip: 'Descargar el parte en PDF');
 
   @override
@@ -412,6 +415,8 @@ class _BotonPdfState extends State<BotonPdf> {
   Widget build(BuildContext context) => IconButton(
     tooltip: widget.tooltip,
     onPressed: preparando ? null : _pulsar,
+    padding: widget.compacto ? EdgeInsets.zero : null,
+    constraints: widget.compacto ? const BoxConstraints.tightFor(width: 32, height: 32) : null,
     icon: preparando
         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
         : Icon(Icons.download_rounded, size: 18, color: P.textoSuave),

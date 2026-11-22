@@ -503,7 +503,7 @@ class _DescargarParteState extends State<_DescargarParte> {
   Future<void> _pdf(Informe i) async {
     setState(() => descargando = true);
     try {
-      await descargarInformePdf(i, widget.t);
+      await descargarInformePdf(context, i, widget.t);
     } catch (e) {
       debugPrint('Pultec: no se pudo crear el PDF: $e');
       if (mounted) {
