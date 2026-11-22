@@ -225,6 +225,30 @@ class _TablaPlanesState extends State<TablaPlanes> {
     );
   }
 
+  /// Desde el mantenimiento, al dejar su orden con un técnico: ¿se encarga siempre él? Con «sí», el mantenimiento
+  /// queda asignado a él y todas sus órdenes nuevas le llegan (como «Asignar a» en el formulario); si no, solo
+  /// esta orden.
+  Future<void> _preguntarSiempre(PlanMantenimiento p, Tarea ot) async {
+    if (ot.trabajadorIds.length != 1 || p.trabajadorId == ot.trabajadorIds.first) return;
+    final w = store.trabajador(ot.trabajadorIds.first);
+    if (w == null) return;
+    final siempre = await confirmar(
+      context,
+      '¿Quieres que ${w.nombre} se encargue siempre de «${p.nombre}»?',
+      accion: 'Sí, siempre ${w.nombre}',
+      icono: Icons.person_pin_outlined,
+      destructivo: false,
+      nota: 'Las próximas órdenes de este mantenimiento se le asignarán a ${w.nombre}.',
+      cancelar: 'Solo esta orden',
+    );
+    if (!siempre || !mounted) return;
+    p
+      ..trabajadorId = w.id
+      ..grupoId = null;
+    store.guardarPlan(p);
+    setState(() {});
+  }
+
   /// Botón de la última columna: menú con todas las columnas para marcar o desmarcar.
   Widget _menuColumnas() => MenuAnchor(
     alignmentOffset: const Offset(-200, 4),
@@ -419,6 +443,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                             () {
                               store.guardarTarea(otPendienteDe);
                               if (mounted) setState(() {});
+                              _preguntarSiempre(p, otPendienteDe);
                             },
                             textoSinAsignar: 'Sin técnico',
                             reducido: true,
@@ -787,7 +812,11 @@ class _PlanFormState extends State<PlanForm> {
               ),
           ],
         ),
-        Bloque('Quién y cuánto', descripcion: 'A quién va su orden de trabajo (un técnico o un grupo) y cuánto dura.', [
+        Bloque(
+          'Quién y cuánto',
+          descripcion: 'Con un técnico o un grupo, todas las órdenes que cree este mantenimiento se le asignan '
+              'siempre por defecto. Si ese día está ausente u ocupado, Pultec te avisa. Y cuánto dura.',
+          [
           // Asignar a y duración en una fila (sin categoría: el grupo ya dice quién lo hace).
           dos(
             conMargen(

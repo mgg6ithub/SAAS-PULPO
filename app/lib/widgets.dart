@@ -2159,6 +2159,7 @@ Future<bool> confirmar(
   IconData icono = Icons.delete_outline_rounded,
   bool destructivo = true,
   String? nota,
+  String cancelar = 'Cancelar',
 }) async =>
     await showDialog<bool>(
       context: context,
@@ -2204,7 +2205,7 @@ Future<bool> confirmar(
                 TextButton(
                   style: TextButton.styleFrom(foregroundColor: P.textoSuave),
                   onPressed: () => Navigator.pop(c, false),
-                  child: const Text('Cancelar'),
+                  child: Text(cancelar),
                 ),
               ],
             ),

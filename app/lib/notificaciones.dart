@@ -120,6 +120,36 @@ List<Aviso> avisosAhora() {
       ),
     );
   }
+  // Técnicos ausentes u ocupados con órdenes pendientes para esta semana (o vencidas): uno por técnico.
+  final porTecnico = <Trabajador, List<Tarea>>{};
+  for (final t in store.tareas) {
+    if (t.esPlantilla || !t.activa || !t.estado.abierta || t.proximo == null || diasHasta(t.proximo!) > 7) continue;
+    for (final id in t.trabajadorIds) {
+      final w = store.trabajador(id);
+      if (w != null && w.estadoHoy != EstadoHoy.disponible) (porTecnico[w] ??= []).add(t);
+    }
+  }
+  for (final MapEntry(key: w, value: ots) in porTecnico.entries) {
+    ots.sort((a, b) => a.proximo!.compareTo(b.proximo!));
+    final estado = w.estadoHoy.etiqueta.toLowerCase();
+    lista.add(
+      Aviso(
+        // Cambia con el día, el estado y las órdenes: si algo cambia, vuelve a avisar.
+        id: 'tecnico-${w.id}-${h.toIso8601String().substring(0, 10)}-${w.estadoHoy.name}-${ots.length}',
+        titulo: ots.length == 1
+            ? '${w.nombre} está $estado y tiene la orden ${ots.first.nombre}'
+            : '${w.nombre} está $estado y tiene ${ots.length} órdenes pendientes',
+        detalle: [
+          for (final t in ots.take(3)) '${t.nombre} (${fecha(t.proximo)})',
+          if (ots.length > 3) 'y ${ots.length - 3} más',
+        ].join(', '),
+        color: w.estadoHoy == EstadoHoy.ausente ? P.rojo : P.ambar,
+        urgente: w.estadoHoy == EstadoHoy.ausente,
+        cuando: h,
+        tareaId: ots.first.id,
+      ),
+    );
+  }
   return lista..sort((a, b) => b.cuando.compareTo(a.cuando));
 }
 
