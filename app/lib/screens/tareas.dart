@@ -523,22 +523,26 @@ class _ChipTipo extends StatelessWidget {
   const _ChipTipo(this.nombre, this.color, this.sel, this.onTap, {this.icono, this.punto = true});
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) {
+    // Marcado, que se vea de un vistazo (también en oscuro): fondo más lleno, borde más grueso y texto en negrita.
+    // Los neutros (Sin asignar, Todos) se marcan con el color del texto: en gris parecían apagados, no elegidos.
+    final acento = color == P.gris || color == P.textoSuave ? P.texto : color;
+    return InkWell(
     borderRadius: BorderRadius.circular(20),
     onTap: onTap,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: EdgeInsets.symmetric(horizontal: sel ? 9.5 : 10, vertical: sel ? 4.5 : 5),
       decoration: BoxDecoration(
-        color: sel ? color.withValues(alpha: .1) : P.superficie,
+        color: sel ? acento.withValues(alpha: .18) : P.superficie,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: sel ? color : P.borde),
+        border: Border.all(color: sel ? acento : P.borde, width: sel ? 1.5 : 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icono != null)
-            Icon(icono, size: 15, color: color)
+            Icon(icono, size: 15, color: sel ? acento : color)
           else if (punto)
             Container(
               width: 7,
@@ -548,12 +552,17 @@ class _ChipTipo extends StatelessWidget {
           if (icono != null || punto) const SizedBox(width: 7),
           Text(
             nombre,
-            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: sel ? color : P.texto),
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+              color: sel ? acento : P.texto,
+            ),
           ),
         ],
       ),
     ),
   );
+  }
 }
 
 /// Crear o editar una etiqueta: nombre y color.
