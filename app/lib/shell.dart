@@ -117,7 +117,36 @@ class _ShellState extends State<Shell> {
   /// Atajo N, escuchado en todo el teclado (no depende de dónde esté el foco, que tras un clic puede quedar
   /// fuera de esta vista). Se ignora al escribir en un campo y con Ctrl/Cmd/Alt. Abre la ventana de nuevo
   /// de la sección; si la abrió una N y sigue arriba (sin un menú o diálogo encima), la cierra.
+  /// Las secciones de la barra lateral, en su orden: el atajo 1 va a la primera, el 2 a la segunda…
+  List<Seccion> get _ordenMenu => [
+    Seccion.inicio,
+    Seccion.planificacion,
+    Seccion.clientes,
+    Seccion.tareas,
+    if (industrial) Seccion.incidencias,
+    Seccion.trabajadores,
+    if (Marca.finanzas) Seccion.finanzas,
+  ];
+
+  /// Números 1-9: ir a esa sección de la barra lateral (sin diálogos encima ni al escribir).
+  bool _teclaNumero(KeyEvent e, BuildContext? foco) {
+    final n = int.tryParse(e.character ?? '');
+    if (n == null || n < 1 || n > _ordenMenu.length) return false;
+    final arriba = foco == null ? null : ModalRoute.of(foco);
+    if (arriba != null && arriba != ModalRoute.of(context)) return false;
+    ir(_ordenMenu[n - 1]);
+    return true;
+  }
+
   bool _tecla(KeyEvent e) {
+    if (e is KeyDownEvent && mounted && rolTrabajador.value == null) {
+      final teclado = HardwareKeyboard.instance;
+      final foco = primaryFocus?.context;
+      if (!teclado.isControlPressed && !teclado.isMetaPressed && !teclado.isAltPressed &&
+          foco?.findAncestorStateOfType<EditableTextState>() == null && _teclaNumero(e, foco)) {
+        return true;
+      }
+    }
     final esT = e.logicalKey == LogicalKeyboardKey.keyT;
     if (e is! KeyDownEvent || (e.logicalKey != LogicalKeyboardKey.keyN && !esT) || !mounted) return false;
     final teclado = HardwareKeyboard.instance;

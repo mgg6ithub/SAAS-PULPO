@@ -46,6 +46,7 @@ class _AjustesState extends State<_Ajustes> {
     if (store.nube != null) (Icons.person_outline_rounded, P.morado, 'Cuenta', 'Tu perfil, el correo y la contraseña, las sesiones abiertas y borrar la cuenta.'),
     (Icons.contrast_rounded, P.morado, 'Apariencia', 'Tema claro u oscuro, y el tamaño y el tipo de letra de toda la app.'),
     (Icons.business_outlined, P.morado, 'Empresa', m('Los tipos de trabajo y las competencias de tus trabajadores.')),
+    (Icons.keyboard_outlined, P.morado, 'Atajos', 'Atajos de teclado para moverte por la app sin el ratón.'),
     if (!(store.nube?.esTrabajador ?? false))
       (Icons.swap_vert_rounded, P.morado, 'Datos', m('Importar y exportar clientes, trabajadores y trabajos en CSV (Excel).')),
   ];
@@ -107,6 +108,29 @@ class _AjustesState extends State<_Ajustes> {
           subtitulo: m('${competencias.length} competencias para trabajadores y trabajos'),
           child: Enlace('Editar', onTap: () => abrirCompetencias(context)),
         ),
+      ]),
+    ],
+    'Atajos' => [
+      _Grupo('General', [
+        _Atajo('Crear algo nuevo en la sección en la que estás', ['N']),
+        _Atajo('Abrir o cerrar el menú Crear', ['T']),
+        _Atajo('Ir a una sección de la barra lateral (1 Inicio, 2 ${industrial ? 'Planificación' : 'Itinerario'}…)', ['1', '…', '9']),
+        _Atajo('Cerrar una ventana o un menú', ['Esc']),
+      ]),
+      _Grupo(m('Listas (${industrial ? 'activos, órdenes de trabajo, incidencias, técnicos…' : 'clientes, trabajos, trabajadores…'})'), [
+        _Atajo('Marcar la primera fila', ['Espacio']),
+        _Atajo('Bajar o subir a la fila siguiente', ['↓', '↑']),
+        _Atajo('Abrir la fila marcada', ['Espacio', 'Intro']),
+        _Atajo('Moverse por las celdas de la fila', ['←', '→']),
+        _Atajo('Quitar la marca', ['Esc']),
+      ]),
+      _Grupo(industrial ? 'Planificación' : 'Itinerario', [
+        if (industrial) _Atajo('Ver el siguiente mantenimiento en el calendario', ['Espacio']),
+        _Atajo('Acercar o alejar el calendario', ['Ctrl', '+', '−']),
+        _Atajo('Acercar o alejar con la rueda', ['Ctrl', 'Rueda']),
+      ]),
+      _Grupo('Fotos', [
+        _Atajo('Foto anterior o siguiente', ['←', '→']),
       ]),
     ],
     _ => [
@@ -359,6 +383,45 @@ class _Grupo extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    ),
+  );
+}
+
+/// Fila de la pestaña Atajos: qué hace a la izquierda y sus teclas a la derecha.
+class _Atajo extends StatelessWidget {
+  final String texto;
+  final List<String> teclas;
+  const _Atajo(this.texto, this.teclas);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+    child: Row(
+      children: [
+        Expanded(child: Text(texto, style: const TextStyle(fontSize: 14))),
+        const SizedBox(width: 12),
+        for (final (i, t) in teclas.indexed) ...[
+          if (i > 0) const SizedBox(width: 4),
+          t == '…'
+              ? Text('…', style: TextStyle(color: P.textoSuave))
+              : Container(
+                  constraints: const BoxConstraints(minWidth: 26),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: P.fondo,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border(
+                      top: BorderSide(color: P.borde),
+                      left: BorderSide(color: P.borde),
+                      right: BorderSide(color: P.borde),
+                      bottom: BorderSide(color: P.borde, width: 2),
+                    ),
+                  ),
+                  child: Text(t, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                ),
+        ],
       ],
     ),
   );

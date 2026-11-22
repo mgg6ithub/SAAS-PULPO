@@ -1402,7 +1402,11 @@ class _TablaState extends State<Tabla> {
     final arriba = foco == null ? null : ModalRoute.of(foco);
     if (arriba != null && arriba != ModalRoute.of(context)) return false;
     if (k == LogicalKeyboardKey.enter || k == LogicalKeyboardKey.space) {
-      if (_foco == null) return false;
+      // Sin ninguna marcada, la primera pulsación marca la primera fila; la siguiente la abre.
+      if (_foco == null) {
+        setState(() => _foco = 0);
+        return true;
+      }
       // En una celda: lo mismo que un clic en lo que tenga (selector, enlace…); si no tiene nada, la fila.
       if (_col != null && _pulsarCelda(_col!)) return true;
       if (widget.onTap == null) return false;
