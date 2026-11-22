@@ -46,7 +46,20 @@ class Historicos extends StatefulWidget {
 
   /// Solo las de este técnico (ficha del técnico).
   final String? tecnicoId;
-  const Historicos({super.key, this.activoId, this.incrustada = false, this.tecnicoId});
+
+  /// Solo la tabla: los filtros (gravedad, periodo y técnico) los pone quien la incrusta (ficha del activo).
+  final bool soloTabla;
+  final TipoMantenimiento? tipo;
+  final int periodo;
+  const Historicos({
+    super.key,
+    this.activoId,
+    this.incrustada = false,
+    this.tecnicoId,
+    this.soloTabla = false,
+    this.tipo,
+    this.periodo = 2,
+  });
 
   @override
   State<Historicos> createState() => _HistoricosState();
@@ -61,7 +74,7 @@ class _HistoricosState extends State<Historicos> {
   List<Realizada> _filtradas() {
     final id = widget.activoId ?? activoId;
     final rama = id == null ? null : store.ramaDe(id);
-    final dias = _periodos[periodo].$2;
+    final dias = _periodos[widget.soloTabla ? widget.periodo : periodo].$2;
     return otsRealizadas().where((r) {
       final (d, t) = r;
       if (rama != null && !rama.contains(t.activoId)) return false;
@@ -74,7 +87,16 @@ class _HistoricosState extends State<Historicos> {
   @override
   Widget build(BuildContext context) {
     final base = _filtradas();
+    final tipo = widget.soloTabla ? widget.tipo : this.tipo;
     final lista = tipo == null ? base : base.where((r) => r.$2.tipoMantenimiento == tipo).toList();
+    final vacio = Vacio(
+      icono: Icons.history_rounded,
+      titulo: otsRealizadas().isEmpty ? 'Aún no hay órdenes de trabajo realizadas' : null,
+      texto: otsRealizadas().isEmpty
+          ? 'Cada orden de trabajo que se marque como hecha quedará aquí registrada.'
+          : 'Ninguna orden de trabajo realizada con estos filtros',
+    );
+    if (widget.soloTabla) return lista.isEmpty ? vacio : _TablaRealizadas(lista);
     final activos = store.hijosDe(null);
     final tecnicos = store.trabajadores.where((w) => w.activo).toList();
     return Padding(
@@ -98,9 +120,9 @@ class _HistoricosState extends State<Historicos> {
                       '${const ['Preventivo', 'No crítico', 'Crítico'][t.index]} ${base.where((r) => r.$2.tipoMantenimiento == t).length}'],
                     colores: [null, for (final t in TipoMantenimiento.values) t.color],
                     anchosIguales: true,
-                    seleccion: tipo == null ? 0 : tipo!.index + 1,
+                    seleccion: tipo == null ? 0 : tipo.index + 1,
                     compactas: true,
-                    onChanged: (i) => setState(() => tipo = i == 0 ? null : TipoMantenimiento.values[i - 1]),
+                    onChanged: (i) => setState(() => this.tipo = i == 0 ? null : TipoMantenimiento.values[i - 1]),
                   ),
                   Wrap(spacing: 12, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     if (box.maxWidth > 1500)
@@ -136,15 +158,7 @@ class _HistoricosState extends State<Historicos> {
           ),
           const SizedBox(height: huecoVista),
           Expanded(
-            child: lista.isEmpty
-                ? Vacio(
-                    icono: Icons.history_rounded,
-                    titulo: otsRealizadas().isEmpty ? 'Aún no hay órdenes de trabajo realizadas' : null,
-                    texto: otsRealizadas().isEmpty
-                        ? 'Cada orden de trabajo que se marque como hecha quedará aquí registrada.'
-                        : 'Ninguna orden de trabajo realizada con estos filtros',
-                  )
-                : _TablaRealizadas(lista),
+            child: lista.isEmpty ? vacio : _TablaRealizadas(lista),
           ),
         ],
       ),
@@ -191,7 +205,7 @@ class _TablaRealizadas extends StatelessWidget {
           const Col('Orden de trabajo', flex: 3),
           if (medio) const Col('Activo', flex: 5),
           if (medio) const Col('Ejecutado por', flex: 2),
-          if (medio) const Col('Tipo', ancho: 190),
+          if (medio) const Col('Gravedad', ancho: 190),
           const Col('Resultado', ancho: 170),
           // El PDF con un clic solo si cabe; si no, está en la ventana de la orden.
           if (ancho) const Col('', ancho: 48, cabecera: SizedBox()),
@@ -365,5 +379,42 @@ Future<void> verOrdenHecha(BuildContext context, Tarea t) {
         ),
       ),
     ),
+  );
+}
+
+/// Periodo y técnico del histórico, para ponerlos a la derecha de otra barra (ficha del activo).
+class FiltrosHistorico extends StatelessWidget {
+  final int periodo;
+  final String? tecnicoId;
+  final ValueChanged<int> onPeriodo;
+  final ValueChanged<String?> onTecnico;
+  const FiltrosHistorico({
+    super.key,
+    required this.periodo,
+    required this.tecnicoId,
+    required this.onPeriodo,
+    required this.onTecnico,
+  });
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 12,
+    runSpacing: 8,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      _Filtro<int>(
+        todos: _periodos.first.$1,
+        valor: periodo == 0 ? null : periodo,
+        opciones: [for (final (i, p) in _periodos.indexed.skip(1)) (i, p.$1)],
+        onChanged: (v) => onPeriodo(v ?? 0),
+      ),
+      _Filtro<String>(
+        todos: 'Todos los técnicos',
+        valor: tecnicoId,
+        iconoOpcion: (id) => AvataresTrabajadores([id], size: 22),
+        opciones: [for (final w in store.trabajadores.where((w) => w.activo)) (w.id, w.nombre)],
+        onChanged: onTecnico,
+      ),
+    ],
   );
 }

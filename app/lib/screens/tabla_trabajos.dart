@@ -100,8 +100,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   }
 
   /// Pultec: columnas opcionales de la lista de órdenes y las que se ven (se recuerdan mientras dure la sesión).
-  static const _opcionales = ['Activo', 'Origen', 'Criticidad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
-  static final _visibles = {'Origen', 'Activo', 'Criticidad', 'Asignado a', 'Periodicidad'};
+  static const _opcionales = ['Activo', 'Origen', 'Gravedad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
+  static final _visibles = {'Origen', 'Activo', 'Gravedad', 'Asignado a', 'Periodicidad'};
   bool _ver(String c) => _visibles.contains(c);
 
   String _descripcion(Tarea t) => descripcionOt(t);
@@ -338,7 +338,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (medio && widget.conCliente && _ver('Activo')) const Col('Activo', flex: 4),
               if (medio && _ver('Origen')) const Col('Origen', ancho: 150),
               // Siempre «Criticidad» con su píldora (Preventivo, No crítico, Crítico), aunque haya poco sitio.
-              if (_ver('Criticidad')) Col('Criticidad', ancho: apurado ? 128 : 170),
+              if (_ver('Gravedad')) Col('Gravedad', ancho: apurado ? 128 : 170),
               if (medio && _ver('Asignado a')) Col('Asignado a', ancho: apurado ? 72 : 96),
               if (medio && _ver('Fecha y hora')) const Col('Fecha y hora', ancho: 160),
               if (ancho && _ver('Periodicidad')) const Col('Periodicidad', ancho: 120),
@@ -466,7 +466,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       Flexible(child: celdaTexto(origen, suave: true)),
                     ]);
                   }),
-                if (_ver('Criticidad'))
+                if (_ver('Gravedad'))
                   Align(
                     alignment: Alignment.centerLeft,
                     child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),

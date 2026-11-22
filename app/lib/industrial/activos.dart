@@ -612,6 +612,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   /// Órdenes de trabajo del activo: pendientes o, aparte, el histórico (como en Órdenes de trabajo).
   bool _historicoOt = false;
 
+  /// Histórico de la ficha: periodo (índice de los del histórico; de serie, 3 meses) y técnico.
+  int _periodoOt = 2;
+  String? _tecnicoOt;
+
   /// Filtros de las órdenes del activo: criticidad (0 todas, 1 preventivo, 2 no crítico, 3 crítico) y solo las que
   /// salen de una incidencia (al pulsar «con OT» arriba).
   int _criticidadOt = 0;
@@ -894,7 +898,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
           if (pestana == 2) ...[
             const SizedBox(height: 16),
             // Lo que no se ve a primera vista: las órdenes que se repiten salen solas de los mantenimientos.
-            if (!_historicoOt && !ajustes.consejoCerrado('ot_activo_mantenimiento')) ...[
+            if (!ajustes.consejoCerrado('ot_activo_mantenimiento')) ...[
               Consejo(
                 clave: 'ot_activo_mantenimiento',
                 '¿Se repite cada cierto tiempo? Crea un mantenimiento y Pultec creará su orden de trabajo cada vez que '
@@ -933,15 +937,16 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                   seleccion: _historicoOt ? 1 : 0,
                   onChanged: (i) => setState(() => _historicoOt = i == 1),
                 ),
-                // Como en Órdenes de trabajo: por criticidad y, si se llega desde arriba, solo las de incidencias.
+                // Como en Órdenes de trabajo: por gravedad (también en el histórico) y, si se llega desde arriba,
+                // solo las de incidencias.
+                Pestanas(
+                  opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
+                  colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                  seleccion: _criticidadOt,
+                  compactas: true,
+                  onChanged: (i) => setState(() => _criticidadOt = i),
+                ),
                 if (!_historicoOt) ...[
-                  Pestanas(
-                    opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
-                    colores: [null, for (final t in TipoMantenimiento.values) t.color],
-                    seleccion: _criticidadOt,
-                    compactas: true,
-                    onChanged: (i) => setState(() => _criticidadOt = i),
-                  ),
                   if (_soloIncidencias) ...[
                       InputChip(
                       label: const Text('De incidencias'),
@@ -953,11 +958,19 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                 ],
                     ],
                   ),
+                // A la derecha: la asignación en pendientes; el periodo y el técnico en el histórico.
                 if (!_historicoOt)
                   FiltroFlujoMantenimiento(
                     incluirSinOrden: false,
                     seleccion: _asignacionOt,
                     onChanged: (i) => setState(() => _asignacionOt = i),
+                  )
+                else
+                  FiltrosHistorico(
+                    periodo: _periodoOt,
+                    tecnicoId: _tecnicoOt,
+                    onPeriodo: (i) => setState(() => _periodoOt = i),
+                    onTecnico: (id) => setState(() => _tecnicoOt = id),
                   ),
                 ],
               ),
@@ -1132,7 +1145,14 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       })),
                     ],
                   ),
-                  _ => Historicos(activoId: a.id, incrustada: true),
+                  _ => Historicos(
+                    activoId: a.id,
+                    incrustada: true,
+                    soloTabla: true,
+                    tipo: _criticidadOt == 0 ? null : TipoMantenimiento.values[_criticidadOt - 1],
+                    periodo: _periodoOt,
+                    tecnicoId: _tecnicoOt,
+                  ),
                 },
               ),
             ),
