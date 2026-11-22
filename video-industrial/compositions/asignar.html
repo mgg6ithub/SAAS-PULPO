@@ -1,0 +1,167 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
+    #as-title { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 80px; font-weight: 650; letter-spacing: -0.035em; white-space: nowrap; }
+    #as-t1, #as-t2 { display: inline-block; }
+    #as-t2 { color: #6a2ff6; }
+    #as-window { position: absolute; left: 64px; top: 196px; width: 1792px; height: 836px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 24px; }
+    #as-barline { position: absolute; left: 64px; top: 272px; width: 1792px; height: 1.5px; background: #e7e4f0; }
+    #as-logo { position: absolute; left: 92px; top: 216px; width: 36px; height: 36px; }
+    #as-brand { position: absolute; left: 140px; top: 216px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+    #as-crumb { position: absolute; left: 270px; top: 221px; font-size: 24px; color: #14121f; font-weight: 600; }
+    .as-pane { position: absolute; top: 296px; height: 712px; border: 1.5px solid #e7e4f0; border-radius: 18px; background: #fff; }
+    #as-left { left: 88px; width: 1100px; }
+    #as-right { left: 1212px; width: 620px; background: #f7f6fb; }
+    .as-th { position: absolute; top: 330px; font-size: 19px; color: #5d5a6e; font-weight: 500; }
+    .as-row { position: absolute; left: 112px; width: 1052px; height: 92px; border-bottom: 1.5px solid #f0eef5; }
+    #as-row0 { background: #faf8ff; border-radius: 14px; border-bottom-color: transparent; }
+    .as-ring { position: absolute; left: 132px; width: 44px; height: 44px; }
+    .ring-bg { fill: none; stroke: #f0eef5; stroke-width: 6; }
+    .ring-fg { fill: none; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 1; }
+    .as-name { position: absolute; left: 200px; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+    .as-desc { position: absolute; left: 200px; font-size: 19px; color: #5d5a6e; }
+    .as-chip { position: absolute; left: 600px; height: 34px; padding: 0 12px; border-radius: 8px; background: #f4f3f8; font-size: 19px; line-height: 34px; color: #5d5a6e; }
+    .as-pill { position: absolute; left: 858px; height: 34px; padding: 0 14px 0 30px; border-radius: 17px; font-size: 19px; font-weight: 600; line-height: 34px; }
+    .as-pill::before { content: ""; position: absolute; left: 13px; top: 13px; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .pv { background: #e8f6ee; color: #16a34a; }
+    .cn { background: #fdf3e5; color: #d97706; }
+    .cc { background: #fdecec; color: #e5484d; }
+    .as-av { position: absolute; left: 1086px; width: 42px; height: 42px; border-radius: 50%; color: #fff; font-size: 15px; font-weight: 700; line-height: 42px; text-align: center; }
+    .as-none { position: absolute; left: 1086px; width: 42px; height: 42px; }
+    #as-menu { position: absolute; left: 860px; top: 484px; width: 320px; height: 252px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 16px; }
+    .as-mi { position: absolute; left: 872px; width: 296px; height: 72px; border-radius: 12px; }
+    .as-mi .mav { position: absolute; left: 14px; top: 16px; width: 40px; height: 40px; border-radius: 50%; color: #fff; font-size: 15px; font-weight: 700; line-height: 40px; text-align: center; }
+    .as-mi b { position: absolute; left: 68px; top: 12px; font-size: 22px; font-weight: 600; }
+    .as-mi small { position: absolute; left: 68px; top: 40px; font-size: 18px; color: #5d5a6e; }
+    #as-mi0 { background: #f4efff; }
+    #as-rhead { position: absolute; left: 1244px; top: 326px; font-size: 26px; font-weight: 650; }
+    #as-rsub { position: absolute; left: 1244px; top: 362px; font-size: 19px; color: #5d5a6e; }
+    .as-tech { position: absolute; left: 1244px; width: 556px; height: 64px; }
+    .as-tech .tav { position: absolute; left: 0; top: 10px; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-size: 15px; font-weight: 700; line-height: 44px; text-align: center; }
+    .as-tech b { position: absolute; left: 60px; top: 8px; font-size: 22px; font-weight: 600; }
+    .as-tech small { position: absolute; left: 60px; top: 36px; font-size: 17px; color: #5d5a6e; }
+    .as-track { position: absolute; left: 1494px; width: 250px; height: 10px; border-radius: 5px; background: #e9e7f0; }
+    .as-bar { position: absolute; left: 1494px; height: 10px; border-radius: 5px; background: #6a2ff6; transform-origin: 0 50%; }
+    .as-num { position: absolute; left: 1760px; font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+    #as-toast { position: absolute; left: 1244px; top: 880px; width: 556px; height: 92px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 16px; }
+    #as-toast .tb { position: absolute; left: 18px; top: 22px; width: 48px; height: 48px; border-radius: 14px; background: #efe9ff; color: #6a2ff6; }
+    #as-toast .tb svg { position: absolute; left: 12px; top: 12px; width: 24px; height: 24px; }
+    #as-toast b { position: absolute; left: 82px; top: 18px; font-size: 21px; font-weight: 600; }
+    #as-toast small { position: absolute; left: 82px; top: 48px; font-size: 18px; color: #5d5a6e; }
+    #as-cursor { position: absolute; left: 0; top: 0; width: 48px; height: 72px; }
+  </style>
+  <div id="root" data-composition-id="asignar" data-width="1920" data-height="1080">
+    <h1 id="as-title"><span id="as-t1">Cada orden,</span> <span id="as-t2">a su técnico.</span></h1>
+    <div id="as-cam" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
+      <div id="as-window"></div>
+      <div id="as-barline"></div>
+      <img id="as-logo" src="assets/pulpo-512.png" alt="" />
+      <div id="as-brand">Pultec</div>
+      <div id="as-crumb">Órdenes de trabajo</div>
+      <div id="as-left" class="as-pane"></div>
+      <div id="as-right" class="as-pane"></div>
+
+      <div class="as-th" style="left: 200px">Orden</div>
+      <div class="as-th" style="left: 600px">Activo</div>
+      <div class="as-th" style="left: 858px">Criticidad</div>
+      <div class="as-th" style="left: 1062px">Técnico</div>
+
+      <div id="as-row0" class="as-row" style="top: 372px"></div>
+      <div class="as-ring" style="top: 396px"><svg viewBox="0 0 56 56" width="44" height="44"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#e5484d" stroke-dashoffset="0.95" /></svg></div>
+      <div class="as-name" style="top: 386px">Cambio de aceite y filtros</div>
+      <div class="as-desc" style="top: 420px">Aceite 15W-40 y filtros de motor</div>
+      <div class="as-chip" style="top: 401px">CAM-01</div>
+      <div class="as-pill pv" style="top: 401px">Preventivo</div>
+      <svg id="as-none0" class="as-none" style="top: 397px" viewBox="0 0 42 42"><circle cx="21" cy="21" r="20" fill="#f4f3f8" /><circle cx="21" cy="16" r="5" fill="none" stroke="#9a97a8" stroke-width="2.4" /><path d="M12 31c1.5-5 5-7 9-7s7.5 2 9 7" fill="none" stroke="#9a97a8" stroke-width="2.4" stroke-linecap="round" /><path d="M10 10l22 22" stroke="#9a97a8" stroke-width="2.4" stroke-linecap="round" /></svg>
+      <div id="as-av0" class="as-av" style="top: 397px; background: #6a2ff6">AR</div>
+
+      <div class="as-row" style="top: 480px"></div>
+      <div class="as-ring" style="top: 504px"><svg viewBox="0 0 56 56" width="44" height="44"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#16a34a" stroke-dashoffset="0.3" /></svg></div>
+      <div class="as-name" style="top: 494px">Revisión general de la planta</div>
+      <div class="as-desc" style="top: 528px">Fugas, ruidos y temperaturas</div>
+      <div class="as-chip" style="top: 509px">PST-02</div>
+      <div class="as-pill pv" style="top: 509px">Preventivo</div>
+      <div class="as-av" style="top: 505px; background: #2563eb">LG</div>
+
+      <div class="as-row" style="top: 588px"></div>
+      <div class="as-ring" style="top: 612px"><svg viewBox="0 0 56 56" width="44" height="44"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#d97706" stroke-dashoffset="0.84" /></svg></div>
+      <div class="as-name" style="top: 602px">Vibraciones del ventilador</div>
+      <div class="as-desc" style="top: 636px">Medir y equilibrar el rodete</div>
+      <div class="as-chip" style="top: 617px">PST-02</div>
+      <div class="as-pill cn" style="top: 617px">Correctivo no crítico</div>
+      <div class="as-av" style="top: 613px; background: #0f9f8f">MS</div>
+
+      <div class="as-row" style="top: 696px"></div>
+      <div class="as-ring" style="top: 720px"><svg viewBox="0 0 56 56" width="44" height="44"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#e5484d" stroke-dashoffset="0.93" /></svg></div>
+      <div class="as-name" style="top: 710px">Reparar bomba de impulsión</div>
+      <div class="as-desc" style="top: 744px">Cierre mecánico con fuga</div>
+      <div class="as-chip" style="top: 725px">EB-01</div>
+      <div class="as-pill cc" style="top: 725px">Correctivo crítico</div>
+      <div class="as-av" style="top: 721px; background: #0f9f8f">MS</div>
+
+      <div class="as-row" style="top: 804px"></div>
+      <div class="as-ring" style="top: 828px"><svg viewBox="0 0 56 56" width="44" height="44"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#16a34a" stroke-dashoffset="0.12" /></svg></div>
+      <div class="as-name" style="top: 818px">Engrase de rodillos del secadero</div>
+      <div class="as-desc" style="top: 852px">Rodillos y alineación del tambor</div>
+      <div class="as-chip" style="top: 833px">PST-02</div>
+      <div class="as-pill pv" style="top: 833px">Preventivo</div>
+      <div class="as-av" style="top: 829px; background: #2563eb">LG</div>
+
+      <div id="as-rhead">Carga del equipo</div>
+      <div id="as-rsub">Órdenes asignadas esta semana</div>
+      <div class="as-tech" style="top: 410px"><div class="tav" style="background:#6a2ff6">AR</div><b>Ana Ruiz</b><small>Mecánica</small></div>
+      <div class="as-track" style="top: 437px"></div>
+      <div id="as-bar0" class="as-bar" style="top: 437px; width: 250px"></div>
+      <div id="as-n6" class="as-num" style="top: 427px">6</div>
+      <div id="as-n7" class="as-num" style="top: 427px">7</div>
+      <div class="as-tech" style="top: 494px"><div class="tav" style="background:#2563eb">LG</div><b>Luis Gómez</b><small>Eléctrica</small></div>
+      <div class="as-track" style="top: 521px"></div>
+      <div class="as-bar" style="top: 521px; width: 179px; background: #2563eb"></div>
+      <div class="as-num" style="top: 511px">5</div>
+      <div class="as-tech" style="top: 578px"><div class="tav" style="background:#0f9f8f">MS</div><b>Marta Sanz</b><small>Bombas y bombeo</small></div>
+      <div class="as-track" style="top: 605px"></div>
+      <div class="as-bar" style="top: 605px; width: 143px; background: #0f9f8f"></div>
+      <div class="as-num" style="top: 595px">4</div>
+
+      <div id="as-toast"><div class="tb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg></div><b>Ana Ruiz ya la tiene en su móvil</b><small>Cambio de aceite y filtros · CAM-01</small></div>
+
+      <div id="as-menu"></div>
+      <div id="as-mi0" class="as-mi" style="top: 496px"><div class="mav" style="background:#6a2ff6">AR</div><b>Ana Ruiz</b><small>Mecánica · 6 esta semana</small></div>
+      <div id="as-mi1" class="as-mi" style="top: 576px"><div class="mav" style="background:#2563eb">LG</div><b>Luis Gómez</b><small>Eléctrica · 5 esta semana</small></div>
+      <div id="as-mi2" class="as-mi" style="top: 656px"><div class="mav" style="background:#0f9f8f">MS</div><b>Marta Sanz</b><small>Bombas · 4 esta semana</small></div>
+
+      <svg id="as-cursor" viewBox="0 0 32 48"><path d="M2 2 L2 38 L11 30 L17 45 L23 42 L17 28 L29 28 Z" fill="#14121f" stroke="#fff" stroke-width="2" stroke-linejoin="round" /></svg>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#as-window, #as-barline, #as-logo, #as-brand, #as-crumb, .as-pane, .as-th, .as-row, .as-ring, .as-name, .as-desc, .as-chip, .as-pill, .as-av:not(#as-av0), #as-none0, #as-rhead, #as-rsub, .as-tech, .as-track, .as-bar, #as-n6", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 0);
+    tl.fromTo("#as-t1", { opacity: 0, filter: "blur(8px)", x: 264 }, { opacity: 1, filter: "blur(0px)", x: 264, duration: 0.25, ease: "power4.out" }, 0.3);
+
+    // Cursor a la celda del técnico: clic y se abre el menú
+    tl.fromTo("#as-cursor", { x: 1400, y: 1150 }, { x: 1104, y: 414, duration: 1.2, ease: "power3.out" }, 0.3);
+    tl.fromTo("#as-none0", { scale: 1 }, { scale: 0.9, duration: 0.08, ease: "power2.out", yoyo: true, repeat: 1, transformOrigin: "50% 50%" }, 1.5);
+    tl.fromTo("#as-menu, .as-mi", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.3, ease: "expo.out" }, 1.58);
+
+    // Elige a Ana
+    tl.fromTo("#as-cursor", { x: 1104, y: 414 }, { x: 1010, y: 526, duration: 0.8, ease: "power2.inOut", immediateRender: false }, 1.65);
+    tl.fromTo("#as-mi0", { scale: 1 }, { scale: 0.97, duration: 0.08, ease: "power2.out", yoyo: true, repeat: 1 }, 2.5);
+    tl.fromTo("#as-menu, .as-mi", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "power2.in", immediateRender: false }, 2.6);
+    tl.fromTo("#as-none0", { opacity: 1 }, { opacity: 0, duration: 0.15, ease: "none", immediateRender: false }, 2.6);
+    tl.fromTo("#as-av0", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2)" }, 2.65);
+    tl.fromTo("#as-cursor", { opacity: 1 }, { opacity: 0, duration: 0.3, ease: "power2.out", immediateRender: false }, 2.8);
+
+    // La carga de Ana sube y le llega el aviso
+    tl.fromTo("#as-bar0", { scaleX: 6 / 7 }, { scaleX: 1, duration: 0.6, ease: "power3.out" }, 2.8);
+    tl.fromTo("#as-n7", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 2.9);
+    tl.fromTo("#as-n6", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "power2.out", immediateRender: false }, 2.9);
+    tl.fromTo("#as-toast", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 3.1);
+
+    tl.fromTo("#as-t1", { x: 264 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 2.9);
+    tl.fromTo("#as-t2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power4.out" }, 3.1);
+
+    tl.fromTo("#as-cam, #as-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in", immediateRender: false }, 4.72);
+    window.__timelines["asignar"] = tl;
+  </script>
+</template>

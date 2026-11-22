@@ -1,0 +1,146 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
+    #auto-title { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 80px; font-weight: 650; letter-spacing: -0.035em; white-space: nowrap; }
+    #auto-t1, #auto-t2 { display: inline-block; }
+    #auto-t2 { color: #6a2ff6; }
+    #auto-window { position: absolute; left: 64px; top: 196px; width: 1792px; height: 836px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 24px; }
+    #auto-barline { position: absolute; left: 64px; top: 272px; width: 1792px; height: 1.5px; background: #e7e4f0; }
+    #auto-logo { position: absolute; left: 92px; top: 216px; width: 36px; height: 36px; }
+    #auto-brand { position: absolute; left: 140px; top: 216px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+    #auto-crumb { position: absolute; left: 270px; top: 221px; font-size: 24px; color: #5d5a6e; }
+    #auto-crumb b { color: #14121f; font-weight: 600; }
+    .auto-pane { position: absolute; top: 296px; height: 712px; border: 1.5px solid #e7e4f0; border-radius: 18px; background: #fff; }
+    #auto-left { left: 88px; width: 860px; }
+    #auto-right { left: 972px; width: 860px; background: #f7f6fb; }
+    .ic { display: block; background: currentColor; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+    #auto-abox { position: absolute; left: 120px; top: 326px; width: 96px; height: 96px; border-radius: 24px; background: #efe9ff; color: #6a2ff6; }
+    #auto-abox .ic { position: absolute; left: 20px; top: 20px; width: 56px; height: 56px; }
+    #auto-name { position: absolute; left: 240px; top: 334px; font-size: 36px; font-weight: 650; letter-spacing: -0.02em; }
+    #auto-sub { position: absolute; left: 240px; top: 384px; font-size: 22px; color: #5d5a6e; }
+    #auto-counter { position: absolute; left: 120px; top: 452px; width: 796px; height: 148px; border: 1.5px solid #e7e4f0; border-radius: 18px; }
+    #auto-clabel { position: absolute; left: 148px; top: 474px; font-size: 22px; color: #5d5a6e; }
+    #auto-hours { position: absolute; left: 146px; top: 502px; font-size: 68px; font-weight: 650; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+    #auto-rate { position: absolute; left: 700px; top: 532px; height: 40px; padding: 0 16px; border-radius: 20px; background: #f4f3f8; font-size: 20px; font-weight: 600; line-height: 40px; color: #5d5a6e; }
+    #auto-mhead { position: absolute; left: 120px; top: 628px; font-size: 24px; font-weight: 600; }
+    .auto-row { position: absolute; left: 120px; width: 796px; height: 96px; border: 1.5px solid #e7e4f0; border-radius: 16px; background: #fff; }
+    .auto-ring { position: absolute; left: 144px; width: 56px; height: 56px; }
+    .auto-ring svg { width: 56px; height: 56px; }
+    .ring-bg { fill: none; stroke: #f0eef5; stroke-width: 6; }
+    .ring-fg { fill: none; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 1; }
+    .auto-rname { position: absolute; left: 224px; font-size: 24px; font-weight: 600; }
+    .auto-rsub { position: absolute; left: 224px; font-size: 20px; color: #5d5a6e; }
+    #auto-flag { position: absolute; left: 744px; top: 696px; height: 40px; padding: 0 16px; border-radius: 20px; background: #efe9ff; color: #6a2ff6; font-size: 20px; font-weight: 650; line-height: 40px; }
+    #auto-ohead { position: absolute; left: 1000px; top: 322px; font-size: 28px; font-weight: 650; letter-spacing: -0.01em; }
+    .auto-count { position: absolute; left: 1272px; top: 322px; height: 36px; min-width: 44px; padding: 0 12px; border-radius: 18px; background: #efe9ff; color: #6a2ff6; font-size: 22px; font-weight: 700; line-height: 36px; text-align: center; }
+    .auto-ot { position: absolute; left: 1000px; width: 804px; height: 120px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 16px; }
+    .auto-ot .obox { position: absolute; left: 20px; top: 26px; width: 64px; height: 64px; border-radius: 16px; }
+    .auto-ot .obox .ic { position: absolute; left: 14px; top: 14px; width: 36px; height: 36px; }
+    .auto-ot .ochip { position: absolute; left: 104px; top: 18px; height: 30px; padding: 0 12px; border-radius: 8px; background: #f4f3f8; font-size: 18px; line-height: 30px; color: #5d5a6e; }
+    .auto-ot .otit { position: absolute; left: 104px; top: 58px; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .auto-ot .opill { position: absolute; right: 24px; top: 20px; height: 32px; padding: 0 12px 0 28px; border-radius: 16px; font-size: 18px; font-weight: 600; line-height: 32px; }
+    .auto-ot .opill::before { content: ""; position: absolute; left: 12px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .pv { background: #e8f6ee; color: #16a34a; }
+    .cc { background: #fdecec; color: #e5484d; }
+    .auto-ot .oav { position: absolute; right: 24px; top: 66px; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 14px; font-weight: 700; line-height: 36px; text-align: center; }
+    #auto-new { border-color: #6a2ff6; border-width: 2px; }
+    #auto-badge { position: absolute; left: 1612px; top: 446px; height: 34px; padding: 0 14px; border-radius: 17px; background: #6a2ff6; color: #fff; font-size: 18px; font-weight: 650; line-height: 34px; }
+  </style>
+  <div id="root" data-composition-id="auto" data-width="1920" data-height="1080">
+    <h1 id="auto-title"><span id="auto-t1">Los mantenimientos</span> <span id="auto-t2">crean sus órdenes solos.</span></h1>
+    <div id="auto-cam" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
+      <div id="auto-window"></div>
+      <div id="auto-barline"></div>
+      <img id="auto-logo" src="assets/pulpo-512.png" alt="" />
+      <div id="auto-brand">Pultec</div>
+      <div id="auto-crumb">Activos › <b>Camión cisterna Volvo FH</b></div>
+      <div id="auto-left" class="auto-pane"></div>
+      <div id="auto-right" class="auto-pane"></div>
+
+      <div id="auto-abox"><i class="ic" style="--m: url(assets/iconos/cisterna.svg)"></i></div>
+      <div id="auto-name">Camión cisterna Volvo FH</div>
+      <div id="auto-sub">CAM-01 · Flota · 4 componentes</div>
+      <div id="auto-counter"></div>
+      <div id="auto-clabel">Horas de uso</div>
+      <div id="auto-hours">2.380 h</div>
+      <div id="auto-rate">≈ 8 h al día</div>
+
+      <div id="auto-mhead">Mantenimientos</div>
+      <div id="auto-row1" class="auto-row" style="top: 672px"></div>
+      <div id="auto-ring1" class="auto-ring" style="top: 692px"><svg viewBox="0 0 56 56"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle id="auto-r1" class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#16a34a" /></svg></div>
+      <div class="auto-rname" style="top: 690px">Cambio de aceite y filtros</div>
+      <div class="auto-rsub" style="top: 724px">Cada 250 horas de uso</div>
+      <div id="auto-flag">✦ OT creada</div>
+
+      <div class="auto-row" style="top: 780px"></div>
+      <div class="auto-ring" style="top: 800px"><svg viewBox="0 0 56 56"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#16a34a" style="stroke-dashoffset: 0.38" /></svg></div>
+      <div class="auto-rname" style="top: 798px">Revisión de frenos</div>
+      <div class="auto-rsub" style="top: 832px">Cada 3 meses</div>
+
+      <div class="auto-row" style="top: 888px"></div>
+      <div class="auto-ring" style="top: 908px"><svg viewBox="0 0 56 56"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#16a34a" style="stroke-dashoffset: 0.15" /></svg></div>
+      <div class="auto-rname" style="top: 906px">Estanqueidad de la cisterna</div>
+      <div class="auto-rsub" style="top: 940px">Cada mes</div>
+
+      <div id="auto-ohead">Órdenes pendientes</div>
+      <div id="auto-count2" class="auto-count">2</div>
+      <div id="auto-count3" class="auto-count">3</div>
+
+      <div id="auto-ot1" class="auto-ot" style="top: 380px">
+        <div class="obox" style="background:#e8f6ee;color:#16a34a"><i class="ic" style="--m: url(assets/iconos/secador.svg)"></i></div>
+        <div class="ochip">Planta de secado térmico</div>
+        <div class="otit">Revisión general de la planta</div>
+        <div class="opill pv">Preventivo</div>
+        <div class="oav" style="background:#2563eb">LG</div>
+      </div>
+      <div id="auto-ot2" class="auto-ot" style="top: 516px">
+        <div class="obox" style="background:#fdecec;color:#e5484d"><i class="ic" style="--m: url(assets/iconos/bomba_centrifuga.svg)"></i></div>
+        <div class="ochip">Estación de bombeo · EB-01</div>
+        <div class="otit">Reparar bomba de impulsión</div>
+        <div class="opill cc">Correctivo crítico</div>
+        <div class="oav" style="background:#0f9f8f">MS</div>
+      </div>
+      <div id="auto-new" class="auto-ot" style="top: 380px">
+        <div class="obox" style="background:#e8f6ee;color:#16a34a"><i class="ic" style="--m: url(assets/iconos/cisterna.svg)"></i></div>
+        <div class="ochip">Camión cisterna Volvo FH</div>
+        <div class="otit">Cambio de aceite y filtros</div>
+        <div class="opill pv">Preventivo</div>
+      </div>
+      <div id="auto-badge">✦ Automática</div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const fmt = (n) => { const s = String(Math.round(n)); return s.slice(0, -3) + "." + s.slice(-3) + " h"; };
+
+    // El logo llega de la escena anterior: la ventana aparece a su alrededor
+    tl.fromTo("#auto-window, #auto-barline, #auto-brand, #auto-crumb, .auto-pane, #auto-abox, #auto-name, #auto-sub, #auto-counter, #auto-clabel, #auto-hours, #auto-rate, #auto-mhead, .auto-row, .auto-ring, .auto-rname, .auto-rsub, #auto-ohead, #auto-count2, #auto-ot1, #auto-ot2", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.out" }, 0);
+    tl.fromTo("#auto-t1", { opacity: 0, filter: "blur(8px)", x: 471 }, { opacity: 1, filter: "blur(0px)", x: 471, duration: 0.25, ease: "power4.out" }, 0.35);
+
+    // Suben las horas y el anillo del mantenimiento se vacía
+    const h = { v: 2380 };
+    tl.fromTo(h, { v: 2380 }, { v: 2500, duration: 2.3, ease: "power1.in", onUpdate: () => { document.querySelector("#auto-hours").textContent = fmt(h.v); } }, 0.6);
+    tl.fromTo("#auto-r1", { attr: { "stroke-dashoffset": 0.52 } }, { attr: { "stroke-dashoffset": 0.985 }, duration: 2.3, ease: "power1.in" }, 0.6);
+    tl.fromTo("#auto-r1", { stroke: "#16a34a" }, { stroke: "#d97706", duration: 0.25, ease: "none", immediateRender: false }, 2.2);
+    tl.fromTo("#auto-r1", { stroke: "#d97706" }, { stroke: "#e5484d", duration: 0.25, ease: "none", immediateRender: false }, 2.6);
+    tl.fromTo("#auto-ring1", { scale: 1 }, { scale: 1.18, duration: 0.15, ease: "power2.out", yoyo: true, repeat: 1 }, 2.9);
+    tl.fromTo("#auto-row1", { borderColor: "#e7e4f0" }, { borderColor: "#6a2ff6", duration: 0.2, ease: "power2.out" }, 2.9);
+
+    // La orden nace del mantenimiento y entra en la lista
+    tl.fromTo("#auto-ot1, #auto-ot2", { y: 0 }, { y: 136, duration: 0.6, ease: "power3.inOut" }, 3.05);
+    tl.fromTo("#auto-new", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, 3.0);
+    tl.fromTo("#auto-new", { x: -880, y: 292, scale: 0.8 }, { x: 0, y: 0, scale: 1, duration: 0.7, ease: "power3.inOut" }, 3.1);
+    tl.fromTo("#auto-flag", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(1.8)" }, 3.15);
+    tl.fromTo("#auto-badge", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 3.65);
+    tl.fromTo("#auto-count3", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 3.6);
+    tl.fromTo("#auto-count2", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "power2.out", immediateRender: false }, 3.6);
+
+    // "Los mantenimientos" deja sitio a la segunda parte
+    tl.fromTo("#auto-t1", { x: 471 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 3.4);
+    tl.fromTo("#auto-t2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power4.out" }, 3.6);
+
+    tl.fromTo("#auto-cam, #auto-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in", immediateRender: false }, 6.72);
+    window.__timelines["auto"] = tl;
+  </script>
+</template>

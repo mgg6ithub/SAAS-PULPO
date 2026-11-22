@@ -16,3 +16,12 @@ MEJORAS/*
 Plan_PULTEC.pdf
 video/*
 scripts/
+
+# Landing: sus vídeos son pequeños y sí se publican
+!landing/assets/video/*.mp4
+
+# Vídeo industrial (HyperFrames): solo el código fuente
+video-industrial/renders/
+video-industrial/.snap*/
+video-industrial/.hyperframes/
+video-industrial/.thumbnails/

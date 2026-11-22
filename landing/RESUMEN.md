@@ -1,29 +1,18 @@
-# Landing de Pultec
+# Landing de Pultec (industrial)
 
-## Dirección
-- Estilo: minimalista con acento de producto moderno. Elegido por el agente con autorización del usuario.
-- Carácter: claro, preciso, con chispa.
-- Referencias: edens-2 (hero centrado, un solo botón oscuro, producto enmarcado con halo suave) y sendr (esquema del flujo de automatización). Solo se ha tomado la composición; no hay textos ni recursos de esas páginas.
-- Paleta: tinta #14121F, morado de marca #6A2FF6 (tomado del icono), morado suave #EFE9FF, fondo #F7F6FB y verde azulado #0F9F8F para la segunda ruta.
-- Tipografía: Geist (Google Fonts, licencia OFL).
-- Movimiento: suave y solo con CSS. Se pulsa "Organizar", se asignan las tareas y se dibujan las rutas. Se desactiva si el sistema pide reducir el movimiento.
-- Tecnología: HTML y CSS nativos, sin JavaScript ni compilación.
+## Qué es
+Landing de Pultec industrial: HTML, CSS y JS nativos, sin compilación. Todos los «Probar» y «Entrar» llevan a `https://saas-pulpo.pages.dev/industrial/` (hoy detrás de Cloudflare Access).
 
-## Contenido
-Se centra en el núcleo: tareas, equipo, botón "Organizar" y rutas optimizadas, más historial y aprendizaje con IA. El módulo de finanzas aparece solo como "Próximamente". El mapa del hero es una ilustración, no una captura real; los nombres y las direcciones son de ejemplo. No hay cifras, testimonios ni precios.
+## Secciones
+Portada con el vídeo completo (sonido opcional) · sectores con los iconos reales de la app · «Hoy / Con Pultec» · Cómo funciona (5 pasos; en escritorio, un vídeo fijo que cambia con el scroll) · Funciones (8 tarjetas con demos en vivo) · Técnicos · foto de planta · Planes (Básico gratis, Premium, Empresa; mensual/anual) · Preguntas · cierre con el pulpo saludando.
 
-## Botón principal
-"Probar Pultec" (navegación, hero y bloque final) lleva a `../`, la app publicada en la raíz de GitHub Pages (/SAAS-PULTEC/).
-
-## Recursos
-- `assets/pultec.png`: el icono del usuario, limpio de manchas y recortado.
-- `assets/favicon.png`, `assets/apple-touch-icon.png` y `assets/og.png`: generados a partir del icono.
-
-## Verificaciones
-- Capturas revisadas (no guardadas): escritorio a 1440 px y móvil a 390 px. No se ven desbordamientos ni recortes.
-- Accesibilidad: enlace para saltar al contenido, foco visible, la ilustración se describe con aria-label y el movimiento se reduce si el sistema lo pide.
+## Vídeos
+- Fuente: `video-industrial/` (HyperFrames, mismo estilo que el clip de muestra del vídeo de Pulpo). Render: `npx hyperframes@0.8.189 render -o renders/pultec-industrial.mp4`.
+- `assets/video/pultec.mp4` (34 s, con efectos de sonido) y un corte mudo por paso (`auto`, `asignar`, `tecnico`, `incidencia`, `parte`), con su póster `.jpg`. Cortes con ffmpeg: 3.5–10.5, 10.5–15.5, 15.5–22, 22–27, 27–31 s.
+- Solo se reproducen mientras se ven; con «reducir movimiento» no se reproducen solos.
 
 ## Pendiente
-- Dominio: después hay que añadir canonical, og:url, URLs absolutas en og:image, robots.txt y sitemap.xml.
-- og.png solo lleva el icono. Se puede hacer una versión con texto.
-- Páginas legales o de contacto, si se publican.
+- Precios de ejemplo (49 €/39 €): decidir los reales en `index.html` (`data-price-*`).
+- «Contactar» (Empresa) va a la app: falta un correo de contacto.
+- Quitar Cloudflare Access de `/industrial/` para que los visitantes puedan entrar.
+- Dominio: canonical, og:url, URLs absolutas en og:image, robots.txt y sitemap.xml. Páginas legales.

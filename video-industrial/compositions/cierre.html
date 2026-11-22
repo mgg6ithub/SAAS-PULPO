@@ -1,0 +1,28 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
+    #ci-halo { position: absolute; left: 460px; top: -40px; width: 1000px; height: 1000px; border-radius: 50%; background: radial-gradient(closest-side, #e6dcff, rgba(239, 233, 255, 0) 100%); }
+    #ci-logo { position: absolute; left: 840px; top: 230px; width: 240px; height: 240px; }
+    #ci-name { position: absolute; left: 0; right: 0; top: 486px; text-align: center; font-size: 120px; font-weight: 700; letter-spacing: -0.05em; }
+    #ci-tag { position: absolute; left: 0; right: 0; top: 646px; text-align: center; font-size: 40px; font-weight: 500; color: #5d5a6e; letter-spacing: -0.02em; }
+    #ci-tag em { font-style: normal; color: #6a2ff6; font-weight: 650; }
+    #ci-btn { position: absolute; left: 810px; top: 750px; width: 300px; height: 76px; border-radius: 18px; background: #14121f; color: #fff; font-size: 30px; font-weight: 650; line-height: 76px; text-align: center; }
+  </style>
+  <div id="root" data-composition-id="cierre" data-width="1920" data-height="1080">
+    <div id="ci-halo" data-layout-ignore></div>
+    <img id="ci-logo" src="assets/pulpo-512.png" alt="Pultec" />
+    <div id="ci-name">Pultec</div>
+    <div id="ci-tag">Mantenimiento industrial, <em>en automático.</em></div>
+    <div id="ci-btn">Probar gratis</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ci-halo", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 1.0, ease: "expo.out" }, 0);
+    tl.fromTo("#ci-logo", { opacity: 0, scale: 0.6, filter: "blur(10px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.7, ease: "back.out(1.6)" }, 0.1);
+    tl.fromTo("#ci-name", { opacity: 0, y: 20, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 0.3);
+    tl.fromTo("#ci-tag", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 0.5);
+    tl.fromTo("#ci-btn", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 0.7);
+    window.__timelines["cierre"] = tl;
+  </script>
+</template>
