@@ -663,7 +663,8 @@ class BotonPrimario extends StatelessWidget {
           ),
         )
       : FilledButton(
-          style: color == null ? null : FilledButton.styleFrom(backgroundColor: color),
+          // Texto, «+» y tecla siempre en blanco (en oscuro el tema los ponía oscuros).
+          style: FilledButton.styleFrom(backgroundColor: color ?? P.morado, foregroundColor: Colors.white),
           onPressed: onPressed,
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -684,7 +685,7 @@ class BotonPrimario extends StatelessWidget {
                     color: Colors.white.withValues(alpha: .2),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text(tecla!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                  child: Text(tecla!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
                 ),
               ],
             ],

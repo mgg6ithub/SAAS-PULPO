@@ -418,3 +418,19 @@ class FiltrosHistorico extends StatelessWidget {
     ],
   );
 }
+
+/// Desplegable «Todos los técnicos» / un técnico, con su avatar (Órdenes de trabajo).
+class FiltroTecnico extends StatelessWidget {
+  final String? tecnicoId;
+  final ValueChanged<String?> onChanged;
+  const FiltroTecnico({super.key, required this.tecnicoId, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => _Filtro<String>(
+    todos: 'Todos los técnicos',
+    valor: tecnicoId,
+    iconoOpcion: (id) => AvataresTrabajadores([id], size: 22),
+    opciones: [for (final w in store.trabajadores.where((w) => w.activo)) (w.id, w.nombre)],
+    onChanged: onChanged,
+  );
+}

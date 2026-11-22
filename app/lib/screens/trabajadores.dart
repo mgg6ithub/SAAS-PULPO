@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'tipos_competencias.dart' show abrirGrupos;
 import '../marca.dart';
+import 'tareas.dart' show otsAtrasadas, verAtrasadasDe;
 
 class Trabajadores extends StatefulWidget {
   final ValueChanged<String> onAbrir;
@@ -254,7 +255,10 @@ class _TrabajadoresState extends State<Trabajadores> {
         onTap: () => _tocar(w),
         child: Opacity(
           opacity: w.activo ? 1 : .55,
-          child: Column(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+          Column(
             children: [
               Stack(
                 clipBehavior: Clip.none,
@@ -303,6 +307,11 @@ class _TrabajadoresState extends State<Trabajadores> {
                 runSpacing: 6,
                 children: [for (final c in w.competencias) Etiqueta(c, P.morado)],
               ),
+            ],
+          ),
+          // Pultec: arriba a la izquierda, cuántas órdenes lleva atrasadas; al tocarla, se ven en Órdenes de trabajo.
+          if (industrial && otsAtrasadas(w.id).isNotEmpty)
+            Positioned(top: -8, left: -8, child: _InsigniaAtrasadas(w)),
             ],
           ),
         ),
@@ -412,4 +421,33 @@ class _RejillaPorGrupos extends StatelessWidget {
       );
     },
   );
+}
+
+/// Número rojo de órdenes atrasadas de un técnico: al pasar el ratón lo explica; al tocarlo, abre Órdenes de
+/// trabajo con sus vencidas.
+class _InsigniaAtrasadas extends StatelessWidget {
+  final Trabajador w;
+  const _InsigniaAtrasadas(this.w);
+
+  @override
+  Widget build(BuildContext context) {
+    final n = otsAtrasadas(w.id).length;
+    return Tooltip(
+      message: '${w.nombre} tiene $n ${n == 1 ? 'orden atrasada' : 'órdenes atrasadas'}. Toca para verlas.',
+      child: Material(
+        color: P.rojo,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: () => verAtrasadasDe(w.id),
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 26),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            alignment: Alignment.center,
+            child: Text('$n', style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700)),
+          ),
+        ),
+      ),
+    );
+  }
 }

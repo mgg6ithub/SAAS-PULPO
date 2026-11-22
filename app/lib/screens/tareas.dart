@@ -7,6 +7,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'tabla_trabajos.dart';
+import '../industrial/historicos.dart' show FiltroTecnico;
 import 'tarea_card.dart';
 import '../marca.dart';
 
@@ -18,6 +19,27 @@ final filtroCriticidadTrabajos = ValueNotifier<int>(0);
 
 /// Pultec: Órdenes de trabajo partida en dos: pendientes (false) o histórico de las hechas (true).
 final historicoTrabajos = ValueNotifier<bool>(false);
+
+/// Pultec: solo las OT de este técnico (también desde su tarjeta en Técnicos).
+final filtroTecnicoTrabajos = ValueNotifier<String?>(null);
+
+/// Pultec: OT pendientes con técnico cuya fecha ya pasó (todas, o las de [tecnicoId]).
+List<Tarea> otsAtrasadas([String? tecnicoId]) => [
+  for (final t in store.tareas)
+    if (!t.esPlantilla && t.activa && t.estado.abierta && t.trabajadorIds.isNotEmpty &&
+        (tecnicoId == null || t.trabajadorIds.contains(tecnicoId)) && t.proximo != null && diasHasta(t.proximo!) < 0)
+      t,
+];
+
+/// Órdenes de trabajo con las vencidas de ese técnico (desde su insignia en Técnicos).
+void verAtrasadasDe(String tecnicoId) {
+  historicoTrabajos.value = false;
+  filtroCriticidadTrabajos.value = 0;
+  filtroTecnicoTrabajos.value = tecnicoId;
+  filtroFechaTrabajos.value = 3;
+  otMarcada.value = null;
+  pedirOrdenes.value++;
+}
 
 /// Pultec: OT a marcar en la lista de Órdenes de trabajo (llegando desde su incidencia con «Ver OT»).
 final otMarcada = ValueNotifier<String?>(null);
@@ -31,6 +53,7 @@ void verOtEnOrdenes(BuildContext context, String id) {
   historicoTrabajos.value = false;
   filtroFechaTrabajos.value = 0;
   filtroCriticidadTrabajos.value = 0;
+  filtroTecnicoTrabajos.value = null;
   otMarcada.value = id;
   pedirOrdenes.value++;
 }
@@ -86,7 +109,27 @@ class _TareasPaginaState extends State<TareasPagina> {
   /// Pultec, en el histórico: false las completadas (de serie), true solo las canceladas.
   bool _canceladas = false;
 
-  void _alCambiarFecha() => setState(() => pestana = 0);
+  /// Pultec: Para hoy, Sin asignar, Vencidos y Automatizaciones se suman (una OT tiene que cumplirlos todos).
+  /// Al llegar con un filtro (desde Inicio, un aviso o un técnico) se empieza solo con ese.
+  late Set<int> _filtros = {if (filtroFechaTrabajos.value != 0) filtroFechaTrabajos.value};
+
+  /// Aviso de vencidas sin asignar cerrado (hasta volver a entrar).
+  bool _sinAvisoVencidas = false;
+
+  /// Marca o desmarca un filtro de Pultec. El global se queda con el único marcado (o ninguno) sin rehacer la
+  /// lista desde él.
+  void _alternar(int f) {
+    setState(() => _filtros.contains(f) ? _filtros.remove(f) : _filtros.add(f));
+    filtroFechaTrabajos.removeListener(_alCambiarFecha);
+    filtroFechaTrabajos.value = _filtros.length == 1 ? _filtros.first : 0;
+    filtroFechaTrabajos.addListener(_alCambiarFecha);
+  }
+
+  void _alCambiarFecha() => setState(() {
+    pestana = 0;
+    _filtros = {if (filtroFechaTrabajos.value != 0) filtroFechaTrabajos.value};
+    _sinAvisoVencidas = false;
+  });
 
   /// Llegando con «Ver OT»: sin búsqueda ni filtros, para que la OT marcada se vea seguro.
   void _alMarcar() => setState(() {
@@ -102,6 +145,7 @@ class _TareasPaginaState extends State<TareasPagina> {
     filtroFechaTrabajos.addListener(_alCambiarFecha);
     filtroCriticidadTrabajos.addListener(_alCambiarFecha);
     historicoTrabajos.addListener(_alCambiarFecha);
+    filtroTecnicoTrabajos.addListener(_alCambiarFecha);
     otMarcada.addListener(_alMarcar);
     if (otMarcada.value != null) _alMarcar();
   }
@@ -111,6 +155,7 @@ class _TareasPaginaState extends State<TareasPagina> {
     filtroFechaTrabajos.removeListener(_alCambiarFecha);
     filtroCriticidadTrabajos.removeListener(_alCambiarFecha);
     historicoTrabajos.removeListener(_alCambiarFecha);
+    filtroTecnicoTrabajos.removeListener(_alCambiarFecha);
     otMarcada.removeListener(_alMarcar);
     // Al salir de la sección, la marca se olvida.
     WidgetsBinding.instance.addPostFrameCallback((_) => otMarcada.value = null);
@@ -136,7 +181,13 @@ class _TareasPaginaState extends State<TareasPagina> {
               (t.estado == EstadoTrabajo.noRealizado) != _canceladas) {
             return false;
           }
-          if (!pasaFechaTrabajo(t, fecha)) return false;
+          if (industrial) {
+            if (!t.esPlantilla && !_filtros.every((f) => pasaFechaTrabajo(t, f))) return false;
+            final tec = filtroTecnicoTrabajos.value;
+            if (tec != null && !t.trabajadorIds.contains(tec)) return false;
+          } else if (!pasaFechaTrabajo(t, fecha)) {
+            return false;
+          }
           if (criticidad != 0 && t.tipoMantenimiento?.index != criticidad - 1) return false;
           final texto = '${t.nombre} ${t.marca} ${t.ubicacion} ${store.cliente(t.clienteId)?.nombre ?? ''}'
               .toLowerCase();
@@ -248,6 +299,11 @@ class _TareasPaginaState extends State<TareasPagina> {
                     ConstrainedBox(constraints: const BoxConstraints(maxWidth: 210), child: SelectorActivo(_activoFiltro,
                       (id) => setState(() => _activoFiltro = id), filtro: true)),
                     const SizedBox(width: 12),
+                    FiltroTecnico(
+                      tecnicoId: filtroTecnicoTrabajos.value,
+                      onChanged: (id) => filtroTecnicoTrabajos.value = id,
+                    ),
+                    const SizedBox(width: 12),
                   ],
                   Expanded(child: Align(
                   alignment: industrial ? Alignment.centerRight : Alignment.centerLeft,
@@ -256,7 +312,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                   reverse: industrial,
                   child: industrial
                       ? Row(
-                          // Pultec: un solo filtro a la vez; al tocar el marcado, vuelve a «Todos».
+                          // Pultec: se suman (p. ej. Vencidos + Sin asignar); «Todos» los quita.
                           children: [
                             // (número de filtro, etiqueta, color, icono); sin «Hechos»: lo cubre el histórico.
                             for (final (i, nombre, color, icono) in [
@@ -267,8 +323,8 @@ class _TareasPaginaState extends State<TareasPagina> {
                               _ChipTipo(
                                 nombre,
                                 color,
-                                fecha == i,
-                                () => filtroFechaTrabajos.value = fecha == i ? 0 : i,
+                                _filtros.contains(i),
+                                () => _alternar(i),
                                 icono: icono,
                                 punto: true,
                               ),
@@ -276,7 +332,11 @@ class _TareasPaginaState extends State<TareasPagina> {
                             ],
                             // «Todos» aparte, a la derecha del todo.
                             Container(width: 1, height: 20, color: P.borde, margin: const EdgeInsets.only(right: 6)),
-                            _ChipTipo('Todos', P.textoSuave, fecha == 0, () => filtroFechaTrabajos.value = 0, punto: false),
+                            _ChipTipo('Todos', P.textoSuave, _filtros.isEmpty, () {
+                              for (final f in [..._filtros]) {
+                                _alternar(f);
+                              }
+                            }, punto: false),
                           ],
                         )
                       : Row(
@@ -314,6 +374,48 @@ class _TareasPaginaState extends State<TareasPagina> {
                   ))),
                 ]),
               ],
+              // Pultec: con «Vencidos», si alguna no la tiene nadie, se dice y se ofrece ver solo esas para asignarlas.
+              if (industrial && !historicoTrabajos.value && _filtros.contains(3) && !_filtros.contains(2) &&
+                  !_sinAvisoVencidas)
+                Builder(builder: (context) {
+                  final vencidas = store.tareas.where((t) => !t.esPlantilla && pasaFechaTrabajo(t, 3)).toList();
+                  final sinTecnico = vencidas.where((t) => t.trabajadorIds.isEmpty).length;
+                  if (sinTecnico == 0) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Tarjeta(
+                      color: Color.alphaBlend(P.rojo.withValues(alpha: .08), P.superficie),
+                      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: P.rojo, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Tienes ${vencidas.length} ${vencidas.length == 1 ? 'orden vencida' : 'órdenes vencidas'} y '
+                              '$sinTecnico ${sinTecnico == 1 ? 'no tiene técnico' : 'no tienen técnico'}: asígnalas para que '
+                              'alguien las haga.',
+                              style: TextStyle(fontSize: 13, color: P.texto),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(foregroundColor: P.rojo),
+                            onPressed: () => _alternar(2),
+                            icon: const Icon(Icons.person_off_outlined, size: 18),
+                            label: const Text('Ver sin asignar'),
+                          ),
+                          IconButton(
+                            tooltip: 'Cerrar',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => setState(() => _sinAvisoVencidas = true),
+                            icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
               // Pultec: que se entienda de dónde salen las órdenes que se repiten.
               if (industrial && !historicoTrabajos.value && !ajustes.consejoCerrado('ot_mantenimiento')) ...[
                 const SizedBox(height: 12),

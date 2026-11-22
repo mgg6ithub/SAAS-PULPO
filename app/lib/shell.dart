@@ -876,7 +876,8 @@ class _BarraState extends State<_Barra> {
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
-      (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
+      // Pultec: cuántas órdenes asignadas van atrasadas (como las vencidas de Planificación).
+      (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, industrial ? otsAtrasadas().length : 0),
       // Estadísticas, oculta de momento (pedido 20/11/2026).
       // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
@@ -909,7 +910,7 @@ class _BarraState extends State<_Barra> {
     return Padding(
       padding: const EdgeInsets.only(bottom: _hueco),
       child: _ConEtiqueta(
-        texto: aviso > 0 ? '$texto · $aviso vencidos' : texto,
+        texto: aviso > 0 ? '$texto · $aviso ${s == Seccion.trabajadores ? 'atrasadas' : 'vencidos'}' : texto,
         activa: iconos,
         child: InkWell(
           borderRadius: BorderRadius.circular(P.radioControl),
@@ -1010,7 +1011,8 @@ class _BarraInferior extends StatelessWidget {
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
-      (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, 0),
+      // Pultec: cuántas órdenes asignadas van atrasadas (como las vencidas de Planificación).
+      (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, industrial ? otsAtrasadas().length : 0),
       // Estadísticas, oculta de momento (pedido 20/11/2026).
       // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
