@@ -514,9 +514,6 @@ Future<Uint8List> informePdf(Informe i, Tarea t, {EdicionPdf? e}) async {
   final tinta = PdfColor.fromInt(0xFF111827);
   final suave = PdfColor.fromInt(0xFF6B7280);
   final base = [P.verde, P.ambar, P.rojo][i.resultado.clamp(0, 2)];
-  final colorResultado = PdfColor.fromInt(base.toARGB32());
-  // El PDF no mezcla la transparencia: el fondo claro se calcula ya mezclado con el blanco.
-  final fondoResultado = PdfColor.fromInt(Color.alphaBlend(base.withValues(alpha: .12), Colors.white).toARGB32());
 
   const etiqueta = _etiquetaPdf, dato = _datoPdf, tarjeta = _tarjetaPdf, seccion = _seccionPdf;
 
@@ -568,21 +565,9 @@ Future<Uint8List> informePdf(Informe i, Tarea t, {EdicionPdf? e}) async {
                 ],
               ),
             ),
-            // Solo si no fue bien (con incidencias o sin hacer): «Todo correcto» no hace falta decirlo.
-            if (i.resultado != 0) ...[
-              pw.SizedBox(width: 16),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: pw.BoxDecoration(
-                  color: fondoResultado,
-                  borderRadius: pw.BorderRadius.circular(20),
-                ),
-                child: pw.Text(
-                  resultadosInforme[i.resultado],
-                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: colorResultado),
-                ),
-              ),
-            ],
+            // Siempre el resultado, como el estado en el informe de incidencia.
+            pw.SizedBox(width: 16),
+            _pildoraPdf(i.resultado == 0 ? 'Completada' : resultadosInforme[i.resultado], base),
           ],
         ),
         if (incidencia != null) ...[
@@ -781,6 +766,31 @@ pw.Widget _tarjetaPdf(String titulo, List<pw.Widget> hijos) => pw.Container(
   ),
 );
 
+/// Estado o resultado arriba a la derecha: etiqueta rectangular de esquinas suaves, fondo claro, borde y punto
+/// del color (el radio no pasa de la mitad del alto: si no, el PDF pinta picos en los lados).
+pw.Widget _pildoraPdf(String texto, Color color) {
+  final c = PdfColor.fromInt(color.toARGB32());
+  PdfColor mezcla(double a) => PdfColor.fromInt(Color.alphaBlend(color.withValues(alpha: a), Colors.white).toARGB32());
+  return pw.Container(
+    margin: const pw.EdgeInsets.only(top: 6),
+    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: pw.BoxDecoration(
+      color: mezcla(.08),
+      border: pw.Border.all(color: mezcla(.35), width: .8),
+      borderRadius: pw.BorderRadius.circular(5),
+    ),
+    child: pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        pw.Container(width: 6, height: 6, decoration: pw.BoxDecoration(color: c, shape: pw.BoxShape.circle)),
+        pw.SizedBox(width: 6),
+        pw.Text(texto.toUpperCase(),
+            style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: c, letterSpacing: .6)),
+      ],
+    ),
+  );
+}
+
 pw.Widget _seccionPdf(String titulo, String texto) => pw.Padding(
   padding: const pw.EdgeInsets.only(top: 14),
   child: pw.Column(
@@ -952,8 +962,6 @@ Future<Uint8List> incidenciaPdf(Incidencia x, {EdicionPdf? e}) async {
   final empresa = store.nube?.nombre ?? '';
   final limpio = x.id.replaceAll('-', '').toUpperCase();
   final numero = 'INC-${limpio.substring(0, min(8, limpio.length))}';
-  final color = PdfColor.fromInt(estado.color.toARGB32());
-  final fondo = PdfColor.fromInt(Color.alphaBlend(estado.color.withValues(alpha: .12), Colors.white).toARGB32());
   final marcaSuave = PdfColor.fromInt(Color.alphaBlend(P.morado.withValues(alpha: .08), Colors.white).toARGB32());
   String cuando(DateTime d) => '${fecha(d)} ${hhmm(d.hour * 60 + d.minute)}';
   final titulo = e?.titulo ?? 'Incidencia en ${raiz?.titulo ?? 'el activo'}';
@@ -990,11 +998,7 @@ Future<Uint8List> incidenciaPdf(Incidencia x, {EdicionPdf? e}) async {
               child: pw.Text(titulo, style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: _tintaPdf)),
             ),
             pw.SizedBox(width: 16),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: pw.BoxDecoration(color: fondo, borderRadius: pw.BorderRadius.circular(20)),
-              child: pw.Text(estado.etiqueta, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: color)),
-            ),
+            _pildoraPdf(estado.etiqueta, estado.color),
           ],
         ),
         _seccionPdf('Qué ocurre', descripcion.isEmpty ? 'Sin descripción.' : descripcion),
@@ -1038,7 +1042,7 @@ Future<Uint8List> incidenciaPdf(Incidencia x, {EdicionPdf? e}) async {
                         fecha(ot.estado == EstadoTrabajo.realizado ? ot.ultimo : ot.proximo),
                       ),
                     ),
-                    pw.Expanded(flex: 2, child: _datoPdf('Asignada a', tecnicosOt.join(', '))),
+                    pw.Expanded(flex: 2, child: _datoPdf('Asignada a', tecnicosOt.isEmpty ? 'Sin asignar' : tecnicosOt.join(', '))),
                   ],
                 ),
               ],
