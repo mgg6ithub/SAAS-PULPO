@@ -2160,6 +2160,7 @@ Future<bool> confirmar(
   bool destructivo = true,
   String? nota,
   String cancelar = 'Cancelar',
+  List<(IconData, String)> lista = const [],
 }) async =>
     await showDialog<bool>(
       context: context,
@@ -2189,6 +2190,31 @@ Future<bool> confirmar(
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
+                // Lo que se va con ello, cada cosa con su icono: «[icono] 3 órdenes de trabajo».
+                if (lista.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text('Se borrarán también', textAlign: TextAlign.center, style: TextStyle(color: P.textoSuave, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final (icono, texto) in lista)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(icono, size: 18, color: P.textoSuave),
+                                const SizedBox(width: 8),
+                                Text(texto, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 4),
                 Text(
                   nota ?? (destructivo ? 'No se puede deshacer.' : ''),
@@ -2430,6 +2456,9 @@ class SeleccionMultiple extends StatefulWidget {
   /// Aviso al confirmar según lo elegido (p. ej. qué más se borra con ellos).
   final String? Function(List<String> ids)? nota;
 
+  /// Qué más se borra con lo elegido, cada cosa con su icono (sale en el aviso en una lista).
+  final List<(IconData, String)> Function(List<String> ids)? lista;
+
   /// Acciones propias antes de «Eliminar» (p. ej. pausar mantenimientos), con los ids elegidos.
   final List<Widget> Function(List<String> ids)? acciones;
   final Widget Function(BuildContext context, Seleccionable s) builder;
@@ -2442,6 +2471,7 @@ class SeleccionMultiple extends StatefulWidget {
     required this.borrar,
     required this.builder,
     this.nota,
+    this.lista,
   });
 
   @override
@@ -2461,7 +2491,9 @@ class _SeleccionMultipleState extends State<SeleccionMultiple> {
     final ids = sel.where(widget.ids.contains).toList();
     final que = '${ids.length} ${ids.length == 1 ? widget.singular : widget.plural}';
     final aviso = widget.nota?.call(ids);
-    if (!await confirmar(context, '¿Eliminar $que?', nota: [?aviso, 'Podrás deshacerlo.'].join(' '))) return;
+    final lista = widget.lista?.call(ids) ?? const [];
+    final nota = [?aviso, if (lista.isNotEmpty) 'También del calendario y del histórico.', 'Podrás deshacerlo.'];
+    if (!await confirmar(context, '¿Eliminar $que?', lista: lista, nota: nota.join(' '))) return;
     store.deshacible('Has borrado $que', () => ids.forEach(widget.borrar));
     _salir();
   }

@@ -63,6 +63,7 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
               Pestanas(
                 opciones: ['Pendientes $pendientes', 'Histórico ${todas.length - pendientes}'],
                 iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                coloresIconos: [null, P.verde],
                 seleccion: historico ? 1 : 0,
                 onChanged: (i) => setState(() {
                   historico = i == 1;

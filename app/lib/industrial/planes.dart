@@ -313,7 +313,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
         singular: 'mantenimiento',
         plural: 'mantenimientos',
         borrar: store.borrarPlan,
-        nota: avisoBorrarPlanes,
+        lista: borradoConPlanes,
         // Pausar o reanudar varios a la vez, además de eliminarlos.
         acciones: (ids) {
           final elegidos = ps.where((p) => ids.contains(p.id)).toList();
@@ -708,9 +708,14 @@ class _PlanFormState extends State<PlanForm> {
           : () async {
               final nav = Navigator.of(context);
               // Si se lleva su OT pendiente (lo normal), se pregunta antes.
-              final aviso = avisoBorrarPlanes([p.id]);
-              if (aviso != null &&
-                  !await confirmar(context, '¿Eliminar el mantenimiento ${p.nombre}?', nota: '$aviso Podrás deshacerlo.')) {
+              final lista = borradoConPlanes([p.id]);
+              if (lista.isNotEmpty &&
+                  !await confirmar(
+                    context,
+                    '¿Eliminar el mantenimiento ${p.nombre}?',
+                    lista: lista,
+                    nota: 'También del calendario y del histórico. Podrás deshacerlo.',
+                  )) {
                 return;
               }
               store.deshacible('Has borrado el mantenimiento ${p.nombre}', () => store.borrarPlan(p.id));

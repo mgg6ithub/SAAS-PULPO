@@ -22,8 +22,9 @@ enum EstadoIncidencia { abierta, conOt, completada, desestimada }
 
 extension EstadoIncidenciaX on EstadoIncidencia {
   String get etiqueta => const ['Abierta', 'Con OT', 'Completada', 'Desestimada'][index];
-  // Sin los colores de la criticidad (verde, ámbar, rojo de puntos): cada estado, su icono.
-  Color get color => [P.rojo, P.azul, P.textoSuave, P.textoSuave][index];
+  // Cada estado, su icono (sin los puntos de la criticidad).
+  // Completada en verde y desestimada en rojo (también sus iconos en los filtros).
+  Color get color => [P.rojo, P.azul, P.verde, P.rojo][index];
   IconData get icono => const [
     Icons.report_outlined,
     Icons.assignment_outlined,

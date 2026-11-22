@@ -297,7 +297,7 @@ class _TablaActivosState extends State<_TablaActivos> {
         singular: componentes ? 'componente' : 'activo',
         plural: componentes ? 'componentes' : 'activos',
         borrar: store.borrarActivo,
-        nota: avisoBorrarActivos,
+        lista: borradoConActivos,
         builder: (context, s) => Align(
           alignment: Alignment.topCenter,
           child: Tabla(
@@ -1146,9 +1146,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
 /// Borra el activo (con sus componentes, mantenimientos, OT e incidencias). Siempre pregunta antes y dice qué más
 /// se lleva por delante. Devuelve si se ha borrado.
 Future<bool> borrarActivoConAviso(BuildContext context, Activo a) async {
-  final aviso = avisoBorrarActivos([a.id]);
+  final lista = borradoConActivos([a.id]);
   final que = a.padreId == null ? 'el activo' : 'el componente';
-  if (!await confirmar(context, '¿Eliminar $que ${a.titulo}?', nota: [?aviso, 'Podrás deshacerlo.'].join(' '))) {
+  final nota = [if (lista.isNotEmpty) 'También del calendario y del histórico.', 'Podrás deshacerlo.'].join(' ');
+  if (!await confirmar(context, '¿Eliminar $que ${a.titulo}?', lista: lista, nota: nota)) {
     return false;
   }
   store.deshacible('Has borrado ${a.titulo}', () => store.borrarActivo(a.id));

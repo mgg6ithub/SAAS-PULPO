@@ -28,40 +28,37 @@ TipoMantenimiento? masGrave(Iterable<Tarea> ots) {
 /// antes su mantenimiento.
 bool otDeMantenimientoVigente(Tarea t) => t.planId != null && store.planes.any((p) => p.id == t.planId && p.activa);
 
-/// «a, b y c».
-String _enumerar(List<String> xs) =>
-    xs.length <= 1 ? xs.join() : '${xs.sublist(0, xs.length - 1).join(', ')} y ${xs.last}';
-
 String _cuantos(int n, String uno, String varios) => '$n ${n == 1 ? uno : varios}';
 
-/// Qué más se borra con estos activos (componentes, mantenimientos, OT pendientes e incidencias); null si nada.
-String? avisoBorrarActivos(Iterable<String> ids) {
+/// Lo que se borra con algo, con el icono de cada cosa (como en sus pestañas), para el aviso de eliminar.
+typedef Borrado = List<(IconData, String)>;
+
+/// Qué más se borra con estos activos: componentes, mantenimientos, OT e incidencias (vacío si nada).
+Borrado borradoConActivos(Iterable<String> ids) {
   final rama = {for (final id in ids) ...store.ramaDe(id)};
   final componentes = rama.length - ids.length;
   final planes = store.planes.where((p) => rama.contains(p.activoId)).length;
   final ots = [...store.tareas, ...store.subtareas].where((t) => rama.contains(t.activoId)).length;
   final incidencias = store.incidencias.where((x) => rama.contains(x.activoId)).length;
-  final partes = [
-    if (componentes > 0) _cuantos(componentes, 'componente', 'componentes'),
-    if (planes > 0) _cuantos(planes, 'mantenimiento', 'mantenimientos'),
-    if (ots > 0) _cuantos(ots, 'orden de trabajo', 'órdenes de trabajo'),
-    if (incidencias > 0) _cuantos(incidencias, 'incidencia', 'incidencias'),
+  return [
+    if (componentes > 0) (Icons.account_tree_outlined, _cuantos(componentes, 'componente', 'componentes')),
+    if (planes > 0) (Icons.content_paste_rounded, _cuantos(planes, 'mantenimiento', 'mantenimientos')),
+    if (ots > 0) (Icons.assignment_outlined, _cuantos(ots, 'orden de trabajo', 'órdenes de trabajo')),
+    if (incidencias > 0) (Icons.report_outlined, _cuantos(incidencias, 'incidencia', 'incidencias')),
   ];
-  return partes.isEmpty ? null : 'Se borrarán también ${_enumerar(partes)}, también del calendario y del histórico.';
 }
 
-/// Qué más se borra con estos mantenimientos (sus OT pendientes); null si nada.
-String? avisoBorrarPlanes(Iterable<String> ids) {
+/// Qué más se borra con estos mantenimientos: sus OT y sus incidencias (vacío si nada).
+Borrado borradoConPlanes(Iterable<String> ids) {
   final set = ids.toSet();
   final otIds = {for (final t in [...store.tareas, ...store.subtareas]) if (set.contains(t.planId)) t.id};
   final incidencias = store.incidencias
       .where((x) => set.contains(x.planId) || otIds.contains(x.trabajoId) || otIds.contains(x.origenTrabajoId))
       .length;
-  final partes = [
-    if (otIds.isNotEmpty) _cuantos(otIds.length, 'orden de trabajo', 'órdenes de trabajo'),
-    if (incidencias > 0) _cuantos(incidencias, 'incidencia', 'incidencias'),
+  return [
+    if (otIds.isNotEmpty) (Icons.assignment_outlined, _cuantos(otIds.length, 'orden de trabajo', 'órdenes de trabajo')),
+    if (incidencias > 0) (Icons.report_outlined, _cuantos(incidencias, 'incidencia', 'incidencias')),
   ];
-  return partes.isEmpty ? null : 'Se borrarán también ${_enumerar(partes)}, también del calendario y del histórico.';
 }
 
 /// Borra una fila del histórico: la OT cerrada entera; si sigue abierta (el día viene de su historial), solo ese día.
