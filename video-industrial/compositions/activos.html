@@ -1,0 +1,79 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
+    #ac-title { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 80px; font-weight: 650; letter-spacing: -0.035em; white-space: nowrap; }
+    #ac-t1, #ac-t2 { display: inline-block; }
+    #ac-t2 { color: #6a2ff6; }
+    #ac-cam { position: absolute; inset: 0; transform-origin: 960px 588px; }
+    #ac-window { position: absolute; left: 64px; top: 196px; width: 1792px; height: 836px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 24px; }
+    #ac-barline { position: absolute; left: 64px; top: 272px; width: 1792px; height: 1.5px; background: #e7e4f0; }
+    #ac-logo { position: absolute; left: 92px; top: 216px; width: 36px; height: 36px; }
+    #ac-brand { position: absolute; left: 140px; top: 216px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+    #ac-crumb { position: absolute; left: 270px; top: 221px; font-size: 24px; font-weight: 600; }
+    #ac-count { position: absolute; left: 380px; top: 218px; height: 34px; padding: 0 12px; border-radius: 17px; background: #efe9ff; color: #6a2ff6; font-size: 20px; font-weight: 700; line-height: 34px; }
+    #ac-btn { position: absolute; left: 1648px; top: 208px; width: 184px; height: 52px; border-radius: 12px; background: #6a2ff6; color: #fff; font-size: 23px; font-weight: 650; line-height: 52px; text-align: center; }
+    #ac-pane { position: absolute; left: 88px; top: 296px; width: 1744px; height: 712px; border: 1.5px solid #e7e4f0; border-radius: 18px; }
+    .ac-th { position: absolute; top: 322px; font-size: 19px; font-weight: 500; color: #5d5a6e; }
+    .ac-row { position: absolute; left: 112px; width: 1696px; height: 104px; border-bottom: 1.5px solid #f0eef5; }
+    .ac-row .ib { position: absolute; left: 22px; top: 22px; width: 60px; height: 60px; border-radius: 16px; background: #efe9ff; color: #6a2ff6; }
+    .ac-row .ic { position: absolute; left: 14px; top: 14px; width: 32px; height: 32px; background: currentColor; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+    .ac-row b { position: absolute; left: 106px; top: 22px; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .ac-row small { position: absolute; left: 106px; top: 58px; font-size: 19px; color: #5d5a6e; }
+    .ac-row .tag { position: absolute; left: 760px; top: 34px; height: 36px; padding: 0 12px; border-radius: 9px; background: #f4f3f8; font-size: 19px; line-height: 36px; color: #5d5a6e; }
+    .ac-row .hrs { position: absolute; left: 990px; top: 36px; font-size: 22px; font-variant-numeric: tabular-nums; }
+    .ac-row .mn { position: absolute; left: 1230px; top: 36px; font-size: 22px; font-weight: 600; }
+    .ac-row .nx { position: absolute; left: 1460px; top: 36px; font-size: 22px; color: #5d5a6e; }
+    #ac-r1 { border-radius: 14px; }
+    #ac-cursor { position: absolute; left: 0; top: 0; width: 48px; height: 72px; }
+  </style>
+  <div id="root" data-composition-id="activos" data-width="1920" data-height="1080">
+    <h1 id="ac-title"><span id="ac-t1">Da de alta</span> <span id="ac-t2">tus activos.</span></h1>
+    <div id="ac-cam" data-layout-allow-overlap data-layout-allow-overflow>
+      <div id="ac-window"></div>
+      <div id="ac-barline"></div>
+      <img id="ac-logo" src="assets/pulpo-512.png" alt="" />
+      <div id="ac-brand">Pultec</div>
+      <div id="ac-crumb">Activos</div>
+      <div id="ac-count">5</div>
+      <div id="ac-btn">+ Activo</div>
+      <div id="ac-pane"></div>
+      <div class="ac-th" style="left: 218px">Activo</div>
+      <div class="ac-th" style="left: 872px">Tag</div>
+      <div class="ac-th" style="left: 1102px">Horas de uso</div>
+      <div class="ac-th" style="left: 1342px">Mantenimientos</div>
+      <div class="ac-th" style="left: 1572px">Próximo</div>
+
+      <div id="ac-r0" class="ac-row" style="top: 364px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/secador.svg)"></i></div><b>Planta de secado térmico</b><small>4 componentes</small><span class="tag">PST-02</span><span class="hrs">6.200 h</span><span class="mn">5</span><span class="nx">19 nov</span></div>
+      <div id="ac-r1" class="ac-row" style="top: 468px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/cisterna.svg)"></i></div><b>Camión cisterna Volvo FH</b><small>4 componentes</small><span class="tag">CAM-01</span><span class="hrs">2.380 h</span><span class="mn">3</span><span class="nx">29 nov</span></div>
+      <div id="ac-r2" class="ac-row" style="top: 572px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/bomba_centrifuga.svg)"></i></div><b>Estación de bombeo de crudo</b><small>3 componentes</small><span class="tag">EB-01</span><span class="hrs">9.800 h</span><span class="mn">3</span><span class="nx">2 dic</span></div>
+      <div id="ac-r3" class="ac-row" style="top: 676px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/compresor.svg)"></i></div><b>Compresor de tornillo</b><small>2 componentes</small><span class="tag">CMP-03</span><span class="hrs">4.150 h</span><span class="mn">4</span><span class="nx">5 dic</span></div>
+      <div id="ac-r4" class="ac-row" style="top: 780px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/reactor.svg)"></i></div><b>Reactor de mezcla R-1</b><small>5 componentes</small><span class="tag">RX-01</span><span class="hrs">11.400 h</span><span class="mn">6</span><span class="nx">9 dic</span></div>
+
+      <svg id="ac-cursor" viewBox="0 0 32 48"><path d="M2 2 L2 38 L11 30 L17 45 L23 42 L17 28 L29 28 Z" fill="#14121f" stroke="#fff" stroke-width="2" stroke-linejoin="round" /></svg>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#ac-window, #ac-barline, #ac-brand, #ac-crumb, #ac-btn, #ac-pane, .ac-th", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 0);
+    tl.fromTo("#ac-t1", { opacity: 0, filter: "blur(8px)", x: 245 }, { opacity: 1, filter: "blur(0px)", x: 245, duration: 0.25, ease: "power4.out" }, 0.3);
+
+    // «+ Activo» y los cinco activos entran uno a uno
+    tl.fromTo("#ac-cursor", { x: 1500, y: 1150 }, { x: 1736, y: 226, duration: 0.8, ease: "power3.out" }, 0.2);
+    tl.fromTo("#ac-btn", { scale: 1 }, { scale: 0.93, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, 0.95);
+    [0, 1, 2, 3, 4].forEach((i) => {
+      tl.fromTo(`#ac-r${i}`, { opacity: 0, y: -16, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.7)" }, 1.15 + i * 0.28);
+    });
+    tl.fromTo("#ac-count", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, 2.45);
+
+    tl.fromTo("#ac-t1", { x: 245 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 2.3);
+    tl.fromTo("#ac-t2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power4.out" }, 2.5);
+
+    // Entra en el camión cisterna
+    tl.fromTo("#ac-cursor", { x: 1736, y: 226 }, { x: 560, y: 506, duration: 0.7, ease: "power2.inOut", immediateRender: false }, 2.75);
+    tl.fromTo("#ac-r1", { backgroundColor: "rgba(239,233,255,0)" }, { backgroundColor: "rgba(239,233,255,1)", duration: 0.2, ease: "power2.out" }, 3.3);
+    tl.fromTo("#ac-cam", { scale: 1 }, { scale: 1.35, duration: 0.6, ease: "power3.in" }, 3.7);
+    tl.fromTo("#ac-cam, #ac-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.3, ease: "power3.in", immediateRender: false }, 4.0);
+    window.__timelines["activos"] = tl;
+  </script>
+</template>

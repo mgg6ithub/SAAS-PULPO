@@ -1,0 +1,104 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
+    #gr-title { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 80px; font-weight: 650; letter-spacing: -0.035em; white-space: nowrap; }
+    #gr-t1, #gr-t2 { display: inline-block; }
+    #gr-t2 { color: #6a2ff6; }
+    .gr-col { position: absolute; top: 250px; font-size: 22px; font-weight: 600; color: #8a879a; }
+    #gr-svg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    .e-base { fill: none; stroke: #dcd7ea; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; }
+    .e-flow { fill: none; stroke: #6a2ff6; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 10 14; }
+    .gr-node { position: absolute; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 18px; }
+    .gr-node .ib { position: absolute; left: 18px; top: 18px; width: 56px; height: 56px; border-radius: 15px; }
+    .gr-node .ic { position: absolute; left: 13px; top: 13px; width: 30px; height: 30px; background: currentColor; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+    .gr-node b { position: absolute; left: 90px; top: 18px; font-size: 23px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+    .gr-node small { position: absolute; left: 90px; top: 50px; font-size: 19px; color: #5d5a6e; white-space: nowrap; }
+    #gr-a { left: 110px; top: 556px; width: 340px; height: 128px; border: 2px solid #6a2ff6; }
+    #gr-a .ib { top: 34px; background: #efe9ff; color: #6a2ff6; width: 60px; height: 60px; }
+    #gr-a b { top: 34px; left: 94px; font-size: 24px; }
+    #gr-a small { top: 68px; left: 94px; }
+    .gr-m { left: 600px; width: 350px; height: 92px; }
+    .gr-m svg { position: absolute; left: 18px; top: 18px; width: 56px; height: 56px; }
+    .ring-bg { fill: none; stroke: #f0eef5; stroke-width: 6; }
+    .ring-fg { fill: none; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 1; }
+    .gr-o { left: 1100px; width: 330px; height: 92px; }
+    .gr-o .ib { background: #e8f6ee; color: #16a34a; }
+    .gr-o .tag { position: absolute; right: 14px; top: -14px; height: 28px; padding: 0 10px; border-radius: 14px; background: #6a2ff6; color: #fff; font-size: 15px; font-weight: 650; line-height: 28px; }
+    .gr-t { left: 1580px; width: 250px; height: 92px; }
+    .gr-t .av { position: absolute; left: 18px; top: 20px; width: 52px; height: 52px; border-radius: 50%; color: #fff; font-size: 18px; font-weight: 700; line-height: 52px; text-align: center; }
+    .gr-t b { left: 84px; } .gr-t small { left: 84px; }
+  </style>
+  <div id="root" data-composition-id="grafo" data-width="1920" data-height="1080">
+    <h1 id="gr-title"><span id="gr-t1">De cada activo,</span> <span id="gr-t2">a cada técnico.</span></h1>
+    <div id="gr-cam" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
+      <div class="gr-col" style="left: 110px">Activo</div>
+      <div class="gr-col" style="left: 600px">Mantenimientos</div>
+      <div class="gr-col" style="left: 1100px">Órdenes de trabajo</div>
+      <div class="gr-col" style="left: 1580px">Técnicos</div>
+
+      <svg id="gr-svg" viewBox="0 0 1920 1080">
+        <path id="gb0" class="e-base" pathLength="1" stroke-dashoffset="1" d="M450 620 C525 620 525 376 600 376" />
+        <path id="gb1" class="e-base" pathLength="1" stroke-dashoffset="1" d="M450 620 L600 620" />
+        <path id="gb2" class="e-base" pathLength="1" stroke-dashoffset="1" d="M450 620 C525 620 525 864 600 864" />
+        <path id="gb3" class="e-base" pathLength="1" stroke-dashoffset="1" d="M950 376 L1100 376" />
+        <path id="gb4" class="e-base" pathLength="1" stroke-dashoffset="1" d="M950 620 L1100 620" />
+        <path id="gb5" class="e-base" pathLength="1" stroke-dashoffset="1" d="M950 864 L1100 864" />
+        <path id="gb6" class="e-base" pathLength="1" stroke-dashoffset="1" d="M1430 376 L1580 376" />
+        <path id="gb7" class="e-base" pathLength="1" stroke-dashoffset="1" d="M1430 620 L1580 620" />
+        <path id="gb8" class="e-base" pathLength="1" stroke-dashoffset="1" d="M1430 864 L1580 864" />
+        <g id="gr-flow">
+          <path class="e-flow" d="M450 620 C525 620 525 376 600 376" />
+          <path class="e-flow" d="M450 620 L600 620" />
+          <path class="e-flow" d="M450 620 C525 620 525 864 600 864" />
+          <path class="e-flow" d="M950 376 L1100 376" />
+          <path class="e-flow" d="M950 620 L1100 620" />
+          <path class="e-flow" d="M950 864 L1100 864" />
+          <path class="e-flow" d="M1430 376 L1580 376" />
+          <path class="e-flow" d="M1430 620 L1580 620" />
+          <path class="e-flow" d="M1430 864 L1580 864" />
+        </g>
+      </svg>
+
+      <div id="gr-a" class="gr-node"><div class="ib"><i class="ic" style="--m:url(assets/iconos/cisterna.svg)"></i></div><b>Camión cisterna</b><small>Volvo FH · CAM-01</small></div>
+
+      <div id="gm0" class="gr-node gr-m" style="top: 330px"><svg viewBox="0 0 56 56"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#e5484d" stroke-dashoffset="0.94" /></svg><b>Cambio de aceite</b><small>Cada 250 h</small></div>
+      <div id="gm1" class="gr-node gr-m" style="top: 574px"><svg viewBox="0 0 56 56"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#d97706" stroke-dashoffset="0.84" /></svg><b>Revisión de frenos</b><small>Cada 3 meses</small></div>
+      <div id="gm2" class="gr-node gr-m" style="top: 818px"><svg viewBox="0 0 56 56"><circle class="ring-bg" cx="28" cy="28" r="22" /><circle class="ring-fg" cx="28" cy="28" r="22" pathLength="1" transform="rotate(-90 28 28)" stroke="#e5484d" stroke-dashoffset="0.93" /></svg><b>Estanqueidad</b><small>Cada mes</small></div>
+
+      <div id="go0" class="gr-node gr-o" style="top: 330px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/cisterna.svg)"></i></div><b>OT-0142</b><small>Cambio de aceite</small><span class="tag">✦ Automática</span></div>
+      <div id="go1" class="gr-node gr-o" style="top: 574px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/cisterna.svg)"></i></div><b>OT-0143</b><small>Revisión de frenos</small><span class="tag">✦ Automática</span></div>
+      <div id="go2" class="gr-node gr-o" style="top: 818px"><div class="ib"><i class="ic" style="--m:url(assets/iconos/cisterna.svg)"></i></div><b>OT-0144</b><small>Estanqueidad</small><span class="tag">✦ Automática</span></div>
+
+      <div id="gt0" class="gr-node gr-t" style="top: 330px"><div class="av" style="background:#6a2ff6">AR</div><b>Ana Ruiz</b><small>En su móvil</small></div>
+      <div id="gt1" class="gr-node gr-t" style="top: 574px"><div class="av" style="background:#2563eb">LG</div><b>Luis Gómez</b><small>En su móvil</small></div>
+      <div id="gt2" class="gr-node gr-t" style="top: 818px"><div class="av" style="background:#0f9f8f">MS</div><b>Marta Sanz</b><small>En su móvil</small></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#gr-t1", { opacity: 0, filter: "blur(8px)", x: 302 }, { opacity: 1, filter: "blur(0px)", x: 302, duration: 0.25, ease: "power4.out" }, 0.25);
+    tl.fromTo(".gr-col", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out", stagger: 0.1 }, 0.1);
+    tl.fromTo("#gr-a", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.7)" }, 0.15);
+
+    // Activo → mantenimientos
+    ["#gb0", "#gb1", "#gb2"].forEach((e) => tl.fromTo(e, { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.5, ease: "power2.inOut" }, 0.6));
+    tl.fromTo("#gm0, #gm1, #gm2", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out", stagger: 0.12 }, 0.95);
+    // Mantenimientos → órdenes (se crean solas)
+    ["#gb3", "#gb4", "#gb5"].forEach((e, i) => tl.fromTo(e, { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.4, ease: "power2.inOut" }, 1.6 + i * 0.12));
+    tl.fromTo("#go0, #go1, #go2", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2)", stagger: 0.12 }, 1.95);
+    // Órdenes → técnicos
+    ["#gb6", "#gb7", "#gb8"].forEach((e, i) => tl.fromTo(e, { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.4, ease: "power2.inOut" }, 2.7 + i * 0.12));
+    tl.fromTo("#gt0, #gt1, #gt2", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out", stagger: 0.12 }, 3.05);
+
+    // El flujo recorre el grafo
+    tl.fromTo("#gr-flow", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 3.4);
+    tl.fromTo("#gr-flow .e-flow", { attr: { "stroke-dashoffset": 0 } }, { attr: { "stroke-dashoffset": -120 }, duration: 2.8, ease: "none" }, 3.4);
+
+    tl.fromTo("#gr-t1", { x: 302 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 3.2);
+    tl.fromTo("#gr-t2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power4.out" }, 3.4);
+
+    tl.fromTo("#gr-cam, #gr-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in", immediateRender: false }, 6.22);
+    window.__timelines["grafo"] = tl;
+  </script>
+</template>

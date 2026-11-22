@@ -48,7 +48,7 @@
     #auto-badge { position: absolute; left: 1612px; top: 446px; height: 34px; padding: 0 14px; border-radius: 17px; background: #6a2ff6; color: #fff; font-size: 18px; font-weight: 650; line-height: 34px; }
   </style>
   <div id="root" data-composition-id="auto" data-width="1920" data-height="1080">
-    <h1 id="auto-title"><span id="auto-t1">Los mantenimientos</span> <span id="auto-t2">crean sus órdenes solos.</span></h1>
+    <h1 id="auto-title"><span id="auto-t1">Cuando toca,</span> <span id="auto-t2">la orden se crea sola.</span></h1>
     <div id="auto-cam" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
       <div id="auto-window"></div>
       <div id="auto-barline"></div>
@@ -116,7 +116,7 @@
 
     // El logo llega de la escena anterior: la ventana aparece a su alrededor
     tl.fromTo("#auto-window, #auto-barline, #auto-brand, #auto-crumb, .auto-pane, #auto-abox, #auto-name, #auto-sub, #auto-counter, #auto-clabel, #auto-hours, #auto-rate, #auto-mhead, .auto-row, .auto-ring, .auto-rname, .auto-rsub, #auto-ohead, #auto-count2, #auto-ot1, #auto-ot2", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.out" }, 0);
-    tl.fromTo("#auto-t1", { opacity: 0, filter: "blur(8px)", x: 471 }, { opacity: 1, filter: "blur(0px)", x: 471, duration: 0.25, ease: "power4.out" }, 0.35);
+    tl.fromTo("#auto-t1", { opacity: 0, filter: "blur(8px)", x: 415 }, { opacity: 1, filter: "blur(0px)", x: 415, duration: 0.25, ease: "power4.out" }, 0.35);
 
     // Suben las horas y el anillo del mantenimiento se vacía
     const h = { v: 2380 };
@@ -137,7 +137,7 @@
     tl.fromTo("#auto-count2", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "power2.out", immediateRender: false }, 3.6);
 
     // "Los mantenimientos" deja sitio a la segunda parte
-    tl.fromTo("#auto-t1", { x: 471 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 3.4);
+    tl.fromTo("#auto-t1", { x: 415 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 3.4);
     tl.fromTo("#auto-t2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power4.out" }, 3.6);
 
     tl.fromTo("#auto-cam, #auto-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in", immediateRender: false }, 6.72);
