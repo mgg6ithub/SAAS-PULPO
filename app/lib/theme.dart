@@ -356,6 +356,8 @@ ThemeData temaPultec() {
       seedColor: P.morado,
       brightness: brillo,
       primary: P.morado,
+      // Sobre el morado, siempre blanco (en oscuro, fromSeed lo ponía casi negro: botones ilegibles).
+      onPrimary: Colors.white,
       surface: P.superficie,
       onSurface: P.texto,
     ),
@@ -392,6 +394,7 @@ ThemeData temaPultec() {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         minimumSize: const Size(0, 40),
         elevation: 0,
+        foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: radio),
         textStyle: textoBoton,
       ),
