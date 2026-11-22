@@ -65,8 +65,11 @@ class InformesDelTrabajo extends StatelessWidget {
 Future<void> verInforme(BuildContext context, Informe i, Tarea t) => showDialog(
   context: context,
   builder: (c) => Dialog(
+    backgroundColor: P.superficie,
+    clipBehavior: Clip.antiAlias,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     child: ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: industrial ? 720 : 560, maxHeight: MediaQuery.sizeOf(c).height * .9),
+      constraints: BoxConstraints(maxWidth: industrial ? 820 : 620, maxHeight: MediaQuery.sizeOf(c).height * .9),
       child: _Informe(i, t),
     ),
   ),
@@ -84,18 +87,68 @@ class _Informe extends StatefulWidget {
 class _InformeState extends State<_Informe> {
   bool descargando = false;
 
-  Widget _dato(String etiqueta, String valor) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Row(
+  /// Etiqueta pequeña en mayúsculas, como en el PDF.
+  Widget _etiqueta(String t) => Text(
+    t.toUpperCase(),
+    style: TextStyle(color: P.textoSuave, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8),
+  );
+
+  /// Dato con su nombre encima (tarjetas y franja de ejecución).
+  Widget _dato(String nombre, String valor, {Widget? hijo}) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 110,
-          child: Text(etiqueta, style: TextStyle(color: P.textoSuave, fontSize: 13)),
-        ),
-        Expanded(child: Text(valor, style: const TextStyle(fontSize: 13.5))),
+        Text(nombre, style: TextStyle(color: P.textoSuave, fontSize: 12)),
+        const SizedBox(height: 2),
+        hijo ?? Text(valor.isEmpty ? '-' : valor, style: const TextStyle(fontSize: 14)),
       ],
     ),
+  );
+
+  /// Tarjeta blanca de borde fino con su etiqueta.
+  Widget _tarjeta(String titulo, List<Widget> hijos) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+    decoration: BoxDecoration(border: Border.all(color: P.borde), borderRadius: BorderRadius.circular(P.radio)),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [_etiqueta(titulo), const SizedBox(height: 10), ...hijos],
+    ),
+  );
+
+  /// Bloque con su etiqueta y el texto en una caja gris suave.
+  Widget _seccion(String titulo, String texto) => Padding(
+    padding: const EdgeInsets.only(top: 18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _etiqueta(titulo),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: P.fondo, borderRadius: BorderRadius.circular(P.radio)),
+          child: Text(texto, style: const TextStyle(fontSize: 14, height: 1.45)),
+        ),
+      ],
+    ),
+  );
+
+  Widget _fotos(List<String> fotos) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (var n = 0; n < fotos.length; n++)
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () => verFotos(context, fotos, n),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(P.radio),
+              child: FotoGuardada(fotos[n], width: 180, height: 128),
+            ),
+          ),
+        ),
+    ],
   );
 
   Future<void> _pdf() async {
@@ -115,122 +168,198 @@ class _InformeState extends State<_Informe> {
 
   @override
   Widget build(BuildContext context) {
-    final i = widget.i;
+    final i = widget.i, t = widget.t;
     final w = store.trabajadores.where((x) => x.id == i.trabajadorId).firstOrNull;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'INFORME',
-            style: TextStyle(color: P.morado, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            widget.t.nombre,
-            style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          if (industrial && widget.t.descripcion.isNotEmpty)
-            Text(widget.t.descripcion, style: TextStyle(color: P.textoSuave, fontSize: 13.5)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+    final cliente = store.cliente(t.clienteId);
+    final raiz = industrial ? raizActivo(t.activoId) : null;
+    final comp = industrial ? store.activo(t.activoId) : null;
+    final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+    final x = industrial ? store.incidenciaDeOt(t.id) : null;
+    final tecnicos = [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombreCompleto];
+    final limpio = t.id.replaceAll('-', '').toUpperCase();
+    final numero = 'OT-${limpio.substring(0, limpio.length < 8 ? limpio.length : 8)}';
+    final cuando = '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}';
+    final resultado = i.resultado.clamp(0, 2);
+    final fabricante = [?raiz?.fabricante, ?raiz?.modelo].where((s) => s.isNotEmpty).join(' ');
+    final estrecho = MediaQuery.sizeOf(context).width < 640;
+
+    final tarjetaOt = _tarjeta(industrial ? 'Orden de trabajo' : m('Trabajo'), [
+      _dato('Número', numero),
+      if (industrial && t.tipoMantenimiento != null)
+        _dato('Criticidad', '', hijo: Pill(t.tipoMantenimiento!.etiqueta, t.tipoMantenimiento!.color, punto: true)),
+      if (industrial) _dato('Origen', x != null ? 'Incidencia' : plan != null ? 'Mantenimiento' : 'Manual'),
+      if (plan != null) _dato('Mantenimiento', [plan.nombre, if (plan.cada.isNotEmpty) plan.cada].join(', ')),
+      if (t.proximo != null || t.ultimo != null) _dato('Fecha prevista', fecha(t.proximo ?? t.ultimo)),
+      if (industrial && tecnicos.isNotEmpty) _dato('Asignada a', tecnicos.join(', ')),
+    ]);
+    final tarjetaDonde = industrial
+        ? _tarjeta('Activo', [
+            _dato('Activo', raiz?.titulo ?? '-'),
+            if (comp != null && comp.id != raiz?.id) _dato('Componente', comp.titulo),
+            if (fabricante.isNotEmpty) _dato('Fabricante y modelo', fabricante),
+            if (raiz != null && raiz.numeroSerie.isNotEmpty) _dato('Número de serie', raiz.numeroSerie),
+            if (t.ubicacion.isNotEmpty) _dato('Ubicación', t.ubicacion),
+          ])
+        : _tarjeta(m('Cliente'), [
+            _dato(m('Cliente'), cliente?.nombre ?? '-'),
+            _dato('Dirección', t.ubicacion.isNotEmpty ? t.ubicacion : (cliente?.direccionCompleta ?? '-')),
+          ]);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Cabecera fija: qué es, número y fecha; la X para cerrar.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 12, 14),
+          child: Row(
             children: [
-              // «Todo correcto» no hace falta decirlo en Pultec.
-              if (!industrial || i.resultado != 0)
-                Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], icono: iconosResultado[i.resultado]),
-              Text(
-                [
-                  '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
-                  if (w != null) w.nombreCompleto,
-                ].join(' · '),
-                style: TextStyle(color: P.textoSuave, fontSize: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      industrial ? 'PARTE DE ORDEN DE TRABAJO' : 'PARTE DE TRABAJO',
+                      style: TextStyle(color: P.morado, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1),
+                    ),
+                    const SizedBox(height: 2),
+                    Text('$numero  ·  $cuando', style: TextStyle(color: P.textoSuave, fontSize: 13)),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cerrar',
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.close_rounded, color: P.textoSuave),
               ),
             ],
           ),
-          // Pultec: los mismos datos que el PDF (dónde, qué orden, de dónde sale y lo que pasó).
-          if (industrial) ...[
-            const SizedBox(height: 16),
-            Builder(builder: (_) {
-              final t = widget.t;
-              final raiz = raizActivo(t.activoId);
-              final comp = store.activo(t.activoId);
-              final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
-              final x = store.incidenciaDeOt(t.id);
-              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _dato('Activo', raiz?.titulo ?? '-'),
-                if (comp != null && comp.id != raiz?.id) _dato('Componente', comp.titulo),
-                if (t.tipoMantenimiento != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(children: [
-                      SizedBox(width: 110, child: Text('Criticidad', style: TextStyle(color: P.textoSuave, fontSize: 13))),
-                      Pill(t.tipoMantenimiento!.etiqueta, t.tipoMantenimiento!.color, punto: true),
-                    ]),
-                  ),
-                _dato('Origen', x != null ? 'Incidencia' : plan != null ? 'Mantenimiento «${plan.nombre}»' : 'Manual'),
-                if (t.proximo != null) _dato('Fecha prevista', fecha(t.proximo)),
-                const SizedBox(height: 12),
-                Text('Historial', style: TextStyle(color: P.textoSuave, fontSize: 12, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                for (final (cuando, texto) in cronologiaOt(t, i))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Container(
-                        margin: const EdgeInsets.only(top: 6, right: 8),
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(color: P.morado, shape: BoxShape.circle),
-                      ),
-                      if (cuando.isNotEmpty)
-                        SizedBox(width: 120, child: Text(cuando, style: TextStyle(color: P.textoSuave, fontSize: 13))),
-                      Expanded(child: Text(texto, style: const TextStyle(fontSize: 13.5))),
-                    ]),
-                  ),
-                const SizedBox(height: 6),
-                Text('Trabajo realizado', style: TextStyle(color: P.textoSuave, fontSize: 12, fontWeight: FontWeight.w700)),
-              ]);
-            }),
-          ],
-          const SizedBox(height: 8),
-          Text(i.notas, style: const TextStyle(fontSize: 14, height: 1.45)),
-          if (i.material.isNotEmpty || i.minutos != null) ...[
-            const SizedBox(height: 12),
-            if (i.valor != null) _dato('Medición', medidaTexto(i, widget.t)),
-            if (i.material.isNotEmpty) _dato('Material', i.material),
-            if (i.minutos != null) _dato('Tiempo', duracionTexto(i.minutos!)),
-          ],
-          if (i.fotos.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+        ),
+        Container(height: 2, color: P.morado),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final f in i.fotos)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(P.radio),
-                    child: FotoGuardada(f, width: 160, height: 120),
+                // Título y descripción, con el resultado a la derecha.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t.nombre,
+                            style: TextStyle(fontFamily: P.titulos, fontSize: 22, fontWeight: FontWeight.w700),
+                          ),
+                          if (t.descripcion.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(t.descripcion, style: TextStyle(color: P.textoSuave, fontSize: 14)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Pill(
+                      resultado == 0 && industrial ? 'Completada' : resultadosInforme[resultado],
+                      coloresResultado[resultado],
+                      icono: iconosResultado[resultado],
+                    ),
+                  ],
+                ),
+                if (x != null) ...[
+                  _seccion('Incidencia original', x.descripcion),
+                  if (x.fotos.isNotEmpty) ...[const SizedBox(height: 8), _fotos(x.fotos)],
+                ],
+                const SizedBox(height: 18),
+                if (estrecho) ...[tarjetaOt, const SizedBox(height: 12), tarjetaDonde]
+                else
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [Expanded(child: tarjetaOt), const SizedBox(width: 12), Expanded(child: tarjetaDonde)],
+                    ),
                   ),
+                const SizedBox(height: 12),
+                // Ejecución en una franja suave del color de la marca.
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                  decoration: BoxDecoration(color: P.moradoSuave, borderRadius: BorderRadius.circular(P.radio)),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _dato('Realizado el', cuando)),
+                      Expanded(child: _dato('Técnico', w?.nombreCompleto ?? '-')),
+                      Expanded(child: _dato('Tiempo', i.minutos == null ? '-' : duracionTexto(i.minutos!))),
+                    ],
+                  ),
+                ),
+                if (industrial) ...[
+                  const SizedBox(height: 18),
+                  _etiqueta('Historial'),
+                  const SizedBox(height: 10),
+                  for (final (c, texto) in cronologiaOt(t, i))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 6, right: 10),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(color: P.morado, shape: BoxShape.circle),
+                          ),
+                          if (c.isNotEmpty)
+                            SizedBox(width: 128, child: Text(c, style: TextStyle(color: P.textoSuave, fontSize: 13))),
+                          Expanded(child: Text(texto, style: const TextStyle(fontSize: 13.5))),
+                        ],
+                      ),
+                    ),
+                ],
+                _seccion('Trabajo realizado', i.notas.isEmpty ? 'Sin observaciones.' : i.notas),
+                if (i.valor != null)
+                  _seccion(plan != null && plan.conMedicion ? plan.medicionNombre : 'Medición', medidaTexto(i, t)),
+                if (i.material.isNotEmpty) _seccion('Material y repuestos', i.material),
+                if (i.fotos.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  _etiqueta('Fotos'),
+                  const SizedBox(height: 8),
+                  _fotos(i.fotos),
+                ],
+                if (i.firma != null) ...[
+                  const SizedBox(height: 22),
+                  _etiqueta(industrial ? 'Firma del técnico' : m('Conforme, el cliente')),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: 260,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FotoGuardada(i.firma!, width: 220, height: 80, fit: BoxFit.contain),
+                          Container(height: 1, color: P.texto),
+                          const SizedBox(height: 4),
+                          Text(
+                            industrial ? (w?.nombreCompleto ?? i.firmante) : i.firmante,
+                            style: TextStyle(color: P.textoSuave, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
-          ],
-          if (i.firma != null) ...[
-            const SizedBox(height: 16),
-            Text(industrial ? 'Firma del técnico' : m('Conforme, el cliente'), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
-            const SizedBox(height: 4),
-            FotoGuardada(i.firma!, width: 220, height: 88, fit: BoxFit.contain),
-            if (industrial && w != null)
-              Text(w.nombreCompleto, style: const TextStyle(fontSize: 13.5))
-            else if (i.firmante.isNotEmpty)
-              Text(i.firmante, style: const TextStyle(fontSize: 13.5)),
-          ],
-          const SizedBox(height: 20),
-          Row(
+          ),
+        ),
+        Divider(height: 1, color: P.borde),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
@@ -238,12 +367,13 @@ class _InformeState extends State<_Informe> {
               BotonAccion(
                 descargando ? 'Creando PDF…' : 'Descargar PDF',
                 icono: Icons.download_rounded,
+                color: P.morado,
                 onPressed: () => descargando ? null : _pdf(),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
