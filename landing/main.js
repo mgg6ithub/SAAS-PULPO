@@ -1,5 +1,5 @@
 // Pultec · landing. Sin dependencias: tema claro/oscuro, aparición al hacer scroll, pasos con vídeo fijo,
-// líneas del bloque «El problema», vídeos que solo se reproducen a la vista y demos que se animan una vez.
+// líneas del bloque «El problema», vídeos que solo se reproducen a la vista y panel que sigue al ratón.
 (() => {
   const root = document.documentElement;
   root.classList.add("js");
@@ -32,17 +32,7 @@
     if (isIntersecting) { if (v.dataset.src && !v.src) v.src = v.dataset.src; if (!quieto) reproducir(v); }
     else if (!v.paused) v.pause();
   }), { threshold: 0.25 });
-  document.querySelectorAll("video.autoplay, .step__video, #film").forEach((v) => vio.observe(v));
-
-  // Sonido del vídeo principal
-  const film = document.getElementById("film");
-  const sonido = document.getElementById("sonido");
-  sonido?.addEventListener("click", () => {
-    film.muted = !film.muted;
-    if (!film.muted) { film.currentTime = 0; reproducir(film); }
-    sonido.setAttribute("aria-pressed", String(!film.muted));
-    sonido.querySelector("span").textContent = film.muted ? "Activar sonido" : "Silenciar";
-  });
+  document.querySelectorAll("video.autoplay, .step__video").forEach((v) => vio.observe(v));
 
   // Cómo funciona: el paso centrado cambia el vídeo grande (fundido entre dos <video>)
   const pasos = [...document.querySelectorAll(".step")];
@@ -95,37 +85,24 @@
   document.fonts?.ready.then(dibujar);
   flujo?.addEventListener("transitionend", dibujar);
 
-  // Demos de las tarjetas: se animan una vez al aparecer
-  const unaVez = (sel, fn) => {
-    const el = document.querySelector(sel); if (!el) return;
-    new IntersectionObserver(([e], o) => { if (e.isIntersecting) { o.disconnect(); fn(el); } }, { threshold: 0.5 }).observe(el);
-  };
-  const contar = (de, a, ms, pinta) => {
-    if (quieto) return pinta(a);
-    const t0 = performance.now();
-    const paso = (t) => { const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3); pinta(de + (a - de) * e); if (p < 1) requestAnimationFrame(paso); };
-    requestAnimationFrame(paso);
-  };
-  unaVez(".ringdemo", (el) => {
-    const f = el.querySelector(".rf"), d = el.querySelector("[data-ring-days]");
-    f.style.strokeDashoffset = "90"; f.style.stroke = "var(--amber)";
-    setTimeout(() => { f.style.stroke = "var(--red)"; }, 1300);
-    contar(18, 3, 2200, (v) => { d.textContent = String(Math.round(v)); });
-  });
-  unaVez(".odo", (el) => {
-    const b = document.querySelector("[data-odo]"), bar = document.querySelector("[data-odo-bar]");
-    bar.style.width = "98%"; bar.style.background = "var(--amber)";
-    contar(2380, 2496, 2200, (v) => { const s = String(Math.round(v)); b.textContent = s.slice(0, -3) + "." + s.slice(-3); });
-  });
-  unaVez(".incdemo", (el) => {
-    const st = el.querySelector("[data-state]"), dot = el.querySelector(".dot"), cad = [...el.querySelectorAll(".incdemo__chain span")];
-    const fases = [["Abierta", 0], ["Con OT", 1], ["Con OT", 1], ["Completada", 2]];
-    fases.forEach(([txt, s], i) => setTimeout(() => {
-      st.textContent = txt; st.dataset.s = String(s);
-      if (s === 2) dot.style.background = "var(--green)";
-      cad.forEach((c, j) => c.classList.toggle("on", j <= i));
-    }, quieto ? 0 : 400 + i * 700));
-  });
+  // Panel de la portada: se inclina un poco siguiendo el ratón
+  const panel = document.getElementById("panel");
+  if (panel && !quieto && matchMedia("(hover: hover)").matches) {
+    const zona = panel.parentElement;
+    zona.addEventListener("mousemove", (e) => {
+      const r = zona.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      panel.style.transform = `rotateX(${(-y * 5).toFixed(2)}deg) rotateY(${(x * 6).toFixed(2)}deg)`;
+    });
+    zona.addEventListener("mouseleave", () => { panel.style.transform = ""; });
+  }
+
+  // Detalles: la luz de cada tarjeta sigue al ratón
+  document.querySelectorAll(".tile").forEach((tile) => tile.addEventListener("mousemove", (e) => {
+    const r = tile.getBoundingClientRect();
+    tile.style.setProperty("--mx", e.clientX - r.left + "px");
+    tile.style.setProperty("--my", e.clientY - r.top + "px");
+  }));
 
   // Facturación mensual / anual
   document.querySelectorAll("[data-billing]").forEach((b) => b.addEventListener("click", () => {
