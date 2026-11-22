@@ -1,9 +1,18 @@
-// Pultec · landing. Sin dependencias: aparición al hacer scroll, pasos con vídeo fijo, vídeos que solo
-// se reproducen a la vista, demos de las tarjetas y cambio de facturación.
+// Pultec · landing. Sin dependencias: tema claro/oscuro, aparición al hacer scroll, pasos con vídeo fijo,
+// líneas del bloque «El problema», vídeos que solo se reproducen a la vista y demos que se animan una vez.
 (() => {
   const root = document.documentElement;
   root.classList.add("js");
   const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Tema: el botón alterna y se recuerda en este navegador
+  const oscuroSistema = matchMedia("(prefers-color-scheme: dark)");
+  const temaActual = () => root.dataset.theme || (oscuroSistema.matches ? "dark" : "light");
+  document.getElementById("tema")?.addEventListener("click", () => {
+    const nuevo = temaActual() === "dark" ? "light" : "dark";
+    root.dataset.theme = nuevo;
+    try { localStorage.setItem("pultec-tema", nuevo); } catch (e) {}
+  });
 
   // Barra con borde al bajar
   const nav = document.getElementById("nav");
@@ -11,26 +20,18 @@
   addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
-  // Aparición
-  const io = new IntersectionObserver((es) => {
-    es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); } });
-  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
-  document.querySelectorAll(".reveal, .tile").forEach((el) => io.observe(el));
+  // Aparición (una vez)
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); }
+  }), { rootMargin: "0px 0px -8% 0px", threshold: 0.15 });
+  document.querySelectorAll(".reveal, .tile, .flow").forEach((el) => io.observe(el));
 
-  // Cinta de sectores: se duplica para que no tenga fin
-  const track = document.querySelector(".marquee__track");
-  if (track && !quieto) track.innerHTML += track.innerHTML;
-
-  // Vídeos: carga perezosa y solo se reproducen mientras se ven (ahorra batería y datos)
+  // Vídeos: carga perezosa y solo se reproducen mientras se ven
   const reproducir = (v) => { const p = v.play(); if (p) p.catch(() => {}); };
-  const vio = new IntersectionObserver((es) => {
-    es.forEach(({ target: v, isIntersecting }) => {
-      if (isIntersecting) {
-        if (v.dataset.src && !v.src) { v.src = v.dataset.src; }
-        if (!quieto) reproducir(v);
-      } else if (!v.paused) v.pause();
-    });
-  }, { threshold: 0.25 });
+  const vio = new IntersectionObserver((es) => es.forEach(({ target: v, isIntersecting }) => {
+    if (isIntersecting) { if (v.dataset.src && !v.src) v.src = v.dataset.src; if (!quieto) reproducir(v); }
+    else if (!v.paused) v.pause();
+  }), { threshold: 0.25 });
   document.querySelectorAll("video.autoplay, .step__video, #film").forEach((v) => vio.observe(v));
 
   // Sonido del vídeo principal
@@ -43,105 +44,95 @@
     sonido.querySelector("span").textContent = film.muted ? "Activar sonido" : "Silenciar";
   });
 
-  // Cómo funciona: el paso centrado cambia el vídeo fijo (fundido entre dos <video>)
+  // Cómo funciona: el paso centrado cambia el vídeo grande (fundido entre dos <video>)
   const pasos = [...document.querySelectorAll(".step")];
   const capas = [...document.querySelectorAll(".stage__video")];
   const barra = document.getElementById("progreso");
   let actual = 0, capa = 0;
   const activar = (i) => {
-    if (i === actual) return;
+    if (i === actual || i < 0) return;
     actual = i;
     pasos.forEach((p, j) => p.classList.toggle("is-active", j === i));
     if (barra) barra.style.width = ((i + 1) / pasos.length) * 100 + "%";
-    const sig = capas[1 - capa];
+    const sig = capas[1 - capa], viejo = capas[capa];
     sig.src = pasos[i].dataset.video;
     sig.poster = pasos[i].dataset.poster;
-    sig.currentTime = 0;
     if (!quieto) reproducir(sig);
     sig.classList.add("is-on");
-    capas[capa].classList.remove("is-on");
-    const viejo = capas[capa];
-    setTimeout(() => viejo.pause(), 520);
+    viejo.classList.remove("is-on");
+    setTimeout(() => viejo.pause(), 480);
     capa = 1 - capa;
   };
   if (capas.length) {
-    const pio = new IntersectionObserver((es) => {
-      es.forEach((e) => { if (e.isIntersecting) activar(pasos.indexOf(e.target)); });
-    }, { rootMargin: "-45% 0px -45% 0px" });
+    if (barra) barra.style.width = 100 / pasos.length + "%";
+    const pio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) activar(pasos.indexOf(e.target)); }), { rootMargin: "-45% 0px -45% 0px" });
     pasos.forEach((p) => pio.observe(p));
-    const stage = document.querySelector(".story__stage");
-    new IntersectionObserver(([e]) => {
-      const v = capas[capa];
-      if (e.isIntersecting && !quieto) reproducir(v); else v.pause();
-    }, { threshold: 0.1 }).observe(stage);
+    new IntersectionObserver(([e]) => { const v = capas[capa]; if (e.isIntersecting && !quieto) reproducir(v); else v.pause(); }, { threshold: 0.1 })
+      .observe(document.querySelector(".story__stage"));
   }
 
-  // Demos de las tarjetas (solo mientras se ven)
-  const visible = new Set();
-  const tio = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting ? visible.add(e.target) : visible.delete(e.target)), { threshold: 0.3 });
-  document.querySelectorAll(".tile").forEach((t) => tio.observe(t));
-  const ve = (sel) => { const el = document.querySelector(sel); return el && visible.has(el.closest(".tile")) ? el : null; };
+  // El problema: líneas discontinuas de cada carta a Pultec y de Pultec a cada resultado
+  const flujo = document.getElementById("flujo");
+  const lineas = flujo?.querySelector(".flow__lines");
+  const dibujar = () => {
+    if (!flujo || getComputedStyle(lineas).display === "none") return;
+    const f = flujo.getBoundingClientRect();
+    const c = flujo.querySelector(".flow__core").getBoundingClientRect();
+    const cx = c.left - f.left, cy = c.top - f.top + c.height / 2, cr = cx + c.width;
+    let d = "";
+    flujo.querySelectorAll(".mess").forEach((m) => {
+      const r = m.getBoundingClientRect(), x = r.right - f.left, y = r.top - f.top + r.height / 2, k = (cx - x) / 2;
+      d += `<path d="M${x} ${y} C${x + k} ${y} ${cx - k} ${cy} ${cx} ${cy}"/>`;
+    });
+    flujo.querySelectorAll(".flow__out li").forEach((o) => {
+      const r = o.getBoundingClientRect(), x = r.left - f.left, y = r.top - f.top + r.height / 2, k = (x - cr) / 2;
+      d += `<path class="out" d="M${cr} ${cy} C${cr + k} ${cy} ${x - k} ${y} ${x} ${y}"/>`;
+    });
+    lineas.innerHTML = d;
+  };
+  dibujar();
+  addEventListener("resize", dibujar);
+  document.fonts?.ready.then(dibujar);
+  flujo?.addEventListener("transitionend", dibujar);
 
-  // Anillo del ciclo: los días bajan y el color cambia (verde, ámbar <20 %, rojo <10 %)
-  const ringF = document.querySelector(".ringdemo .rf");
-  const ringD = document.querySelector("[data-ring-days]");
-  let dias = 30;
-  // Contador por horas
-  const odo = document.querySelector("[data-odo]");
-  const odoBar = document.querySelector("[data-odo-bar]");
-  let horas = 2380;
-  // Incidencia: estados
-  const estado = document.querySelector("[data-state]");
-  const dot = document.querySelector(".incdemo .dot");
-  const cadena = [...document.querySelectorAll(".incdemo__chain span")];
-  let paso = 0;
-  // Avisos
-  const toasts = [...document.querySelectorAll(".toast")];
-  let tIdx = 0;
-  const colocarToasts = () => toasts.forEach((t, i) => {
-    const pos = (i - tIdx + toasts.length) % toasts.length; // 0 delante
-    t.style.transform = `translateY(${pos * 22}px) scale(${1 - pos * 0.05})`;
-    t.style.opacity = pos === toasts.length - 1 ? 0 : 1 - pos * 0.5;
-    t.style.zIndex = String(10 - pos);
+  // Demos de las tarjetas: se animan una vez al aparecer
+  const unaVez = (sel, fn) => {
+    const el = document.querySelector(sel); if (!el) return;
+    new IntersectionObserver(([e], o) => { if (e.isIntersecting) { o.disconnect(); fn(el); } }, { threshold: 0.5 }).observe(el);
+  };
+  const contar = (de, a, ms, pinta) => {
+    if (quieto) return pinta(a);
+    const t0 = performance.now();
+    const paso = (t) => { const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3); pinta(de + (a - de) * e); if (p < 1) requestAnimationFrame(paso); };
+    requestAnimationFrame(paso);
+  };
+  unaVez(".ringdemo", (el) => {
+    const f = el.querySelector(".rf"), d = el.querySelector("[data-ring-days]");
+    f.style.strokeDashoffset = "90"; f.style.stroke = "var(--amber)";
+    setTimeout(() => { f.style.stroke = "var(--red)"; }, 1300);
+    contar(18, 3, 2200, (v) => { d.textContent = String(Math.round(v)); });
   });
-  colocarToasts();
-
-  const tic = () => {
-    if (ve(".ringdemo")) {
-      dias = dias <= 0 ? 30 : dias - 1;
-      const f = dias / 30;
-      ringF.style.strokeDashoffset = String(100 - f * 100);
-      ringF.style.stroke = f < 0.1 ? "var(--red)" : f < 0.2 ? "var(--amber)" : "var(--green)";
-      ringD.textContent = String(dias);
-    }
-    if (ve("[data-odo]")) {
-      horas = horas >= 2500 ? 2380 : horas + 4;
-      const s = String(horas);
-      odo.textContent = s.slice(0, -3) + "." + s.slice(-3);
-      odoBar.style.width = ((horas - 2250) / 250) * 100 + "%";
-      odoBar.style.background = horas >= 2480 ? "var(--red)" : horas >= 2450 ? "var(--amber)" : "var(--purple)";
-    }
-  };
-  const ticLento = () => {
-    if (ve("[data-state]")) {
-      paso = (paso + 1) % 4;
-      const s = Math.min(paso, 2);
-      estado.dataset.s = String(s);
-      estado.textContent = ["Abierta", "Con OT", "Completada"][s];
-      dot.style.background = s === 2 ? "var(--green)" : "var(--red)";
-      cadena.forEach((c, i) => c.classList.toggle("on", i <= paso));
-    }
-    if (ve(".toasts")) { tIdx = (tIdx + 1) % toasts.length; colocarToasts(); }
-  };
-  if (!quieto) { setInterval(tic, 140); setInterval(ticLento, 1500); }
-  else { cadena.forEach((c) => c.classList.add("on")); }
+  unaVez(".odo", (el) => {
+    const b = document.querySelector("[data-odo]"), bar = document.querySelector("[data-odo-bar]");
+    bar.style.width = "98%"; bar.style.background = "var(--amber)";
+    contar(2380, 2496, 2200, (v) => { const s = String(Math.round(v)); b.textContent = s.slice(0, -3) + "." + s.slice(-3); });
+  });
+  unaVez(".incdemo", (el) => {
+    const st = el.querySelector("[data-state]"), dot = el.querySelector(".dot"), cad = [...el.querySelectorAll(".incdemo__chain span")];
+    const fases = [["Abierta", 0], ["Con OT", 1], ["Con OT", 1], ["Completada", 2]];
+    fases.forEach(([txt, s], i) => setTimeout(() => {
+      st.textContent = txt; st.dataset.s = String(s);
+      if (s === 2) dot.style.background = "var(--green)";
+      cad.forEach((c, j) => c.classList.toggle("on", j <= i));
+    }, quieto ? 0 : 400 + i * 700));
+  });
 
   // Facturación mensual / anual
   document.querySelectorAll("[data-billing]").forEach((b) => b.addEventListener("click", () => {
-    const k = b.dataset.billing;
+    const k = b.dataset.billing === "mes" ? "Mes" : "Anio";
     document.querySelectorAll("[data-billing]").forEach((x) => x.classList.toggle("is-on", x === b));
-    document.querySelectorAll("[data-price-mes]").forEach((p) => { p.textContent = p.dataset["price" + (k === "mes" ? "Mes" : "Anio")]; });
-    document.querySelectorAll("[data-per-mes]").forEach((p) => { p.textContent = p.dataset["per" + (k === "mes" ? "Mes" : "Anio")]; });
+    document.querySelectorAll("[data-price-mes]").forEach((p) => { p.textContent = p.dataset["price" + k]; });
+    document.querySelectorAll("[data-per-mes]").forEach((p) => { p.textContent = p.dataset["per" + k]; });
   }));
 
   // Paralaje suave de la foto
@@ -150,8 +141,7 @@
     const mover = () => {
       const r = foto.parentElement.getBoundingClientRect();
       if (r.bottom < 0 || r.top > innerHeight) return;
-      const p = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;
-      foto.style.transform = `translateY(${p * -60}px)`;
+      foto.style.transform = `translateY(${((r.top + r.height / 2 - innerHeight / 2) / innerHeight) * -50}px)`;
     };
     addEventListener("scroll", mover, { passive: true });
     mover();
