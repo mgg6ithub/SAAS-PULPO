@@ -26,6 +26,9 @@ class TablaTrabajos extends StatefulWidget {
 
   /// Cómo se llama cada fila, en singular ('trabajo', 'subtrabajo').
   final String nombre;
+
+  /// OT a destacar (borde morado) y dejar marcada para el teclado: la de «Ver OT» de una incidencia.
+  final String? marcada;
   const TablaTrabajos(
     this.trabajos, {
     super.key,
@@ -33,6 +36,7 @@ class TablaTrabajos extends StatefulWidget {
     this.conCliente = true,
     this.umbralAncho = 1000,
     this.nombre = 'trabajo',
+    this.marcada,
   });
 
   @override
@@ -325,6 +329,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
+          resaltar: widget.marcada == null ? null : (i) => ts[i].id == widget.marcada ? P.morado : null,
+          focoInicial: widget.marcada == null ? null : ts.indexWhere((t) => t.id == widget.marcada),
           seleccionCabecera: BotonSeleccionLista(
             activo: seleccionando,
             onTap: () => seleccionando ? salirSeleccion() : setState(() => seleccionando = true),

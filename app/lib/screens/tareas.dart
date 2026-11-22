@@ -19,6 +19,22 @@ final filtroCriticidadTrabajos = ValueNotifier<int>(0);
 /// Pultec: Órdenes de trabajo partida en dos: pendientes (false) o histórico de las hechas (true).
 final historicoTrabajos = ValueNotifier<bool>(false);
 
+/// Pultec: OT a marcar en la lista de Órdenes de trabajo (llegando desde su incidencia con «Ver OT»).
+final otMarcada = ValueNotifier<String?>(null);
+
+/// Cada aviso pide a la barra lateral que vaya a Órdenes de trabajo.
+final pedirOrdenes = ValueNotifier<int>(0);
+
+/// «Ver OT»: cierra lo que haya encima, va a Órdenes de trabajo (pendientes, sin filtros) y deja marcada esa OT.
+void verOtEnOrdenes(BuildContext context, String id) {
+  Navigator.of(context).popUntil((r) => r.isFirst);
+  historicoTrabajos.value = false;
+  filtroFechaTrabajos.value = 0;
+  filtroCriticidadTrabajos.value = 0;
+  otMarcada.value = id;
+  pedirOrdenes.value++;
+}
+
 /// Al histórico: completadas y canceladas.
 bool _hecha(Tarea t) => t.estado == EstadoTrabajo.realizado || t.estado == EstadoTrabajo.noRealizado;
 
@@ -69,12 +85,22 @@ class _TareasPaginaState extends State<TareasPagina> {
 
   void _alCambiarFecha() => setState(() => pestana = 0);
 
+  /// Llegando con «Ver OT»: sin búsqueda ni filtros, para que la OT marcada se vea seguro.
+  void _alMarcar() => setState(() {
+    pestana = 0;
+    q = '';
+    tipo = null;
+    _activoFiltro = null;
+  });
+
   @override
   void initState() {
     super.initState();
     filtroFechaTrabajos.addListener(_alCambiarFecha);
     filtroCriticidadTrabajos.addListener(_alCambiarFecha);
     historicoTrabajos.addListener(_alCambiarFecha);
+    otMarcada.addListener(_alMarcar);
+    if (otMarcada.value != null) _alMarcar();
   }
 
   @override
@@ -82,6 +108,9 @@ class _TareasPaginaState extends State<TareasPagina> {
     filtroFechaTrabajos.removeListener(_alCambiarFecha);
     filtroCriticidadTrabajos.removeListener(_alCambiarFecha);
     historicoTrabajos.removeListener(_alCambiarFecha);
+    otMarcada.removeListener(_alMarcar);
+    // Al salir de la sección, la marca se olvida.
+    WidgetsBinding.instance.addPostFrameCallback((_) => otMarcada.value = null);
     super.dispose();
   }
 
@@ -304,7 +333,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                             : null,
                       )
                     : lista
-                    ? TablaTrabajos(filtradas, onAbrir: widget.onAbrir)
+                    ? TablaTrabajos(filtradas, onAbrir: widget.onAbrir, marcada: otMarcada.value)
                     // Solo se reconstruye al cambiar el nº de columnas; el ancho de cada tarjeta lo pone la Rejilla.
                     : ListaRejilla(
                         anchoMin: 420,

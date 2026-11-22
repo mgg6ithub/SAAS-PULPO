@@ -10,6 +10,7 @@ import '../widgets.dart';
 import 'incidencia.dart';
 import 'mantenimientos.dart';
 import 'tipo_mantenimiento.dart';
+import '../screens/tareas.dart' show verOtEnOrdenes;
 
 /// Pultec: sección Incidencias. Pendientes (abiertas y con OT) e histórico (completadas y desestimadas):
 /// ninguna incidencia desaparece, quedan todas controladas en el tiempo.
@@ -24,7 +25,7 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
   String q = '';
   bool historico = false;
 
-  /// 0 todas; 1 la primera de su pestaña (abierta / completada); 2 la segunda (con OT / desestimada).
+  /// Pendientes: 0 todas, 1 abiertas, 2 con OT. Histórico: 0 las completadas, 1 solo las desestimadas.
   int estado = 0;
   String? activoId;
 
@@ -37,7 +38,11 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
         todas.where((e) {
           final (x, est) = e;
           if (est.pendiente == historico) return false;
-          if (estado != 0 && est.index != (historico ? 1 : -1) + estado) return false;
+          if (historico) {
+            if (est != (estado == 1 ? EstadoIncidencia.desestimada : EstadoIncidencia.completada)) return false;
+          } else if (estado != 0 && est.index != estado - 1) {
+            return false;
+          }
           if (rama != null && !rama.contains(x.activoId)) return false;
           final quien = (x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombre ?? '';
           return '${x.descripcion} ${dondeEs(x.activoId)} $quien'.toLowerCase().contains(q.toLowerCase());
@@ -70,14 +75,24 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
                   estado = 0;
                 }),
               ),
-              Pestanas(
-                opciones: ['Todas', for (final e in estados) e.etiqueta],
-                iconos: [null, for (final e in estados) e.icono],
-                coloresIconos: [null, for (final e in estados) e.color],
-                seleccion: estado,
-                compactas: true,
-                onChanged: (i) => setState(() => estado = i),
-              ),
+              // Histórico: de serie, las completadas; un botón enseña solo las desestimadas.
+              if (historico)
+                BotonAccion(
+                  'Desestimadas',
+                  icono: EstadoIncidencia.desestimada.icono,
+                  tooltip: estado == 1 ? 'Volver a las completadas' : 'Ver solo las desestimadas',
+                  color: estado == 1 ? P.rojo : null,
+                  onPressed: () => setState(() => estado = estado == 1 ? 0 : 1),
+                )
+              else
+                Pestanas(
+                  opciones: ['Todas', for (final e in estados) e.etiqueta],
+                  iconos: [null, for (final e in estados) e.icono],
+                  coloresIconos: [null, for (final e in estados) e.color],
+                  seleccion: estado,
+                  compactas: true,
+                  onChanged: (i) => setState(() => estado = i),
+                ),
             ],
             derecha: [
               Buscador(hint: 'Buscar incidencia…', width: 240, onChanged: (v) => setState(() => q = v)),
@@ -156,12 +171,14 @@ class _TablaIncidencias extends StatelessWidget {
             if (ancho) celdaTexto((x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombre ?? 'Oficina', suave: true),
             if (ancho) celdaTexto(relativo(DateUtils.dateOnly(historico ? x.cerradaEl ?? x.creada : x.creada)), suave: true),
             if (medio)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Tooltip(
-                  message: ot == null ? '' : 'OT: ${ot.nombre}',
-                  child: Pill(est.etiqueta, est.color, icono: est.icono),
-                ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
+                  // Con su OT por hacer: debajo, en gris, «Ver OT» lleva a ella en Órdenes de trabajo.
+                  if (ot != null && est == EstadoIncidencia.conOt) EnlaceVerOt(ot.id),
+                ],
               ),
             // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.
             if (medio) BotonPdf(() => descargarInformeIncidencia(context, x), tooltip: 'Descargar el informe en PDF'),
@@ -172,5 +189,31 @@ class _TablaIncidencias extends StatelessWidget {
       ),
       );
     },
+  );
+}
+
+/// «👁 Ver OT» en tono neutro: va a Órdenes de trabajo con la OT de la incidencia marcada.
+class EnlaceVerOt extends StatelessWidget {
+  final String otId;
+  const EnlaceVerOt(this.otId, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: 'Ver la orden de trabajo',
+    child: InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => verOtEnOrdenes(context, otId),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.visibility_outlined, size: 15, color: P.textoSuave),
+            const SizedBox(width: 5),
+            Text('Ver OT', style: TextStyle(fontSize: 12.5, color: P.textoSuave, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    ),
   );
 }

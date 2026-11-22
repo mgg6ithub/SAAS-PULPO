@@ -1307,7 +1307,11 @@ class Tabla extends StatefulWidget {
 
   /// Color del borde de una fila destacada (p. ej. la que se abrió desde Inicio); null = sin destacar.
   final Color? Function(int i)? resaltar;
+
+  /// Fila que entra ya marcada (como con las flechas) y a la vista; null o -1 = ninguna.
+  final int? focoInicial;
   const Tabla({
+    this.focoInicial,
     super.key,
     required this.columnas,
     required this.filas,
@@ -1324,6 +1328,23 @@ class Tabla extends StatefulWidget {
 }
 
 class _TablaState extends State<Tabla> {
+  /// Entra con [Tabla.focoInicial] marcada y la acerca a la vista.
+  void _marcarInicial() {
+    final i = widget.focoInicial;
+    if (i == null || i < 0 || i >= widget.filas) return;
+    _foco = i;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      _scroll.jumpTo((i * 57.0 - 57).clamp(0, _scroll.position.maxScrollExtent));
+    });
+  }
+
+  @override
+  void didUpdateWidget(Tabla old) {
+    super.didUpdateWidget(old);
+    if (widget.focoInicial != old.focoInicial) _marcarInicial();
+  }
+
   /// Anchos elegidos arrastrando, por título de columna (las columnas pueden aparecer o no según el ancho).
   final anchos = <String, double>{};
   final _claves = <String, GlobalKey>{};
@@ -1346,6 +1367,7 @@ class _TablaState extends State<Tabla> {
   @override
   void initState() {
     super.initState();
+    _marcarInicial();
     _abiertas.add(this);
     HardwareKeyboard.instance.addHandler(_tecla);
   }

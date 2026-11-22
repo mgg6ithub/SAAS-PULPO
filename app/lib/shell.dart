@@ -60,6 +60,7 @@ class _ShellState extends State<Shell> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_tecla);
+    pedirOrdenes.addListener(_irAOrdenes);
     // ?nuevo=tarea|cliente|trabajador abre ese formulario al entrar (útil para capturas).
     final nuevo = Uri.base.queryParameters['nuevo'];
     if (nuevo != null) {
@@ -85,8 +86,14 @@ class _ShellState extends State<Shell> {
     tareaId = null;
   });
 
+  /// «Ver OT» desde una incidencia: a Órdenes de trabajo (la OT queda marcada allí).
+  void _irAOrdenes() {
+    if (mounted) ir(Seccion.tareas);
+  }
+
   @override
   void dispose() {
+    pedirOrdenes.removeListener(_irAOrdenes);
     HardwareKeyboard.instance.removeHandler(_tecla);
     super.dispose();
   }

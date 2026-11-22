@@ -11,6 +11,7 @@ import 'activos.dart';
 import 'gravedad.dart';
 import 'incidencia.dart';
 import 'tipo_mantenimiento.dart';
+import 'incidencias.dart' show EnlaceVerOt;
 
 /// Activo raíz (la máquina) del activo o componente.
 Activo? raizDe(String? id) {
@@ -324,6 +325,11 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       // Estado y gravedad, en la misma línea.
       bajoBotones: Row(mainAxisSize: MainAxisSize.min, children: [
         if (existe) ...[Pill(estado.etiqueta, estado.color, icono: estado.icono), const SizedBox(width: 12)],
+        // Con su OT por hacer: «Ver OT» lleva a ella en Órdenes de trabajo.
+        if (existe && estado == EstadoIncidencia.conOt && store.tarea(x.trabajoId) != null) ...[
+          EnlaceVerOt(x.trabajoId!),
+          const SizedBox(width: 12),
+        ],
         BotonMenu<Gravedad>(
         tooltip: 'Gravedad',
         seleccionado: x.gravedad,
