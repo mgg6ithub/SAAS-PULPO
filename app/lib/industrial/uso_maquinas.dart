@@ -1399,19 +1399,16 @@ class _Maquinas extends StatelessWidget {
     ],
   );
 
+  /// La leyenda va junto a las máquinas (no suelta en la otra punta, que con la barra lateral plegada queda lejos
+  /// de todo): detrás de la última ficha, a su altura.
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    crossAxisAlignment: WrapCrossAlignment.center,
     children: [
-      Expanded(
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [for (final (i, a) in activos.indexed) SizedBox(width: 250, child: _ficha(i, a))],
-        ),
-      ),
-      const SizedBox(width: 16),
-      Padding(padding: const EdgeInsets.only(top: 8), child: _leyenda),
+      for (final (i, a) in activos.indexed) SizedBox(width: 250, child: _ficha(i, a)),
+      Padding(padding: const EdgeInsets.only(left: 10), child: _leyenda),
     ],
   );
 }
