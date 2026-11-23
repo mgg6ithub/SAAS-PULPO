@@ -1059,6 +1059,34 @@ class _BarraState extends State<_Barra> {
     );
   }
 
+  /// Opción de un grupo con la barra plegada (solo iconos): una rama neutra baja desde el icono de su cabeza y
+  /// lleva a su icono, algo menor y desplazado a la derecha.
+  Widget _hijoIconos(IconData icono, bool sel) => LayoutBuilder(
+    builder: (context, c) {
+      final cx = c.maxWidth / 2;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: CustomPaint(painter: _Rama(color: P.bordeBarra, x: cx - 6, arriba: _hueco)),
+          ),
+          Positioned(
+            left: cx + 1,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: sel ? P.iconoBarraElegido : P.textoBarraSuave),
+                duration: const Duration(milliseconds: 200),
+                builder: (_, col, _) => Icon(icono, size: 17 * escala, color: col),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
   /// Flecha del grupo: plegar o desplegar sin cambiar de sección. Gira con la misma animación.
   Widget _flecha(bool abierto) => InkWell(
     borderRadius: BorderRadius.circular(6),
@@ -1100,7 +1128,8 @@ class _BarraState extends State<_Barra> {
           child: Container(
             height: _altoItem,
             padding: EdgeInsets.symmetric(horizontal: iconos ? 8 : 12),
-            child: Row(
+            // Solo iconos: «Uso de activos» cuelga de Activos con una rama, como en el grupo desplegado.
+            child: iconos && s == Seccion.usoActivos ? _hijoIconos(icono, sel) : Row(
               mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Stack(
@@ -1487,4 +1516,30 @@ class _BotonDemo extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Rama «└» de la barra plegada: baja en [x] desde encima del hueco ([arriba]) hasta la mitad y gira a la derecha.
+class _Rama extends CustomPainter {
+  final Color color;
+  final double x, arriba;
+  const _Rama({required this.color, required this.x, required this.arriba});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final y = size.height / 2;
+    canvas.drawPath(
+      Path()
+        ..moveTo(x, -arriba)
+        ..lineTo(x, y - 4)
+        ..quadraticBezierTo(x, y, x + 4, y)
+        ..lineTo(x + 7, y),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Rama old) => old.color != color || old.x != x || old.arriba != arriba;
 }
