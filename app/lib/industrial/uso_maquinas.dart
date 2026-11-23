@@ -857,11 +857,8 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               padding: const EdgeInsets.only(bottom: 3),
               child: Row(
                 children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(color: _colorDe(i), shape: BoxShape.circle),
-                  ),
+                  // El icono de la máquina, en su color (en vez de un punto).
+                  IconoActivo(a.icono, size: 14, color: _colorDe(i)),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
