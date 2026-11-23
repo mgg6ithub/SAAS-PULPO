@@ -603,11 +603,11 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               ),
             ),
             // Abajo en el centro, encima de todo (no mueve el calendario): la barra de selección de las listas.
-            // Si no cabe, se encoge entera en vez de cortarse.
+            // Sin pisar la campana de avisos (abajo a la derecha); si no cabe, se encoge en vez de cortarse.
             if (conSel)
               Positioned(
-                left: 16,
-                right: 16,
+                left: 96,
+                right: 96,
                 bottom: 24,
                 child: Center(
                   child: FittedBox(fit: BoxFit.scaleDown, child: _barraSeleccion(activos)),

@@ -132,23 +132,27 @@ class _ClientesState extends State<Clientes> {
         ),
         if (seleccionando)
           Positioned(
-            left: 0,
-            right: 0,
+            // Sin pisar la campana de avisos (abajo a la derecha); si no cabe, se encoge.
+            left: 96,
+            right: 96,
             bottom: 24,
             child: Center(
-              child: BarraSeleccion(
-                seleccionados: seleccion.length,
-                total: clientes.length,
-                nombre: m('clientes'),
-                onTodos: () => setState(() {
-                  if (seleccion.length == clientes.length) {
-                    seleccion.clear();
-                  } else {
-                    seleccion.addAll(clientes.map((c) => c.id));
-                  }
-                }),
-                onEliminar: eliminarSeleccion,
-                onSalir: salirSeleccion,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: BarraSeleccion(
+                  seleccionados: seleccion.length,
+                  total: clientes.length,
+                  nombre: m('clientes'),
+                  onTodos: () => setState(() {
+                    if (seleccion.length == clientes.length) {
+                      seleccion.clear();
+                    } else {
+                      seleccion.addAll(clientes.map((c) => c.id));
+                    }
+                  }),
+                  onEliminar: eliminarSeleccion,
+                  onSalir: salirSeleccion,
+                ),
               ),
             ),
           ),

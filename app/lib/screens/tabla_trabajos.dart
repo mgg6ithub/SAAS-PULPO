@@ -281,31 +281,35 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
         _tabla(ts),
         if (seleccionando)
           Positioned(
-            left: 0,
-            right: 0,
+            // Sin pisar la campana de avisos (abajo a la derecha); si no cabe, se encoge.
+            left: 96,
+            right: 96,
             bottom: 24,
             child: Center(
-              child: BarraSeleccion(
-                acciones: [_cambiar()],
-                // Pultec: en el histórico (todo cerrado) se elimina; si hay alguna abierta, se cancela.
-                textoEliminar: industrial &&
-                        (seleccion.isEmpty
-                            ? ts.any((t) => t.estado.abierta)
-                            : seleccion.any((id) => store.tarea(id)?.estado.abierta ?? false))
-                    ? 'Cancelar'
-                    : 'Eliminar',
-                seleccionados: seleccion.length,
-                total: ts.length,
-                nombre: m('${widget.nombre}s'),
-                onTodos: () => setState(() {
-                  if (ts.every((t) => seleccion.contains(t.id))) {
-                    seleccion.removeAll(ts.map((t) => t.id));
-                  } else {
-                    seleccion.addAll(ts.map((t) => t.id));
-                  }
-                }),
-                onEliminar: eliminarSeleccion,
-                onSalir: salirSeleccion,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: BarraSeleccion(
+                  acciones: [_cambiar()],
+                  // Pultec: en el histórico (todo cerrado) se elimina; si hay alguna abierta, se cancela.
+                  textoEliminar: industrial &&
+                          (seleccion.isEmpty
+                              ? ts.any((t) => t.estado.abierta)
+                              : seleccion.any((id) => store.tarea(id)?.estado.abierta ?? false))
+                      ? 'Cancelar'
+                      : 'Eliminar',
+                  seleccionados: seleccion.length,
+                  total: ts.length,
+                  nombre: m('${widget.nombre}s'),
+                  onTodos: () => setState(() {
+                    if (ts.every((t) => seleccion.contains(t.id))) {
+                      seleccion.removeAll(ts.map((t) => t.id));
+                    } else {
+                      seleccion.addAll(ts.map((t) => t.id));
+                    }
+                  }),
+                  onEliminar: eliminarSeleccion,
+                  onSalir: salirSeleccion,
+                ),
               ),
             ),
           ),
