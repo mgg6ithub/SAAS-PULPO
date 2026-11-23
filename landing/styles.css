@@ -5,6 +5,9 @@
 /* Hallmark · waive 47b · the brief names realistic laptop and phone mock-ups · frames built from tokens, no drawn browser bar */
 /* Hallmark · waive 38iii · the purple second line is the brand signature, once, in the hero · kept from the original page */
 /* Hallmark · waive 26b · no control on the page is ever disabled · the billing toggle and the theme button always act */
+/* Hallmark · waive 80 · div.flow draws the page's own five scattered sources and three outcomes · composition from the owner's facts, kept from the original page */
+/* Hallmark · waive 44c · the product stage is the next block and fills the rest of the first screen at every fold · the hero text and the app read as one screen */
+/* Hallmark · waive 59 · the 64px seam is hero text to product stage, one composition split for the fold · every other seam is 120px or more */
 /* Hallmark · waive 29 · the brief says the header stays · the sticky nav keeps its translucent blur */
 /* Hallmark · copy: owner's words kept; eyebrows dropped (El problema, Cómo funciona, Los detalles, Para el técnico, Planes, Preguntas), the hero pill moved into the product caption, "Llamada perdida · Taller" to "Llamada perdida del taller" */
 @import url("./tokens.css");
@@ -16,8 +19,8 @@ body { font-size: 1.0625rem; text-rendering: optimizeLegibility; }
 a { text-decoration: none; }
 ul, ol { margin: 0; padding: 0; list-style: none; }
 .wrap { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: var(--gutter); }
-.skip { position: absolute; left: -999px; top: var(--space-xs); z-index: var(--z-toast); padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-inner); background: var(--color-btn); color: var(--color-btn-ink); }
-.skip:focus-visible { left: var(--space-xs); }
+.skip { position: absolute; left: var(--space-xs); top: var(--space-xs); transform: translateY(-200%); z-index: var(--z-toast); padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-inner); background: var(--color-btn); color: var(--color-btn-ink); }
+.skip:focus-visible { transform: none; }
 :focus-visible { border-radius: 6px; }
 
 /* Imagen según el tema (las capturas de la app existen en claro y en oscuro) */
@@ -97,7 +100,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .phone__status svg { width: 19%; fill: currentColor; stroke: currentColor; }
 
 /* ── Portada ── */
-.hero { position: relative; padding: var(--space-2xl) 0 var(--space-3xl); }
+.hero { position: relative; z-index: var(--z-base); padding: var(--space-2xl) 0 0; }
+.showcase { position: relative; z-index: var(--z-raised); padding-bottom: var(--space-3xl); }
 .hero__grid, .final__grid {
   position: absolute; inset: 0; pointer-events: none;
   background-image: linear-gradient(var(--color-grid) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
@@ -105,6 +109,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 18%, var(--color-ink) 30%, transparent 78%);
   mask-image: radial-gradient(ellipse 70% 60% at 50% 18%, var(--color-ink) 30%, transparent 78%);
 }
+.hero__grid { bottom: -640px; }
 .hero__text { position: relative; }
 .hero h1 { max-width: none; font-size: clamp(1.9rem, 6.6vw + 0.4rem, 6.5rem); line-height: 0.94; letter-spacing: -0.052em; }
 .hero__line2 { color: var(--color-accent-ink); }
@@ -218,7 +223,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 /* ── Planes ── */
 .billing { display: inline-flex; padding: var(--space-2xs); border-radius: var(--radius-pill); background: var(--color-paper-3); }
-.billing button { height: 40px; padding: 0 var(--space-md); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--color-muted); font-weight: 600; cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
+.billing button { height: 44px; padding: 0 var(--space-md); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--color-muted); font-weight: 600; cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
 .billing button:hover { color: var(--color-ink); }
 .billing button.is-on { background: var(--color-paper-2); color: var(--color-ink); box-shadow: 0 0 0 1px var(--color-rule-2); }
 .billing em { font-style: normal; color: var(--color-ok); }
@@ -296,6 +301,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   .sectors__list li:nth-child(n+7) { border-bottom: 1px solid var(--color-rule); }
   .sectors__list li:nth-child(n+10) { border-bottom: 0; }
   .hero__stage .laptop { width: 100%; margin: 0; }
+  .laptop__base { width: 104%; margin-left: -2%; }
   .hero__stage { padding-bottom: 14%; }
   .phone--hero { right: 0; bottom: 0; width: 30%; }
   .hero__caption { margin-top: var(--space-lg); max-width: 64%; }
@@ -308,7 +314,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 @media (max-width: 640px) {
   body { font-size: 1rem; }
   .nav__cta .link { display: none; }
-  .hero { padding: var(--space-xl) 0 var(--space-2xl); }
+  .hero { padding: var(--space-xl) 0 0; }
   .hero h1 br { display: none; }
   .hero__side .btn { width: 100%; }
   .head { margin-bottom: var(--space-xl); }
