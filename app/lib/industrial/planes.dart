@@ -25,10 +25,45 @@ Activo? raizActivo(String? id) {
 
 String _dia(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-/// Turnos marcados para un día en el calendario de uso (0 = no trabaja).
-int turnosDe(Activo r, DateTime d) => r.turnos[_dia(d)] ?? 0;
+/// Turnos que da el patrón semanal para un día (sin excepciones): 0 en los festivos de la planta.
+int turnosPatron(Activo r, DateTime d) =>
+    r.patron.length != 7 || store.festivo(d) != null ? 0 : r.patron[d.weekday - 1];
 
-void ponerTurnos(Activo r, DateTime d, int n) => n <= 0 ? r.turnos.remove(_dia(d)) : r.turnos[_dia(d)] = n;
+/// Hay una excepción al patrón ese día (turnos puestos a mano distintos de los del patrón).
+bool esExcepcion(Activo r, DateTime d) =>
+    r.patron.length == 7 && r.turnos.containsKey(_dia(d)) && r.turnos[_dia(d)] != turnosPatron(r, d);
+
+/// Turnos de un día en el calendario de uso (0 = no trabaja): la excepción si la hay; si no, el patrón. Igual
+/// que la base (`private.turnos_de`).
+int turnosDe(Activo r, DateTime d) => r.turnos[_dia(d)] ?? turnosPatron(r, d);
+
+/// Turnos previstos para un día, para estimar fechas. Con patrón semanal, los del día. Sin él: los marcados y,
+/// pasado el último día marcado, los del mismo día de la última semana marcada (se repite esa semana). Igual
+/// que la base (`private.turnos_previstos`).
+int turnosPrevistos(Activo r, DateTime d) {
+  if (r.patron.length == 7) return turnosDe(r, d);
+  if (r.turnos.isEmpty) return 0;
+  final u = DateTime.parse(r.turnos.keys.reduce((a, b) => a.compareTo(b) >= 0 ? a : b));
+  // En UTC: con el cambio de hora, la resta de dos medianoches locales no da días enteros.
+  final dias = DateTime.utc(d.year, d.month, d.day).difference(DateTime.utc(u.year, u.month, u.day)).inDays;
+  if (dias <= 0) return turnosDe(r, d);
+  final semanas = (dias + 6) ~/ 7;
+  return turnosDe(r, masDias(d, -7 * semanas));
+}
+
+/// Pone los turnos de un día: si coinciden con el patrón, sin excepción (vuelve al patrón); si no, como
+/// excepción (también 0, una parada en un día que el patrón trabaja).
+void ponerTurnos(Activo r, DateTime d, int n) {
+  final k = _dia(d);
+  if (n.clamp(0, 3) == turnosPatron(r, d)) {
+    r.turnos.remove(k);
+  } else {
+    r.turnos[k] = n.clamp(0, 3);
+  }
+}
+
+/// Quita la excepción de un día: vuelve a lo que diga el patrón.
+void volverAlPatron(Activo r, DateTime d) => r.turnos.remove(_dia(d));
 
 /// Horas de hoy: las del activo principal. Uso planificado: la lectura más los turnos marcados desde entonces;
 /// si no, la lectura más el ritmo de uso por los días pasados.
@@ -58,7 +93,7 @@ int diasHastaAviso(String activoId, DateTime d) {
   if (r == null || !r.usoPlanificado) return diasHasta(d);
   var n = 0;
   for (var x = masDias(hoy(), 1); !x.isAfter(d); x = masDias(x, 1)) {
-    if (turnosDe(r, x) > 0) n++;
+    if (turnosPrevistos(r, x) > 0) n++;
   }
   return n;
 }
@@ -76,8 +111,11 @@ DateTime? proximoPlan(PlanMantenimiento p) {
   var quedan = p.cadaHoras! - (horasHoy(a) - (p.ultimoHoras ?? 0));
   if (quedan <= 0) return hoy();
   if (r.usoPlanificado) {
-    for (var d = masDias(hoy(), 1), i = 0; i < 400; d = masDias(d, 1), i++) {
-      quedan -= turnosDe(r, d) * r.horasTurno;
+    // Las horas de hoy cuentan los turnos hasta hoy, salvo si la lectura es de hoy: entonces los de hoy aún no
+    // están en el contador y se prevén desde hoy (si no, el turno de hoy que llega a las horas lo pasaba a mañana).
+    final desde = DateUtils.isSameDay(r.fechaLectura, hoy()) || r.fechaLectura.isAfter(hoy()) ? hoy() : masDias(hoy(), 1);
+    for (var d = desde, i = 0; i < 400; d = masDias(d, 1), i++) {
+      quedan -= turnosPrevistos(r, d) * r.horasTurno;
       if (quedan <= 0) return d;
     }
     return null;
@@ -86,6 +124,27 @@ DateTime? proximoPlan(PlanMantenimiento p) {
   final dias = (quedan / r.usoDiario).ceil();
   if (dias > 3652500) return null;
   return masDias(hoy(), dias);
+}
+
+/// Al cambiar el uso de una máquina (turnos, patrón, festivos, lectura): cada mantenimiento por horas de ella
+/// (y de sus componentes) lleva su OT pendiente a la nueva fecha estimada; si no tiene OT, se crea ya. Así, si
+/// el contador llega hoy, la OT queda para hoy en el momento. Devuelve los mantenimientos que tocan hoy o antes.
+/// Igual que la base (`private.reprogramar_ots_activo`).
+List<PlanMantenimiento> reprogramarOts(Activo raiz) {
+  final hoyMismo = <PlanMantenimiento>[];
+  for (final p in store.planes.where((p) => p.activa && p.proximo == null && p.cadaHoras != null)) {
+    if (raizActivo(p.activoId)?.id != raiz.id) continue;
+    final d = proximoPlan(p);
+    if (d == null) continue;
+    if (!d.isAfter(hoy())) hoyMismo.add(p);
+    final ot = store.tareas.where((t) => t.planId == p.id && t.activa && t.estado.abierta).firstOrNull;
+    if (ot == null) {
+      store.guardarTarea(p.ot(store.nuevoId())..proximo = d);
+    } else if (ot.proximo == null || !DateUtils.isSameDay(ot.proximo, d)) {
+      store.guardarTarea(ot..proximo = d);
+    }
+  }
+  return hoyMismo;
 }
 
 /// Horas que le quedan a un mantenimiento por horas, con el contador de su activo principal.

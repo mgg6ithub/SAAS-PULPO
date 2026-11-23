@@ -1225,7 +1225,8 @@ class _HeroState extends State<_Hero> {
   Widget build(BuildContext context) {
     // Desde el primer cliente, mostrar las cifras aunque la guía siga pendiente.
     final clientes = industrial ? store.hijosDe(null).length : store.clientes.length;
-    final trabajos = store.tareas.where((t) => !t.esPlantilla).length;
+    // Pultec: solo las órdenes vigentes (las de la pestaña Pendientes), no las del histórico.
+    final trabajos = store.tareas.where((t) => !t.esPlantilla && (!industrial || t.estado.abierta)).length;
     final trabajadores = store.trabajadores.length;
     final cifras = [
       (clientes, industrial ? (clientes == 1 ? 'activo' : 'activos') : m(clientes == 1 ? 'cliente' : 'clientes')),

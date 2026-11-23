@@ -272,6 +272,9 @@ class Store extends ChangeNotifier {
 
   /// Pultec: grupos de técnicos.
   List<GrupoTecnicos> grupos = [];
+
+  /// Pultec: festivos, vacaciones y paradas de la planta.
+  List<Festivo> festivos = [];
   SharedPreferences? _prefs;
 
   /// Con sesión iniciada, cada cambio se guarda en Supabase en vez de en el navegador.
@@ -312,6 +315,7 @@ class Store extends ChangeNotifier {
     planes = d.planes;
     incidencias = d.incidencias;
     grupos = d.grupos;
+    festivos = d.festivos;
     tipos = tiposParaMarca(d.tipos.isEmpty ? [...tiposBase] : d.tipos);
     // Pultec: las especialidades nuevas de la base también salen en empresas que ya tenían su lista.
     competencias = competenciasParaMarca(
@@ -346,6 +350,7 @@ class Store extends ChangeNotifier {
     planes = [];
     incidencias = [];
     grupos = [];
+    festivos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     usoPlantillas = [];
@@ -366,6 +371,7 @@ class Store extends ChangeNotifier {
     planes = [];
     incidencias = [];
     grupos = [];
+    festivos = [];
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
     notifyListeners();
@@ -395,6 +401,7 @@ class Store extends ChangeNotifier {
       planes = [for (final x in j['planes'] as List? ?? []) PlanMantenimiento.fromJson(x)];
       incidencias = [for (final x in j['incidencias'] as List? ?? []) Incidencia.fromJson(x)];
       grupos = [for (final x in j['grupos'] as List? ?? []) GrupoTecnicos.fromJson(x)];
+      festivos = [for (final x in j['festivos'] as List? ?? []) Festivo.fromJson(x)];
       if (j['tipos'] case final List l when l.isNotEmpty) tipos = [for (final x in l) TipoInfo.fromJson(x)];
       if (j['competencias'] case final List l when l.isNotEmpty) competencias = List<String>.from(l);
       // Clientes de ejemplo creados antes de existir las coordenadas: se ubican con las de la tabla.
@@ -438,6 +445,7 @@ class Store extends ChangeNotifier {
         if (planes.isNotEmpty) 'planes': [for (final x in planes) x.toJson()],
         if (incidencias.isNotEmpty) 'incidencias': [for (final x in incidencias) x.toJson()],
         if (grupos.isNotEmpty) 'grupos': [for (final x in grupos) x.toJson()],
+        if (festivos.isNotEmpty) 'festivos': [for (final x in festivos) x.toJson()],
         'competencias': competencias,
       }),
     );
@@ -468,6 +476,7 @@ class Store extends ChangeNotifier {
     'planes': planes,
     'incidencias': incidencias,
     'grupos': grupos,
+    'festivos': festivos,
   };
 
   static final Map<String, Object Function(Map<String, dynamic>)> _desdeJson = {
@@ -482,6 +491,7 @@ class Store extends ChangeNotifier {
     'planes': PlanMantenimiento.fromJson,
     'incidencias': Incidencia.fromJson,
     'grupos': GrupoTecnicos.fromJson,
+    'festivos': Festivo.fromJson,
   };
 
   /// Cada fila por id, en JSON; tipos y competencias, enteros.
@@ -791,6 +801,18 @@ class Store extends ChangeNotifier {
 
   void borrarIncidencia(String id) {
     incidencias.removeWhere((x) => x.id == id);
+    _cambio();
+  }
+
+  // ── Festivos de la planta (Pultec) ──
+  Festivo? festivo(DateTime d) => festivos.where((f) => DateUtils.isSameDay(f.fecha, d)).firstOrNull;
+
+  /// Marca o desmarca días como festivos (con [nombre] al marcar).
+  void ponerFestivos(Iterable<DateTime> dias, {required bool festivo, String nombre = ''}) {
+    for (final d in dias) {
+      festivos.removeWhere((f) => DateUtils.isSameDay(f.fecha, d));
+      if (festivo) festivos.add(Festivo(id: nuevoId(), fecha: DateUtils.dateOnly(d), nombre: nombre));
+    }
     _cambio();
   }
 
@@ -1462,6 +1484,7 @@ class Store extends ChangeNotifier {
     planes = [];
     incidencias = [];
     grupos = [];
+    festivos = [];
     tareas = industrial ? plantillasIndustriales() : [
       Tarea(
         id: 'p1',

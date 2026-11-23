@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/iconos.dart';
-import '../industrial/gravedad.dart' show cancelarOts, origenOt, AnilloCiclo, cicloOt, descripcionOt;
+import '../industrial/gravedad.dart' show cancelarOts, origenOt, periodicidadOt, AnilloCiclo, cicloOt, descripcionOt;
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos;
 import '../models.dart';
@@ -506,7 +506,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         ),
                       ],
                     ),
-                if (ancho && _ver('Periodicidad')) celdaTexto(t.periodicidad.etiqueta),
+                if (ancho && _ver('Periodicidad')) celdaTexto(periodicidadOt(t)),
               ] else ...[
                 // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
                 if (medio && widget.conCliente)

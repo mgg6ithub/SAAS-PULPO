@@ -23,7 +23,7 @@ class Activo {
   bool usoSemanal;
   DateTime fechaLectura;
 
-  /// Uso planificado a mano: turnos por día (`aaaa-mm-dd` → 1 o 2) de [horasTurno] horas cada uno,
+  /// Uso planificado a mano: turnos por día (`aaaa-mm-dd` → 0 a 3) de [horasTurno] horas cada uno,
   /// en vez del ritmo fijo de [horasUso]. Solo en activos principales: los componentes usan el suyo.
   bool usoPlanificado;
 
@@ -31,6 +31,11 @@ class Activo {
   /// ritmo de su activo principal. Si no, usa el contador del principal.
   bool contadorPropio;
   double horasTurno;
+
+  /// Patrón semanal: turnos de cada día de la semana (lunes a domingo), que se repite solo. Vacío = sin patrón.
+  /// [turnos] guarda las excepciones a él (un sábado extra, una parada = 0); los festivos de la planta, sin
+  /// excepción, no trabajan.
+  List<int> patron;
   Map<String, int> turnos;
 
   /// Estado de mantenimiento del activo: preventivo, correctivo no crítico o crítico.
@@ -63,9 +68,11 @@ class Activo {
     this.contadorPropio = false,
     this.horasTurno = 8,
     Map<String, int>? turnos,
+    List<int>? patron,
     DateTime? fechaLectura,
     this.tipo = TipoMantenimiento.preventivo,
   }) : turnos = turnos ?? {},
+       patron = patron ?? [],
        fechaLectura = fechaLectura ?? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
   /// "CAM-01 · Camión cisterna", o lo que haya.
@@ -128,6 +135,7 @@ class Activo {
     if (contadorPropio) 'contadorPropio': true,
     'horasTurno': horasTurno,
     'turnos': turnos,
+    if (patron.isNotEmpty) 'patron': patron,
     'fechaLectura': fechaLectura.toIso8601String(),
     'tipo': tipo.index,
   };
@@ -159,6 +167,7 @@ class Activo {
     contadorPropio: j['contadorPropio'] as bool? ?? false,
     horasTurno: (j['horasTurno'] as num?)?.toDouble() ?? 8,
     turnos: {for (final e in ((j['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
+    patron: [for (final x in (j['patron'] as List?) ?? []) (x as num).toInt()],
     fechaLectura: DateTime.tryParse(j['fechaLectura'] as String? ?? ''),
     tipo: TipoMantenimiento.values[j['tipo'] as int? ?? 0],
   );

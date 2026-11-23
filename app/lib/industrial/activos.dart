@@ -169,7 +169,8 @@ class _ActivosState extends State<Activos> {
               BotonAccion(
                 'Uso de activos',
                 icono: Icons.event_note_outlined,
-                onPressed: () => abrirUsoMaquinas(context),
+                // A su sección de la barra lateral (debajo de Activos).
+                onPressed: () => pedirUsoActivos.value++,
               ),
             ],
             derecha: const [],
@@ -935,6 +936,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                 Pestanas(
                   opciones: const ['Pendientes', 'Histórico'],
                   iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                  coloresIconos: [null, P.verde],
                   seleccion: _historicoOt ? 1 : 0,
                   onChanged: (i) => setState(() => _historicoOt = i == 1),
                 ),
@@ -1463,11 +1465,21 @@ class _ActivoFormState extends State<ActivoForm> {
                     error: errores['uso'],
                   ),
           ),
-          if (a.usoPlanificado)
+          // Patrón semanal: se repite solo; en «Uso de activos» se marcan las excepciones y los festivos.
+          if (a.usoPlanificado) ...[
+            Text('Patrón semanal', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.texto)),
+            const SizedBox(height: 8),
+            EditorPatron(
+              patron: a.patron,
+              maximo: maxTurnos(a),
+              onChanged: (v) => setState(() => ponerPatron(a, v)),
+            ),
             Text(
-              'Marca los días y turnos en Activos → «Uso de activos». Cada turno suma sus horas al contador.',
+              'Turnos de cada día de la semana, que se repiten solos. Las excepciones (un sábado extra, una parada) '
+              'y los festivos se marcan en «Uso de activos». Cada turno suma sus horas al contador.',
               style: TextStyle(fontSize: 12.5, color: P.textoSuave),
             ),
+          ],
         ],
       ),
     );
@@ -1553,6 +1565,8 @@ class _ActivoFormState extends State<ActivoForm> {
     if (ahora == _guardado) return;
     _guardado = ahora;
     store.guardarActivo(a);
+    // Lectura, ritmo o patrón nuevos: sus OT por horas, a la nueva fecha.
+    if (a.padreId == null) reprogramarOts(a);
   }
 
   void guardar() {
@@ -1561,6 +1575,7 @@ class _ActivoFormState extends State<ActivoForm> {
     if (_erroresMantenimiento.isNotEmpty) return _irA(_claveMantenimiento);
     _volcar();
     store.guardarActivo(a);
+    if (a.padreId == null) reprogramarOts(a);
     if (widget.incrustada) {
       widget.onTerminar?.call();
     } else {

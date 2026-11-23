@@ -28,6 +28,17 @@ TipoMantenimiento? masGrave(Iterable<Tarea> ots) {
 /// antes su mantenimiento.
 bool otDeMantenimientoVigente(Tarea t) => t.planId != null && store.planes.any((p) => p.id == t.planId && p.activa);
 
+/// Periodicidad que se enseña de una OT. La OT de un mantenimiento se guarda como «Única» (quien se repite es
+/// el mantenimiento), así que se muestra la de su mantenimiento: la fija si coincide (Mensual…) o «Cada 10 días ·
+/// cada 500 h». Las sueltas (manuales, de incidencia) o sin mantenimiento, la suya.
+String periodicidadOt(Tarea t) {
+  final plan = t.planId == null ? null : store.planes.where((p) => p.id == t.planId).firstOrNull;
+  if (plan == null) return t.periodicidad.etiqueta;
+  if (plan.periodicidad.repite && plan.cadaHoras == null) return plan.periodicidad.etiqueta;
+  final cada = plan.cada;
+  return cada.isEmpty ? t.periodicidad.etiqueta : '${cada[0].toUpperCase()}${cada.substring(1)}';
+}
+
 String _cuantos(int n, String uno, String varios) => '$n ${n == 1 ? uno : varios}';
 
 /// Lo que se borra con algo, con el icono de cada cosa (como en sus pestañas), para el aviso de eliminar.

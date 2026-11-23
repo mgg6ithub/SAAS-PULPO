@@ -18,6 +18,7 @@ const tablasEnVivo = [
   if (industrial) 'planes_mantenimiento',
   if (industrial) 'incidencias',
   if (industrial) 'grupos',
+  if (industrial) 'festivos',
   'trabajos',
   'trabajo_trabajadores',
   'trabajo_historial',
