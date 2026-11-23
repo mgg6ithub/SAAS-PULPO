@@ -15,6 +15,7 @@ import '../industrial/mantenimientos.dart' show abrirIncidenciaForm;
 import 'tabla_trabajos.dart';
 import 'tarea_automatizaciones.dart';
 import '../marca.dart';
+import '../industrial/gravedad.dart' show periodicidadOt;
 import '../industrial/iconos.dart';
 import '../industrial/tipo_mantenimiento.dart';
 
@@ -182,7 +183,7 @@ class _Resumen extends StatelessWidget {
                 t.ultimo == null ? '—' : relativo(t.ultimo!),
                 t.ultimo == null ? 'sin registros' : fecha(t.ultimo),
               ),
-              _cifra('Periodicidad', t.periodicidad.etiqueta, t.horario ?? 'sin hora'),
+              _cifra('Periodicidad', periodicidadOt(t), t.horario ?? 'sin hora'),
             ],
           ),
         ),

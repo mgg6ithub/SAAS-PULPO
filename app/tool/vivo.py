@@ -18,6 +18,8 @@ import time
 APP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDUSTRIAL = "--industrial" in sys.argv
 PUERTO = os.environ.get("PUERTO", "8081" if INDUSTRIAL else "8080")
+# Windows: la consola no es UTF-8 por defecto (emoji y tildes rompían el print).
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
 def huella(rutas):
@@ -38,13 +40,15 @@ def huella(rutas):
 
 def main():
     flutter = subprocess.Popen(
-        ["flutter", "run", "-d", "web-server", "--web-port", PUERTO, "--web-hostname", "localhost"]
+        ["flutter.bat" if os.name == "nt" else "flutter", "run", "-d", "web-server", "--web-port", PUERTO, "--web-hostname", "localhost"]
         + (["--dart-define=MARCA=industrial"] if INDUSTRIAL else []),
         cwd=APP,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         bufsize=1,
     )
     print(f"\n🐙 {'Pultec' if INDUSTRIAL else 'Pulcón'} en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)

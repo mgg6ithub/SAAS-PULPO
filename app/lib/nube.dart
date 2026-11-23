@@ -778,6 +778,7 @@ class Nube {
       if (industrial) _todo('planes_mantenimiento'),
       if (industrial) _todo('incidencias'),
       if (industrial) _todo('grupos'),
+      if (industrial) _todo('festivos'),
     ]);
     final precioDe = {for (final x in r[11]) x['trabajo_id'] as String: x};
     final trabajadoresDe = <String, List<String>>{};
@@ -870,6 +871,11 @@ class Nube {
         if (industrial)
           for (final x in r[15]) GrupoTecnicos(id: x['id'], nombre: x['nombre'], area: x['area'] ?? ''),
       ],
+      festivos: [
+        if (industrial)
+          for (final x in r[16])
+            Festivo(id: x['id'], fecha: DateTime.parse(x['fecha'] as String), nombre: x['nombre'] ?? ''),
+      ],
     );
   }
 
@@ -931,6 +937,7 @@ class Nube {
     'clientes',
     // Antes que los técnicos, que apuntan a su grupo.
     if (industrial) 'grupos',
+    if (industrial) 'festivos',
     'trabajadores',
     'etiquetas',
     'tipos_trabajo',
@@ -1151,6 +1158,7 @@ class Nube {
   static const _clave = {
     'clientes': 'id',
     'grupos': 'id',
+    'festivos': 'id',
     'trabajadores': 'id',
     'etiquetas': 'id',
     'tipos_trabajo': 'id',
@@ -1208,6 +1216,14 @@ class Nube {
       for (final g in s.grupos) {
         r['grupos']![_u(g.id)] = {'id': _u(g.id), 'empresa_id': e, 'nombre': g.nombre, 'area': g.area};
       }
+      for (final f in s.festivos) {
+        r['festivos']![_u(f.id)] = {
+          'id': _u(f.id),
+          'empresa_id': e,
+          'fecha': _dia(f.fecha),
+          'nombre': f.nombre,
+        };
+      }
     }
     if (industrial) {
       // Padres antes que hijos: se suben por tandas y un componente no puede llegar antes que su activo.
@@ -1246,6 +1262,7 @@ class Nube {
           if (a.contadorPropio) 'contador_propio': true,
           'horas_turno': a.horasTurno,
           'turnos': a.turnos,
+          'patron': a.patron,
           'lectura_fecha': a.fechaLectura.toIso8601String().substring(0, 10),
           'mantenimiento_tipo': a.tipo.index,
           'icono': a.icono,
@@ -1490,6 +1507,7 @@ class DatosNube {
   final List<PlanMantenimiento> planes;
   final List<Incidencia> incidencias;
   final List<GrupoTecnicos> grupos;
+  final List<Festivo> festivos;
   const DatosNube({
     required this.clientes,
     required this.trabajadores,
@@ -1504,6 +1522,7 @@ class DatosNube {
     this.planes = const [],
     this.incidencias = const [],
     this.grupos = const [],
+    this.festivos = const [],
   });
 }
 
@@ -1583,6 +1602,7 @@ Activo _activo(Map x) => Activo(
   contadorPropio: x['contador_propio'] as bool? ?? false,
   horasTurno: (x['horas_turno'] as num?)?.toDouble() ?? 8,
   turnos: {for (final e in ((x['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
+  patron: [for (final v in (x['patron'] as List?) ?? []) (v as num).toInt()],
   fechaLectura: DateTime.tryParse(x['lectura_fecha'] as String? ?? ''),
   tipo: TipoMantenimiento.values[(x['mantenimiento_tipo'] as num?)?.toInt() ?? 0],
 );

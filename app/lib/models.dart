@@ -273,6 +273,18 @@ class GrupoTecnicos {
       GrupoTecnicos(id: _s(j, 'id'), nombre: _s(j, 'nombre'), area: _s(j, 'area'));
 }
 
+/// Pultec: día festivo, de vacaciones o de parada de la planta. Sin excepción, ninguna máquina trabaja ese día
+/// por su patrón semanal, y las acciones «laborables» del calendario de uso lo saltan.
+class Festivo {
+  String id, nombre;
+  DateTime fecha;
+  Festivo({required this.id, required this.fecha, this.nombre = ''});
+
+  Map<String, dynamic> toJson() => {'id': id, 'fecha': fecha.toIso8601String(), 'nombre': nombre};
+  factory Festivo.fromJson(Map<String, dynamic> j) =>
+      Festivo(id: _s(j, 'id'), fecha: DateTime.parse(_s(j, 'fecha')), nombre: _s(j, 'nombre'));
+}
+
 class Trabajador {
   String id, nombre, apellidos, telefono, email, info, titulos;
 

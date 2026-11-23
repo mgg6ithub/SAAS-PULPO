@@ -11,6 +11,7 @@ import 'industrial/activos.dart';
 import 'industrial/estadisticas.dart';
 import 'industrial/incidencias.dart';
 import 'industrial/mantenimientos.dart' show abrirIncidenciaForm;
+import 'industrial/uso_maquinas.dart' show UsoMaquinas, pedirUsoActivos, activosPorTurnos;
 import 'screens/cliente_detalle.dart';
 import 'screens/finanzas.dart';
 import 'screens/clientes.dart';
@@ -30,7 +31,7 @@ import 'widgets.dart';
 
 /// Secciones de la barra lateral, en orden.
 /// `incidencias` y `estadisticas` solo existen en Pultec.
-enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, incidencias, estadisticas, finanzas }
+enum Seccion { inicio, planificacion, clientes, trabajadores, tareas, incidencias, usoActivos, estadisticas, finanzas }
 
 /// Barra lateral + página activa.
 class Shell extends StatefulWidget {
@@ -46,7 +47,7 @@ class _ShellState extends State<Shell> {
     0,
     Seccion.values.length - (industrial ? 2 : 1),
   )]) {
-    Seccion.incidencias || Seccion.estadisticas when !industrial => Seccion.inicio,
+    Seccion.incidencias || Seccion.usoActivos || Seccion.estadisticas when !industrial => Seccion.inicio,
     final s => s,
   };
   String? clienteId = Uri.base.queryParameters['c'];
@@ -61,6 +62,7 @@ class _ShellState extends State<Shell> {
     super.initState();
     HardwareKeyboard.instance.addHandler(_tecla);
     pedirOrdenes.addListener(_irAOrdenes);
+    pedirUsoActivos.addListener(_irAUso);
     // ?nuevo=tarea|cliente|trabajador abre ese formulario al entrar (útil para capturas).
     final nuevo = Uri.base.queryParameters['nuevo'];
     if (nuevo != null) {
@@ -91,9 +93,15 @@ class _ShellState extends State<Shell> {
     if (mounted) ir(Seccion.tareas);
   }
 
+  /// «Uso de activos» desde el botón de Activos: a su sección.
+  void _irAUso() {
+    if (mounted) ir(Seccion.usoActivos);
+  }
+
   @override
   void dispose() {
     pedirOrdenes.removeListener(_irAOrdenes);
+    pedirUsoActivos.removeListener(_irAUso);
     HardwareKeyboard.instance.removeHandler(_tecla);
     super.dispose();
   }
@@ -342,6 +350,8 @@ class _ShellState extends State<Shell> {
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
     Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
     Seccion.incidencias => const IncidenciasPagina(),
+    // ignore: prefer_const_constructors
+    Seccion.usoActivos => UsoMaquinas(),
     Seccion.estadisticas => const EstadisticasPultec(),
     Seccion.finanzas => const VistaFinanzas(),
   };
@@ -867,13 +877,34 @@ class _BarraState extends State<_Barra> {
   double get _altoItem => 40 * escala;
   static const _hueco = 4.0;
 
-  /// Menú de secciones. La marca de la opción activa es un único fondo morado que se desliza
-  /// de una a otra (como en macOS), en vez de apagarse una y encenderse otra.
+  /// Menú de secciones. La marca de la opción activa es un único fondo blanco que se desliza de una a otra
+  /// (como en macOS), en vez de apagarse una y encenderse otra.
+  ///
+  /// Pultec: con algún activo por turnos, Activos es un grupo que se despliega (como en Holded o Cloudflare):
+  /// debajo, sangrado y sin icono, «Uso de activos», unido a su cabeza por una raya neutra. Se abre y se cierra
+  /// animado, y la marca se desliza a la vez (misma duración y curva).
+  bool _activosAbierto = true;
+
+  static const _anim = Duration(milliseconds: 260);
+  static const _curva = Curves.easeOutCubic;
+
+  /// Alto de una opción dentro de un grupo y hueco entre ellas.
+  double get _altoSub => 34 * escala;
+  static const _huecoSub = 2.0;
+
+  /// Dónde va la raya del grupo: bajo el centro del icono de su cabeza.
+  double get _xRaya => 12 + 10 * escala;
+
   Widget _menu(int vencidas) {
+    final conUso = industrial && activosPorTurnos().isNotEmpty;
+    // Estando en «Uso de activos», el grupo no se pliega.
+    final abierto = conUso && (_activosAbierto || widget.seccion == Seccion.usoActivos);
     final items = [
       (Icons.home_outlined, 'Inicio', Seccion.inicio, 0),
       (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), Seccion.planificacion, vencidas),
       (Marca.iconoCliente, m('Clientes'), Seccion.clientes, 0),
+      // Solo iconos: sin grupo; «Uso de activos» va como una opción más, con su icono.
+      if (conUso && iconos) (Icons.event_note_outlined, 'Uso de activos', Seccion.usoActivos, 0),
       (Marca.iconoTrabajo, m('Trabajos'), Seccion.tareas, 0),
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       // Pultec: cuántas órdenes asignadas van atrasadas (como las vencidas de Planificación).
@@ -882,30 +913,171 @@ class _BarraState extends State<_Barra> {
       // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
-    final activo = items.indexWhere((x) => x.$3 == widget.seccion);
+    final subs = [if (conUso && !iconos) (Icons.event_note_outlined, 'Uso de activos', Seccion.usoActivos)];
+    final altoGrupo = subs.length * (_altoSub + _huecoSub) + _huecoSub;
+
+    // Posición de la marca: la suma de lo que hay encima (el grupo, si está abierto, cuenta entero).
+    double? top, left;
+    var y = 0.0;
+    for (final x in items) {
+      if (x.$3 == widget.seccion) {
+        top = y;
+        left = 0;
+      }
+      y += _altoItem + _hueco;
+      if (x.$3 == Seccion.clientes && subs.isNotEmpty) {
+        for (final (j, sub) in subs.indexed) {
+          if (sub.$3 == widget.seccion) {
+            top = y + _huecoSub / 2 + j * (_altoSub + _huecoSub);
+            left = _xRaya + 8;
+          }
+        }
+        if (abierto) y += altoGrupo;
+      }
+    }
+    final enSub = subs.any((x) => x.$3 == widget.seccion);
+
     return Stack(
       children: [
         AnimatedPositioned(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-          top: activo * (_altoItem + _hueco),
-          left: 0,
+          duration: _anim,
+          curve: _curva,
+          top: top ?? 0,
+          left: left ?? 0,
           right: 0,
-          height: _altoItem,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: P.seleccionBarra,
-              borderRadius: BorderRadius.circular(P.radioControl),
-              boxShadow: P.sombraSeleccionBarra,
+          height: enSub ? _altoSub : _altoItem,
+          // Sin ninguna opción elegida (p. ej. «Uso de activos» sin activos por turnos), sin marca.
+          child: AnimatedOpacity(
+            duration: _anim,
+            opacity: top == null ? 0 : 1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: P.seleccionBarra,
+                borderRadius: BorderRadius.circular(P.radioControl),
+                boxShadow: P.sombraSeleccionBarra,
+              ),
             ),
           ),
         ),
-        Column(children: [for (final (icono, texto, s, aviso) in items) _item(icono, texto, s, aviso: aviso)]),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (icono, texto, s, aviso) in items) ...[
+              _item(
+                icono,
+                texto,
+                s,
+                aviso: aviso,
+                desplegable: s == Seccion.clientes && subs.isNotEmpty ? abierto : null,
+              ),
+              if (s == Seccion.clientes && subs.isNotEmpty) _grupo(subs, abierto, altoGrupo),
+            ],
+          ],
+        ),
       ],
     );
   }
 
-  Widget _item(IconData icono, String texto, Seccion s, {int aviso = 0}) {
+  /// Las opciones de un grupo: se despliegan (alto y opacidad) a la vez que se desliza la marca.
+  Widget _grupo(List<(IconData, String, Seccion)> subs, bool abierto, double alto) => TweenAnimationBuilder<double>(
+    tween: Tween(end: abierto ? 1 : 0),
+    duration: _anim,
+    curve: _curva,
+    builder: (context, f, child) => SizedBox(
+      height: alto * f,
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topCenter,
+          minHeight: alto,
+          maxHeight: alto,
+          child: Opacity(opacity: f.clamp(0.0, 1.0), child: child),
+        ),
+      ),
+    ),
+    child: Stack(
+      children: [
+        // La raya neutra que une las opciones con su cabeza.
+        Positioned(
+          left: _xRaya - .5,
+          top: 0,
+          bottom: _huecoSub,
+          width: 1,
+          child: ColoredBox(color: P.bordeBarra),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: _huecoSub / 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [for (final (icono, texto, s) in subs) _sub(icono, texto, s)],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  /// Una opción dentro de un grupo: sangrada, con su icono algo menor; su marca (y el hover) empiezan pasada
+  /// la raya.
+  Widget _sub(IconData icono, String texto, Seccion s) {
+    final sel = s == widget.seccion;
+    return Padding(
+      padding: EdgeInsets.only(left: _xRaya + 8, bottom: _huecoSub),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(P.radioControl),
+        mouseCursor: SystemMouseCursors.click,
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: Colors.transparent,
+        hoverColor: P.hoverBarra,
+        onTap: () => widget.onTap(s),
+        child: Container(
+          height: _altoSub,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: sel ? P.iconoBarraElegido : P.textoBarraSuave),
+                duration: const Duration(milliseconds: 200),
+                builder: (_, c, _) => Icon(icono, size: 18 * escala, color: c),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontFamily: P.titulos,
+                    fontSize: 14 * escala,
+                    fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
+                    color: sel ? P.textoBarraElegido : P.textoBarraSuave,
+                  ),
+                  child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Flecha del grupo: plegar o desplegar sin cambiar de sección. Gira con la misma animación.
+  Widget _flecha(bool abierto) => InkWell(
+    borderRadius: BorderRadius.circular(6),
+    mouseCursor: SystemMouseCursors.click,
+    hoverColor: P.hoverBarra,
+    onTap: () => setState(() => _activosAbierto = !abierto),
+    child: Padding(
+      padding: const EdgeInsets.all(4),
+      child: AnimatedRotation(
+        turns: abierto ? 0 : -.25,
+        duration: _anim,
+        curve: _curva,
+        child: Icon(Icons.expand_more_rounded, size: 18 * escala, color: P.textoBarraSuave),
+      ),
+    ),
+  );
+
+  /// [desplegable]: cabeza de un grupo, con su flecha (true = abierto); null = opción normal.
+  Widget _item(IconData icono, String texto, Seccion s, {int aviso = 0, bool? desplegable}) {
     final sel = s == widget.seccion;
     return Padding(
       padding: const EdgeInsets.only(bottom: _hueco),
@@ -920,7 +1092,11 @@ class _BarraState extends State<_Barra> {
           highlightColor: Colors.transparent,
           // Mismo color siempre: al pulsar, el fondo de la elegida (encima) lo tapa sin cambio brusco ni parpadeo.
           hoverColor: P.hoverBarra,
-          onTap: () => widget.onTap(s),
+          onTap: () {
+            // Ir a la cabeza de un grupo también lo despliega.
+            if (desplegable == false) setState(() => _activosAbierto = true);
+            widget.onTap(s);
+          },
           child: Container(
             height: _altoItem,
             padding: EdgeInsets.symmetric(horizontal: iconos ? 8 : 12),
@@ -970,6 +1146,7 @@ class _BarraState extends State<_Barra> {
                       child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   ),
+                  if (desplegable != null) _flecha(desplegable),
                   if (aviso > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
