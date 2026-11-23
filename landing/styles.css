@@ -187,7 +187,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .tile--cal { grid-column: span 4; grid-row: span 2; }
 .tile--cal .tile__shot { min-height: 420px; }
 .tile--load, .tile--roles { grid-column: span 2; }
-.tile--load .tile__shot > img, .tile--roles .tile__shot > img { object-position: center; }
+.tile--load .tile__shot, .tile--roles .tile__shot { flex: none; min-height: 0; aspect-ratio: 640 / 468; }
+.tile--roles .tile__shot { aspect-ratio: 760 / 522; }
 .tile--crit, .tile--tree { grid-column: span 3; }
 .tile--crit .tile__shot > img { object-position: top center; }
 
