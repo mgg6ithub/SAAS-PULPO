@@ -1,46 +1,38 @@
 <template>
   <style>
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
-    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
-    #intro-halo {
-      position: absolute; left: 460px; top: -60px; width: 1000px; height: 1000px; border-radius: 50%;
-      background: radial-gradient(closest-side, #e6dcff, rgba(239, 233, 255, 0) 100%);
-    }
-    #intro-logo { position: absolute; left: 810px; top: 250px; width: 300px; height: 300px; }
-    #intro-title {
-      position: absolute; left: 0; right: 0; top: 640px; text-align: center;
-      font-size: 92px; font-weight: 650; letter-spacing: -0.04em; line-height: 1.05;
-    }
-    #intro-title span { display: inline-block; }
-    #intro-title em { font-style: normal; color: #6a2ff6; }
-    #intro-eyebrow {
-      position: absolute; left: 0; right: 0; top: 590px; text-align: center;
-      font-size: 26px; font-weight: 600; color: #6a2ff6; letter-spacing: 0.02em;
-    }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #f3f2f8; overflow: hidden; background: #0d0c13; }
+    .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(243,242,248,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(243,242,248,.05) 1px, transparent 1px); background-size: 64px 64px; background-position: center top;
+      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; transform-origin: 0 0; }
+    .grupo { position: absolute; inset: 0; }
+    .pantalla { position: absolute; left: 80px; top: 50px; width: 1760px; height: 1100px; border-radius: 18px; overflow: hidden; background: #121119; box-shadow: 0 0 0 1px #2c2a39; }
+    .pantalla img, .movil__pantalla img.cap { position: absolute; left: 0; top: 0; width: 100%; }
+    .movil { position: absolute; left: 706.0px; top: 66px; width: 508px; height: 1068px; border-radius: 74px; background: #1a1a1d; box-shadow: inset 0 0 0 2px #45454b, inset 0 0 0 5px #0b0b0d, 0 50px 90px -40px #000; }
+    .movil__pantalla { position: absolute; left: 14px; top: 14px; width: 480px; height: 1040px; border-radius: 60px; overflow: hidden; background: #121119; }
+    .movil__pantalla img.cap { top: 60px; }
+    .movil__isla { position: absolute; z-index: 3; left: 165px; top: 16px; width: 150px; height: 40px; border-radius: 20px; background: #000; }
+    .movil__barra { position: absolute; z-index: 2; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 44px 0 58px; font-size: 21px; font-weight: 600; color: #f3f2f8; background: #121119; }
+    .movil__barra svg { width: 92px; fill: #f3f2f8; stroke: #f3f2f8; }
+    .marco { position: absolute; border: 3px solid #8b5cf6; border-radius: 14px; box-shadow: 0 0 0 6px rgba(139,92,246,.18); }
+    .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 50px; }
+    .toque { position: absolute; left: -32px; top: -32px; width: 64px; height: 64px; border-radius: 50%; background: rgba(243,242,248,.28); border: 2px solid rgba(243,242,248,.85); }
+    .onda { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #8b5cf6; opacity: 0; }
+  
+    .t { position: absolute; left: 0; right: 0; text-align: center; font-weight: 700; letter-spacing: -0.05em; line-height: 0.95; }
+    .t em { font-style: normal; color: #a78bfa; }
+    .logo { position: absolute; left: 870px; width: 180px; height: 180px; }
   </style>
-  <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
-    <div id="intro-halo" data-layout-ignore></div>
-    <img id="intro-logo" src="assets/pulpo-512.png" alt="Pultec" />
-    <div id="intro-eyebrow">Pultec</div>
-    <h1 id="intro-title">
-      <span id="intro-w1">Mantenimiento</span> <span id="intro-w2">industrial,</span><br />
-      <span id="intro-w3"><em>en automático.</em></span>
-    </h1>
+  <div id="root" data-composition-id="intro" data-width="1920" data-height="1200">
+    <div class="grid"></div>
+    <img class="logo" id="in-logo" src="assets/pulpo-512.png" alt="Pultec" style="top: 250px" />
+    <h1 class="t" id="in-t" style="top: 520px; font-size: 150px;"><span id="in-1" style="display:inline-block">Tus mantenimientos,</span><br /><em id="in-2" style="display:inline-block">en piloto automático.</em></h1>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#intro-halo", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 1.1, ease: "expo.out" }, 0.05);
-    tl.fromTo("#intro-logo", { opacity: 0, scale: 0.8, filter: "blur(10px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.8, ease: "expo.out" }, 0.1);
-    tl.fromTo("#intro-eyebrow", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 0.45);
-    tl.fromTo(
-      "#intro-w1, #intro-w2, #intro-w3",
-      { opacity: 0, filter: "blur(6px)", y: 14 },
-      { opacity: 1, filter: "blur(0px)", y: 0, duration: 0.5, ease: "expo.out", stagger: 0.12 },
-      0.6,
-    );
-    // El logo viaja a la barra de la app de la escena siguiente
-    tl.fromTo("#intro-title, #intro-halo, #intro-eyebrow", { opacity: 1 }, { opacity: 0, duration: 0.25, ease: "power3.in", immediateRender: false }, 2.85);
-    tl.fromTo("#intro-logo", { x: 0, y: 0, scale: 1 }, { x: -850, y: -166, scale: 0.12, duration: 0.6, ease: "power3.inOut", immediateRender: false }, 2.9);
+        tl.fromTo("#in-1", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.3);
+    tl.fromTo("#in-2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.55);
+    tl.to("#in-logo, #in-t", { opacity: 0, y: -12, duration: 0.35, ease: "power2.in" }, 2.1);
     window.__timelines["intro"] = tl;
   </script>
 </template>

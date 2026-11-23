@@ -1,104 +1,51 @@
 <template>
   <style>
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
-    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
-    #pa-title { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 80px; font-weight: 650; letter-spacing: -0.035em; white-space: nowrap; }
-    #pa-title span { display: inline-block; }
-    #pa-w3 { color: #6a2ff6; }
-    #pa-halo { position: absolute; left: 260px; top: 220px; width: 900px; height: 900px; border-radius: 50%; background: radial-gradient(closest-side, #ece4ff, rgba(239, 233, 255, 0) 100%); }
-    #pa-doc { position: absolute; left: 420px; top: 200px; width: 600px; height: 830px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 20px; }
-    #pa-logo { position: absolute; left: 456px; top: 236px; width: 44px; height: 44px; }
-    #pa-h { position: absolute; left: 512px; top: 234px; font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
-    #pa-hs { position: absolute; left: 512px; top: 272px; font-size: 17px; color: #5d5a6e; }
-    #pa-num { position: absolute; left: 860px; top: 242px; width: 124px; text-align: right; font-size: 20px; font-weight: 650; color: #5d5a6e; }
-    #pa-hr { position: absolute; left: 456px; top: 314px; width: 528px; height: 1.5px; background: #e7e4f0; }
-    .pa-k { position: absolute; font-size: 15px; font-weight: 600; color: #8a879a; text-transform: uppercase; letter-spacing: 0.06em; }
-    .pa-v { position: absolute; font-size: 21px; font-weight: 600; }
-    .pa-v i { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: #16a34a; vertical-align: 2px; }
-    #pa-sec { position: absolute; left: 456px; top: 580px; font-size: 15px; font-weight: 600; color: #8a879a; text-transform: uppercase; letter-spacing: 0.06em; }
-    #pa-rail { position: absolute; left: 466px; top: 622px; width: 2px; height: 168px; background: #e7e4f0; transform-origin: 50% 0; }
-    .pa-st { position: absolute; left: 459px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #fff; }
-    .pa-sx { position: absolute; left: 492px; font-size: 19px; }
-    .pa-sx small { color: #5d5a6e; margin-left: 8px; font-size: 17px; }
-    #pa-hr2 { position: absolute; left: 456px; top: 830px; width: 528px; height: 1.5px; background: #e7e4f0; }
-    #pa-sigk { position: absolute; left: 456px; top: 850px; font-size: 15px; font-weight: 600; color: #8a879a; text-transform: uppercase; letter-spacing: 0.06em; }
-    #pa-sig { position: absolute; left: 456px; top: 874px; width: 240px; height: 80px; }
-    #pa-sig path { fill: none; stroke: #14121f; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; }
-    #pa-sign { position: absolute; left: 456px; top: 966px; font-size: 18px; font-weight: 600; }
-    #pa-ok { position: absolute; left: 820px; top: 896px; height: 44px; padding: 0 18px; border-radius: 22px; background: #e8f6ee; color: #16a34a; font-size: 19px; font-weight: 650; line-height: 44px; }
-    .pa-act { position: absolute; left: 1090px; width: 430px; height: 96px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 18px; }
-    .pa-act .ai { position: absolute; left: 22px; top: 24px; width: 48px; height: 48px; border-radius: 14px; }
-    .pa-act .ai svg { position: absolute; left: 12px; top: 12px; width: 24px; height: 24px; }
-    .pa-act b { position: absolute; left: 88px; top: 20px; font-size: 23px; font-weight: 650; }
-    .pa-act small { position: absolute; left: 88px; top: 52px; font-size: 18px; color: #5d5a6e; }
-    #pa-a0 { background: #14121f; border-color: #14121f; color: #fff; }
-    #pa-a0 small { color: #b9b6c6; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #f3f2f8; overflow: hidden; background: #0d0c13; }
+    .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(243,242,248,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(243,242,248,.05) 1px, transparent 1px); background-size: 64px 64px; background-position: center top;
+      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; transform-origin: 0 0; }
+    .grupo { position: absolute; inset: 0; }
+    .pantalla { position: absolute; left: 80px; top: 50px; width: 1760px; height: 1100px; border-radius: 18px; overflow: hidden; background: #121119; box-shadow: 0 0 0 1px #2c2a39; }
+    .pantalla img, .movil__pantalla img.cap { position: absolute; left: 0; top: 0; width: 100%; }
+    .movil { position: absolute; left: 706.0px; top: 66px; width: 508px; height: 1068px; border-radius: 74px; background: #1a1a1d; box-shadow: inset 0 0 0 2px #45454b, inset 0 0 0 5px #0b0b0d, 0 50px 90px -40px #000; }
+    .movil__pantalla { position: absolute; left: 14px; top: 14px; width: 480px; height: 1040px; border-radius: 60px; overflow: hidden; background: #121119; }
+    .movil__pantalla img.cap { top: 60px; }
+    .movil__isla { position: absolute; z-index: 3; left: 165px; top: 16px; width: 150px; height: 40px; border-radius: 20px; background: #000; }
+    .movil__barra { position: absolute; z-index: 2; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 44px 0 58px; font-size: 31px; font-weight: 600; color: #f3f2f8; background: #121119; }
+    .movil__barra svg { width: 92px; fill: #f3f2f8; stroke: #f3f2f8; }
+    .marco { position: absolute; border: 3px solid #8b5cf6; border-radius: 14px; box-shadow: 0 0 0 6px rgba(139,92,246,.18); }
+    .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 50px; }
+    .toque { position: absolute; left: -32px; top: -32px; width: 64px; height: 64px; border-radius: 50%; background: rgba(243,242,248,.28); border: 2px solid rgba(243,242,248,.85); }
+    .onda { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #8b5cf6; opacity: 0; }
   </style>
-  <div id="root" data-composition-id="parte" data-width="1920" data-height="1080">
-    <h1 id="pa-title"><span id="pa-w1">Y todo</span> <span id="pa-w2">queda</span> <span id="pa-w3">registrado.</span></h1>
-    <div id="pa-cam" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
-      <div id="pa-halo" data-layout-ignore></div>
-      <div id="pa-docg" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
-        <div id="pa-doc"></div>
-        <img id="pa-logo" src="assets/pulpo-512.png" alt="" />
-        <div id="pa-h">Parte de trabajo</div>
-        <div id="pa-hs">Lunes, 23 de noviembre de 2026</div>
-        <div id="pa-num">OT-0142</div>
-        <div id="pa-hr"></div>
-        <div class="pa-k" style="left: 456px; top: 340px">Activo</div>
-        <div class="pa-v" style="left: 456px; top: 362px">Camión cisterna Volvo FH</div>
-        <div class="pa-k" style="left: 456px; top: 412px">Mantenimiento</div>
-        <div class="pa-v" style="left: 456px; top: 434px">Cambio de aceite y filtros</div>
-        <div class="pa-k" style="left: 456px; top: 484px">Criticidad</div>
-        <div class="pa-v" style="left: 456px; top: 506px"><i></i>Preventivo</div>
-        <div class="pa-k" style="left: 790px; top: 340px">Técnico</div>
-        <div class="pa-v" style="left: 790px; top: 362px">Ana Ruiz</div>
-        <div class="pa-k" style="left: 790px; top: 412px">Tiempo</div>
-        <div class="pa-v" style="left: 790px; top: 434px">42 min</div>
-        <div class="pa-k" style="left: 790px; top: 484px">Contador</div>
-        <div class="pa-v" style="left: 790px; top: 506px">2.500 h</div>
-
-        <div id="pa-sec">Historial</div>
-        <div id="pa-rail"></div>
-        <div id="pa-s0" class="pa-st" style="top: 614px; background: #6a2ff6"></div>
-        <div id="pa-x0" class="pa-sx" style="top: 610px">Orden creada sola<small>09:00</small></div>
-        <div id="pa-s1" class="pa-st" style="top: 668px; background: #2563eb"></div>
-        <div id="pa-x1" class="pa-sx" style="top: 664px">Asignada a Ana Ruiz<small>09:03</small></div>
-        <div id="pa-s2" class="pa-st" style="top: 722px; background: #d97706"></div>
-        <div id="pa-x2" class="pa-sx" style="top: 718px">Empezada en el sitio<small>09:12</small></div>
-        <div id="pa-s3" class="pa-st" style="top: 776px; background: #16a34a"></div>
-        <div id="pa-x3" class="pa-sx" style="top: 772px">Cerrada en 42 min<small>09:54</small></div>
-
-        <div id="pa-hr2"></div>
-        <div id="pa-sigk">Firma del técnico</div>
-        <svg id="pa-sig" viewBox="0 0 300 80"><path id="pa-sigp" pathLength="1" stroke-dashoffset="1" d="M18 58c10-30 18-42 24-36s-10 38-2 36 16-34 26-30-4 26 6 26 14-22 24-18 2 16 12 14 18-16 30-14c10 2 6 12 18 10s24-12 40-10 30 4 52 0" /></svg>
-        <div id="pa-sign">Ana Ruiz</div>
-        <div id="pa-ok">✓ Hecho</div>
-      </div>
-
-      <div id="pa-a0" class="pa-act" style="top: 400px"><div class="ai" style="background:#2a2735"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></svg></div><b>Descargar PDF</b><small>En un clic, listo para auditoría</small></div>
-      <div id="pa-a1" class="pa-act" style="top: 520px"><div class="ai" style="background:#efe9ff"><svg viewBox="0 0 24 24" fill="none" stroke="#6a2ff6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg></div><b>Enviado al responsable</b><small>Por correo, con fotos y firma</small></div>
-      <div id="pa-a2" class="pa-act" style="top: 640px"><div class="ai" style="background:#e8f6ee"><svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M12 7v5l3 2" /></svg></div><b>Al histórico del activo</b><small>Cada intervención, para siempre</small></div>
+  <div id="root" data-composition-id="parte" data-width="1920" data-height="1200">
+    <div class="grid"></div>
+    <div class="cam" id="parte-cam" data-layout-allow-overflow data-layout-allow-overlap>
+    <div class="grupo" id="parte-escritorio">
+    <div class="pantalla">
+    <img class="cap" id="parte-a" src="assets/app/ot-historico.webp" alt="" />
+    </div>
+    <div class="marco" id="parte-m0" style="opacity:0;left:579px;top:130px;width:182px;height:60px"></div>
+    <div class="marco" id="parte-m1" style="opacity:0;left:1583px;top:244px;width:163px;height:823px"></div>
+    <svg class="cursor" id="parte-cur" viewBox="0 0 34 50"><path d="M3 3 L3 40 L12 32 L18 47 L25 44 L19 30 L31 30 Z" fill="#ffffff" stroke="#0d0c13" stroke-width="2.4" stroke-linejoin="round"/></svg>
+    <div class="cursor" id="parte-escritorio-onda"><div class="onda"></div></div>
+    </div>
     </div>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#pa-halo", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.9, ease: "expo.out" }, 0);
-    tl.fromTo("#pa-docg", { opacity: 0, y: 80, rotation: -2 }, { opacity: 1, y: 0, rotation: 0, duration: 0.8, ease: "expo.out" }, 0);
-    tl.fromTo("#pa-w1, #pa-w2, #pa-w3", { opacity: 0, filter: "blur(6px)", y: 12 }, { opacity: 1, filter: "blur(0px)", y: 0, duration: 0.45, ease: "expo.out", stagger: 0.12 }, 0.3);
-    tl.fromTo(".pa-k, .pa-v", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out", stagger: 0.04 }, 0.45);
-    tl.fromTo("#pa-sec", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 0.9);
-    tl.fromTo("#pa-rail", { scaleY: 0 }, { scaleY: 1, duration: 1.2, ease: "power1.inOut" }, 1.0);
-    [0, 1, 2, 3].forEach((i) => {
-      tl.fromTo(`#pa-s${i}`, { opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2.4)" }, 1.0 + i * 0.36);
-      tl.fromTo(`#pa-x${i}`, { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.35, ease: "expo.out" }, 1.05 + i * 0.36);
-    });
-    tl.fromTo("#pa-hr2, #pa-sigk, #pa-sign", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 2.2);
-    tl.fromTo("#pa-sigp", { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.7, ease: "power1.inOut" }, 2.25);
-    tl.fromTo("#pa-ok", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 2.8);
-    tl.fromTo("#pa-a0, #pa-a1, #pa-a2", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.55, ease: "expo.out", stagger: 0.15 }, 1.6);
-
-    tl.fromTo("#pa-cam, #pa-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in", immediateRender: false }, 3.72);
+    tl.fromTo("#parte-cam", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tl.set("#parte-cam", { x: 0, y: 0, scale: 1 }, 0);
+    tl.to("#parte-cam", { x: -288.0, y: -100.6, scale: 1.3, duration: 1.4, ease: "power3.inOut" }, 2.3);
+    tl.set("#parte-cur", { x: 1536, y: 1260 }, 0);
+    tl.to("#parte-cur", { x: 428, y: 282, duration: 0.9, ease: "power2.inOut" }, 1.0);
+    tl.to("#parte-cur", { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out", transformOrigin: "3px 3px" }, 1.9);
+    tl.set("#parte-escritorio-onda", { x: 428, y: 282 }, 1.9);
+    tl.fromTo("#parte-escritorio-onda .onda", { opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.6, duration: 0.5, ease: "power2.out" }, 1.9);
+    tl.fromTo("#parte-m0", { opacity: 0, scale: 1.04 }, { opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }, 0.5);
+    tl.fromTo("#parte-m1", { opacity: 0, scale: 1.04 }, { opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }, 1.9);
+    tl.to("#parte-cam", { opacity: 0, duration: 0.35, ease: "power2.in" }, 4.1);
     window.__timelines["parte"] = tl;
   </script>
 </template>

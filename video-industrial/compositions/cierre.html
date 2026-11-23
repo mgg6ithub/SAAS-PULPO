@@ -1,28 +1,39 @@
 <template>
   <style>
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
-    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
-    #ci-halo { position: absolute; left: 460px; top: -40px; width: 1000px; height: 1000px; border-radius: 50%; background: radial-gradient(closest-side, #e6dcff, rgba(239, 233, 255, 0) 100%); }
-    #ci-logo { position: absolute; left: 840px; top: 230px; width: 240px; height: 240px; }
-    #ci-name { position: absolute; left: 0; right: 0; top: 486px; text-align: center; font-size: 120px; font-weight: 700; letter-spacing: -0.05em; }
-    #ci-tag { position: absolute; left: 0; right: 0; top: 646px; text-align: center; font-size: 40px; font-weight: 500; color: #5d5a6e; letter-spacing: -0.02em; }
-    #ci-tag em { font-style: normal; color: #6a2ff6; font-weight: 650; }
-    #ci-btn { position: absolute; left: 810px; top: 750px; width: 300px; height: 76px; border-radius: 18px; background: #14121f; color: #fff; font-size: 30px; font-weight: 650; line-height: 76px; text-align: center; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #f3f2f8; overflow: hidden; background: #0d0c13; }
+    .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(243,242,248,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(243,242,248,.05) 1px, transparent 1px); background-size: 64px 64px; background-position: center top;
+      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; transform-origin: 0 0; }
+    .grupo { position: absolute; inset: 0; }
+    .pantalla { position: absolute; left: 80px; top: 50px; width: 1760px; height: 1100px; border-radius: 18px; overflow: hidden; background: #121119; box-shadow: 0 0 0 1px #2c2a39; }
+    .pantalla img, .movil__pantalla img.cap { position: absolute; left: 0; top: 0; width: 100%; }
+    .movil { position: absolute; left: 706.0px; top: 66px; width: 508px; height: 1068px; border-radius: 74px; background: #1a1a1d; box-shadow: inset 0 0 0 2px #45454b, inset 0 0 0 5px #0b0b0d, 0 50px 90px -40px #000; }
+    .movil__pantalla { position: absolute; left: 14px; top: 14px; width: 480px; height: 1040px; border-radius: 60px; overflow: hidden; background: #121119; }
+    .movil__pantalla img.cap { top: 60px; }
+    .movil__isla { position: absolute; z-index: 3; left: 165px; top: 16px; width: 150px; height: 40px; border-radius: 20px; background: #000; }
+    .movil__barra { position: absolute; z-index: 2; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 44px 0 58px; font-size: 21px; font-weight: 600; color: #f3f2f8; background: #121119; }
+    .movil__barra svg { width: 92px; fill: #f3f2f8; stroke: #f3f2f8; }
+    .marco { position: absolute; border: 3px solid #8b5cf6; border-radius: 14px; box-shadow: 0 0 0 6px rgba(139,92,246,.18); }
+    .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 50px; }
+    .toque { position: absolute; left: -32px; top: -32px; width: 64px; height: 64px; border-radius: 50%; background: rgba(243,242,248,.28); border: 2px solid rgba(243,242,248,.85); }
+    .onda { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #8b5cf6; opacity: 0; }
+  
+    .t { position: absolute; left: 0; right: 0; text-align: center; font-weight: 700; letter-spacing: -0.05em; line-height: 0.95; }
+    .t em { font-style: normal; color: #a78bfa; }
+    .logo { position: absolute; left: 870px; width: 180px; height: 180px; }
   </style>
-  <div id="root" data-composition-id="cierre" data-width="1920" data-height="1080">
-    <div id="ci-halo" data-layout-ignore></div>
-    <img id="ci-logo" src="assets/pulpo-512.png" alt="Pultec" />
-    <div id="ci-name">Pultec</div>
-    <div id="ci-tag">Mantenimiento industrial, <em>en automático.</em></div>
-    <div id="ci-btn">Probar gratis</div>
+  <div id="root" data-composition-id="cierre" data-width="1920" data-height="1200">
+    <div class="grid"></div>
+    <img class="logo" id="ci-logo" src="assets/pulpo-512.png" alt="Pultec" style="top: 330px" />
+    <h1 class="t" id="ci-t" style="top: 560px; font-size: 140px;">Pultec</h1>
+    <p class="t" id="ci-s" style="top: 730px; font-size: 48px; font-weight: 600; letter-spacing: -0.03em; color: #a3a0b3;">Tu próxima orden se creará sola.</p>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#ci-halo", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 1.0, ease: "expo.out" }, 0);
-    tl.fromTo("#ci-logo", { opacity: 0, scale: 0.6, filter: "blur(10px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.7, ease: "back.out(1.6)" }, 0.1);
-    tl.fromTo("#ci-name", { opacity: 0, y: 20, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 0.3);
-    tl.fromTo("#ci-tag", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 0.5);
-    tl.fromTo("#ci-btn", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 0.7);
+    tl.fromTo("#ci-logo", { opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.6, ease: "power3.out" }, 0.1);
+    tl.fromTo("#ci-t", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.3);
+    tl.fromTo("#ci-s", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.55);
     window.__timelines["cierre"] = tl;
   </script>
 </template>

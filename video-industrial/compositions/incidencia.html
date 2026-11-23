@@ -1,172 +1,65 @@
 <template>
   <style>
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
-    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
-    #in-title { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 80px; font-weight: 650; letter-spacing: -0.035em; white-space: nowrap; }
-    #in-t1, #in-t2 { display: inline-block; }
-    #in-t2 { color: #e5484d; }
-    #in-phone { position: absolute; left: 110px; top: 210px; width: 400px; height: 816px; border-radius: 58px; background: #14121f; }
-    #in-screen { position: absolute; left: 124px; top: 224px; width: 372px; height: 788px; border-radius: 46px; background: #fff; }
-    #in-notch { position: absolute; left: 250px; top: 240px; width: 120px; height: 32px; border-radius: 16px; background: #14121f; }
-    #in-ficon { position: absolute; left: 148px; top: 298px; width: 52px; height: 52px; border-radius: 15px; background: #fdecec; }
-    #in-ficon svg { position: absolute; left: 13px; top: 13px; width: 26px; height: 26px; }
-    #in-ftitle { position: absolute; left: 214px; top: 309px; font-size: 27px; font-weight: 650; letter-spacing: -0.02em; }
-    .in-label { position: absolute; left: 148px; font-size: 16px; font-weight: 600; color: #5d5a6e; }
-    .in-field { position: absolute; left: 148px; width: 324px; height: 52px; padding: 0 16px; border: 1.5px solid #e7e4f0; border-radius: 14px; font-size: 19px; line-height: 50px; }
-    #in-photo { position: absolute; left: 148px; top: 600px; width: 156px; height: 156px; border-radius: 16px; object-fit: cover; }
-    #in-photo2 { position: absolute; left: 316px; top: 600px; width: 156px; height: 156px; border-radius: 16px; border: 1.5px dashed #d9d6e3; }
-    #in-photo2 span { position: absolute; left: 0; right: 0; top: 60px; text-align: center; font-size: 30px; color: #9a97a8; }
-    .in-grav { position: absolute; top: 808px; height: 46px; padding: 0 18px 0 34px; border-radius: 23px; font-size: 19px; font-weight: 600; line-height: 46px; border: 1.5px solid #e7e4f0; color: #5d5a6e; }
-    .in-grav::before { content: ""; position: absolute; left: 16px; top: 19px; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
-    #in-g2 { background: #fdecec; color: #e5484d; border-color: #f7c9cb; }
-    #in-send { position: absolute; left: 148px; top: 930px; width: 324px; height: 58px; border-radius: 16px; background: #e5484d; color: #fff; font-size: 22px; font-weight: 650; line-height: 58px; text-align: center; }
-    #in-flash { position: absolute; left: 124px; top: 224px; width: 372px; height: 788px; border-radius: 46px; background: #fff; }
-    #in-tap { position: absolute; left: 0; top: 0; width: 64px; height: 64px; border-radius: 50%; background: rgba(20, 18, 31, 0.18); }
-    #in-sent { position: absolute; left: 124px; top: 224px; width: 372px; height: 788px; border-radius: 46px; background: rgba(255, 255, 255, 0.95); }
-    #in-sentt { position: absolute; left: 124px; top: 610px; width: 372px; text-align: center; font-size: 26px; font-weight: 650; }
-    #in-sentd { position: absolute; left: 124px; top: 650px; width: 372px; text-align: center; font-size: 18px; color: #5d5a6e; }
-    #in-sentc { position: absolute; left: 260px; top: 480px; width: 100px; height: 100px; border-radius: 50%; background: #e5484d; }
-    #in-sentc svg { position: absolute; left: 26px; top: 26px; width: 48px; height: 48px; }
-
-    #in-window { position: absolute; left: 600px; top: 210px; width: 1220px; height: 816px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 24px; }
-    #in-barline { position: absolute; left: 600px; top: 286px; width: 1220px; height: 1.5px; background: #e7e4f0; }
-    #in-logo { position: absolute; left: 628px; top: 230px; width: 36px; height: 36px; }
-    #in-brand { position: absolute; left: 676px; top: 230px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
-    #in-crumb { position: absolute; left: 806px; top: 235px; font-size: 24px; font-weight: 600; }
-    #in-bell { position: absolute; left: 1756px; top: 228px; width: 40px; height: 40px; }
-    #in-badge { position: absolute; left: 1780px; top: 222px; width: 26px; height: 26px; border-radius: 13px; background: #e5484d; color: #fff; font-size: 15px; font-weight: 700; line-height: 26px; text-align: center; }
-    .in-th { position: absolute; top: 320px; font-size: 19px; color: #5d5a6e; font-weight: 500; }
-    .in-row { position: absolute; left: 628px; width: 1164px; height: 96px; border-bottom: 1.5px solid #f0eef5; }
-    #in-row0 { background: #fff8f8; border-radius: 14px; border-bottom-color: transparent; }
-    .in-dot { position: absolute; left: 652px; width: 12px; height: 12px; border-radius: 50%; }
-    .in-name { position: absolute; left: 684px; font-size: 23px; font-weight: 600; }
-    .in-desc { position: absolute; left: 684px; font-size: 18px; color: #5d5a6e; }
-    .in-who { position: absolute; left: 1150px; font-size: 20px; color: #5d5a6e; }
-    .in-st { position: absolute; left: 1390px; height: 36px; padding: 0 16px; border-radius: 18px; font-size: 19px; font-weight: 650; line-height: 36px; }
-    .ab { background: #fdecec; color: #e5484d; }
-    .ot { background: #e8effd; color: #2563eb; }
-    .ok { background: #e8f6ee; color: #16a34a; }
-    #in-crear { position: absolute; left: 1620px; height: 44px; width: 150px; border-radius: 12px; background: #14121f; color: #fff; font-size: 19px; font-weight: 650; line-height: 44px; text-align: center; }
-    #in-chain { position: absolute; left: 684px; top: 468px; font-size: 18px; color: #5d5a6e; }
-    #in-chain b { color: #14121f; font-weight: 600; }
-    #in-cursor { position: absolute; left: 0; top: 0; width: 48px; height: 72px; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #f3f2f8; overflow: hidden; background: #0d0c13; }
+    .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(243,242,248,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(243,242,248,.05) 1px, transparent 1px); background-size: 64px 64px; background-position: center top;
+      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; transform-origin: 0 0; }
+    .grupo { position: absolute; inset: 0; }
+    .pantalla { position: absolute; left: 80px; top: 50px; width: 1760px; height: 1100px; border-radius: 18px; overflow: hidden; background: #121119; box-shadow: 0 0 0 1px #2c2a39; }
+    .pantalla img, .movil__pantalla img.cap { position: absolute; left: 0; top: 0; width: 100%; }
+    .movil { position: absolute; left: 706.0px; top: 66px; width: 508px; height: 1068px; border-radius: 74px; background: #1a1a1d; box-shadow: inset 0 0 0 2px #45454b, inset 0 0 0 5px #0b0b0d, 0 50px 90px -40px #000; }
+    .movil__pantalla { position: absolute; left: 14px; top: 14px; width: 480px; height: 1040px; border-radius: 60px; overflow: hidden; background: #121119; }
+    .movil__pantalla img.cap { top: 60px; }
+    .movil__isla { position: absolute; z-index: 3; left: 165px; top: 16px; width: 150px; height: 40px; border-radius: 20px; background: #000; }
+    .movil__barra { position: absolute; z-index: 2; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 44px 0 58px; font-size: 31px; font-weight: 600; color: #f3f2f8; background: #121119; }
+    .movil__barra svg { width: 92px; fill: #f3f2f8; stroke: #f3f2f8; }
+    .marco { position: absolute; border: 3px solid #8b5cf6; border-radius: 14px; box-shadow: 0 0 0 6px rgba(139,92,246,.18); }
+    .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 50px; }
+    .toque { position: absolute; left: -32px; top: -32px; width: 64px; height: 64px; border-radius: 50%; background: rgba(243,242,248,.28); border: 2px solid rgba(243,242,248,.85); }
+    .onda { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #8b5cf6; opacity: 0; }
   </style>
-  <div id="root" data-composition-id="incidencia" data-width="1920" data-height="1080">
-    <h1 id="in-title"><span id="in-t1">Si algo falla,</span> <span id="in-t2">se avisa al momento.</span></h1>
-    <div id="in-cam" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
-      <!-- Móvil del técnico -->
-      <div id="in-phone"></div>
-      <div id="in-screen"></div>
-      <div id="in-notch"></div>
-      <div id="in-ficon"><svg viewBox="0 0 24 24" fill="none" stroke="#e5484d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 7v6" /><path d="M12 17h.01" /></svg></div>
-      <div id="in-ftitle">Crear incidencia</div>
-      <div class="in-label" style="top: 382px">Activo</div>
-      <div class="in-field" style="top: 406px">Bomba de impulsión · EB-01</div>
-      <div class="in-label" style="top: 480px">Qué pasa</div>
-      <div class="in-field" style="top: 504px"><span id="in-typed"></span></div>
-      <div class="in-label" style="top: 576px">Fotos</div>
-      <img id="in-photo" src="assets/foto-incidencia.jpg" alt="" />
-      <div id="in-photo2"><span>+</span></div>
-      <div class="in-label" style="top: 778px">Gravedad</div>
-      <div id="in-g1" class="in-grav" style="left: 148px; color: #d97706">No crítico</div>
-      <div id="in-g2" class="in-grav" style="left: 296px">Crítico</div>
-      <div id="in-send">Enviar</div>
-      <div id="in-tap"></div>
-      <div id="in-flash"></div>
-      <div id="in-sent"></div>
-      <div id="in-sentc"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
-      <div id="in-sentt">Enviada a la oficina</div>
-      <div id="in-sentd">Con 1 foto · hace un momento</div>
-
-      <!-- Oficina -->
-      <div id="in-window"></div>
-      <div id="in-barline"></div>
-      <img id="in-logo" src="assets/pulpo-512.png" alt="" />
-      <div id="in-brand">Pultec</div>
-      <div id="in-crumb">Incidencias</div>
-      <svg id="in-bell" viewBox="0 0 24 24" fill="none" stroke="#14121f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-      <div id="in-badge">1</div>
-      <div class="in-th" style="left: 684px">Incidencia</div>
-      <div class="in-th" style="left: 1150px">Comunicada por</div>
-      <div class="in-th" style="left: 1390px">Estado</div>
-
-      <div id="in-row0" class="in-row" style="top: 360px; height: 132px"></div>
-      <div id="in-d0" class="in-dot" style="top: 386px; background: #e5484d"></div>
-      <div id="in-n0" class="in-name" style="top: 376px">Fuga en el cierre mecánico</div>
-      <div id="in-x0" class="in-desc" style="top: 410px">Bomba de impulsión · EB-01 · 1 foto</div>
-      <div id="in-w0" class="in-who" style="top: 392px">Marta · ahora</div>
-      <div id="in-s0a" class="in-st ab" style="top: 390px">Abierta</div>
-      <div id="in-s0b" class="in-st ot" style="top: 390px">Con OT</div>
-      <div id="in-s0c" class="in-st ok" style="top: 390px">Completada</div>
-      <div id="in-crear" style="top: 386px">Crear OT</div>
-      <div id="in-chain">Incidencia → <b>OT-0143</b> → <b>Marta Sanz</b> · Correctivo crítico</div>
-
-      <div id="in-rows-off" style="position:absolute;left:0;right:0;bottom:0;top:36px" data-layout-allow-overflow><div id="in-rows">
-        <div class="in-row" style="top: 504px"></div>
-        <div class="in-dot" style="top: 530px; background: #d97706"></div>
-        <div class="in-name" style="top: 520px">Ruido metálico al girar</div>
-        <div class="in-desc" style="top: 554px">Camión cisterna Volvo FH · Frenos</div>
-        <div class="in-who" style="top: 536px">Luis · hoy</div>
-        <div class="in-st ot" style="top: 534px">Con OT</div>
-        <div class="in-row" style="top: 600px"></div>
-        <div class="in-dot" style="top: 626px; background: #d97706"></div>
-        <div class="in-name" style="top: 616px">Temperatura alta en el quemador</div>
-        <div class="in-desc" style="top: 650px">Planta de secado · Quemador</div>
-        <div class="in-who" style="top: 632px">Ana · ayer</div>
-        <div class="in-st ok" style="top: 630px">Completada</div>
-        <div class="in-row" style="top: 696px"></div>
-        <div class="in-dot" style="top: 722px; background: #e5484d"></div>
-        <div class="in-name" style="top: 712px">No arranca a la primera</div>
-        <div class="in-desc" style="top: 746px">Camión de vacío Scania · Motor</div>
-        <div class="in-who" style="top: 728px">Marta · hace 2 días</div>
-        <div class="in-st ok" style="top: 726px">Completada</div>
-      </div></div>
-
-      <svg id="in-cursor" viewBox="0 0 32 48"><path d="M2 2 L2 38 L11 30 L17 45 L23 42 L17 28 L29 28 Z" fill="#14121f" stroke="#fff" stroke-width="2" stroke-linejoin="round" /></svg>
+  <div id="root" data-composition-id="incidencia" data-width="1920" data-height="1200">
+    <div class="grid"></div>
+    <div class="cam" id="incidencia-cam" data-layout-allow-overflow data-layout-allow-overlap>
+    <div class="grupo" id="incidencia-escritorio" style="opacity:0">
+    <div class="pantalla">
+    <img class="cap" id="incidencia-b" src="assets/app/incidencias.webp" alt="" />
+    <img class="cap" id="incidencia-c" src="assets/app/incid-detalle.webp" alt="" style="opacity:0" />
+    </div>
+    <svg class="cursor" id="incidencia-cur" viewBox="0 0 34 50"><path d="M3 3 L3 40 L12 32 L18 47 L25 44 L19 30 L31 30 Z" fill="#ffffff" stroke="#0d0c13" stroke-width="2.4" stroke-linejoin="round"/></svg>
+    <div class="cursor" id="incidencia-escritorio-onda"><div class="onda"></div></div>
+    </div>
+    <div class="grupo" id="incidencia-movil">
+    <div class="movil"><div class="movil__pantalla"><div class="movil__barra"><span>9:41</span><svg viewBox="0 0 64 14"><path d="M1 10h3v3H1zM6 8h3v5H6zM11 5h3v8h-3zM16 2h3v11h-3z"/><path d="M30 5.2a9 9 0 0 1 12 0M32.4 7.6a5.6 5.6 0 0 1 7.2 0M34.8 10a2.2 2.2 0 0 1 2.4 0" fill="none" stroke-width="1.6" stroke-linecap="round"/><rect x="45.5" y="2.5" width="15" height="9" rx="2.5" fill="none"/><rect x="47.5" y="4.5" width="10" height="5" rx="1"/></svg></div><div class="movil__isla"></div>
+    <img class="cap" id="incidencia-a" src="assets/app/tec-incid.webp" alt="" />
+    </div></div>
+    <div class="marco" id="incidencia-m0" style="opacity:0;left:737px;top:557px;width:447px;height:164px"></div>
+    <div class="cursor" id="incidencia-toq" style="display:none" style="opacity:0"><div class="toque"></div></div>
+    <div class="cursor" id="incidencia-movil-onda"><div class="onda"></div></div>
+    </div>
     </div>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#in-phone, #in-screen, #in-notch, #in-ficon, #in-ftitle, .in-label, .in-field, #in-photo2, .in-grav, #in-send", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, 0);
-    tl.fromTo("#in-window, #in-barline, #in-logo, #in-brand, #in-crumb, #in-bell, .in-th, #in-rows", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.out" }, 0.1);
-    tl.fromTo("#in-t1", { opacity: 0, filter: "blur(8px)", x: 396 }, { opacity: 1, filter: "blur(0px)", x: 396, duration: 0.25, ease: "power4.out" }, 0.3);
-
-    // Escribe qué pasa, hace la foto y elige la gravedad
-    const ty = { n: 0 }, txt = "Fuga en el cierre mecánico";
-    tl.fromTo(ty, { n: 0 }, { n: txt.length, duration: 0.7, ease: "none", onUpdate: () => { document.querySelector("#in-typed").textContent = txt.slice(0, Math.round(ty.n)); } }, 0.55);
-    tl.fromTo("#in-photo", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)", immediateRender: false }, 1.3);
-    tl.fromTo("#in-flash", { opacity: 0 }, { opacity: 0.9, duration: 0.06, ease: "none", yoyo: true, repeat: 1 }, 1.25);
-    // Elige «Crítico» y envía
-    tl.fromTo("#in-g2", { opacity: 0.35 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 1.55);
-    tl.fromTo("#in-tap", { x: 278, y: 927, opacity: 0, scale: 0.4 }, { x: 278, y: 927, opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 1.8);
-    tl.fromTo("#in-tap", { opacity: 1, scale: 1 }, { opacity: 0, scale: 1.5, duration: 0.3, ease: "power2.out", immediateRender: false }, 1.98);
-    tl.fromTo("#in-send", { scale: 1 }, { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, 1.88);
-    tl.fromTo("#in-sent, #in-sentt, #in-sentd", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 2.05);
-    tl.fromTo("#in-sentc", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2)" }, 2.1);
-
-    // Llega a la oficina: fila nueva arriba y campana
-    tl.fromTo("#in-row0, #in-d0, #in-n0, #in-x0, #in-w0, #in-s0a, #in-crear", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.55, ease: "expo.out" }, 2.2);
-    tl.fromTo("#in-badge", { opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2.4)" }, 2.3);
-    tl.fromTo("#in-bell", { rotation: 0 }, { rotation: 14, duration: 0.08, yoyo: true, repeat: 5, ease: "sine.inOut", transformOrigin: "50% 10%" }, 2.3);
-
-    // La oficina crea la OT
-    tl.fromTo("#in-cursor", { x: 1600, y: 1150 }, { x: 1690, y: 404, duration: 0.8, ease: "power3.out" }, 2.25);
-    tl.fromTo("#in-crear", { scale: 1 }, { scale: 0.94, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, 3.05);
-    tl.fromTo("#in-crear", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "power2.in", immediateRender: false }, 3.25);
-    tl.fromTo("#in-s0a", { opacity: 1 }, { opacity: 0, duration: 0.15, ease: "none", immediateRender: false }, 3.2);
-    tl.fromTo("#in-s0b", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, 3.2);
-    tl.fromTo("#in-chain", { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, 3.35);
-    tl.fromTo("#in-cursor", { opacity: 1 }, { opacity: 0, duration: 0.3, ease: "power2.out", immediateRender: false }, 3.4);
-
-    // Resuelta
-    tl.fromTo("#in-s0b", { opacity: 1 }, { opacity: 0, duration: 0.15, ease: "none", immediateRender: false }, 4.2);
-    tl.fromTo("#in-s0c", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, 4.2);
-    tl.fromTo("#in-d0", { backgroundColor: "#e5484d" }, { backgroundColor: "#16a34a", duration: 0.3, ease: "power2.out" }, 4.2);
-
-    tl.fromTo("#in-t1", { x: 396 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 2.4);
-    tl.fromTo("#in-t2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power4.out" }, 2.6);
-
-    tl.fromTo("#in-cam, #in-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in", immediateRender: false }, 5.22);
+    tl.to("#incidencia-movil", { opacity: 0, scale: 0.97, transformOrigin: "50% 50%", duration: 0.45, ease: "power2.in" }, 2.1);
+    tl.fromTo("#incidencia-escritorio", { opacity: 0, scale: 1.03, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1, duration: 0.55, ease: "power3.out" }, 2.4);
+    tl.to("#incidencia-c", { opacity: 1, duration: 0.35, ease: "power2.out" }, 3.6);
+    tl.fromTo("#incidencia-cam", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tl.set("#incidencia-cam", { x: 0, y: 0, scale: 1 }, 0);
+    tl.to("#incidencia-cam", { x: -672.0, y: -336.7, scale: 1.35, duration: 1.2, ease: "power3.inOut" }, 3.9);
+    tl.set("#incidencia-cur", { x: 1536, y: 1260 }, 0);
+    tl.to("#incidencia-cur", { x: 630, y: 281, duration: 0.8, ease: "power2.inOut" }, 2.6);
+    tl.to("#incidencia-cur", { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out", transformOrigin: "3px 3px" }, 3.4000000000000004);
+    tl.set("#incidencia-escritorio-onda", { x: 630, y: 281 }, 3.4000000000000004);
+    tl.fromTo("#incidencia-escritorio-onda .onda", { opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.6, duration: 0.5, ease: "power2.out" }, 3.4000000000000004);
+    tl.to("#incidencia-cur", { x: 835, y: 743, duration: 0.8, ease: "power2.inOut" }, 4.1);
+    tl.to("#incidencia-cur", { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out", transformOrigin: "3px 3px" }, 4.8999999999999995);
+    tl.set("#incidencia-escritorio-onda", { x: 835, y: 743 }, 4.8999999999999995);
+    tl.fromTo("#incidencia-escritorio-onda .onda", { opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.6, duration: 0.5, ease: "power2.out" }, 4.8999999999999995);
+    tl.fromTo("#incidencia-m0", { opacity: 0, scale: 1.04 }, { opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }, 0.5);
+    tl.to("#incidencia-m0", { opacity: 0, duration: 0.3, ease: "power2.in" }, 1.9);
+    tl.to("#incidencia-cam", { opacity: 0, duration: 0.35, ease: "power2.in" }, 5.6);
     window.__timelines["incidencia"] = tl;
   </script>
 </template>

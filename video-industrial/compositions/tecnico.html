@@ -1,152 +1,63 @@
 <template>
   <style>
     @font-face { font-family: "Geist"; src: url("assets/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; }
-    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #14121f; overflow: hidden; }
-    #tc-title { position: absolute; left: 0; right: 0; top: 66px; text-align: center; font-size: 80px; font-weight: 650; letter-spacing: -0.035em; white-space: nowrap; }
-    #tc-t1, #tc-t2 { display: inline-block; }
-    #tc-t2 { color: #6a2ff6; }
-    #tc-halo { position: absolute; left: 420px; top: 260px; width: 700px; height: 700px; border-radius: 50%; background: radial-gradient(closest-side, #ece4ff, rgba(239, 233, 255, 0) 100%); }
-    #tc-phone { position: absolute; left: 580px; top: 196px; width: 420px; height: 830px; border-radius: 60px; background: #14121f; }
-    #tc-screen { position: absolute; left: 594px; top: 210px; width: 392px; height: 802px; border-radius: 48px; background: #f7f6fb; overflow: hidden; }
-    #tc-notch { position: absolute; left: 730px; top: 226px; width: 120px; height: 32px; border-radius: 16px; background: #14121f; }
-    #tc-hora { position: absolute; left: 630px; top: 228px; font-size: 18px; font-weight: 650; }
-    #tc-hoy { position: absolute; left: 618px; top: 284px; font-size: 38px; font-weight: 650; letter-spacing: -0.03em; }
-    #tc-hoysub { position: absolute; left: 620px; top: 332px; font-size: 18px; color: #5d5a6e; }
-    #tc-card { position: absolute; left: 610px; top: 372px; width: 360px; height: 620px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 24px; }
-    #tc-chip { position: absolute; left: 630px; top: 392px; height: 30px; padding: 0 12px; border-radius: 8px; background: #f4f3f8; font-size: 16px; line-height: 30px; color: #5d5a6e; }
-    #tc-ot { position: absolute; left: 630px; top: 432px; width: 320px; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
-    #tc-pill { position: absolute; left: 630px; top: 500px; height: 30px; padding: 0 12px 0 26px; border-radius: 15px; background: #e8f6ee; color: #16a34a; font-size: 16px; font-weight: 600; line-height: 30px; }
-    #tc-pill::before { content: ""; position: absolute; left: 11px; top: 11px; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-    #tc-timer { position: absolute; left: 630px; top: 546px; width: 320px; height: 74px; border-radius: 16px; background: #f4efff; }
-    #tc-tlabel { position: absolute; left: 648px; top: 558px; font-size: 15px; font-weight: 600; color: #6a2ff6; }
-    #tc-time { position: absolute; left: 648px; top: 576px; font-size: 32px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #6a2ff6; }
-    #tc-dot { position: absolute; left: 920px; top: 576px; width: 12px; height: 12px; border-radius: 50%; background: #e5484d; }
-    .tc-check { position: absolute; left: 630px; width: 320px; height: 44px; }
-    .tc-box { position: absolute; left: 630px; width: 26px; height: 26px; border-radius: 8px; border: 2px solid #d9d6e3; }
-    .tc-tick { position: absolute; left: 630px; width: 26px; height: 26px; border-radius: 8px; background: #16a34a; }
-    .tc-tick svg { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; }
-    .tc-ctext { position: absolute; left: 670px; font-size: 19px; }
-    #tc-sigbox { position: absolute; left: 630px; top: 790px; width: 320px; height: 104px; border: 1.5px dashed #d9d6e3; border-radius: 14px; }
-    #tc-siglabel { position: absolute; left: 646px; top: 866px; font-size: 14px; color: #5d5a6e; }
-    #tc-sig { position: absolute; left: 640px; top: 796px; width: 300px; height: 80px; }
-    #tc-sig path { fill: none; stroke: #14121f; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; }
-    .tc-btn { position: absolute; left: 630px; top: 916px; width: 320px; height: 58px; border-radius: 16px; color: #fff; font-size: 22px; font-weight: 650; line-height: 58px; text-align: center; }
-    #tc-start { background: #6a2ff6; }
-    #tc-close { background: #16a34a; }
-    #tc-notif { position: absolute; left: 606px; top: 268px; width: 368px; height: 76px; border-radius: 22px; background: #14121f; color: #fff; }
-    #tc-notif i { position: absolute; left: 14px; top: 16px; width: 44px; height: 44px; border-radius: 12px; background: #6a2ff6 url(assets/pulpo-512.png) center / 30px no-repeat; }
-    #tc-notif b { position: absolute; left: 70px; top: 14px; font-size: 18px; font-weight: 650; }
-    #tc-notif small { position: absolute; left: 70px; top: 40px; font-size: 16px; color: #c9c6d6; }
-    #tc-tap { position: absolute; left: 0; top: 0; width: 64px; height: 64px; border-radius: 50%; background: rgba(20, 18, 31, 0.18); }
-    #tc-done { position: absolute; left: 594px; top: 210px; width: 392px; height: 802px; border-radius: 48px; background: rgba(247, 246, 251, 0.94); }
-    #tc-donec { position: absolute; left: 730px; top: 500px; width: 120px; height: 120px; border-radius: 50%; background: #16a34a; }
-    #tc-donec svg { position: absolute; left: 30px; top: 30px; width: 60px; height: 60px; }
-    #tc-donet { position: absolute; left: 594px; top: 646px; width: 392px; text-align: center; font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
-    #tc-doned { position: absolute; left: 594px; top: 690px; width: 392px; text-align: center; font-size: 19px; color: #5d5a6e; }
-    .tc-ev { position: absolute; left: 1100px; width: 520px; height: 96px; background: #fff; border: 1.5px solid #e7e4f0; border-radius: 18px; }
-    .tc-ev i { position: absolute; left: 22px; top: 26px; width: 44px; height: 44px; border-radius: 12px; }
-    .tc-ev b { position: absolute; left: 86px; top: 18px; font-size: 24px; font-weight: 650; letter-spacing: -0.01em; }
-    .tc-ev small { position: absolute; left: 86px; top: 52px; font-size: 19px; color: #5d5a6e; }
-    .tc-ev em { position: absolute; right: 22px; top: 32px; font-style: normal; font-size: 22px; font-weight: 650; color: #5d5a6e; font-variant-numeric: tabular-nums; }
-    #tc-line { position: absolute; left: 1066px; top: 360px; width: 2px; height: 520px; background: #e7e4f0; transform-origin: 50% 0; }
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #f3f2f8; overflow: hidden; background: #0d0c13; }
+    .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(243,242,248,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(243,242,248,.05) 1px, transparent 1px); background-size: 64px 64px; background-position: center top;
+      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, #000 30%, transparent 80%); }
+    .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; transform-origin: 0 0; }
+    .grupo { position: absolute; inset: 0; }
+    .pantalla { position: absolute; left: 80px; top: 50px; width: 1760px; height: 1100px; border-radius: 18px; overflow: hidden; background: #121119; box-shadow: 0 0 0 1px #2c2a39; }
+    .pantalla img, .movil__pantalla img.cap { position: absolute; left: 0; top: 0; width: 100%; }
+    .movil { position: absolute; left: 706.0px; top: 66px; width: 508px; height: 1068px; border-radius: 74px; background: #1a1a1d; box-shadow: inset 0 0 0 2px #45454b, inset 0 0 0 5px #0b0b0d, 0 50px 90px -40px #000; }
+    .movil__pantalla { position: absolute; left: 14px; top: 14px; width: 480px; height: 1040px; border-radius: 60px; overflow: hidden; background: #121119; }
+    .movil__pantalla img.cap { top: 60px; }
+    .movil__isla { position: absolute; z-index: 3; left: 165px; top: 16px; width: 150px; height: 40px; border-radius: 20px; background: #000; }
+    .movil__barra { position: absolute; z-index: 2; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 44px 0 58px; font-size: 31px; font-weight: 600; color: #f3f2f8; background: #121119; }
+    .movil__barra svg { width: 92px; fill: #f3f2f8; stroke: #f3f2f8; }
+    .marco { position: absolute; border: 3px solid #8b5cf6; border-radius: 14px; box-shadow: 0 0 0 6px rgba(139,92,246,.18); }
+    .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 50px; }
+    .toque { position: absolute; left: -32px; top: -32px; width: 64px; height: 64px; border-radius: 50%; background: rgba(243,242,248,.28); border: 2px solid rgba(243,242,248,.85); }
+    .onda { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #8b5cf6; opacity: 0; }
   </style>
-  <div id="root" data-composition-id="tecnico" data-width="1920" data-height="1080">
-    <h1 id="tc-title"><span id="tc-t1">El técnico la cierra</span> <span id="tc-t2">desde el móvil.</span></h1>
-    <div id="tc-cam" style="position:absolute;inset:0" data-layout-allow-overlap data-layout-allow-overflow>
-      <div id="tc-shift" style="position:absolute;inset:0;transform:translateX(-140px)" data-layout-allow-overlap data-layout-allow-overflow>
-      <div id="tc-halo" data-layout-ignore></div>
-      <div id="tc-phone"></div>
-      <div id="tc-screen"></div>
-      <div id="tc-notch"></div>
-      <div id="tc-hora">9:12</div>
-      <div id="tc-hoy">Hoy</div>
-      <div id="tc-hoysub">Ana Ruiz · 3 órdenes</div>
-      <div id="tc-card"></div>
-      <div id="tc-chip">Camión cisterna Volvo FH</div>
-      <div id="tc-ot">Cambio de aceite y filtros</div>
-      <div id="tc-pill">Preventivo</div>
-      <div id="tc-timer"></div>
-      <div id="tc-tlabel">En curso</div>
-      <div id="tc-time">00:00</div>
-      <div id="tc-dot"></div>
-
-      <div class="tc-box" style="top: 646px"></div>
-      <div id="tc-k0" class="tc-tick" style="top: 646px"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
-      <div class="tc-ctext" style="top: 647px">Vaciar y cambiar aceite</div>
-      <div class="tc-box" style="top: 692px"></div>
-      <div id="tc-k1" class="tc-tick" style="top: 692px"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
-      <div class="tc-ctext" style="top: 693px">Cambiar filtros de motor</div>
-      <div class="tc-box" style="top: 738px"></div>
-      <div id="tc-k2" class="tc-tick" style="top: 738px"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
-      <div class="tc-ctext" style="top: 739px">Apuntar horas: 2.500 h</div>
-
-      <div id="tc-sigbox"></div>
-      <div id="tc-siglabel">Firma del técnico</div>
-      <svg id="tc-sig" viewBox="0 0 300 80"><path id="tc-sigp" pathLength="1" stroke-dashoffset="1" d="M18 58c10-30 18-42 24-36s-10 38-2 36 16-34 26-30-4 26 6 26 14-22 24-18 2 16 12 14 18-16 30-14c10 2 6 12 18 10s24-12 40-10 30 4 52 0" /></svg>
-
-      <div id="tc-start" class="tc-btn">Empezar OT</div>
-      <div id="tc-close" class="tc-btn">Cerrar OT</div>
-      <div id="tc-tap"></div>
-      <div id="tc-notif"><i></i><b>Nueva orden de trabajo</b><small>Cambio de aceite · CAM-01</small></div>
-
-      <div id="tc-done"></div>
-      <div id="tc-donec"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></div>
-      <div id="tc-donet">Orden cerrada</div>
-      <div id="tc-doned">El parte llega a la oficina</div>
-
-      <div id="tc-line"></div>
-      <div id="tc-ev0" class="tc-ev" style="top: 330px"><i style="background:#efe9ff"></i><b>Empezada</b><small>Desde la orden, en el sitio</small><em>09:12</em></div>
-      <div id="tc-ev1" class="tc-ev" style="top: 450px"><i style="background:#e8f6ee"></i><b>Checklist completo</b><small>3 de 3 tareas hechas</small><em>3/3</em></div>
-      <div id="tc-ev2" class="tc-ev" style="top: 570px"><i style="background:#f4f3f8"></i><b>Firmada por Ana Ruiz</b><small>Firma y horas del contador</small><em>✓</em></div>
-      <div id="tc-ev3" class="tc-ev" style="top: 690px"><i style="background:#e8f6ee"></i><b>Cerrada en 42 min</b><small>Tiempo medido solo</small><em>09:54</em></div>
-      </div>
+  <div id="root" data-composition-id="tecnico" data-width="1920" data-height="1200">
+    <div class="grid"></div>
+    <div class="cam" id="tecnico-cam" data-layout-allow-overflow data-layout-allow-overlap>
+    <div class="grupo" id="tecnico-movil">
+    <div class="movil"><div class="movil__pantalla"><div class="movil__barra"><span>9:41</span><svg viewBox="0 0 64 14"><path d="M1 10h3v3H1zM6 8h3v5H6zM11 5h3v8h-3zM16 2h3v11h-3z"/><path d="M30 5.2a9 9 0 0 1 12 0M32.4 7.6a5.6 5.6 0 0 1 7.2 0M34.8 10a2.2 2.2 0 0 1 2.4 0" fill="none" stroke-width="1.6" stroke-linecap="round"/><rect x="45.5" y="2.5" width="15" height="9" rx="2.5" fill="none"/><rect x="47.5" y="4.5" width="10" height="5" rx="1"/></svg></div><div class="movil__isla"></div>
+    <img class="cap" id="tecnico-a" src="assets/app/tec-lista.webp" alt="" />
+    <img class="cap" id="tecnico-b" src="assets/app/tec-ot.webp" alt="" style="opacity:0" />
+    <img class="cap" id="tecnico-c" src="assets/app/tec-run.webp" alt="" style="opacity:0" />
+    <img class="cap" id="tecnico-d" src="assets/app/tec-cierre.webp" alt="" style="opacity:0" />
+    </div></div>
+    <div class="cursor" id="tecnico-toq" style="opacity:0"><div class="toque"></div></div>
+    <div class="cursor" id="tecnico-movil-onda"><div class="onda"></div></div>
+    </div>
     </div>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#tc-halo", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.9, ease: "expo.out" }, 0);
-    tl.fromTo("#tc-phone, #tc-screen, #tc-notch, #tc-hora, #tc-hoy, #tc-hoysub, #tc-card, #tc-chip, #tc-ot, #tc-pill, .tc-box, .tc-ctext, #tc-sigbox, #tc-siglabel, #tc-sig, #tc-start",
-      { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, 0);
-    tl.fromTo("#tc-t1", { opacity: 0, filter: "blur(8px)", x: 283 }, { opacity: 1, filter: "blur(0px)", x: 283, duration: 0.25, ease: "power4.out" }, 0.3);
-    tl.fromTo("#tc-line", { scaleY: 0 }, { scaleY: 1, duration: 3.4, ease: "none" }, 1.8);
-
-    // Le llega la orden nueva
-    tl.fromTo("#tc-notif", { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, 0.55);
-    tl.fromTo("#tc-notif", { opacity: 1, y: 0 }, { opacity: 0, y: -20, duration: 0.3, ease: "power3.in", immediateRender: false }, 1.4);
-    tl.fromTo("#tc-card", { borderColor: "#e7e4f0" }, { borderColor: "#6a2ff6", duration: 0.3, ease: "power2.out" }, 0.8);
-    // Toca «Empezar OT»
-    tl.fromTo("#tc-tap", { x: 758, y: 913, opacity: 0, scale: 0.4 }, { x: 758, y: 913, opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 1.6);
-    tl.fromTo("#tc-tap", { opacity: 1 }, { opacity: 0, scale: 1.5, duration: 0.3, ease: "power2.out", immediateRender: false }, 1.78);
-    tl.fromTo("#tc-start", { scale: 1 }, { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, 1.68);
-    tl.fromTo("#tc-start", { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "power2.in", immediateRender: false }, 1.85);
-    tl.fromTo("#tc-timer, #tc-tlabel, #tc-time, #tc-dot", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.35, ease: "expo.out" }, 1.85);
-    tl.fromTo("#tc-dot", { opacity: 1 }, { opacity: 0.25, duration: 0.4, ease: "sine.inOut", yoyo: true, repeat: 5, immediateRender: false }, 2.2);
-    const s = { v: 0 };
-    tl.fromTo(s, { v: 0 }, { v: 42 * 60 + 18, duration: 2.6, ease: "power1.inOut", onUpdate: () => {
-      const m = Math.floor(s.v / 60), ss = Math.floor(s.v % 60);
-      document.querySelector("#tc-time").textContent = String(m).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
-    } }, 1.95);
-    tl.fromTo("#tc-ev0", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 1.95);
-
-    // Checklist, firma y cierre
-    ["#tc-k0", "#tc-k1", "#tc-k2"].forEach((k, i) => {
-      tl.fromTo(k, { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2.2)" }, 2.4 + i * 0.35);
-    });
-    tl.fromTo("#tc-ev1", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 3.15);
-    tl.fromTo("#tc-sigp", { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.8, ease: "power1.inOut" }, 3.4);
-    tl.fromTo("#tc-ev2", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 4.1);
-    tl.fromTo("#tc-close", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: "expo.out" }, 4.2);
-    tl.fromTo("#tc-tap", { x: 758, y: 913, opacity: 0, scale: 0.4 }, { x: 758, y: 913, opacity: 1, scale: 1, duration: 0.18, ease: "power2.out", immediateRender: false }, 4.5);
-    tl.fromTo("#tc-tap", { opacity: 1, scale: 1 }, { opacity: 0, scale: 1.5, duration: 0.3, ease: "power2.out", immediateRender: false }, 4.68);
-    tl.fromTo("#tc-close", { scale: 1 }, { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out", immediateRender: false }, 4.58);
-    tl.fromTo("#tc-done, #tc-donet, #tc-doned", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 4.75);
-    tl.fromTo("#tc-donec", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 4.8);
-    tl.fromTo("#tc-ev3", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 4.85);
-
-    tl.fromTo("#tc-t1", { x: 283 }, { x: 0, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 4.85);
-    tl.fromTo("#tc-t2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power4.out" }, 5.05);
-
-    tl.fromTo("#tc-cam, #tc-title", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in", immediateRender: false }, 6.22);
+    tl.to("#tecnico-b", { opacity: 1, duration: 0.35, ease: "power2.out" }, 1.35);
+    tl.to("#tecnico-c", { opacity: 1, duration: 0.35, ease: "power2.out" }, 2.45);
+    tl.to("#tecnico-d", { opacity: 1, duration: 0.35, ease: "power2.out" }, 3.75);
+    tl.fromTo("#tecnico-cam", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tl.set("#tecnico-cam", { x: 0, y: 0, scale: 1 }, 0);
+    tl.set("#tecnico-toq", { x: 1536, y: 1260 }, 0);
+    tl.set("#tecnico-toq", { x: 942, y: 848 }, 1.05);
+    tl.fromTo("#tecnico-toq", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 1.05);
+    tl.to("#tecnico-toq", { opacity: 0, duration: 0.25, ease: "power2.in" }, 1.37);
+    tl.set("#tecnico-movil-onda", { x: 942, y: 848 }, 1.05);
+    tl.fromTo("#tecnico-movil-onda .onda", { opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.6, duration: 0.5, ease: "power2.out" }, 1.05);
+    tl.set("#tecnico-toq", { x: 818, y: 327 }, 2.15);
+    tl.fromTo("#tecnico-toq", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 2.15);
+    tl.to("#tecnico-toq", { opacity: 0, duration: 0.25, ease: "power2.in" }, 2.4699999999999998);
+    tl.set("#tecnico-movil-onda", { x: 818, y: 327 }, 2.15);
+    tl.fromTo("#tecnico-movil-onda .onda", { opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.6, duration: 0.5, ease: "power2.out" }, 2.15);
+    tl.set("#tecnico-toq", { x: 868, y: 327 }, 3.45);
+    tl.fromTo("#tecnico-toq", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 3.45);
+    tl.to("#tecnico-toq", { opacity: 0, duration: 0.25, ease: "power2.in" }, 3.77);
+    tl.set("#tecnico-movil-onda", { x: 868, y: 327 }, 3.45);
+    tl.fromTo("#tecnico-movil-onda .onda", { opacity: 0.9, scale: 0.4 }, { opacity: 0, scale: 1.6, duration: 0.5, ease: "power2.out" }, 3.45);
+    tl.to("#tecnico-cam", { opacity: 0, duration: 0.35, ease: "power2.in" }, 5.6);
     window.__timelines["tecnico"] = tl;
   </script>
 </template>
