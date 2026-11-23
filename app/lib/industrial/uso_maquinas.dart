@@ -1379,22 +1379,15 @@ class _Maquinas extends StatelessWidget {
   }
 
   /// Leyenda: claro = 1 turno, lleno = 2 o 3; rombo = mantenimiento.
-  /// En una fila (nunca apilada) y separada de las fichas.
-  Widget get _leyenda => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _item(_Muestra(P.textoSuave, 1), '1 turno'),
-        const SizedBox(width: 14),
-        _item(_Muestra(P.textoSuave, 2), '2 o 3 turnos'),
-        const SizedBox(width: 14),
-        _item(
-          Transform.rotate(angle: .785, child: Container(width: 7, height: 7, color: P.textoSuave)),
-          'Mantenimiento',
-        ),
-      ],
-    ),
+  Widget get _leyenda => Wrap(
+    spacing: 14,
+    runSpacing: 6,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      _item(_Muestra(P.textoSuave, 1), '1 turno'),
+      _item(_Muestra(P.textoSuave, 2), '2 o 3 turnos'),
+      _item(Transform.rotate(angle: .785, child: Container(width: 7, height: 7, color: P.textoSuave)), 'Mantenimiento'),
+    ],
   );
 
   Widget _item(Widget muestra, String texto) => Row(
@@ -1415,7 +1408,7 @@ class _Maquinas extends StatelessWidget {
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
       for (final (i, a) in activos.indexed) SizedBox(width: 250, child: _ficha(i, a)),
-      _leyenda,
+      Padding(padding: const EdgeInsets.only(left: 10), child: _leyenda),
     ],
   );
 }
