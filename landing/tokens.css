@@ -1,0 +1,60 @@
+:root {
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.8125rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.25rem; --text-xl: 1.5625rem; --text-2xl: 1.953rem; --text-3xl: 2.441rem;
+  --text-display-s: clamp(2.25rem, 4vw + 0.5rem, 3.75rem); --text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
+  --text-section: clamp(2rem, 2.5vw + 1rem, 3.5rem); --text-title: clamp(1.25rem, 0.75vw + 0.875rem, 1.625rem); --text-lead: clamp(1.125rem, 0.35vw + 1rem, 1.375rem);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --color-error: oklch(52% 0.19 27); --color-success: oklch(50% 0.12 150);
+  --container: 1440px; --gutter: 64px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  --container: 1240px; --gutter: 40px;
+  /* Marca Pultec: tinta + morado del logo. Claro por defecto; oscuro abajo. */
+  color-scheme: light;
+  --color-paper: oklch(97.5% 0.007 295); --color-paper-2: oklch(99.4% 0.003 295); --color-paper-3: oklch(94.6% 0.012 295);
+  --color-ink: oklch(19.1% 0.026 291); --color-ink-2: oklch(32% 0.026 291); --color-muted: oklch(47.8% 0.032 292);
+  --color-rule: oklch(91.5% 0.016 297); --color-rule-2: oklch(86% 0.02 297);
+  --color-accent: oklch(52.2% 0.265 286.3); --color-accent-ink: oklch(50% 0.25 286.3); --color-focus: oklch(54% 0.24 286.3);
+  --color-on-accent: oklch(99% 0.004 295); --color-btn: oklch(19.1% 0.026 291); --color-btn-ink: oklch(99% 0.004 295);
+  --color-ok: oklch(62.7% 0.17 149); --color-warn: oklch(66.6% 0.157 58); --color-bad: oklch(62.6% 0.193 23);
+  --color-grid: oklch(19.1% 0.026 291 / 0.06);
+  --color-app: oklch(98% 0.003 295);
+  /* Dispositivos: aluminio y carcasa (iguales en los dos temas) */
+  --device-shell: oklch(17% 0.004 286); --device-edge: oklch(38% 0.006 286); --device-glass: oklch(10% 0.003 286);
+  --alu-1: oklch(64% 0.005 286); --alu-2: oklch(50% 0.006 286); --alu-3: oklch(36% 0.006 286); --alu-4: oklch(26% 0.006 286);
+  --device-shade: oklch(10% 0.01 290 / 0.55);
+  --photo-scrim: oklch(12% 0.012 290 / 0.82); --photo-ink: oklch(98% 0.004 295);
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif; --font-body: "Geist", ui-sans-serif, system-ui, sans-serif; --font-outlier: var(--font-body);
+  --radius-card: 20px; --radius-inner: 12px; --radius-pill: 999px; --rule-hair: 1px; --shadow-card: none;
+  --tracking-display: -0.04em; --display-weight: 700;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: oklch(14.5% 0.012 291); --color-paper-2: oklch(18.3% 0.016 290); --color-paper-3: oklch(21% 0.018 290);
+  --color-ink: oklch(96.4% 0.008 294); --color-ink-2: oklch(86% 0.012 293); --color-muted: oklch(71.4% 0.027 293);
+  --color-rule: oklch(26.9% 0.028 290.5); --color-rule-2: oklch(33% 0.03 290.5);
+  --color-accent-ink: oklch(72% 0.16 293.5); --color-focus: oklch(72% 0.17 292);
+  --color-btn: oklch(96.4% 0.008 294); --color-btn-ink: oklch(19.1% 0.026 291);
+  --color-grid: oklch(96% 0.008 294 / 0.055);
+  --color-app: oklch(18.3% 0.016 290);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-paper: oklch(14.5% 0.012 291); --color-paper-2: oklch(18.3% 0.016 290); --color-paper-3: oklch(21% 0.018 290);
+    --color-ink: oklch(96.4% 0.008 294); --color-ink-2: oklch(86% 0.012 293); --color-muted: oklch(71.4% 0.027 293);
+    --color-rule: oklch(26.9% 0.028 290.5); --color-rule-2: oklch(33% 0.03 290.5);
+    --color-accent-ink: oklch(72% 0.16 293.5); --color-focus: oklch(72% 0.17 292);
+    --color-btn: oklch(96.4% 0.008 294); --color-btn-ink: oklch(19.1% 0.026 291);
+    --color-grid: oklch(96% 0.008 294 / 0.055);
+    --color-app: oklch(18.3% 0.016 290);
+  }
+}
+
+/* Bloques siempre oscuros (Técnicos): mismos valores que el tema oscuro */
+.section--ink {
+  color-scheme: dark;
+  --color-paper: oklch(14.5% 0.012 291); --color-paper-2: oklch(18.3% 0.016 290); --color-paper-3: oklch(21% 0.018 290);
+  --color-ink: oklch(96.4% 0.008 294); --color-ink-2: oklch(86% 0.012 293); --color-muted: oklch(71.4% 0.027 293);
+  --color-rule: oklch(26.9% 0.028 290.5); --color-accent-ink: oklch(72% 0.16 293.5); --color-app: oklch(18.3% 0.016 290);
+}

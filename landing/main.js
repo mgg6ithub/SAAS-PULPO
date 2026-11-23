@@ -1,5 +1,5 @@
-// Pultec · landing. Sin dependencias: tema claro/oscuro, aparición al hacer scroll, pasos con vídeo fijo,
-// líneas del bloque «El problema», vídeos que solo se reproducen a la vista y panel que sigue al ratón.
+// Pultec · landing. Sin dependencias: tema claro/oscuro, una aparición en la portada, pasos con vídeo fijo,
+// líneas del bloque «El problema» y vídeos que se reproducen una vez, solo a la vista (nada en bucle).
 (() => {
   const root = document.documentElement;
   root.classList.add("js");
@@ -24,7 +24,7 @@
   const io = new IntersectionObserver((es) => es.forEach((e) => {
     if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); }
   }), { rootMargin: "0px 0px -8% 0px", threshold: 0.15 });
-  document.querySelectorAll(".reveal, .tile, .flow").forEach((el) => io.observe(el));
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
 
   // Vídeos: carga perezosa y solo se reproducen mientras se ven
   const reproducir = (v) => { const p = v.play(); if (p) p.catch(() => {}); };
@@ -32,7 +32,7 @@
     if (isIntersecting) { if (v.dataset.src && !v.src) v.src = v.dataset.src; if (!quieto) reproducir(v); }
     else if (!v.paused) v.pause();
   }), { threshold: 0.25 });
-  document.querySelectorAll("video.autoplay, .step__video").forEach((v) => vio.observe(v));
+  document.querySelectorAll(".step__video").forEach((v) => vio.observe(v));
 
   // Cómo funciona: el paso centrado cambia el vídeo grande (fundido entre dos <video>)
   const pasos = [...document.querySelectorAll(".step")];
@@ -43,10 +43,11 @@
     if (i === actual || i < 0) return;
     actual = i;
     pasos.forEach((p, j) => p.classList.toggle("is-active", j === i));
-    if (barra) barra.style.width = ((i + 1) / pasos.length) * 100 + "%";
+    if (barra) barra.style.transform = `scaleX(${(i + 1) / pasos.length})`;
     const sig = capas[1 - capa], viejo = capas[capa];
     sig.src = pasos[i].dataset.video;
     sig.poster = pasos[i].dataset.poster;
+    sig.currentTime = 0;
     if (!quieto) reproducir(sig);
     sig.classList.add("is-on");
     viejo.classList.remove("is-on");
@@ -54,7 +55,7 @@
     capa = 1 - capa;
   };
   if (capas.length) {
-    if (barra) barra.style.width = 100 / pasos.length + "%";
+    if (barra) barra.style.transform = `scaleX(${1 / pasos.length})`;
     const pio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) activar(pasos.indexOf(e.target)); }), { rootMargin: "-45% 0px -45% 0px" });
     pasos.forEach((p) => pio.observe(p));
     new IntersectionObserver(([e]) => { const v = capas[capa]; if (e.isIntersecting && !quieto) reproducir(v); else v.pause(); }, { threshold: 0.1 })
@@ -83,26 +84,6 @@
   dibujar();
   addEventListener("resize", dibujar);
   document.fonts?.ready.then(dibujar);
-  flujo?.addEventListener("transitionend", dibujar);
-
-  // Panel de la portada: se inclina un poco siguiendo el ratón
-  const panel = document.getElementById("panel");
-  if (panel && !quieto && matchMedia("(hover: hover)").matches) {
-    const zona = panel.parentElement;
-    zona.addEventListener("mousemove", (e) => {
-      const r = zona.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-      panel.style.transform = `rotateX(${(-y * 5).toFixed(2)}deg) rotateY(${(x * 6).toFixed(2)}deg)`;
-    });
-    zona.addEventListener("mouseleave", () => { panel.style.transform = ""; });
-  }
-
-  // Detalles: la luz de cada tarjeta sigue al ratón
-  document.querySelectorAll(".tile").forEach((tile) => tile.addEventListener("mousemove", (e) => {
-    const r = tile.getBoundingClientRect();
-    tile.style.setProperty("--mx", e.clientX - r.left + "px");
-    tile.style.setProperty("--my", e.clientY - r.top + "px");
-  }));
 
   // Facturación mensual / anual
   document.querySelectorAll("[data-billing]").forEach((b) => b.addEventListener("click", () => {
@@ -112,15 +93,4 @@
     document.querySelectorAll("[data-per-mes]").forEach((p) => { p.textContent = p.dataset["per" + k]; });
   }));
 
-  // Paralaje suave de la foto
-  const foto = document.querySelector(".photo__img");
-  if (foto && !quieto) {
-    const mover = () => {
-      const r = foto.parentElement.getBoundingClientRect();
-      if (r.bottom < 0 || r.top > innerHeight) return;
-      foto.style.transform = `translateY(${((r.top + r.height / 2 - innerHeight / 2) / innerHeight) * -50}px)`;
-    };
-    addEventListener("scroll", mover, { passive: true });
-    mover();
-  }
 })();

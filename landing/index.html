@@ -18,9 +18,10 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/app/inicio.webp" media="(min-width: 900px)">
   <script>try { const t = localStorage.getItem("pultec-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -51,101 +52,94 @@
   </header>
 
   <main id="contenido">
-    <!-- ─────────── Portada ─────────── -->
+    <!-- ─────────── Portada: la app real, en un portátil y en el móvil del técnico ─────────── -->
     <section class="hero">
-      <div class="hero__bg" aria-hidden="true"><div class="hero__grid"></div><div class="hero__halo"></div></div>
+      <div class="hero__grid" aria-hidden="true"></div>
       <div class="wrap hero__text">
-        <p class="pill reveal"><span class="pill__dot"></span>Software de mantenimiento industrial</p>
-        <h1 class="reveal" style="--d: .06s">Tus mantenimientos,<br> <span class="accent">en piloto automático.</span></h1>
-        <p class="lead reveal" style="--d: .12s">Configuras tus máquinas una vez y Pultec se encarga de que nada se pase de fecha.</p>
-        <div class="hero__ctas reveal" style="--d: .18s">
-          <a class="btn btn--big" href="https://saas-pulpo.pages.dev/industrial/">Probar Pultec gratis <span class="btn__arrow" aria-hidden="true">→</span></a>
-          <a class="link" href="#como-funciona">Ver cómo funciona</a>
+        <h1>Tus mantenimientos,<br> <span class="hero__line2">en piloto automático.</span></h1>
+        <div class="hero__side">
+          <p class="lead">Configuras tus máquinas una vez y Pultec se encarga de que nada se pase de fecha.</p>
+          <div class="hero__ctas">
+            <a class="btn btn--big" href="https://saas-pulpo.pages.dev/industrial/">Probar Pultec gratis</a>
+            <a class="link" href="#como-funciona">Ver cómo funciona</a>
+          </div>
         </div>
       </div>
 
-      <!-- Panel de inicio (maqueta en HTML, se inclina con el ratón) -->
-      <div class="wrap">
-        <div class="dash-wrap reveal reveal--up" style="--d: .26s">
-          <figure class="dash" id="panel" aria-label="Panel de inicio de Pultec: cifras del día, órdenes por criticidad y semana del equipo">
-            <aside class="dash__side" aria-hidden="true">
-              <div class="dash__brand"><img src="assets/pultec.png" alt="" width="22" height="22">Pultec</div>
-              <span class="dash__new">+ Crear</span>
-              <span class="dash__nav is-on">Inicio</span><span class="dash__nav">Planificación</span><span class="dash__nav">Activos</span><span class="dash__nav">Órdenes de trabajo</span><span class="dash__nav">Incidencias</span><span class="dash__nav">Técnicos</span>
-            </aside>
-            <div class="dash__main" aria-hidden="true">
-              <p class="dash__date">Lunes, 23 de noviembre</p>
-              <p class="dash__plant">Planta Norte</p>
-              <div class="dash__kpis">
-                <div class="kpi kpi--p"><small>Para hoy</small><b>6</b><span>en agenda</span></div>
-                <div class="kpi kpi--g"><small>Sin asignar</small><b>2</b><span>por asignar</span></div>
-                <div class="kpi kpi--r"><small>Vencidas</small><b>0</b><span>todo al día</span></div>
-                <div class="kpi kpi--ok"><small>Hechas</small><b>128</b><span>este mes</span></div>
-              </div>
-              <div class="dash__cols">
-                <div class="dash__col"><p><i style="--c:var(--green)"></i>Preventivo <em>5</em></p><span class="mini"><b>Revisión general de la planta</b><small>Planta de secado · LG</small></span><span class="mini"><b>Engrase de rodillos</b><small>Secadero rotativo · AR</small></span></div>
-                <div class="dash__col"><p><i style="--c:var(--amber)"></i>Correctivo no crítico <em>1</em></p><span class="mini"><b>Vibraciones del ventilador</b><small>Extracción · MS</small></span></div>
-                <div class="dash__col"><p><i style="--c:var(--red)"></i>Correctivo crítico <em>0</em></p><span class="mini mini--empty">Ninguna pendiente</span></div>
-              </div>
+      <figure class="wrap hero__stage reveal" id="panel">
+        <div class="laptop">
+          <div class="laptop__lid">
+            <div class="laptop__screen" data-slot="inicio" data-kind="product">
+              <img class="only-dark" src="assets/app/inicio.webp" srcset="assets/app/inicio-1440.webp 1440w, assets/app/inicio.webp 2880w" sizes="(min-width: 1280px) 1180px, 92vw" width="2880" height="1800" alt="Inicio de Pultec: tres mantenimientos para hoy, una orden vencida, una incidencia abierta y la carga de cada técnico">
+              <img class="only-light" src="assets/app/inicio-claro.webp" srcset="assets/app/inicio-claro-1440.webp 1440w, assets/app/inicio-claro.webp 2880w" sizes="(min-width: 1280px) 1180px, 92vw" width="2880" height="1800" alt="" loading="lazy">
             </div>
-          </figure>
+          </div>
+          <div class="laptop__base" aria-hidden="true"></div>
         </div>
-      </div>
+        <div class="phone phone--hero">
+          <div class="phone__screen" data-slot="tec-lista" data-kind="product">
+            <div class="phone__status" aria-hidden="true" data-keep><span>9:41</span><svg viewBox="0 0 64 14"><path d="M1 10h3v3H1zM6 8h3v5H6zM11 5h3v8h-3zM16 2h3v11h-3z"/><path d="M30 5.2a9 9 0 0 1 12 0M32.4 7.6a5.6 5.6 0 0 1 7.2 0M34.8 10a2.2 2.2 0 0 1 2.4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="45.5" y="2.5" width="15" height="9" rx="2.5" fill="none" stroke="currentColor"/><rect x="47.5" y="4.5" width="10" height="5" rx="1"/><path d="M62 5.5v3"/></svg></div>
+            <img class="only-dark" src="assets/app/tec-lista.webp" width="1170" height="2532" alt="Móvil del técnico: lo atrasado primero, luego las órdenes de hoy">
+            <img class="only-light" src="assets/app/tec-lista-claro.webp" width="1170" height="2532" alt="" loading="lazy">
+          </div>
+        </div>
+        <figcaption class="hero__caption">Software de mantenimiento industrial: el inicio de la oficina y el día del técnico, tal cual se ven en Pultec.</figcaption>
+      </figure>
     </section>
 
     <!-- ─────────── Sectores ─────────── -->
-    <section class="sectors" aria-label="Para qué tipo de instalaciones">
-      <p class="sectors__title">Para plantas de proceso, flotas y cualquier instalación con máquinas</p>
-      <div class="wrap">
-        <div class="chips">
-          <span><i style="--m:url(assets/iconos/reactor.svg)"></i>Reactores</span>
-          <span><i style="--m:url(assets/iconos/bomba_centrifuga.svg)"></i>Bombas</span>
-          <span><i style="--m:url(assets/iconos/compresor.svg)"></i>Compresores</span>
-          <span><i style="--m:url(assets/iconos/cisterna.svg)"></i>Flotas y cisternas</span>
-          <span><i style="--m:url(assets/iconos/secador.svg)"></i>Secaderos</span>
-          <span><i style="--m:url(assets/iconos/silo.svg)"></i>Silos</span>
-          <span><i style="--m:url(assets/iconos/intercambiador_tubos.svg)"></i>Intercambiadores</span>
-          <span><i style="--m:url(assets/iconos/horno_proceso.svg)"></i>Hornos</span>
-          <span><i style="--m:url(assets/iconos/valvula_seguridad.svg)"></i>Válvulas</span>
-          <span><i style="--m:url(assets/iconos/motor_electrico.svg)"></i>Motores</span>
-          <span><i style="--m:url(assets/iconos/caudalimetro.svg)"></i>Instrumentación</span>
-          <span><i style="--m:url(assets/iconos/esfera_glp.svg)"></i>Almacenamiento</span>
-        </div>
+    <section class="sectors" aria-labelledby="sectores-t">
+      <div class="wrap sectors__inner">
+        <h2 class="sectors__title" id="sectores-t">Para plantas de proceso, flotas y cualquier instalación con máquinas</h2>
+        <ul class="sectors__list">
+          <li><i style="--m:url(assets/iconos/reactor.svg)"></i>Reactores</li>
+          <li><i style="--m:url(assets/iconos/bomba_centrifuga.svg)"></i>Bombas</li>
+          <li><i style="--m:url(assets/iconos/compresor.svg)"></i>Compresores</li>
+          <li><i style="--m:url(assets/iconos/cisterna.svg)"></i>Flotas y cisternas</li>
+          <li><i style="--m:url(assets/iconos/secador.svg)"></i>Secaderos</li>
+          <li><i style="--m:url(assets/iconos/silo.svg)"></i>Silos</li>
+          <li><i style="--m:url(assets/iconos/intercambiador_tubos.svg)"></i>Intercambiadores</li>
+          <li><i style="--m:url(assets/iconos/horno_proceso.svg)"></i>Hornos</li>
+          <li><i style="--m:url(assets/iconos/valvula_seguridad.svg)"></i>Válvulas</li>
+          <li><i style="--m:url(assets/iconos/motor_electrico.svg)"></i>Motores</li>
+          <li><i style="--m:url(assets/iconos/caudalimetro.svg)"></i>Instrumentación</li>
+          <li><i style="--m:url(assets/iconos/esfera_glp.svg)"></i>Almacenamiento</li>
+        </ul>
       </div>
     </section>
 
     <!-- ─────────── El problema: todo disperso → Pultec ─────────── -->
-    <section class="section">
+    <section class="section section--problem">
       <div class="wrap">
-        <div class="head reveal">
-          <p class="eyebrow">El problema</p>
-          <h2>El mantenimiento no falla por falta de ganas.<br> <span class="muted">Falla porque depende de acordarse.</span></h2>
+        <div class="head">
+          <h2>El mantenimiento no falla por falta de ganas.</h2>
+          <p class="head__after">Falla porque depende de acordarse.</p>
         </div>
         <div class="flow" id="flujo">
           <svg class="flow__lines" aria-hidden="true"></svg>
           <ul class="flow__in">
-            <li class="mess" style="--r:-3deg"><i class="mess__i mess__i--xls">XLS</i><div><b>Mantenimientos.xlsx</b><small>Última edición: hace 3 meses</small></div></li>
-            <li class="mess" style="--r:2deg"><i class="mess__i mess__i--wa">WA</i><div><b>«La bomba vuelve a gotear»</b><small>Grupo de mantenimiento</small></div></li>
-            <li class="mess" style="--r:-1.5deg"><i class="mess__i mess__i--doc">PDF</i><div><b>Parte_firmado_final2.pdf</b><small>¿Dónde está el original?</small></div></li>
-            <li class="mess" style="--r:2.5deg"><i class="mess__i mess__i--tel">☎</i><div><b>Llamada perdida · Taller</b><small>«¿Quién va al compresor?»</small></div></li>
-            <li class="mess" style="--r:-2deg"><i class="mess__i mess__i--note">!</i><div><b>Post-it: cambiar filtros</b><small>Pegado en el monitor</small></div></li>
+            <li class="mess"><i class="mess__i mess__i--xls">XLS</i><div><b>Mantenimientos.xlsx</b><small>Última edición: hace 3 meses</small></div></li>
+            <li class="mess"><i class="mess__i mess__i--wa">WA</i><div><b>«La bomba vuelve a gotear»</b><small>Grupo de mantenimiento</small></div></li>
+            <li class="mess"><i class="mess__i mess__i--doc">PDF</i><div><b>Parte_firmado_final2.pdf</b><small>¿Dónde está el original?</small></div></li>
+            <li class="mess"><i class="mess__i mess__i--tel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></i><div><b>Llamada perdida del taller</b><small>«¿Quién va al compresor?»</small></div></li>
+            <li class="mess"><i class="mess__i mess__i--note">!</i><div><b>Post-it: cambiar filtros</b><small>Pegado en el monitor</small></div></li>
           </ul>
-          <div class="flow__core"><span class="flow__ring"></span><img src="assets/pultec.png" alt="" width="64" height="64"><b>Pultec</b></div>
+          <div class="flow__core"><img src="assets/pultec.png" alt="" width="64" height="64"><b>Pultec</b></div>
           <ul class="flow__out">
-            <li><span class="ok"></span><div><b>Una sola fuente de verdad</b><small>Oficina y taller miran lo mismo</small></div></li>
-            <li><span class="ok"></span><div><b>Menos llamadas y mensajes</b><small>Todo pasa por un solo sitio</small></div></li>
-            <li><span class="ok"></span><div><b>Auditorías sin sustos</b><small>Cada intervención, documentada</small></div></li>
+            <li><div><b>Una sola fuente de verdad</b><small>Oficina y taller miran lo mismo</small></div></li>
+            <li><div><b>Menos llamadas y mensajes</b><small>Todo pasa por un solo sitio</small></div></li>
+            <li><div><b>Auditorías sin sustos</b><small>Cada intervención, documentada</small></div></li>
           </ul>
         </div>
       </div>
     </section>
 
     <!-- ─────────── Cómo funciona (pasos con vídeo fijo) ─────────── -->
-    <section class="section section--tint" id="como-funciona">
+    <section class="section section--steps" id="como-funciona">
       <div class="wrap">
-        <div class="head reveal">
-          <p class="eyebrow">Cómo funciona</p>
-          <h2>Del activo al parte firmado.<br> <span class="accent">Así trabaja Pultec.</span></h2>
+        <div class="head">
+          <h2>Del activo al parte firmado.</h2>
+          <p class="head__after">Así trabaja Pultec.</p>
         </div>
 
         <div class="story">
@@ -154,53 +148,53 @@
               <span class="step__n">01</span>
               <h3>Crea tus activos</h3>
               <p>Da de alta tus máquinas en un momento: plantas, camiones, bombas, compresores… cada una con su icono, su tag y su contador de horas.</p>
-              <video class="step__video" muted loop playsinline preload="none" poster="assets/video/activos.jpg" data-src="assets/video/activos.mp4"></video>
+              <video class="step__video" muted playsinline preload="none" poster="assets/video/activos.jpg" data-src="assets/video/activos.mp4"></video>
             </li>
             <li class="step" data-video="assets/video/mantenimiento.mp4" data-poster="assets/video/mantenimiento.jpg">
               <span class="step__n">02</span>
               <h3>Programa sus mantenimientos</h3>
               <p>Entra en un activo y di cada cuánto toca cada mantenimiento: por días, meses o por horas de uso. Con un interruptor, sus órdenes se crearán solas.</p>
-              <video class="step__video" muted loop playsinline preload="none" poster="assets/video/mantenimiento.jpg" data-src="assets/video/mantenimiento.mp4"></video>
+              <video class="step__video" muted playsinline preload="none" poster="assets/video/mantenimiento.jpg" data-src="assets/video/mantenimiento.mp4"></video>
             </li>
             <li class="step" data-video="assets/video/auto.mp4" data-poster="assets/video/auto.jpg">
               <span class="step__n">03</span>
               <h3>Cuando toca, la orden se crea sola</h3>
               <p>El anillo de cada mantenimiento se va vaciando. Cuando llega el momento, Pultec crea la orden de trabajo con su descripción y su criticidad.</p>
-              <video class="step__video" muted loop playsinline preload="none" poster="assets/video/auto.jpg" data-src="assets/video/auto.mp4"></video>
+              <video class="step__video" muted playsinline preload="none" poster="assets/video/auto.jpg" data-src="assets/video/auto.mp4"></video>
             </li>
             <li class="step" data-video="assets/video/grafo.mp4" data-poster="assets/video/grafo.jpg">
               <span class="step__n">04</span>
               <h3>De cada activo, a cada técnico</h3>
               <p>Cada activo tiene sus mantenimientos, cada mantenimiento genera sus órdenes y cada orden llega al técnico que la hace. Todo conectado.</p>
-              <video class="step__video" muted loop playsinline preload="none" poster="assets/video/grafo.jpg" data-src="assets/video/grafo.mp4"></video>
+              <video class="step__video" muted playsinline preload="none" poster="assets/video/grafo.jpg" data-src="assets/video/grafo.mp4"></video>
             </li>
             <li class="step" data-video="assets/video/tecnico.mp4" data-poster="assets/video/tecnico.jpg">
               <span class="step__n">05</span>
               <h3>El técnico la cierra desde el móvil</h3>
               <p>Le llega el aviso, pulsa «Empezar OT» y el tiempo se mide solo. Checklist, contador y firma en la misma pantalla.</p>
-              <video class="step__video" muted loop playsinline preload="none" poster="assets/video/tecnico.jpg" data-src="assets/video/tecnico.mp4"></video>
+              <video class="step__video" muted playsinline preload="none" poster="assets/video/tecnico.jpg" data-src="assets/video/tecnico.mp4"></video>
             </li>
             <li class="step" data-video="assets/video/incidencia.mp4" data-poster="assets/video/incidencia.jpg">
               <span class="step__n">06</span>
               <h3>Si algo falla, se sabe al momento</h3>
               <p>El técnico escribe qué pasa, hace una foto y elige la gravedad. En la oficina suena la campana y, con un clic, se crea la orden correctiva.</p>
-              <video class="step__video" muted loop playsinline preload="none" poster="assets/video/incidencia.jpg" data-src="assets/video/incidencia.mp4"></video>
+              <video class="step__video" muted playsinline preload="none" poster="assets/video/incidencia.jpg" data-src="assets/video/incidencia.mp4"></video>
             </li>
             <li class="step" data-video="assets/video/parte.mp4" data-poster="assets/video/parte.jpg">
               <span class="step__n">07</span>
               <h3>Y todo queda registrado</h3>
               <p>Cada intervención deja su parte en PDF con el historial y la firma del técnico. El histórico de cada máquina, siempre a mano.</p>
-              <video class="step__video" muted loop playsinline preload="none" poster="assets/video/parte.jpg" data-src="assets/video/parte.mp4"></video>
+              <video class="step__video" muted playsinline preload="none" poster="assets/video/parte.jpg" data-src="assets/video/parte.mp4"></video>
             </li>
           </ol>
 
           <div class="story__stage" aria-hidden="true">
             <div class="stage">
-              <div class="stage__bar"><span class="dots"><i></i><i></i><i></i></span><span class="stage__progress"><i id="progreso"></i></span></div>
               <div class="stage__screen">
-                <video class="stage__video is-on" muted loop playsinline preload="metadata" poster="assets/video/activos.jpg" src="assets/video/activos.mp4"></video>
-                <video class="stage__video" muted loop playsinline preload="none"></video>
+                <video class="stage__video is-on" muted playsinline preload="metadata" poster="assets/video/activos.jpg" src="assets/video/activos.mp4"></video>
+                <video class="stage__video" muted playsinline preload="none" poster="assets/video/activos.jpg"></video>
               </div>
+              <div class="stage__progress"><i id="progreso"></i></div>
             </div>
           </div>
         </div>
@@ -210,67 +204,45 @@
     <!-- ─────────── Detalles (lo que no sale en los pasos) ─────────── -->
     <section class="section" id="funciones">
       <div class="wrap">
-        <div class="head reveal">
-          <p class="eyebrow">Los detalles</p>
-          <h2>Pensado para cómo trabaja<br> <span class="muted">un equipo de mantenimiento de verdad.</span></h2>
+        <div class="head">
+          <h2>Pensado para cómo trabaja</h2>
+          <p class="head__after">un equipo de mantenimiento de verdad.</p>
         </div>
         <div class="bento">
-          <article class="tile tile--wide reveal">
-            <div class="tile__viz">
-              <div class="cal">
-                <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
-                <i></i><i class="g"></i><i></i><i class="g"></i><i></i><i></i><i></i>
-                <i class="o"></i><i></i><i class="g"></i><i></i><i class="r"></i><i></i><i></i>
-                <i></i><i class="g"></i><i></i><i class="today"></i><i class="g"></i><i></i><i></i>
-                <i class="g"></i><i></i><i></i><i class="g"></i><i></i><i></i><i></i>
-              </div>
+          <article class="tile tile--cal">
+            <div class="tile__shot" data-slot="calendario" data-kind="product"><img src="assets/app/calendario.webp" width="2384" height="1800" alt="Planificación de noviembre con los mantenimientos de cada día" loading="lazy"></div>
+            <div class="tile__text">
+              <h3>Planificación en mes, semana o día</h3>
+              <p>Mira lo que viene y salta de un mantenimiento al siguiente con una tecla.</p>
             </div>
-            <h3>Planificación en mes, semana o día</h3>
-            <p>Mira lo que viene y salta de un mantenimiento al siguiente con una tecla.</p>
           </article>
-          <article class="tile reveal" style="--d: .06s">
-            <div class="tile__viz">
-              <ul class="load">
-                <li><span class="av" style="--c:#6a2ff6">AR</span><b>Ana Ruiz</b><span class="load__t"><i style="--w:.86"></i></span><em>7</em></li>
-                <li><span class="av" style="--c:#2563eb">LG</span><b>Luis Gómez</b><span class="load__t"><i style="--w:.62; --c:#2563eb"></i></span><em>5</em></li>
-                <li><span class="av" style="--c:#0f9f8f">MS</span><b>Marta Sanz</b><span class="load__t"><i style="--w:.5; --c:#0f9f8f"></i></span><em>4</em></li>
-              </ul>
+          <article class="tile tile--load">
+            <div class="tile__shot" data-slot="carga" data-kind="product"><img src="assets/app/carga.webp" width="640" height="468" alt="Carga del equipo: órdenes de cada técnico en los próximos 7 días" loading="lazy"></div>
+            <div class="tile__text">
+              <h3>La carga de cada técnico</h3>
+              <p>Reparte sin sobrecargar a nadie.</p>
             </div>
-            <h3>La carga de cada técnico</h3>
-            <p>Reparte sin sobrecargar a nadie.</p>
           </article>
-          <article class="tile reveal">
-            <div class="tile__viz">
-              <ul class="tree">
-                <li><i style="--m:url(assets/iconos/secador.svg)"></i>Planta de secado térmico</li>
-                <li class="l2"><i style="--m:url(assets/iconos/horno_proceso.svg)"></i>Quemador</li>
-                <li class="l2"><i style="--m:url(assets/iconos/soplante.svg)"></i>Ventilador de extracción</li>
-                <li class="l2"><i style="--m:url(assets/iconos/ciclon.svg)"></i>Ciclón separador</li>
-              </ul>
+          <article class="tile tile--tree">
+            <div class="tile__shot" data-slot="componentes" data-kind="product"><img src="assets/app/componentes.webp" width="2320" height="616" alt="Componentes del camión cisterna: bomba de descarga, cisterna, frenos y motor" loading="lazy"></div>
+            <div class="tile__text">
+              <h3>Árbol de componentes</h3>
+              <p>Organiza cada máquina pieza a pieza.</p>
             </div>
-            <h3>Árbol de componentes</h3>
-            <p>Organiza cada máquina pieza a pieza.</p>
           </article>
-          <article class="tile reveal" style="--d: .06s">
-            <div class="tile__viz">
-              <ul class="crit">
-                <li><i style="--c:var(--green)"></i><b>Preventivo</b><small>Lo programado</small></li>
-                <li><i style="--c:var(--amber)"></i><b>Correctivo no crítico</b><small>Puede esperar</small></li>
-                <li><i style="--c:var(--red)"></i><b>Correctivo crítico</b><small>Para ya</small></li>
-              </ul>
+          <article class="tile tile--crit">
+            <div class="tile__shot" data-slot="prioridad" data-kind="product"><img src="assets/app/prioridad.webp" width="1600" height="764" alt="Órdenes por criticidad: preventivo, correctivo no crítico y correctivo crítico" loading="lazy"></div>
+            <div class="tile__text">
+              <h3>Prioridad por colores</h3>
+              <p>Verde, ámbar o rojo: sabes qué atender primero sin leer nada.</p>
             </div>
-            <h3>Prioridad por colores</h3>
-            <p>Verde, ámbar o rojo: sabes qué atender primero sin leer nada.</p>
           </article>
-          <article class="tile reveal" style="--d: .12s">
-            <div class="tile__viz">
-              <div class="roles">
-                <span class="role"><b>Oficina</b><small>Planifica, asigna y revisa</small></span>
-                <span class="role role--t"><b>Técnico</b><small>Lo suyo, nada más</small></span>
-              </div>
+          <article class="tile tile--roles">
+            <div class="tile__shot" data-slot="roles" data-kind="product"><img src="assets/app/roles.webp" width="760" height="522" alt="Ver Pultec como cada técnico" loading="lazy"></div>
+            <div class="tile__text">
+              <h3>Un acceso para cada uno</h3>
+              <p>Invita a tu equipo y cada persona ve justo lo que necesita.</p>
             </div>
-            <h3>Un acceso para cada uno</h3>
-            <p>Invita a tu equipo y cada persona ve justo lo que necesita.</p>
           </article>
         </div>
       </div>
@@ -279,28 +251,27 @@
     <!-- ─────────── Técnicos ─────────── -->
     <section class="section section--ink" id="tecnicos">
       <div class="wrap tech">
-        <div class="tech__text reveal">
-          <p class="eyebrow eyebrow--light">Para el técnico</p>
+        <div class="tech__text">
           <h2>Pensado para quien está a pie de máquina.</h2>
-          <p class="lead lead--light">Sin formación, sin instalar nada y sin pantallas que no le sirven.</p>
+          <p class="lead">Sin formación, sin instalar nada y sin pantallas que no le sirven.</p>
           <ul class="checks">
             <li><b>Entra desde el navegador del móvil</b> con su acceso.</li>
             <li><b>Su día ordenado</b>: lo atrasado primero, luego hoy y los próximos días.</li>
             <li><b>Su histórico por días</b>, para saber qué hizo y dónde.</li>
           </ul>
         </div>
-        <div class="tech__media reveal" style="--d: .1s">
-          <div class="phone" aria-label="Pantalla del técnico con sus órdenes de hoy">
-            <div class="phone__notch"></div>
-            <p class="phone__hi">Hola, Ana</p>
-            <p class="phone__sub">Martes · 4 órdenes</p>
-            <p class="phone__grp phone__grp--r">Atrasadas</p>
-            <span class="pcard"><i style="--c:var(--red)"></i><b>Revisión de la bomba</b><small>Estación de bombeo · EB-01</small></span>
-            <p class="phone__grp">Hoy</p>
-            <span class="pcard"><i style="--c:var(--green)"></i><b>Cambio de aceite y filtros</b><small>Camión cisterna · CAM-01</small></span>
-            <span class="pcard"><i style="--c:var(--green)"></i><b>Engrase de rodillos</b><small>Secadero rotativo</small></span>
-            <p class="phone__grp">Jueves</p>
-            <span class="pcard"><i style="--c:var(--amber)"></i><b>Vibraciones del ventilador</b><small>Planta de secado</small></span>
+        <div class="tech__media">
+          <div class="phone phone--back">
+            <div class="phone__screen" data-slot="tec-cierre" data-kind="product">
+              <div class="phone__status" aria-hidden="true" data-keep><span>9:41</span><svg viewBox="0 0 64 14"><path d="M1 10h3v3H1zM6 8h3v5H6zM11 5h3v8h-3zM16 2h3v11h-3z"/><path d="M30 5.2a9 9 0 0 1 12 0M32.4 7.6a5.6 5.6 0 0 1 7.2 0M34.8 10a2.2 2.2 0 0 1 2.4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="45.5" y="2.5" width="15" height="9" rx="2.5" fill="none" stroke="currentColor"/><rect x="47.5" y="4.5" width="10" height="5" rx="1"/><path d="M62 5.5v3"/></svg></div>
+              <img src="assets/app/tec-cierre.webp" width="1170" height="2532" alt="Informe de la orden: resultado, trabajo realizado, repuestos y contador" loading="lazy">
+            </div>
+          </div>
+          <div class="phone phone--front">
+            <div class="phone__screen" data-slot="tec-run" data-kind="product">
+              <div class="phone__status" aria-hidden="true" data-keep><span>9:41</span><svg viewBox="0 0 64 14"><path d="M1 10h3v3H1zM6 8h3v5H6zM11 5h3v8h-3zM16 2h3v11h-3z"/><path d="M30 5.2a9 9 0 0 1 12 0M32.4 7.6a5.6 5.6 0 0 1 7.2 0M34.8 10a2.2 2.2 0 0 1 2.4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="45.5" y="2.5" width="15" height="9" rx="2.5" fill="none" stroke="currentColor"/><rect x="47.5" y="4.5" width="10" height="5" rx="1"/><path d="M62 5.5v3"/></svg></div>
+              <img src="assets/app/tec-run.webp" width="1170" height="2532" alt="Orden en marcha en el móvil: el tiempo se mide solo" loading="lazy">
+            </div>
           </div>
         </div>
       </div>
@@ -308,8 +279,8 @@
 
     <!-- ─────────── Foto industrial ─────────── -->
     <section class="photo" aria-label="Planta industrial">
-      <div class="photo__img" style="background-image:url(assets/img/planta.jpg)"></div>
-      <div class="wrap photo__text reveal">
+      <img class="photo__img" src="assets/img/planta.jpg" alt="" loading="lazy">
+      <div class="wrap photo__text">
         <h2>Tu planta no se para.<br> Tu mantenimiento, tampoco.</h2>
         <p>Lo preventivo llega antes que la avería.</p>
       </div>
@@ -318,9 +289,11 @@
     <!-- ─────────── Planes ─────────── -->
     <section class="section" id="planes">
       <div class="wrap">
-        <div class="head head--center reveal">
-          <p class="eyebrow">Planes</p>
-          <h2>Empieza gratis.<br> <span class="muted">Crece cuando lo necesites.</span></h2>
+        <div class="head head--split">
+          <div>
+            <h2>Empieza gratis.</h2>
+            <p class="head__after">Crece cuando lo necesites.</p>
+          </div>
           <div class="billing" role="group" aria-label="Facturación">
             <button type="button" class="is-on" data-billing="mes">Mensual</button>
             <button type="button" data-billing="anio">Anual <em>−20 %</em></button>
@@ -328,7 +301,7 @@
         </div>
 
         <div class="plans">
-          <article class="plan reveal">
+          <article class="plan">
             <h3>Básico</h3>
             <p class="plan__desc">Para empezar a ordenar el mantenimiento de una planta pequeña.</p>
             <p class="plan__price"><b>0 €</b><span>para siempre</span></p>
@@ -342,9 +315,8 @@
             </ul>
           </article>
 
-          <article class="plan plan--pro reveal" style="--d: .08s">
-            <span class="plan__badge">Más elegido</span>
-            <h3>Premium</h3>
+          <article class="plan plan--pro">
+            <div class="plan__top"><h3>Premium</h3><span class="plan__badge">Más elegido</span></div>
             <p class="plan__desc">Para equipos de mantenimiento que quieren tenerlo todo controlado.</p>
             <p class="plan__price"><b data-price-mes="49 €" data-price-anio="39 €">49 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p>
             <a class="btn btn--block" href="https://saas-pulpo.pages.dev/industrial/">Empezar con Premium</a>
@@ -359,7 +331,7 @@
             </ul>
           </article>
 
-          <article class="plan reveal" style="--d: .16s">
+          <article class="plan">
             <h3>Empresa</h3>
             <p class="plan__desc">Para varias plantas, flotas grandes o necesidades a medida.</p>
             <p class="plan__price"><b>A medida</b><span>hablamos</span></p>
@@ -379,13 +351,10 @@
     </section>
 
     <!-- ─────────── Preguntas ─────────── -->
-    <section class="section section--tint" id="preguntas">
+    <section class="section section--faq" id="preguntas">
       <div class="wrap faq">
-        <div class="head reveal">
-          <p class="eyebrow">Preguntas</p>
-          <h2>Lo que suelen preguntarnos.</h2>
-        </div>
-        <div class="faq__list reveal" style="--d: .06s">
+        <h2>Lo que suelen preguntarnos.</h2>
+        <div class="faq__list">
           <details open>
             <summary>¿Puedo pausar un mantenimiento?</summary>
             <p>Sí. Un mantenimiento pausado deja de crear órdenes hasta que lo reanudes, sin perder su historial. Puedes pausar uno o todos a la vez.</p>
@@ -408,18 +377,20 @@
 
     <!-- ─────────── Cierre ─────────── -->
     <section class="final">
-      <div class="wrap final__inner reveal">
-        <video class="final__pulpo autoplay" muted loop playsinline preload="none" poster="assets/pultec.png" data-src="assets/video/pulpo-saluda.mp4" aria-hidden="true"></video>
-        <h2>Empieza hoy.<br> <span class="accent">Tu próxima orden se creará sola.</span></h2>
-        <p class="lead">Da de alta tu primera máquina en dos minutos.</p>
-        <a class="btn btn--big" href="https://saas-pulpo.pages.dev/industrial/">Probar Pultec gratis <span class="btn__arrow" aria-hidden="true">→</span></a>
+      <div class="final__grid" aria-hidden="true"></div>
+      <div class="wrap final__inner">
+        <h2>Empieza hoy.<br> Tu próxima orden se creará sola.</h2>
+        <div class="final__side">
+          <p class="lead">Da de alta tu primera máquina en dos minutos.</p>
+          <a class="btn btn--big" href="https://saas-pulpo.pages.dev/industrial/">Probar Pultec gratis</a>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="foot">
     <div class="wrap foot__inner">
-      <span class="brand brand--muted"><img src="assets/pultec.png" alt="" width="24" height="24" loading="lazy">Pultec</span>
+      <span class="brand brand--foot"><img src="assets/pultec.png" alt="" width="28" height="28" loading="lazy">Pultec</span>
       <nav class="foot__links" aria-label="Pie">
         <a href="#como-funciona">Cómo funciona</a><a href="#planes">Planes</a><a href="#preguntas">Preguntas</a>
       </nav>
@@ -427,6 +398,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=4" defer></script>
+  <script src="main.js?v=5" defer></script>
 </body>
 </html>
