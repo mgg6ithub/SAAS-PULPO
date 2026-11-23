@@ -38,6 +38,10 @@ class Activo {
   List<int> patron;
   Map<String, int> turnos;
 
+  /// Horas reales menos las estimadas al apuntar la última lectura del contador (null = sin dato). Si se aleja
+  /// mucho, el patrón de turnos no refleja el uso real.
+  double? desvio;
+
   /// Estado de mantenimiento del activo: preventivo, correctivo no crítico o crítico.
   TipoMantenimiento tipo;
 
@@ -70,6 +74,7 @@ class Activo {
     Map<String, int>? turnos,
     List<int>? patron,
     DateTime? fechaLectura,
+    this.desvio,
     this.tipo = TipoMantenimiento.preventivo,
   }) : turnos = turnos ?? {},
        patron = patron ?? [],
@@ -137,6 +142,7 @@ class Activo {
     'turnos': turnos,
     if (patron.isNotEmpty) 'patron': patron,
     'fechaLectura': fechaLectura.toIso8601String(),
+    if (desvio != null) 'desvio': desvio,
     'tipo': tipo.index,
   };
 
@@ -169,6 +175,7 @@ class Activo {
     turnos: {for (final e in ((j['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
     patron: [for (final x in (j['patron'] as List?) ?? []) (x as num).toInt()],
     fechaLectura: DateTime.tryParse(j['fechaLectura'] as String? ?? ''),
+    desvio: (j['desvio'] as num?)?.toDouble(),
     tipo: TipoMantenimiento.values[j['tipo'] as int? ?? 0],
   );
 

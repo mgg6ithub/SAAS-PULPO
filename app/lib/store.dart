@@ -502,7 +502,8 @@ class Store extends ChangeNotifier {
   };
 
   /// Hace [cambio] (un borrado) y apunta cómo estaba todo lo que ha tocado, para poder deshacerlo.
-  void deshacible(String texto, void Function() cambio) {
+  /// Sin [aviso], queda en el historial pero no sale el aviso de «Deshacer».
+  void deshacible(String texto, void Function() cambio, {bool aviso = true}) {
     final antes = _foto();
     cambio();
     final despues = _foto();
@@ -521,7 +522,7 @@ class Store extends ChangeNotifier {
     if (quitadas.isEmpty && cambiadas.isEmpty) return;
     final a = Accion(texto, DateTime.now(), quitadas, cambiadas);
     acciones.insert(0, a);
-    ultimaAccion.value = a;
+    if (aviso) ultimaAccion.value = a;
   }
 
   /// Vuelve a poner lo borrado. Lo que se ha cambiado después a mano no se pisa.

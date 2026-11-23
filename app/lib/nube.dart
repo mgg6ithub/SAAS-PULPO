@@ -1264,6 +1264,7 @@ class Nube {
           'turnos': a.turnos,
           'patron': a.patron,
           'lectura_fecha': a.fechaLectura.toIso8601String().substring(0, 10),
+          if (a.desvio != null) 'desvio': a.desvio,
           'mantenimiento_tipo': a.tipo.index,
           'icono': a.icono,
           'activo': a.activo,
@@ -1604,6 +1605,7 @@ Activo _activo(Map x) => Activo(
   turnos: {for (final e in ((x['turnos'] as Map?) ?? {}).entries) e.key as String: (e.value as num).toInt()},
   patron: [for (final v in (x['patron'] as List?) ?? []) (v as num).toInt()],
   fechaLectura: DateTime.tryParse(x['lectura_fecha'] as String? ?? ''),
+  desvio: (x['desvio'] as num?)?.toDouble(),
   tipo: TipoMantenimiento.values[(x['mantenimiento_tipo'] as num?)?.toInt() ?? 0],
 );
 

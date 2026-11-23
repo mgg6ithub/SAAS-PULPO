@@ -1208,6 +1208,10 @@ class _ActivoFormState extends State<ActivoForm> {
   late final Activo a =
       widget.original?.copia() ??
       Activo(id: store.nuevoId(), padreId: widget.padreId);
+
+  /// Lectura y horas estimadas al abrir: si se apunta otra lectura, se guarda cuánto se aleja de lo estimado.
+  late final double _horasAlAbrir = a.horas;
+  late final double? _estimadoAlAbrir = widget.original != null && a.usoPlanificado ? horasHoy(a) : null;
   late final tag = TextEditingController(text: a.tag)
     ..addListener(() => setState(() {}));
   late final nombre = TextEditingController(text: a.nombre)
@@ -1541,6 +1545,8 @@ class _ActivoFormState extends State<ActivoForm> {
       ..horasUso = _valor(ritmo, vacio: 0) ?? 0
       ..repuestos = repuestos.text.trim()
       ..notas = notas.text.trim();
+    final estimado = _estimadoAlAbrir;
+    if (estimado != null && a.horas != _horasAlAbrir) a.desvio = a.horas - estimado;
   }
 
   /// En la pestaña Datos no hay botón de guardar: cada cambio se guarda solo (en cuanto es válido), un momento

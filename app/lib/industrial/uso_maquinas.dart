@@ -17,7 +17,6 @@ import 'planes.dart'
         esExcepcion,
         ponerTurnos,
         volverAlPatron,
-        horasHoy,
         proximoPlan,
         raizActivo,
         reprogramarOts;
@@ -186,11 +185,54 @@ Future<void> abrirPatron(BuildContext context, Activo a, Color color) async {
     ),
   );
   if (ok != true) return;
+  final antes = _fechasOts([a]);
   store.deshacible('${a.tag.isEmpty ? a.nombre : a.tag}: patrón ${resumenPatron(Activo(id: '', patron: p))}', () {
     ponerPatron(a, p);
     store.guardarActivo(a);
     reprogramarOts(a);
-  });
+  }, aviso: false);
+  if (context.mounted) _avisarOts(context, antes);
+}
+
+/// OT abierta de cada mantenimiento de estas máquinas (y de sus componentes): su fecha antes de un cambio.
+Map<String, DateTime?> _fechasOts(Iterable<Activo> activos) {
+  final ids = {for (final a in activos) a.id};
+  return {
+    for (final p in store.planes.where((p) => p.activa && ids.contains(raizActivo(p.activoId)?.id))) p.id: _fechaOt(p.id),
+  };
+}
+
+DateTime? _fechaOt(String planId) =>
+    store.tareas.where((t) => t.planId == planId && t.activa && t.estado.abierta).firstOrNull?.proximo;
+
+String _diaMes(DateTime d) => '${d.day} ${meses[d.month - 1].substring(0, 3).toLowerCase()}';
+
+/// Tras cambiar el uso, qué órdenes de trabajo han cambiado de fecha (o se han creado): «Engrase pasa del 12 dic
+/// al 15 dic». [abajo] lo sube por encima de la barra de selección.
+void _avisarOts(BuildContext context, Map<String, DateTime?> antes, {double abajo = 16}) {
+  final cambios = <String>[];
+  for (final e in antes.entries) {
+    final p = store.planes.where((p) => p.id == e.key).firstOrNull;
+    final ahora = _fechaOt(e.key);
+    if (p == null || ahora == null || (e.value != null && DateUtils.isSameDay(e.value, ahora))) continue;
+    final esHoy = !ahora.isAfter(hoy());
+    cambios.add(
+      e.value == null
+          ? '${p.nombre}: orden nueva para ${esHoy ? 'hoy' : 'el ${_diaMes(ahora)}'}'
+          : '${p.nombre} pasa del ${_diaMes(e.value!)} ${esHoy ? 'a hoy' : 'al ${_diaMes(ahora)}'}',
+    );
+  }
+  if (cambios.isEmpty) return;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        margin: EdgeInsets.fromLTRB(16, 0, 16, abajo),
+        content: Text(
+          cambios.length <= 3 ? cambios.join('\n') : '${cambios.take(3).join('\n')}\ny ${cambios.length - 3} más',
+        ),
+      ),
+    );
 }
 
 /// Un mantenimiento en su día del calendario: de qué máquina, cuál y si la fecha es estimada por horas.
@@ -200,9 +242,11 @@ typedef _Marca = ({Activo activo, PlanMantenimiento plan, bool estimada});
 ///
 /// · Cada máquina tiene su patrón semanal (se repite solo); en el calendario se marcan las excepciones.
 /// · Se seleccionan días (tocándolos, arrastrando, por la cabecera del día de la semana o por la semana) y al
-///   tocar una máquina se le ponen los turnos elegidos en todos. También se marcan como festivos.
+///   tocar una máquina salen sus opciones para esos días (turnos, su patrón o parada). También se marcan como
+///   festivos.
 /// · Se ve en su día cada mantenimiento (≈ si la fecha es estimada por horas) y las horas de cada semana.
 /// · Cambiar días pasados pide confirmación: altera las horas estimadas del contador.
+/// · Tras cada cambio se avisa de las órdenes de trabajo que cambian de fecha (sin aviso de «Deshacer»).
 class UsoMaquinas extends StatefulWidget {
   /// En su propia pantalla (no como sección de la barra lateral): con flecha para volver.
   final bool conVolver;
@@ -218,10 +262,9 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   /// 0 = mes en cuadrícula; 1 = una fila por máquina.
   int _vista = 0;
 
-  /// Días seleccionados. Con alguno, tocar una máquina le pone [_nSel] turnos en todos (0 = se los quita).
+  /// Días seleccionados. Con alguno, tocar una máquina saca sus opciones para esos días.
   final _sel = <DateTime>{};
   DateTime? _ultimoSel;
-  int _nSel = 1;
 
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
   DateTime? _desde;
@@ -330,36 +373,26 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     return ok;
   }
 
-  /// Hace un cambio de turnos (se puede deshacer) tras confirmar si toca días pasados.
+  /// Hace un cambio de turnos tras confirmar si toca días pasados y avisa de las OT que cambian de fecha.
+  /// Queda en el historial, pero sin aviso de «Deshacer».
   Future<void> _cambiar(String texto, Iterable<DateTime> dias, Iterable<Activo> activos, void Function() cambio) async {
     if (!await _confirmarPasado(dias)) return;
-    final hoyMismo = <PlanMantenimiento>[];
+    final antes = _fechasOts(activos);
     store.deshacible(texto, () {
       cambio();
       for (final a in activos) {
         store.guardarActivo(a);
-        // Sus OT por horas, a la nueva fecha (dentro del deshacer: deshacer también las devuelve).
-        hoyMismo.addAll(reprogramarOts(a));
+        // Sus OT por horas, a la nueva fecha.
+        reprogramarOts(a);
       }
-    });
-    if (mounted) setState(() {});
-    _avisarHoy(hoyMismo);
+    }, aviso: false);
+    if (!mounted) return;
+    setState(() {});
+    _avisarOts(context, antes, abajo: _abajoAviso);
   }
 
-  /// Si con el cambio un mantenimiento llega a sus horas hoy, su OT ya queda para hoy: se avisa.
-  void _avisarHoy(List<PlanMantenimiento> planes) {
-    if (planes.isEmpty || !mounted) return;
-    final nombres = planes.map((p) => p.nombre).toSet().join(', ');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          planes.length == 1
-              ? '$nombres llega a sus horas: su orden de trabajo queda para hoy.'
-              : '$nombres llegan a sus horas: sus órdenes de trabajo quedan para hoy.',
-        ),
-      ),
-    );
-  }
+  /// Con días seleccionados, los avisos salen por encima de la barra de selección.
+  double get _abajoAviso => _sel.isEmpty ? 16 : 92;
 
   Future<void> _poner(Activo a, DateTime d, int n) => _cambiar(
     n == 0 ? '${_quien(a)}: sin turno el ${d.day}' : '${_quien(a)}: ${_turnos(n)} el ${d.day}',
@@ -368,16 +401,25 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     () => ponerTurnos(a, d, n.clamp(0, maxTurnos(a))),
   );
 
-  Future<void> _aplicarSel(Activo a) {
-    final n = _nSel.clamp(0, maxTurnos(a));
+  /// Opción de una máquina para los días seleccionados: «sel1»…«sel3» turnos, «sel0» parada o «selPatron».
+  Future<void> _aplicarSel(Activo a, String accion) {
+    final dias = _sel.toList();
+    if (accion == 'selPatron') {
+      return _cambiar('${_quien(a)}: su patrón en ${_dias(dias.length)}', dias, [a], () {
+        for (final d in dias) {
+          volverAlPatron(a, d);
+        }
+      });
+    }
+    final n = int.parse(accion.substring(3)).clamp(0, maxTurnos(a));
     return _cambiar(
       n == 0
-          ? '${_quien(a)}: sin turnos en ${_dias(_sel.length)}'
-          : '${_quien(a)}: ${_turnos(n)} en ${_dias(_sel.length)}',
-      _sel,
+          ? '${_quien(a)}: parada en ${_dias(dias.length)}'
+          : '${_quien(a)}: ${_turnos(n)} en ${_dias(dias.length)}',
+      dias,
       [a],
       () {
-        for (final d in _sel) {
+        for (final d in dias) {
           ponerTurnos(a, d, n);
         }
       },
@@ -403,6 +445,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       nombre = r;
     }
     if (!await _confirmarPasado(dias)) return;
+    final antes = _fechasOts(activos);
     store.deshacible(
       todos
           ? 'Quitado festivo en ${_dias(dias.length)}'
@@ -413,8 +456,11 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
           reprogramarOts(a);
         }
       },
+      aviso: false,
     );
+    if (!mounted) return;
     setState(() {});
+    _avisarOts(context, antes, abajo: _abajoAviso);
   }
 
   Future<String?> _pedirNombre() {
@@ -440,8 +486,13 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     );
   }
 
-  /// Acciones de una máquina: editarla, su patrón y rellenar el mes.
+  /// Acciones de una máquina: con días seleccionados, las de esos días; si no, editarla, su patrón y rellenar
+  /// el mes.
   void _accion(Activo a, Color color, String accion) {
+    if (accion.startsWith('sel')) {
+      _aplicarSel(a, accion);
+      return;
+    }
     final q = _quien(a);
     final dias = _diasMes.toList();
     Future<void> rellenar(String texto, int Function(DateTime d) n) => _cambiar(texto, dias, [a], () {
@@ -523,8 +574,9 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                     const SizedBox(height: 10),
                     const Consejo(
                       'Cada máquina tiene su patrón semanal; aquí marcas las excepciones. Selecciona días (tocando, '
-                      'arrastrando, por el día de la semana o por la semana) y toca una máquina para ponerle turnos.',
-                      clave: 'uso-activos-4',
+                      'arrastrando, por el día de la semana o por la semana) y toca una máquina para elegir qué hace '
+                      'esos días.',
+                      clave: 'uso-activos-5',
                     ),
                     const SizedBox(height: 12),
                     if (activos.isEmpty)
@@ -541,10 +593,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                         colorDe: _colorDe,
                         horasMes: (a) => _horas(a, _diasMes),
                         onAccion: _accion,
-                        onAplicar: _sel.isEmpty ? null : _aplicarSel,
-                        textoAplicar: _nSel == 0
-                            ? 'Toca para quitarle los turnos en ${_dias(_sel.length)}'
-                            : 'Toca para darle ${_turnos(_nSel)} en ${_dias(_sel.length)}',
+                        diasSel: _sel.isEmpty ? null : _dias(_sel.length),
                       ),
                       const SizedBox(height: 14),
                       Expanded(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
@@ -554,7 +603,16 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               ),
             ),
             // Abajo en el centro, encima de todo (no mueve el calendario): la barra de selección de las listas.
-            if (conSel) Positioned(left: 0, right: 0, bottom: 24, child: Center(child: _barraSeleccion(activos))),
+            // Si no cabe, se encoge entera en vez de cortarse.
+            if (conSel)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 24,
+                child: Center(
+                  child: FittedBox(fit: BoxFit.scaleDown, child: _barraSeleccion(activos)),
+                ),
+              ),
           ],
         ),
       ),
@@ -609,10 +667,9 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     ],
   );
 
-  /// Barra de selección de días, como la de las listas: cuántos, todo el mes, cuántos turnos se aplican al
-  /// tocar una máquina (o quitarlos), festivo, vaciar los días y salir (también con Esc).
+  /// Barra de selección de días, como la de las listas: cuántos, todo el mes, festivo, vaciar los días y salir
+  /// (también con Esc). Lo de cada máquina sale al tocarla.
   Widget _barraSeleccion(List<Activo> activos) {
-    final maximo = activos.map(maxTurnos).fold(1, (a, b) => a > b ? a : b);
     final delMes = _diasMes.toList();
     final festivos = _sel.every((d) => store.festivo(d) != null);
     return BarraSeleccion(
@@ -624,12 +681,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       onEliminar: () => _vaciarSel(activos),
       onSalir: _deseleccionar,
       acciones: [
-        for (var k = 0; k <= maximo; k++) _opcionTurnos(k == maximo ? 0 : k + 1),
-        const SizedBox(width: 8),
-        const Text('y toca una máquina', style: TextStyle(color: Colors.white70, fontSize: 13)),
-        const SizedBox(width: 10),
-        Container(width: 1, height: 22, color: Colors.white24),
-        const SizedBox(width: 6),
         TextButton(
           style: TextButton.styleFrom(foregroundColor: Colors.white),
           onPressed: () => _festivoSel(activos),
@@ -637,25 +688,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         ),
         const SizedBox(width: 6),
       ],
-    );
-  }
-
-  Widget _opcionTurnos(int n) {
-    final elegida = _nSel == n;
-    return Padding(
-      padding: const EdgeInsets.only(right: 2),
-      child: TextButton(
-        style: TextButton.styleFrom(
-          foregroundColor: elegida ? Colors.white : Colors.white70,
-          backgroundColor: elegida ? Colors.white.withValues(alpha: .16) : Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          minimumSize: const Size(0, 34),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
-          textStyle: TextStyle(fontWeight: elegida ? FontWeight.w700 : FontWeight.w500),
-        ),
-        onPressed: () => setState(() => _nSel = n),
-        child: Text(n == 0 ? 'Quitar' : _turnos(n)),
-      ),
     );
   }
 
@@ -860,9 +892,9 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       onAcceptWithDetails: (det) {
         final a = store.activo(det.data);
         if (a == null) return;
-        // Soltada en un día seleccionado: a todos los seleccionados.
+        // Soltada en un día seleccionado: un turno en todos los seleccionados.
         if (elegido) {
-          _aplicarSel(a);
+          _aplicarSel(a, 'sel1');
         } else if (turnosDe(a, d) == 0) {
           _poner(a, d, 1);
         }
@@ -1287,16 +1319,38 @@ class _Maquinas extends StatelessWidget {
   final Color Function(int) colorDe;
   final double Function(Activo) horasMes;
   final void Function(Activo, Color, String) onAccion;
-  final ValueChanged<Activo>? onAplicar;
-  final String textoAplicar;
+
+  /// Con días seleccionados («5 días»), tocar una máquina saca sus opciones para esos días.
+  final String? diasSel;
   const _Maquinas({
     required this.activos,
     required this.colorDe,
     required this.horasMes,
     required this.onAccion,
-    this.onAplicar,
-    this.textoAplicar = '',
+    this.diasSel,
   });
+
+  List<(String, Widget)> _opciones(Activo a) {
+    final dias = diasSel;
+    if (dias != null) {
+      return [
+        for (var k = 1; k <= maxTurnos(a); k++) ('sel$k', Text('${_turnos(k)} en $dias')),
+        if (a.patron.length == 7) ('selPatron', Text('Su patrón en $dias')),
+        ('sel0', Text('Parada en $dias', style: TextStyle(color: P.rojo))),
+      ];
+    }
+    return [
+      ('editar', const Text('Editar activo')),
+      ('patron', const Text('Patrón semanal…')),
+      ('lab1', const Text('1 turno los laborables del mes')),
+      if (maxTurnos(a) >= 2) ('lab2', const Text('2 turnos los laborables del mes')),
+      if (maxTurnos(a) >= 3) ('lab3', const Text('3 turnos los laborables del mes')),
+      ('todos1', const Text('1 turno todos los días del mes')),
+      ('copiar', const Text('Copiar el mes anterior')),
+      if (a.patron.length == 7) ('patronMes', const Text('Quitar las excepciones del mes')),
+      ('vaciar', Text('Vaciar el mes', style: TextStyle(color: P.rojo))),
+    ];
+  }
 
   Widget _ficha(int i, Activo a) {
     final color = colorDe(i);
@@ -1308,32 +1362,19 @@ class _Maquinas extends StatelessWidget {
         child: SizedBox(width: 250, child: _Ficha(a, color, h, elevada: true)),
       ),
       childWhenDragging: Opacity(opacity: .4, child: _Ficha(a, color, h)),
-      child: onAplicar != null
-          ? Tooltip(
-              message: textoAplicar,
-              child: GestureDetector(
-                onTap: () => onAplicar!(a),
-                child: MouseRegion(cursor: SystemMouseCursors.click, child: _Ficha(a, color, h, aplicar: true)),
-              ),
-            )
-          : BotonMenu<String>(
-              tooltip: 'Arrastra a un día o toca para ver las acciones',
-              resaltarHover: false,
-              relleno: EdgeInsets.zero,
-              onSelected: (accion) => onAccion(a, color, accion),
-              opciones: [
-                ('editar', const Text('Editar activo')),
-                ('patron', const Text('Patrón semanal…')),
-                ('lab1', const Text('1 turno los laborables del mes')),
-                if (maxTurnos(a) >= 2) ('lab2', const Text('2 turnos los laborables del mes')),
-                if (maxTurnos(a) >= 3) ('lab3', const Text('3 turnos los laborables del mes')),
-                ('todos1', const Text('1 turno todos los días del mes')),
-                ('copiar', const Text('Copiar el mes anterior')),
-                if (a.patron.length == 7) ('patronMes', const Text('Quitar las excepciones del mes')),
-                ('vaciar', Text('Vaciar el mes', style: TextStyle(color: P.rojo))),
-              ],
-              child: MouseRegion(cursor: SystemMouseCursors.grab, child: _Ficha(a, color, h)),
-            ),
+      child: BotonMenu<String>(
+        tooltip: diasSel == null
+            ? 'Arrastra a un día o toca para ver las acciones'
+            : 'Toca para elegir qué hace en los $diasSel',
+        resaltarHover: false,
+        relleno: EdgeInsets.zero,
+        onSelected: (accion) => onAccion(a, color, accion),
+        opciones: _opciones(a),
+        child: MouseRegion(
+          cursor: diasSel == null ? SystemMouseCursors.grab : SystemMouseCursors.click,
+          child: _Ficha(a, color, h, aplicar: diasSel != null),
+        ),
+      ),
     );
   }
 
@@ -1494,9 +1535,15 @@ class _Ficha extends StatelessWidget {
   final double horasMes;
   final bool elevada;
 
-  /// Hay días seleccionados: se resalta, porque tocarla aplica los turnos.
+  /// Hay días seleccionados: se resalta, porque tocarla saca las opciones de esos días.
   final bool aplicar;
   const _Ficha(this.a, this.color, this.horasMes, {this.elevada = false, this.aplicar = false});
+
+  /// La última lectura se aleja de lo estimado con los turnos más de medio turno (y al menos 2 h).
+  bool get _desviada {
+    final d = a.desvio;
+    return d != null && d.abs() >= (a.horasTurno / 2).clamp(2, 12);
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1542,6 +1589,20 @@ class _Ficha extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 11.5, color: P.textoSuave),
               ),
+              if (_desviada) ...[
+                const SizedBox(height: 2),
+                Tooltip(
+                  message:
+                      'La última lectura del contador (${fecha(a.fechaLectura)}) se aleja de lo que suman sus turnos. '
+                      'Revisa su patrón o los días marcados.',
+                  child: Text(
+                    'Lectura real ${a.desvio! > 0 ? '+' : '−'}${a.desvio!.abs().toStringAsFixed(0)} h sobre sus turnos',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5, color: P.ambar, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

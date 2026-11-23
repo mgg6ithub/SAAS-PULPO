@@ -2303,6 +2303,8 @@ class _FormularioInformeState extends State<FormularioInforme> {
         ..resultadoResuelto = false;
       final h = _contador;
       if (raiz != null && h != null && h >= 0) {
+        // Cuánto se aleja la lectura de lo que suman sus turnos (la base lo calcula igual al apuntarla).
+        if (raiz!.usoPlanificado) raiz!.desvio = h - horasHoy(raiz!);
         raiz!
           ..horas = h
           ..fechaLectura = hoy();
