@@ -936,14 +936,17 @@ class _BarraState extends State<_Barra> {
       }
     }
     final enSub = subs.any((x) => x.$3 == widget.seccion);
+    // Solo iconos: la marca de «Uso de activos» va sangrada, pasada su rama.
+    final hijoIconos = iconos && widget.seccion == Seccion.usoActivos;
 
-    return Stack(
+    return LayoutBuilder(
+      builder: (context, c) => Stack(
       children: [
         AnimatedPositioned(
           duration: _anim,
           curve: _curva,
           top: top ?? 0,
-          left: left ?? 0,
+          left: hijoIconos ? _sangriaHijo(c.maxWidth) : left ?? 0,
           right: 0,
           height: enSub ? _altoSub : _altoItem,
           // Sin ninguna opción elegida (p. ej. «Uso de activos» sin activos por turnos), sin marca.
@@ -975,6 +978,7 @@ class _BarraState extends State<_Barra> {
           ],
         ),
       ],
+      ),
     );
   }
 
@@ -1059,32 +1063,54 @@ class _BarraState extends State<_Barra> {
     );
   }
 
+  /// Sangría de una opción de grupo con la barra plegada: su fondo (marca y hover) empieza pasada la rama.
+  static double _sangriaHijo(double ancho) => ancho / 2 - 4;
+
   /// Opción de un grupo con la barra plegada (solo iconos): una rama neutra baja desde el icono de su cabeza y
-  /// lleva a su icono, algo menor y desplazado a la derecha.
-  Widget _hijoIconos(IconData icono, bool sel) => LayoutBuilder(
-    builder: (context, c) {
-      final cx = c.maxWidth / 2;
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: CustomPaint(painter: _Rama(color: P.bordeBarra, x: cx - 6, arriba: _hueco)),
-          ),
-          Positioned(
-            left: cx + 1,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: TweenAnimationBuilder<Color?>(
-                tween: ColorTween(end: sel ? P.iconoBarraElegido : P.textoBarraSuave),
-                duration: const Duration(milliseconds: 200),
-                builder: (_, col, _) => Icon(icono, size: 17 * escala, color: col),
+  /// lleva a ella; su fondo y su icono (algo menor) van sangrados a la derecha de la rama.
+  Widget _hijoIconos(IconData icono, String texto, Seccion s, bool sel) => Padding(
+    padding: const EdgeInsets.only(bottom: _hueco),
+    child: SizedBox(
+      height: _altoItem,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final l = _sangriaHijo(c.maxWidth);
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: CustomPaint(painter: _Rama(color: P.bordeBarra, x: l - 5, fin: l, arriba: _hueco)),
               ),
-            ),
-          ),
-        ],
-      );
-    },
+              Positioned(
+                left: l,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: _ConEtiqueta(
+                  texto: texto,
+                  activa: true,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(P.radioControl),
+                    mouseCursor: SystemMouseCursors.click,
+                    splashFactory: NoSplash.splashFactory,
+                    highlightColor: Colors.transparent,
+                    hoverColor: P.hoverBarra,
+                    onTap: () => widget.onTap(s),
+                    child: Center(
+                      child: TweenAnimationBuilder<Color?>(
+                        tween: ColorTween(end: sel ? P.iconoBarraElegido : P.textoBarraSuave),
+                        duration: const Duration(milliseconds: 200),
+                        builder: (_, col, _) => Icon(icono, size: 17 * escala, color: col),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    ),
   );
 
   /// Flecha del grupo: plegar o desplegar sin cambiar de sección. Gira con la misma animación.
@@ -1107,6 +1133,8 @@ class _BarraState extends State<_Barra> {
   /// [desplegable]: cabeza de un grupo, con su flecha (true = abierto); null = opción normal.
   Widget _item(IconData icono, String texto, Seccion s, {int aviso = 0, bool? desplegable}) {
     final sel = s == widget.seccion;
+    // Solo iconos: «Uso de activos» cuelga de Activos con una rama, como en el grupo desplegado.
+    if (iconos && s == Seccion.usoActivos) return _hijoIconos(icono, texto, s, sel);
     return Padding(
       padding: const EdgeInsets.only(bottom: _hueco),
       child: _ConEtiqueta(
@@ -1128,8 +1156,7 @@ class _BarraState extends State<_Barra> {
           child: Container(
             height: _altoItem,
             padding: EdgeInsets.symmetric(horizontal: iconos ? 8 : 12),
-            // Solo iconos: «Uso de activos» cuelga de Activos con una rama, como en el grupo desplegado.
-            child: iconos && s == Seccion.usoActivos ? _hijoIconos(icono, sel) : Row(
+            child: Row(
               mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Stack(
@@ -1518,11 +1545,12 @@ class _BotonDemo extends StatelessWidget {
   );
 }
 
-/// Rama «└» de la barra plegada: baja en [x] desde encima del hueco ([arriba]) hasta la mitad y gira a la derecha.
+/// Rama «└» de la barra plegada: baja en [x] desde encima del hueco ([arriba]) hasta la mitad y gira a la derecha
+/// hasta [fin].
 class _Rama extends CustomPainter {
   final Color color;
-  final double x, arriba;
-  const _Rama({required this.color, required this.x, required this.arriba});
+  final double x, fin, arriba;
+  const _Rama({required this.color, required this.x, required this.fin, required this.arriba});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1530,9 +1558,9 @@ class _Rama extends CustomPainter {
     canvas.drawPath(
       Path()
         ..moveTo(x, -arriba)
-        ..lineTo(x, y - 4)
-        ..quadraticBezierTo(x, y, x + 4, y)
-        ..lineTo(x + 7, y),
+        ..lineTo(x, y - 3)
+        ..quadraticBezierTo(x, y, x + 3, y)
+        ..lineTo(fin, y),
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
@@ -1541,5 +1569,5 @@ class _Rama extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_Rama old) => old.color != color || old.x != x || old.arriba != arriba;
+  bool shouldRepaint(_Rama old) => old.color != color || old.x != x || old.fin != fin || old.arriba != arriba;
 }
