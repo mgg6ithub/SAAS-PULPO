@@ -266,6 +266,13 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   final _sel = <DateTime>{};
   DateTime? _ultimoSel;
 
+  /// Máquinas elegidas arriba para ver solo las suyas en el mes (vacío = todas).
+  final _filtro = <String>{};
+  bool _visible(Activo a) => _filtro.isEmpty || _filtro.contains(a.id);
+
+  /// Con muchas máquinas y sin filtro, cada día del mes se resume (cuántas trabajan) en vez de listarlas.
+  bool _resumen(List<Activo> activos) => _filtro.isEmpty && activos.length > 6;
+
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
   DateTime? _desde;
   Set<DateTime> _antes = {};
@@ -585,6 +592,9 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                         horasMes: (a) => _horas(a, _diasMes),
                         onAccion: _accion,
                         diasSel: _sel.isEmpty ? null : _dias(_sel.length),
+                        filtro: _filtro,
+                        onFiltrar: (a) => setState(() => _filtro.contains(a.id) ? _filtro.remove(a.id) : _filtro.add(a.id)),
+                        onTodas: () => setState(_filtro.clear),
                       ),
                       const SizedBox(height: 14),
                       Expanded(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
@@ -748,19 +758,35 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   // Medidas de un día: cabecera (número), cada línea de turnos y cada mantenimiento. Con ellas, cada semana mide
   // lo que pida su día más lleno (y al menos lo que toque para llenar el alto): con muchas máquinas el
   // calendario crece y se desplaza en vertical en vez de amontonar los turnos.
-  static const _altoBaseDia = 50.0, _altoTurno = 20.0, _altoMarca = 18.0, _anchoTurnoMin = 58.0, _altoCabecera = 26.0;
+  static const _altoBaseDia = 50.0,
+      _altoTurno = 20.0,
+      _altoMarca = 18.0,
+      _anchoTurnoMin = 58.0,
+      _altoCabecera = 26.0,
+      _altoResumen = 48.0,
+      _maxMarcasResumen = 3;
 
   TextStyle get _estiloCabecera =>
       TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: .6, color: P.textoSuave);
 
-  /// Máquinas que salen en un día (con turnos o con una parada que es excepción).
-  int _enDia(List<Activo> activos, DateTime d) => activos.where((a) => turnosDe(a, d) > 0 || esExcepcion(a, d)).length;
+  /// Máquinas (visibles) que salen en un día: con turnos o con una parada que es excepción.
+  int _enDia(List<Activo> activos, DateTime d) =>
+      activos.where((a) => _visible(a) && (turnosDe(a, d) > 0 || esExcepcion(a, d))).length;
+
+  /// Alto de un día: el resumen y hasta tres mantenimientos (más una línea «+N»), o sus pastillas y mantenimientos.
+  double _altoDia(List<Activo> activos, DateTime d, int marcas, int porLinea, bool resumen) => resumen
+      ? _altoBaseDia + _altoResumen + (marcas > _maxMarcasResumen ? _maxMarcasResumen + 1 : marcas) * _altoMarca
+      : _altoBaseDia + (_enDia(activos, d) / porLinea).ceil() * (_altoTurno + 3) + marcas * _altoMarca;
 
   Widget _calendario(List<Activo> activos) {
     final inicio = lunesDe(mes);
     final fin = DateTime(mes.year, mes.month + 1, 0);
     final semanas = ((fin.difference(inicio).inDays + 1) / 7).ceil();
-    final marcas = _marcas(activos, inicio, masDias(inicio, semanas * 7 - 1));
+    final marcas = {
+      for (final e in _marcas(activos, inicio, masDias(inicio, semanas * 7 - 1)).entries)
+        e.key: [for (final m in e.value) if (_visible(m.activo)) m],
+    };
+    final resumen = _resumen(activos);
     return LayoutBuilder(
       builder: (context, box) {
         final ancho = box.maxWidth < 820 ? 820.0 : box.maxWidth;
@@ -775,9 +801,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               minimo,
               for (var i = 0; i < 7; i++)
                 if (masDias(inicio, s * 7 + i) case final d)
-                  _altoBaseDia +
-                      (_enDia(activos, d) / porLinea).ceil() * (_altoTurno + 3) +
-                      (marcas[d]?.length ?? 0) * _altoMarca,
+                  _altoDia(activos, d, marcas[d]?.length ?? 0, porLinea, resumen),
             ].reduce((x, y) => x > y ? x : y),
         ];
         return SingleChildScrollView(
@@ -807,7 +831,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   ],
                 ),
                 Expanded(
-                  child: SingleChildScrollView(child: _rejilla(activos, inicio, altos, marcas, anchoTurno)),
+                  child: SingleChildScrollView(child: _rejilla(activos, inicio, altos, marcas, anchoTurno, resumen)),
                 ),
               ],
             ),
@@ -825,6 +849,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     List<double> altos,
     Map<DateTime, List<_Marca>> marcas,
     double anchoTurno,
+    bool resumen,
   ) => LayoutBuilder(
     builder: (context, box) {
       DateTime diaEn(Offset p) {
@@ -869,6 +894,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                               activos,
                               marcas[masDias(inicio, s * 7 + i)] ?? const [],
                               anchoTurno,
+                              resumen: resumen,
                               derecha: i < 6,
                               abajo: s < altos.length - 1,
                             ),
@@ -889,6 +915,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     List<Activo> activos,
     List<_Marca> marcas,
     double anchoTurno, {
+    bool resumen = false,
     bool derecha = true,
     bool abajo = true,
   }) {
@@ -983,14 +1010,34 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Turnos en pastillas pequeñas, varias por línea.
+                          children: resumen
+                              ? [
+                                  _ResumenDia(
+                                    trabajan: activos.where((a) => turnosDe(a, d) > 0).length,
+                                    total: activos.length,
+                                    turnos: activos.fold(0, (t, a) => t + turnosDe(a, d)),
+                                    paradas: activos.where((a) => turnosDe(a, d) == 0 && esExcepcion(a, d)).length,
+                                  ),
+                                  if (marcas.isNotEmpty) const SizedBox(height: 3),
+                                  for (final m in marcas.take(_maxMarcasResumen))
+                                    _MarcaMantenimiento(m, _colorDe(activos.indexOf(m.activo))),
+                                  if (marcas.length > _maxMarcasResumen)
+                                    Tooltip(
+                                      message: [for (final m in marcas.skip(_maxMarcasResumen)) '${m.plan.nombre}, ${m.activo.titulo}'].join('\n'),
+                                      child: Text(
+                                        '+${marcas.length - _maxMarcasResumen} mantenimientos',
+                                        style: TextStyle(fontSize: 10.5, color: P.textoSuave, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                ]
+                              : [
+                            // Turnos en pastillas pequeñas, varias por línea (solo las máquinas visibles).
                             Wrap(
                               spacing: 3,
                               runSpacing: 3,
                               children: [
                                 for (final (i, a) in activos.indexed)
-                                  if (turnosDe(a, d) > 0 || esExcepcion(a, d))
+                                  if (_visible(a) && (turnosDe(a, d) > 0 || esExcepcion(a, d)))
                                     SizedBox(
                                       width: anchoTurno,
                                       height: _altoTurno,
@@ -1339,11 +1386,19 @@ class _Maquinas extends StatelessWidget {
 
   /// Con días seleccionados («5 días»), tocar una máquina saca sus opciones para esos días.
   final String? diasSel;
+
+  /// Sin días seleccionados, tocar una máquina la filtra (ver solo las elegidas); sus acciones, en su flecha.
+  final Set<String> filtro;
+  final ValueChanged<Activo> onFiltrar;
+  final VoidCallback onTodas;
   const _Maquinas({
     required this.activos,
     required this.colorDe,
     required this.horasMes,
     required this.onAccion,
+    required this.filtro,
+    required this.onFiltrar,
+    required this.onTodas,
     this.diasSel,
   });
 
@@ -1379,20 +1434,49 @@ class _Maquinas extends StatelessWidget {
         child: _Ficha(a, color, h, elevada: true),
       ),
       childWhenDragging: Opacity(opacity: .4, child: _Ficha(a, color, h)),
-      child: BotonMenu<String>(
-        // Lo que antes ocupaba la ficha (patrón y horas del mes) va en el tooltip.
-        tooltip:
-            '${a.titulo}\n${resumenPatron(a)}, ${h.toStringAsFixed(0)} h este mes\n'
-            '${diasSel == null ? 'Arrastra a un día o toca para ver las acciones' : 'Toca para elegir qué hace en los $diasSel'}',
-        resaltarHover: false,
-        relleno: EdgeInsets.zero,
-        onSelected: (accion) => onAccion(a, color, accion),
-        opciones: _opciones(a),
-        child: MouseRegion(
-          cursor: diasSel == null ? SystemMouseCursors.grab : SystemMouseCursors.click,
-          child: _Ficha(a, color, h, aplicar: diasSel != null),
-        ),
-      ),
+      child: diasSel != null
+          ? BotonMenu<String>(
+              tooltip: '${a.titulo}\nToca para elegir qué hace en los $diasSel',
+              resaltarHover: false,
+              relleno: EdgeInsets.zero,
+              onSelected: (accion) => onAccion(a, color, accion),
+              opciones: _opciones(a),
+              child: MouseRegion(cursor: SystemMouseCursors.click, child: _Ficha(a, color, h, aplicar: true)),
+            )
+          // Sin días elegidos: tocarla la filtra; la flecha saca sus acciones. Las no elegidas se atenúan.
+          : AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: filtro.isEmpty || filtro.contains(a.id) ? 1 : .45,
+              child: Tooltip(
+                // Lo que antes ocupaba la ficha (patrón y horas del mes) va en el tooltip.
+                message:
+                    '${a.titulo}\n${resumenPatron(a)}, ${h.toStringAsFixed(0)} h este mes\n'
+                    '${filtro.contains(a.id) ? 'Toca para dejar de verla sola' : 'Toca para ver solo esta máquina'}; arrástrala a un día',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => onFiltrar(a),
+                    child: _Ficha(
+                      a,
+                      color,
+                      h,
+                      elegida: filtro.contains(a.id),
+                      menu: BotonMenu<String>(
+                        tooltip: 'Acciones de ${a.titulo}',
+                        relleno: EdgeInsets.zero,
+                        onSelected: (accion) => onAccion(a, color, accion),
+                        opciones: _opciones(a),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Icon(Icons.expand_more_rounded, size: 18, color: P.textoSuave),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 
@@ -1424,6 +1508,11 @@ class _Maquinas extends StatelessWidget {
     height: 40,
     child: Row(
       children: [
+        // Con filtro, un botón para volver a verlas todas.
+        if (filtro.isNotEmpty) ...[
+          TextButton(onPressed: onTodas, child: const Text('Ver todas')),
+          const SizedBox(width: 6),
+        ],
         Expanded(
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
@@ -1534,7 +1623,21 @@ class _Ficha extends StatelessWidget {
 
   /// Hay días seleccionados: se resalta, porque tocarla saca las opciones de esos días.
   final bool aplicar;
-  const _Ficha(this.a, this.color, this.horasMes, {this.elevada = false, this.aplicar = false});
+
+  /// Elegida en el filtro del mes: se resalta como [aplicar].
+  final bool elegida;
+
+  /// Al final, la flecha con sus acciones.
+  final Widget? menu;
+  const _Ficha(
+    this.a,
+    this.color,
+    this.horasMes, {
+    this.elevada = false,
+    this.aplicar = false,
+    this.elegida = false,
+    this.menu,
+  });
 
   /// La última lectura se aleja de lo estimado con los turnos más de medio turno (y al menos 2 h).
   bool get _desviada {
@@ -1545,11 +1648,14 @@ class _Ficha extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 40,
-    padding: const EdgeInsets.symmetric(horizontal: 12),
+    padding: EdgeInsets.fromLTRB(12, 0, menu == null ? 12 : 6, 0),
     decoration: BoxDecoration(
-      color: Color.alphaBlend(color.withValues(alpha: aplicar ? .12 : .06), P.superficie),
+      color: Color.alphaBlend(color.withValues(alpha: aplicar || elegida ? .14 : .06), P.superficie),
       borderRadius: BorderRadius.circular(P.radioControl),
-      border: Border.all(color: elevada || aplicar ? color : color.withValues(alpha: .35), width: aplicar ? 1.5 : 1),
+      border: Border.all(
+        color: elevada || aplicar || elegida ? color : color.withValues(alpha: .35),
+        width: aplicar || elegida ? 1.5 : 1,
+      ),
       boxShadow: elevada ? [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 12)] : null,
     ),
     child: Row(
@@ -1578,6 +1684,63 @@ class _Ficha extends StatelessWidget {
               height: 7,
               decoration: const BoxDecoration(color: P.ambar, shape: BoxShape.circle),
             ),
+          ),
+        ],
+        if (menu != null) ...[const SizedBox(width: 4), menu!],
+      ],
+    ),
+  );
+}
+
+/// Un día del mes resumido (muchas máquinas y sin filtro): cuántas trabajan de cuántas, con una barra de carga
+/// en morado, y los turnos del día (y las paradas, si hay). El detalle, filtrando arriba o en «Por máquina».
+class _ResumenDia extends StatelessWidget {
+  final int trabajan, total, turnos, paradas;
+  const _ResumenDia({required this.trabajan, required this.total, required this.turnos, required this.paradas});
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: '$trabajan de $total máquinas trabajan, $turnos turnos${paradas > 0 ? ', $paradas paradas' : ''}',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '$trabajan',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: trabajan == 0 ? P.textoSuave : P.texto),
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                'de $total, $turnos turnos',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: P.textoSuave),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: SizedBox(
+            height: 4,
+            child: LinearProgressIndicator(
+              value: total == 0 ? 0 : trabajan / total,
+              backgroundColor: P.morado.withValues(alpha: .1),
+              color: P.morado,
+            ),
+          ),
+        ),
+        if (paradas > 0) ...[
+          const SizedBox(height: 4),
+          Text(
+            paradas == 1 ? '1 parada' : '$paradas paradas',
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: P.rojo),
           ),
         ],
       ],
