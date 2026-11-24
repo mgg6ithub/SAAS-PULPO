@@ -10,6 +10,7 @@ import 'cuenta.dart';
 import 'importar_exportar.dart';
 import 'tipos_competencias.dart';
 import '../marca.dart';
+import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 
 /// Ajustes de la app: a la izquierda tu cuenta y las secciones (como la barra lateral de Pultec); a la derecha,
 /// la sección elegida con su título y sus filas en tarjetas. Simplificados (2026-11-19): sin color
@@ -44,6 +45,8 @@ class _AjustesState extends State<_Ajustes> {
 
   List<_Seccion> get _secciones => [
     if (store.nube != null) (Icons.person_outline_rounded, P.morado, 'Cuenta', 'Tu perfil, el correo y la contraseña, las sesiones abiertas y borrar la cuenta.'),
+    if (industrial && (store.nube?.esAdmin ?? false))
+      (Icons.workspace_premium_outlined, P.morado, 'Plan', 'El plan de tu empresa, el pago con tarjeta y las facturas.'),
     (Icons.contrast_rounded, P.morado, 'Apariencia', 'Tema claro u oscuro, y el tamaño y el tipo de letra de toda la app.'),
     (Icons.business_outlined, P.morado, 'Empresa', m('Los tipos de trabajo y las competencias de tus trabajadores.')),
     (Icons.keyboard_outlined, P.morado, 'Atajos', 'Atajos de teclado para moverte por la app sin el ratón.'),
@@ -60,7 +63,16 @@ class _AjustesState extends State<_Ajustes> {
           child: Enlace('Editar', onTap: () => abrirCuenta(context)),
         ),
       ]),
+      if (industrial)
+        _Grupo('Pultec', [
+          _Fila(
+            titulo: 'Web de Pultec',
+            subtitulo: 'Planes, precios y preguntas frecuentes',
+            child: Enlace('Abrir', onTap: () => abrirEnlace(landingUrl)),
+          ),
+        ]),
     ],
+    'Plan' => [const _PlanEmpresa()],
     'Apariencia' => [
       _Grupo(null, [
         _Fila(
@@ -460,4 +472,116 @@ class _Fila extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Plan de la empresa (solo el admin): el actual con su estado y, según el caso, pasar a Premium o gestionarlo en
+/// el portal de Stripe. El pago y las facturas los pone Stripe; aquí solo se enseña y se lleva allí.
+class _PlanEmpresa extends StatefulWidget {
+  const _PlanEmpresa();
+
+  @override
+  State<_PlanEmpresa> createState() => _PlanEmpresaState();
+}
+
+class _PlanEmpresaState extends State<_PlanEmpresa> {
+  late Future<PlanEmpresa> _plan = store.nube!.planEmpresa();
+  bool _yendo = false;
+
+  static String _fecha(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  /// Lleva a Stripe (pago o portal) en esta misma pestaña; Stripe devuelve a la app al terminar.
+  Future<void> _ir(Future<String> Function() url) async {
+    setState(() => _yendo = true);
+    try {
+      irA(await url());
+    } on YaPremium {
+      irA(await store.nube!.urlPortal());
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _yendo = false);
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir Stripe. Vuelve a intentarlo en un momento.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<PlanEmpresa>(
+    future: _plan,
+    builder: (context, s) {
+      if (s.hasError) {
+        return _Grupo(null, [
+          _Fila(
+            titulo: 'No se pudo cargar el plan',
+            subtitulo: 'Comprueba la conexión',
+            child: Enlace('Reintentar', onTap: () => setState(() => _plan = store.nube!.planEmpresa())),
+          ),
+        ]);
+      }
+      if (!s.hasData || _yendo) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            children: [
+              SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2, color: P.morado)),
+              const SizedBox(width: 12),
+              Text(_yendo ? 'Abriendo Stripe…' : 'Cargando el plan…'),
+            ],
+          ),
+        );
+      }
+      final p = s.data!;
+      final pagina = nube.urlPago;
+      final (estado, color) = switch (p) {
+        PlanEmpresa(premium: false) => ('Gratis', P.morado),
+        PlanEmpresa(pagoPendiente: true) => ('Pago pendiente', P.rojo),
+        PlanEmpresa(cancelaAlFinal: true) => ('Cancelado', P.ambar),
+        _ => ('Activo', P.verde),
+      };
+      final detalle = switch (p) {
+        PlanEmpresa(premium: false) => '1 planta, hasta 15 activos y 2 técnicos',
+        PlanEmpresa(pagoPendiente: true) => 'Falló el último cobro: actualiza la tarjeta para no perder Premium',
+        PlanEmpresa(cancelaAlFinal: true, fin: final f?) => 'Sigue activo hasta el ${_fecha(f)}; después pasa a Básico',
+        PlanEmpresa(periodo: 'anual', fin: final f?) => '468 € al año + IVA · se renueva el ${_fecha(f)}',
+        PlanEmpresa(fin: final f?) => '49 € al mes + IVA · se renueva el ${_fecha(f)}',
+        _ => 'Activo',
+      };
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Grupo(null, [
+            _Fila(
+              titulo: p.premium ? 'Premium' : 'Básico',
+              subtitulo: detalle,
+              child: Etiqueta(estado, color),
+            ),
+          ]),
+          if (!p.premium)
+            _Grupo('Pasar a Premium', [
+              _Fila(
+                titulo: 'Mensual',
+                subtitulo: '49 € al mes + IVA',
+                child: Enlace('Elegir', onTap: () => _ir(() => pagina('mensual'))),
+              ),
+              _Fila(
+                titulo: 'Anual',
+                subtitulo: '39 € al mes (468 € al año) + IVA · ahorras 120 € al año',
+                child: Enlace('Elegir', onTap: () => _ir(() => pagina('anual'))),
+              ),
+            ]),
+          if (p.conCliente)
+            _Grupo('Facturación', [
+              _Fila(
+                titulo: 'Gestionar en Stripe',
+                subtitulo: 'Tarjeta, mensual o anual, facturas y cancelar',
+                child: Enlace('Abrir', onTap: () => _ir(store.nube!.urlPortal)),
+              ),
+            ]),
+        ],
+      );
+    },
+  );
+
+  Nube get nube => store.nube!;
 }

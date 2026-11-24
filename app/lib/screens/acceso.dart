@@ -11,6 +11,7 @@ import '../widgets.dart';
 import 'cuenta.dart';
 import 'vista_trabajador.dart';
 import '../marca.dart';
+import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 
 /// Entrada de la app con Supabase: sin sesión pide acceso; con sesión carga la empresa y abre Pultec.
 class PuertaNube extends StatefulWidget {
@@ -66,6 +67,48 @@ class _PuertaNubeState extends State<PuertaNube> {
     }
   }
 
+  /// Vuelta de Stripe ya atendida (no se repite al reabrir la empresa).
+  static bool _pagoAtendido = false;
+
+  /// Vuelta de Stripe al entrar (`?pago=ok`, `?pago=cancelado` o `?pago=portal`): se pone al día el plan y se
+  /// avisa. El pago solo se abre desde Ajustes → Plan; aquí nunca se manda a nadie a Stripe.
+  Future<void> _pago() async {
+    final nube = store.nube;
+    if (nube == null || !industrial) return;
+    void aviso(String texto) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(texto)));
+
+    final vuelta = Uri.base.queryParameters['pago'];
+    if (vuelta != null && !_pagoAtendido) {
+      _pagoAtendido = true;
+      quitarDeLaDireccion('pago');
+      await Nube.olvidarPlan();
+      if (vuelta == 'portal') {
+        // Vuelve del portal de Stripe: se copia el estado (cancelación, cambio a anual…) sin avisar.
+        await nube.sincronizarPago().catchError((_) => false);
+        return;
+      }
+      if (vuelta != 'ok') {
+        if (mounted) aviso('Pago cancelado: sigues en el plan Básico. Puedes mejorar cuando quieras en Ajustes → Plan.');
+        return;
+      }
+      try {
+        final premium = await nube.sincronizarPago();
+        if (mounted) {
+          aviso(premium
+              ? 'Ya tienes Premium. ¡Gracias! La factura te llega por correo.'
+              : 'Pago recibido. Premium se activará en unos segundos.');
+        }
+      } catch (_) {
+        if (mounted) aviso('Pago recibido. Premium se activará en unos segundos.');
+      }
+      return;
+    }
+
+    // El pago NUNCA se abre solo: únicamente desde Ajustes → Plan, cuando el admin lo pide.
+    // (Se borra el plan que pudiera haber traído la landing para que no quede guardado.)
+    if (Nube.plan != null) await Nube.olvidarPlan();
+  }
+
   Future<void> _abrir(String usuario) async {
     _usuario = usuario;
     setState(() => _fase = _Fase.cargando);
@@ -77,8 +120,15 @@ class _PuertaNubeState extends State<PuertaNube> {
       if (Nube.creadaAlEntrar) {
         Nube.creadaAlEntrar = false;
         final proveedores = Supabase.instance.client.auth.currentUser?.appMetadata['providers'] as List? ?? [];
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          // Primero el nombre de la empresa (sale así en Stripe y en las facturas) y después, si toca, el pago.
+          await nombrarEmpresa(context, porGoogle: proveedores.contains('google'));
+          if (mounted) _pago();
+        });
+      } else {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) nombrarEmpresa(context, porGoogle: proveedores.contains('google'));
+          if (mounted) _pago();
         });
       }
       // Vuelve del primer enlace del cambio de correo: falta el del otro correo.
@@ -239,7 +289,7 @@ class PantallaAcceso extends StatefulWidget {
 class _PantallaAccesoState extends State<PantallaAcceso> {
   final _correo = TextEditingController();
   final _clave = TextEditingController();
-  bool _nueva = false, _enviando = false, _verClave = false;
+  bool _nueva = Nube.registro, _enviando = false, _verClave = false;
   String? _aviso;
   bool _avisoMalo = true;
 
@@ -383,6 +433,8 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         Text(
           Nube.invitacion != null
               ? (_invitacion ?? 'Mirando tu invitación…')
+              : _nueva && Nube.plan == 'premium'
+              ? 'Empiezas con Premium${Nube.periodo == 'anual' ? ' anual' : ''}: creas la cuenta y lo activas al entrar.'
               : _nueva
               ? 'Solo correo y contraseña. El nombre de la empresa, al entrar.'
               : m('Tu empresa, tus clientes y tus trabajos.'),
@@ -466,18 +518,18 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         ),
         if (!_nueva && _porConfirmar != null)
           TextButton(onPressed: _enviando ? null : _reenviar, child: const Text('Reenviar el correo de confirmación')),
-        // Pultec: solo por invitación (IPT-013); sin enlace, solo se entra.
-        if (!industrial || Nube.invitacion != null) ...[
-          const SizedBox(height: 14),
-          Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(_nueva ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?', style: suave),
-              TextButton(onPressed: _enviando ? null : _cambiarModo, child: Text(_nueva ? 'Entra' : 'Crea una')),
-            ],
-          ),
-        ],
+        const SizedBox(height: 14),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(_nueva ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?', style: suave),
+            TextButton(onPressed: _enviando ? null : _cambiarModo, child: Text(_nueva ? 'Entra' : 'Crea una')),
+          ],
+        ),
+        // Pultec: vuelta a la landing (de ahí vienen «Probar gratis» y «Entrar»).
+        if (industrial)
+          TextButton(onPressed: () => irA(landingUrl), child: const Text('← Volver a la web de Pultec')),
       ],
     );
   }

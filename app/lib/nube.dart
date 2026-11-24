@@ -17,10 +17,16 @@ import 'models.dart';
 import 'store.dart';
 import 'theme.dart' show P, TipoInfo, competencias, iconosTipo, tipos;
 
-const supabaseUrl = 'https://gvasthxiqckmekwvhtrg.supabase.co';
+/// Supabase a la que se conecta la app. Sin `--dart-define` es producción (lo que compila `tool/build_pages.sh`);
+/// en desarrollo `tool/vivo.py` pasa la Supabase local (`supabase start`) y producción no se toca.
+const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://gvasthxiqckmekwvhtrg.supabase.co');
 
 /// Clave publicable: está pensada para ir dentro de la app. La secreta (`service_role`) nunca.
-const supabasePublicable = 'sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ';
+const supabasePublicable =
+    String.fromEnvironment('SUPABASE_PUBLICABLE', defaultValue: 'sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ');
+
+/// Web pública de Pultec (la landing). En desarrollo `tool/vivo.py` pasa la local (localhost:8001).
+const landingUrl = String.fromEnvironment('LANDING_URL', defaultValue: 'https://saas-pulpo.pages.dev/landing/');
 
 /// El enlace de invitación ya se usó, caducó o no existe.
 class InvitacionNoValida implements Exception {
@@ -38,6 +44,47 @@ class SinInvitacion implements Exception {
 }
 
 /// La empresa se quedaría sin administrador (quitar o degradar al último, o borrar su cuenta).
+/// La empresa ya tiene Premium: en vez de pagar otra vez, se abre la gestión del plan.
+class YaPremium implements Exception {}
+
+/// Plan de una empresa, tal como lo ha dejado Stripe (tabla `suscripciones`).
+class PlanEmpresa {
+  /// Premium vigente: activo, en prueba o con un cobro fallido que Stripe aún reintenta.
+  final bool premium;
+  final String? estado, periodo;
+
+  /// Fin del periodo pagado: próxima renovación o, si se ha cancelado, último día de Premium.
+  final DateTime? fin;
+  final bool cancelaAlFinal;
+
+  /// Ya es cliente de Stripe (tiene tarjeta o facturas): puede abrir el portal.
+  final bool conCliente;
+
+  const PlanEmpresa({
+    this.premium = false,
+    this.estado,
+    this.periodo,
+    this.fin,
+    this.cancelaAlFinal = false,
+    this.conCliente = false,
+  });
+
+  bool get pagoPendiente => premium && estado == 'past_due';
+
+  factory PlanEmpresa.desde(Map<String, dynamic>? r) {
+    if (r == null) return const PlanEmpresa();
+    final estado = r['estado'] as String?;
+    return PlanEmpresa(
+      premium: r['plan'] == 'premium' && const ['active', 'trialing', 'past_due'].contains(estado),
+      estado: estado,
+      periodo: r['periodo'] as String?,
+      fin: DateTime.tryParse(r['fin_periodo'] as String? ?? '')?.toLocal(),
+      cancelaAlFinal: r['cancela_al_final'] == true,
+      conCliente: r['stripe_customer_id'] != null,
+    );
+  }
+}
+
 class UltimoAdministrador implements Exception {
   const UltimoAdministrador();
 }
@@ -119,6 +166,32 @@ class Nube {
     if (r.isEmpty) return null;
     final i = r.first as Map;
     return (empresa: i['empresa'] as String, rol: i['rol'] as String, trabajador: i['trabajador'] as String?);
+  }
+
+  /// Viene de «Probar gratis» / «Empezar con Premium» de la landing (`?registro=1`): abre en «Crea tu cuenta».
+  static bool registro = false;
+
+  /// Plan elegido en la landing (`?plan=premium&periodo=anual`), para el paso de pago. Se guarda en el navegador
+  /// porque el enlace de confirmar el correo vuelve a la app sin esos parámetros.
+  static String? plan, periodo;
+
+  static Future<void> recordarPlan(Map<String, String> enlace) async {
+    final prefs = await SharedPreferences.getInstance();
+    registro = enlace['registro'] == '1';
+    if (enlace['plan'] case final p? when p.isNotEmpty) {
+      await prefs.setString('pultec_plan', p);
+      await prefs.setString('pultec_periodo', enlace['periodo'] == 'anual' ? 'anual' : 'mensual');
+    }
+    plan = prefs.getString('pultec_plan');
+    periodo = prefs.getString('pultec_periodo');
+  }
+
+  /// El plan de la landing ya se ha usado (se ha abierto el pago o no tocaba): no se vuelve a ofrecer solo.
+  static Future<void> olvidarPlan() async {
+    plan = periodo = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pultec_plan');
+    await prefs.remove('pultec_periodo');
   }
 
   static Future<void> _olvidarInvitacion() async {
@@ -441,6 +514,43 @@ class Nube {
   /// Manda al cliente el PDF del parte (función `enviar-parte`); la función no lo repite si ya se mandó.
   Future<void> enviarParte(String informeId, Uint8List pdf) =>
       _db.functions.invoke('enviar-parte', body: {'informe_id': informeId, 'pdf': base64Encode(pdf)});
+
+  // ── Plan y pago (Stripe) ──
+  // El plan es de la empresa. La app solo lo lee: lo escriben las funciones con lo que diga Stripe.
+
+  /// Plan de la empresa (sin fila o sin suscripción viva = Básico).
+  Future<PlanEmpresa> planEmpresa() async {
+    final r = await _db.from('suscripciones').select().eq('empresa_id', empresaId).maybeSingle();
+    return PlanEmpresa.desde(r);
+  }
+
+  /// Enlace a la página de pago de Stripe para pasar a Premium. Lanza [YaPremium] si ya paga.
+  Future<String> urlPago(String periodo) async {
+    try {
+      final r = await _db.functions.invoke(
+        'crear-pago',
+        body: {'empresa_id': empresaId, 'periodo': periodo, 'volver': _aqui()},
+      );
+      return (r.data as Map)['url'] as String;
+    } on FunctionException catch (e) {
+      if (e.status == 409) throw YaPremium();
+      rethrow;
+    }
+  }
+
+  /// Enlace al portal de Stripe: tarjeta, mensual/anual, facturas y cancelar.
+  Future<String> urlPortal() async {
+    // Vuelve con ?pago=portal: la app sincroniza el plan (p. ej. si ha cancelado o cambiado a anual).
+    final volver = Uri.parse(_aqui()).replace(queryParameters: {'pago': 'portal'}).toString();
+    final r = await _db.functions.invoke('portal-pago', body: {'empresa_id': empresaId, 'volver': volver});
+    return (r.data as Map)['url'] as String;
+  }
+
+  /// Pide al servidor que copie el estado actual de Stripe (al volver del pago o del portal). ¿Queda en Premium?
+  Future<bool> sincronizarPago() async {
+    final r = await _db.functions.invoke('sincronizar-pago', body: {'empresa_id': empresaId});
+    return (r.data as Map)['plan'] == 'premium';
+  }
 
   // ── Documentos de los equipos ──
 

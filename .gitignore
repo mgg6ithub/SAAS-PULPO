@@ -25,3 +25,6 @@ video-industrial/renders/
 video-industrial/.snap*/
 video-industrial/.hyperframes/
 video-industrial/.thumbnails/
+
+# Python
+__pycache__/

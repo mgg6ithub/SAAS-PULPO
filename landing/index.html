@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>try { const t = localStorage.getItem("pultec-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -44,8 +44,8 @@
           <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
           <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         </button>
-        <a class="link link--quiet" href="https://saas-pulpo.pages.dev/industrial/">Entrar</a>
-        <a class="btn btn--small" href="https://saas-pulpo.pages.dev/industrial/">Probar gratis</a>
+        <a class="link link--quiet" data-acceso="entrar" href="https://saas-pulpo.pages.dev/industrial/">Entrar</a>
+        <a class="btn btn--small" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1">Probar gratis</a>
       </div>
     </div>
   </header>
@@ -59,7 +59,7 @@
         <h1 class="reveal" style="--d: .06s">Tus mantenimientos,<br> <span class="accent">en piloto automático.</span></h1>
         <p class="lead reveal" style="--d: .12s">Configuras tus máquinas una vez y Pultec se encarga de que nada se pase de fecha.</p>
         <div class="hero__ctas reveal" style="--d: .18s">
-          <a class="btn btn--big" href="https://saas-pulpo.pages.dev/industrial/">Probar Pultec gratis <span class="btn__arrow" aria-hidden="true">→</span></a>
+          <a class="btn btn--big" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1">Probar Pultec gratis <span class="btn__arrow" aria-hidden="true">→</span></a>
           <a class="link" href="#como-funciona">Ver cómo funciona</a>
         </div>
       </div>
@@ -332,7 +332,7 @@
             <h3>Básico</h3>
             <p class="plan__desc">Para empezar a ordenar el mantenimiento de una planta pequeña.</p>
             <p class="plan__price"><b>0 €</b><span>para siempre</span></p>
-            <a class="btn btn--ghost btn--block" href="https://saas-pulpo.pages.dev/industrial/">Empezar gratis</a>
+            <a class="btn btn--ghost btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=basico">Empezar gratis</a>
             <ul class="plan__list">
               <li>1 planta y hasta 15 activos</li>
               <li>2 técnicos</li>
@@ -347,7 +347,7 @@
             <h3>Premium</h3>
             <p class="plan__desc">Para equipos de mantenimiento que quieren tenerlo todo controlado.</p>
             <p class="plan__price"><b data-price-mes="49 €" data-price-anio="39 €">49 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p>
-            <a class="btn btn--block" href="https://saas-pulpo.pages.dev/industrial/">Empezar con Premium</a>
+            <a class="btn btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=premium&amp;periodo=mensual" data-plan-premium>Empezar con Premium</a>
             <ul class="plan__list">
               <li><b>Todo lo del Básico</b></li>
               <li>Activos y componentes ilimitados</li>
@@ -412,7 +412,7 @@
         <video class="final__pulpo autoplay" muted loop playsinline preload="none" poster="assets/pultec.png" data-src="assets/video/pulpo-saluda.mp4" aria-hidden="true"></video>
         <h2>Empieza hoy.<br> <span class="accent">Tu próxima orden se creará sola.</span></h2>
         <p class="lead">Da de alta tu primera máquina en dos minutos.</p>
-        <a class="btn btn--big" href="https://saas-pulpo.pages.dev/industrial/">Probar Pultec gratis <span class="btn__arrow" aria-hidden="true">→</span></a>
+        <a class="btn btn--big" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1">Probar Pultec gratis <span class="btn__arrow" aria-hidden="true">→</span></a>
       </div>
     </section>
   </main>
@@ -427,6 +427,40 @@
     </div>
   </footer>
 
-  <script src="main.js?v=4" defer></script>
+  <!-- Entrar / crear cuenta sin salir de la landing (main.js). Al terminar lleva a la app con la sesión puesta.
+       Sin JS, los botones siguen llevando a la pantalla de acceso de la app. -->
+  <dialog class="acceso" id="acceso" aria-labelledby="acceso-titulo">
+    <form class="acceso__caja" id="acceso-form" novalidate>
+      <button type="button" class="acceso__cerrar" data-cerrar aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <span class="brand acceso__marca"><img src="assets/pultec.png" alt="" width="28" height="28">Pultec</span>
+      <p class="acceso__plan" id="acceso-plan" hidden></p>
+      <h2 id="acceso-titulo">Crea tu cuenta</h2>
+      <p class="acceso__sub" id="acceso-sub"></p>
+
+      <button type="button" class="btn btn--ghost btn--block" id="acceso-google" hidden>Continuar con Google</button>
+      <p class="acceso__o" id="acceso-o" hidden><span>o con tu correo</span></p>
+
+      <label class="campo">
+        <span>Correo</span>
+        <input type="email" id="acceso-correo" autocomplete="email" inputmode="email" placeholder="nombre@empresa.com" required>
+      </label>
+      <label class="campo" id="acceso-campo-clave">
+        <span>Contraseña</span>
+        <span class="campo__clave">
+          <input type="password" id="acceso-clave" autocomplete="new-password" minlength="6" required>
+          <button type="button" class="campo__ver" id="acceso-ver" aria-pressed="false">Ver</button>
+        </span>
+      </label>
+      <button type="button" class="acceso__olvido" id="acceso-olvido" hidden>¿Has olvidado la contraseña?</button>
+
+      <p class="acceso__aviso" id="acceso-aviso" role="status" hidden></p>
+      <button type="submit" class="btn btn--block" id="acceso-enviar">Crear cuenta</button>
+      <p class="acceso__cambio"><span id="acceso-cambio-texto"></span> <button type="button" id="acceso-cambio"></button></p>
+    </form>
+  </dialog>
+
+  <script src="main.js?v=8" defer></script>
 </body>
 </html>

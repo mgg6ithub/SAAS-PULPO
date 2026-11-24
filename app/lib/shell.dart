@@ -909,8 +909,7 @@ class _BarraState extends State<_Barra> {
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       // Pultec: cuántas órdenes asignadas van atrasadas (como las vencidas de Planificación).
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, industrial ? otsAtrasadas().length : 0),
-      // Estadísticas, oculta de momento (pedido 20/11/2026).
-      // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
+      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     final subs = [if (conUso && !iconos) (Icons.event_note_outlined, 'Uso de activos', Seccion.usoActivos)];
@@ -1216,8 +1215,7 @@ class _BarraInferior extends StatelessWidget {
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       // Pultec: cuántas órdenes asignadas van atrasadas (como las vencidas de Planificación).
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, industrial ? otsAtrasadas().length : 0),
-      // Estadísticas, oculta de momento (pedido 20/11/2026).
-      // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
+      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     return Container(

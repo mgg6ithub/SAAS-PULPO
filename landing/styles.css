@@ -442,3 +442,38 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal { opacity: 1; transform: none; }
 }
+
+/* ─────────── Entrar / crear cuenta (ventana sobre la landing) ─────────── */
+:where(.acceso button:not(.btn)) { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.acceso { margin: auto; padding: 0; border: 0; background: transparent; color: var(--ink); width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: visible; }
+.acceso::backdrop { background: rgba(13, 12, 19, .42); backdrop-filter: blur(4px); }
+.acceso[open] .acceso__caja { animation: acceso-entra .35s var(--ease); }
+@keyframes acceso-entra { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+.acceso__caja { position: relative; display: flex; flex-direction: column; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 32px; max-height: calc(100dvh - 32px); overflow-y: auto; }
+.acceso__cerrar { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--muted); }
+.acceso__cerrar:hover { background: var(--card-2); color: var(--ink); }
+.acceso__cerrar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.acceso__marca { font-size: 17px; }
+.acceso__plan { align-self: flex-start; height: 26px; padding: 0 12px; border-radius: 13px; background: var(--purple-soft); color: var(--purple-ink); font-size: 13px; font-weight: 650; line-height: 26px; }
+.acceso h2 { font-size: 28px; letter-spacing: -0.035em; line-height: 1.1; margin-top: 4px; }
+.acceso__sub { color: var(--muted); font-size: 15px; margin-top: -6px; }
+.acceso__o { display: flex; align-items: center; gap: 12px; color: var(--soft); font-size: 13.5px; }
+.acceso__o::before, .acceso__o::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.campo { display: grid; gap: 6px; }
+.campo > span:first-child { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.campo input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; font-size: 16px; outline: none; transition: border-color .15s, box-shadow .15s; }
+.campo input::placeholder { color: var(--soft); }
+.campo input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--halo); }
+.campo__clave { position: relative; display: block; }
+.campo__clave input { padding-right: 64px; }
+.campo__ver { position: absolute; right: 6px; top: 6px; height: 36px; padding: 0 10px; border-radius: 9px; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.campo__ver:hover { color: var(--ink); background: var(--card-2); }
+.acceso__olvido { align-self: flex-start; margin-top: -4px; color: var(--muted); font-size: 14px; font-weight: 600; }
+.acceso__olvido:hover, .acceso__cambio button:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.acceso__aviso { padding: 12px 14px; border-radius: 12px; font-size: 14.5px; line-height: 1.45; background: var(--red-soft); color: var(--red-ink); }
+.acceso__aviso.es-bueno { background: var(--green-soft); color: var(--green-ink); }
+.acceso__aviso button { display: inline; margin-left: 4px; color: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.acceso .btn[disabled] { opacity: .6; pointer-events: none; }
+.acceso__cambio { text-align: center; color: var(--muted); font-size: 14.5px; }
+.acceso__cambio button { color: var(--purple-ink); font-weight: 650; }
+@media (max-width: 640px) { .acceso__caja { padding: 26px 20px; } .acceso h2 { font-size: 24px; } }

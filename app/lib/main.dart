@@ -41,6 +41,7 @@ Future<void> main() async {
   } else {
     await Nube.iniciar();
     await Nube.recordarInvitacion(Uri.base.queryParameters['invitacion']);
+    await Nube.recordarPlan(Uri.base.queryParameters);
   }
   if (industrial) ponerPestana('favicon.png', Marca.nombre);
   runApp(PultecApp(local: local));
