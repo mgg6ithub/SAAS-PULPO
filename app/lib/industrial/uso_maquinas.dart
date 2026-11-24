@@ -21,7 +21,6 @@ import 'planes.dart'
         esExcepcion,
         ponerTurnos,
         volverAlPatron,
-        proximoPlan,
         raizActivo,
         reprogramarOts;
 
@@ -301,14 +300,16 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
 
   double _horas(Activo a, Iterable<DateTime> dias) => dias.fold(0, (t, d) => t + turnosDe(a, d)) * a.horasTurno;
 
-  /// Mantenimientos activos de cada máquina (y de sus componentes) por día, en el rango que se ve.
+  /// Mantenimientos de cada máquina (y de sus componentes) por día, en el rango que se ve.
+  // Solo los que ya tienen su orden de trabajo generada (abierta), en la fecha de esa OT: así se ve aquí cuándo
+  // cae cada mantenimiento de verdad. Sin OT, no sale.
   Map<DateTime, List<_Marca>> _marcas(List<Activo> activos, DateTime desde, DateTime hasta) {
     final out = <DateTime, List<_Marca>>{};
     final ids = {for (final a in activos) a.id: a};
     for (final p in store.planes.where((p) => p.activa)) {
       final a = ids[raizActivo(p.activoId)?.id];
       if (a == null) continue;
-      final d = proximoPlan(p);
+      final d = _fechaOt(p.id);
       if (d == null || d.isBefore(desde) || d.isAfter(hasta)) continue;
       (out[DateUtils.dateOnly(d)] ??= []).add((activo: a, plan: p, estimada: p.proximo == null && p.cadaHoras != null));
     }
