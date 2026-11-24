@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../ajustes.dart' show ajustes;
 import '../widgets.dart';
 import '../marca.dart' show Marca;
 import '../screens/vista_dias.dart' show meses, diasSemana, lunesDe;
@@ -573,18 +574,26 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   children: [
                     _cabecera(),
                     const SizedBox(height: 10),
+                    // El consejo solo ocupa sitio (con su hueco) mientras no se cierra.
+                    ListenableBuilder(
+                      listenable: ajustes,
+                      builder: (context, _) => ajustes.consejoCerrado(_claveConsejo)
+                          ? const SizedBox.shrink()
+                          : const Padding(
+                              padding: EdgeInsets.only(bottom: 10),
+                              child: Consejo(
+                                'Cada máquina tiene su patrón semanal; aquí marcas las excepciones. Selecciona días '
+                                '(tocando, arrastrando o por el día de la semana) y toca una máquina para elegir qué '
+                                'hace esos días.',
+                                clave: _claveConsejo,
+                              ),
+                            ),
+                    ),
                     // Debajo del título: el activo que se ve (o todos); abre y cierra la lista de activos.
                     if (activos.isNotEmpty) ...[
                       Align(alignment: Alignment.centerLeft, child: _botonActivos(activos)),
                       const SizedBox(height: 10),
                     ],
-                    const Consejo(
-                      'Cada máquina tiene su patrón semanal; aquí marcas las excepciones. Selecciona días (tocando, '
-                      'arrastrando o por el día de la semana) y toca una máquina para elegir qué hace '
-                      'esos días.',
-                      clave: 'uso-activos-5',
-                    ),
-                    const SizedBox(height: 12),
                     if (activos.isEmpty)
                       const Expanded(
                         child: Vacio(
@@ -654,13 +663,60 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     );
   }
 
+  static const _claveConsejo = 'uso-activos-5';
+
+  /// El activo que se ve (o todos), del mismo ancho que la lista y con el color del activo: abre y cierra la lista.
   Widget _botonActivos(List<Activo> activos) {
-    final a = activos.where((x) => x.id == _elegida).firstOrNull;
-    return BotonAccion(
-      a == null ? 'Todos los activos' : a.titulo,
-      icono: a == null ? Marca.iconoCliente : iconoIndustrial(a.icono),
-      tooltip: _panel ? 'Ocultar la lista de activos' : 'Ver la lista de activos',
-      onPressed: () => setState(() => _panel = !_panel),
+    final i = activos.indexWhere((x) => x.id == _elegida);
+    final a = i < 0 ? null : activos[i];
+    final color = a == null ? P.textoSuave : _colorDe(i);
+    return Tooltip(
+      message: _panel ? 'Ocultar la lista de activos' : 'Ver la lista de activos',
+      child: Material(
+        color: a == null ? P.superficie : Color.alphaBlend(color.withValues(alpha: .08), P.superficie),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(P.radioControl),
+          side: BorderSide(color: a == null ? P.borde : color.withValues(alpha: .45)),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(P.radioControl),
+          hoverColor: P.hover,
+          onTap: () => setState(() => _panel = !_panel),
+          child: SizedBox(
+            width: _anchoPanel,
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  a == null
+                      ? Icon(Marca.iconoCliente, size: 17, color: color)
+                      : IconoActivo(a.icono, size: 17, color: color),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      a == null ? 'Todos los activos' : a.nombre.isEmpty ? a.tag : a.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (a != null && a.tag.isNotEmpty && a.nombre.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Text(a.tag, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+                  ],
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: _panel ? .5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.expand_more_rounded, size: 18, color: P.textoSuave),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1516,16 +1572,10 @@ class _Maquinas extends StatelessWidget {
         ('sel0', Text('Parada en $dias', style: TextStyle(color: P.rojo))),
       ];
     }
+    // Lo justo: el patrón semanal decide los turnos; el resto se hace seleccionando días.
     return [
-      ('editar', const Text('Editar activo')),
       ('patron', const Text('Patrón semanal…')),
-      ('lab1', const Text('1 turno los laborables del mes')),
-      if (maxTurnos(a) >= 2) ('lab2', const Text('2 turnos los laborables del mes')),
-      if (maxTurnos(a) >= 3) ('lab3', const Text('3 turnos los laborables del mes')),
-      ('todos1', const Text('1 turno todos los días del mes')),
-      ('copiar', const Text('Copiar el mes anterior')),
-      if (a.patron.length == 7) ('patronMes', const Text('Quitar las excepciones del mes')),
-      ('vaciar', Text('Vaciar el mes', style: TextStyle(color: P.rojo))),
+      ('editar', const Text('Editar activo')),
     ];
   }
 
@@ -1551,9 +1601,11 @@ class _Maquinas extends StatelessWidget {
           // Sin días elegidos: tocarla abre su mes; la flecha saca sus acciones.
           : Tooltip(
               message: elegida == a.id ? 'Toca para volver a ver todas' : 'Toca para ver su mes; arrástrala a un día',
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(P.radioControl),
+                  hoverColor: P.hover,
                   onTap: () => onElegir(a),
                   child: _Ficha(
                     a,
@@ -1594,7 +1646,7 @@ class _Maquinas extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Todas las máquinas',
+                  'Todos los activos',
                   style: TextStyle(fontWeight: FontWeight.w600, color: elegida == null ? P.morado : P.texto),
                 ),
               ),
@@ -1755,12 +1807,14 @@ class _Ficha extends StatelessWidget {
     duration: const Duration(milliseconds: 160),
     height: 48,
     padding: EdgeInsets.fromLTRB(10, 0, menu == null ? 10 : 4, 0),
+    // Sobria: sin fondo ni borde (el color, solo en el icono); la elegida, con un tinte y borde de su color.
     decoration: BoxDecoration(
-      color: Color.alphaBlend(color.withValues(alpha: aplicar || elegida ? .14 : .05), P.superficie),
+      color: elegida || aplicar
+          ? Color.alphaBlend(color.withValues(alpha: .08), P.superficie)
+          : (elevada ? P.superficie : Colors.transparent),
       borderRadius: BorderRadius.circular(P.radioControl),
       border: Border.all(
-        color: elevada || aplicar || elegida ? color : color.withValues(alpha: .3),
-        width: aplicar || elegida ? 1.5 : 1,
+        color: elegida || aplicar || elevada ? color.withValues(alpha: .45) : Colors.transparent,
       ),
       boxShadow: elevada ? [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 12)] : null,
     ),
@@ -1785,7 +1839,7 @@ class _Ficha extends StatelessWidget {
                   ),
                   if (a.tag.isNotEmpty && a.nombre.isNotEmpty) ...[
                     const SizedBox(width: 6),
-                    Text(a.tag, style: TextStyle(fontSize: 11.5, color: color, fontWeight: FontWeight.w600)),
+                    Text(a.tag, style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
                   ],
                 ],
               ),
