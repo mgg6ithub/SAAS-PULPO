@@ -161,7 +161,7 @@ const conTema = (url) => {
     clave.autocomplete = modo === "entrar" ? "current-password" : "new-password";
     const p = $("acceso-plan");
     p.hidden = !plan || modo !== "registro";
-    p.textContent = `Plan ${plan === "esencial" ? "Esencial" : "Premium"} ${periodo === "anual" ? "anual" : "mensual"}`;
+    p.textContent = `Plan ${{ basico: "Básico", estandar: "Estándar", premium: "Premium" }[plan] ?? ""} ${periodo === "anual" ? "anual" : "mensual"}`;
   };
 
   const ponerAviso = (texto, bueno = false, accion = null) => {
