@@ -538,41 +538,12 @@ Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => s
     child: Stack(
       fit: StackFit.expand,
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(-.7, -.8),
-              radius: 1.3,
-              colors: [P.morado.withValues(alpha: .16), P.morado.withValues(alpha: 0)],
-            ),
-          ),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(.9, .9),
-              radius: 1.1,
-              colors: [P.morado.withValues(alpha: .10), P.morado.withValues(alpha: 0)],
-            ),
-          ),
-        ),
-        // Cuadrícula de 64 px como la de la landing, que se desvanece hacia los bordes.
-        ShaderMask(
-          blendMode: BlendMode.dstIn,
-          shaderCallback: (r) => const RadialGradient(
-            center: Alignment(0, -.35),
-            radius: .9,
-            colors: [Colors.white, Colors.transparent],
-            stops: [.3, 1],
-          ).createShader(r),
-          child: CustomPaint(painter: _Cuadricula(P.texto.withValues(alpha: .06))),
-        ),
-        const Positioned(right: -80, bottom: -90, child: Opacity(opacity: .07, child: LogoPultec(size: 460))),
+        const FondoMarca(),
         Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: const BoxConstraints(maxWidth: 620),
               padding: const EdgeInsets.fromLTRB(48, 48, 48, 36),
               decoration: BoxDecoration(
                 color: P.superficie,
@@ -587,30 +558,6 @@ Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => s
     ),
   ),
 );
-
-/// Cuadrícula de fondo como la de la landing: líneas finas cada 64 px, centrada arriba.
-class _Cuadricula extends CustomPainter {
-  final Color color;
-  const _Cuadricula(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const lado = 64.0;
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = 1;
-    final x0 = (size.width / 2) % lado;
-    for (var x = x0; x < size.width; x += lado) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), p);
-    }
-    for (var y = 0.0; y < size.height; y += lado) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Cuadricula o) => o.color != color;
-}
 
 class _NombrarEmpresa extends StatefulWidget {
   final bool porGoogle;

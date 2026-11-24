@@ -257,13 +257,18 @@ class _Marco extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: P.fondo,
-    body: Center(
+    // Como la landing: degradado de la marca y cuadrícula detrás de la tarjeta.
+    body: Stack(
+      fit: StackFit.expand,
+      children: [
+        const FondoMarca(),
+        Center(
       child: SingleChildScrollView(
         padding: margenPagina,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 380),
+          constraints: const BoxConstraints(maxWidth: 460),
           child: Tarjeta(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(36, 36, 36, 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -276,6 +281,8 @@ class _Marco extends StatelessWidget {
           ),
         ),
       ),
+    ),
+      ],
     ),
   );
 }
