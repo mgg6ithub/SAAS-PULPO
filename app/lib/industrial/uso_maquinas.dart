@@ -444,13 +444,18 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     );
   }
 
-  Future<void> _vaciarSel(List<Activo> activos) => _cambiar('Sin turnos en ${_dias(_sel.length)}', _sel, activos, () {
-    for (final a in activos) {
-      for (final d in _sel) {
-        ponerTurnos(a, d, 0);
+  Future<void> _vaciarSel(List<Activo> activos) => _cambiar(
+    '${activos.length == 1 ? '${_quien(activos.first)}: s' : 'S'}in turnos en ${_dias(_sel.length)}',
+    _sel,
+    activos,
+    () {
+      for (final a in activos) {
+        for (final d in _sel) {
+          ponerTurnos(a, d, 0);
+        }
       }
-    }
-  });
+    },
+  );
 
   /// Marca (con su nombre) o desmarca como festivos los días seleccionados.
   Future<void> _festivoSel(List<Activo> activos) async {
@@ -793,14 +798,16 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   Widget _barraSeleccion(List<Activo> activos) {
     final delMes = _diasMes.toList();
     final festivos = _sel.every((d) => store.festivo(d) != null);
+    final elegido = activos.where((a) => a.id == _elegida).firstOrNull;
     return BarraSeleccion(
       seleccionados: _sel.length,
       total: delMes.length,
       nombre: 'días',
       textoEliminar: 'Vaciar días',
       onTodos: () => _alternar(delMes),
-      onEliminar: () => _vaciarSel(activos),
-      eliminar: _menuVaciar(activos),
+      // Con un activo elegido, vacía solo los suyos, sin preguntar de cuál; con todos, el menú para elegir.
+      onEliminar: () => _vaciarSel(elegido == null ? activos : [elegido]),
+      eliminar: elegido == null ? _menuVaciar(activos) : null,
       onSalir: _deseleccionar,
       acciones: [
         TextButton(
@@ -1879,13 +1886,12 @@ class _Ficha extends StatelessWidget {
     padding: EdgeInsets.fromLTRB(10, 0, menu == null ? 10 : 4, 0),
     // Sobria: sin fondo ni borde (el color, solo en el icono); la elegida, con un tinte y borde de su color.
     decoration: BoxDecoration(
-      color: elegida || aplicar
+      // Con días seleccionados no se tiñe ninguna más (el tooltip dice que tocarla aplica a esos días).
+      color: elegida
           ? Color.alphaBlend(color.withValues(alpha: .08), P.superficie)
           : (elevada ? P.superficie : Colors.transparent),
       borderRadius: BorderRadius.circular(P.radioControl),
-      border: Border.all(
-        color: elegida || aplicar || elevada ? color.withValues(alpha: .45) : Colors.transparent,
-      ),
+      border: Border.all(color: elegida || elevada ? color.withValues(alpha: .45) : Colors.transparent),
       boxShadow: elevada ? [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 12)] : null,
     ),
     child: Row(
