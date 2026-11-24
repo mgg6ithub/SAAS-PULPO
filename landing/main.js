@@ -100,16 +100,30 @@ const conTema = (url) => {
   addEventListener("resize", dibujar);
   document.fonts?.ready.then(dibujar);
 
-  // Facturación mensual / anual
-  document.querySelectorAll("[data-billing]").forEach((b) => b.addEventListener("click", () => {
-    const k = b.dataset.billing === "mes" ? "Mes" : "Anio";
-    document.querySelectorAll("[data-billing]").forEach((x) => x.classList.toggle("is-on", x === b));
-    document.querySelectorAll("[data-price-mes]").forEach((p) => { p.textContent = p.dataset["price" + k]; });
+  // Facturación mensual / anual y precios con o sin IVA (21 %)
+  let k = "Mes", iva = false;
+  const euros = (txt) => {
+    const n = parseFloat(txt) * (iva ? 1.21 : 1);
+    return n.toLocaleString("es-ES", { maximumFractionDigits: 2, minimumFractionDigits: Number.isInteger(n) ? 0 : 2 }) + " €";
+  };
+  const precios = () => {
+    document.querySelectorAll("[data-price-mes]").forEach((p) => { p.textContent = euros(p.dataset["price" + k]); });
     document.querySelectorAll("[data-per-mes]").forEach((p) => { p.textContent = p.dataset["per" + k]; });
+    document.querySelectorAll("[data-iva-nota]").forEach((p) => { p.textContent = iva ? "Precios con IVA (21 %)." : "Precios sin IVA."; });
     // Los botones de los planes llevan el periodo elegido a la app (lo usará el paso de pago).
     document.querySelectorAll("[data-plan-pago]").forEach((a) => {
       a.href = a.href.replace(/periodo=\w+/, "periodo=" + (k === "Mes" ? "mensual" : "anual"));
     });
+  };
+  document.querySelectorAll("[data-billing]").forEach((b) => b.addEventListener("click", () => {
+    k = b.dataset.billing === "mes" ? "Mes" : "Anio";
+    document.querySelectorAll("[data-billing]").forEach((x) => x.classList.toggle("is-on", x === b));
+    precios();
+  }));
+  document.querySelectorAll("[data-iva]").forEach((b) => b.addEventListener("click", () => {
+    iva = b.dataset.iva === "con";
+    document.querySelectorAll("[data-iva]").forEach((x) => x.classList.toggle("is-on", x === b));
+    precios();
   }));
 
 })();

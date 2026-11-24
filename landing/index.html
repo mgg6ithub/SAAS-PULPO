@@ -298,9 +298,15 @@
             <h2>Prueba 14 días gratis.</h2>
             <p class="head__after">Sin tarjeta. Después eliges plan.</p>
           </div>
-          <div class="billing" role="group" aria-label="Facturación">
-            <button type="button" class="is-on" data-billing="mes">Mensual</button>
-            <button type="button" data-billing="anio">Anual <em>−20 %</em></button>
+          <div class="billing-grupo">
+            <div class="billing" role="group" aria-label="Facturación">
+              <button type="button" class="is-on" data-billing="mes">Mensual</button>
+              <button type="button" data-billing="anio">Anual <em>−20 %</em></button>
+            </div>
+            <div class="billing" role="group" aria-label="IVA">
+              <button type="button" class="is-on" data-iva="sin">Sin IVA</button>
+              <button type="button" data-iva="con">Con IVA</button>
+            </div>
           </div>
         </div>
 
@@ -348,7 +354,7 @@
           <article class="plan">
             <h3>Business</h3>
             <p class="plan__desc">Para varias plantas o delegaciones desde una misma cuenta.</p>
-            <p class="plan__price"><span>desde</span><b>399 €</b><span>al mes</span></p>
+            <p class="plan__price"><span>desde</span><b data-price-mes="399 €" data-price-anio="399 €">399 €</b><span>al mes</span></p>
             <a class="btn btn--ghost btn--block" href="https://saas-pulpo.pages.dev/industrial/">Contactar</a>
             <ul class="plan__list">
               <li><b>Todo lo del Premium</b></li>
@@ -358,7 +364,7 @@
             </ul>
           </article>
         </div>
-        <p class="plans__note">Precios sin IVA. Todos los planes empiezan con 14 días gratis, sin tarjeta.</p>
+        <p class="plans__note"><span data-iva-nota>Precios sin IVA.</span> Todos los planes empiezan con 14 días gratis, sin tarjeta.</p>
       </div>
     </section>
 
