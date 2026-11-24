@@ -14,7 +14,13 @@
         },
         {
           "image-name": "pulpo.svg",
-          "name": "pulpo"
+          "name": "pulpo",
+          "fill": {
+            "linear-gradient": [
+              "display-p3:0.62000,0.45000,1.00000,1.00000",
+              "display-p3:0.30000,0.10000,0.75000,1.00000"
+            ]
+          }
         }
       ],
       "shadow": {
