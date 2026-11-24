@@ -3034,46 +3034,27 @@ class _DesplazarTablaState extends State<DesplazarTabla> {
 }
 
 
-/// Fondo de las pantallas de entrada (acceso, nombre de la empresa), como el de la landing: degradados suaves del
-/// morado de la marca, la cuadrícula de 64 px que se desvanece hacia los bordes y el pulpo grande difuminado.
+/// Fondo de las pantallas de entrada (acceso, nombre de la empresa), como el de la landing: blanco con una
+/// cuadrícula de 64 px muy suave que se desvanece hacia los bordes.
 class FondoMarca extends StatelessWidget {
   const FondoMarca({super.key});
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(-.7, -.8),
-              radius: 1.3,
-              colors: [P.morado.withValues(alpha: .16), P.morado.withValues(alpha: 0)],
-            ),
-          ),
+    child: ColoredBox(
+      color: P.superficie,
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (r) => const RadialGradient(
+          center: Alignment(0, -.4),
+          radius: .75,
+          colors: [Colors.white, Colors.transparent],
+          stops: [.2, 1],
+        ).createShader(r),
+        child: RepaintBoundary(
+          child: SizedBox.expand(child: CustomPaint(painter: _Cuadricula(P.texto.withValues(alpha: .05)))),
         ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(.9, .9),
-              radius: 1.1,
-              colors: [P.morado.withValues(alpha: .10), P.morado.withValues(alpha: 0)],
-            ),
-          ),
-        ),
-        ShaderMask(
-          blendMode: BlendMode.dstIn,
-          shaderCallback: (r) => const RadialGradient(
-            center: Alignment(0, -.3),
-            radius: .95,
-            colors: [Colors.white, Colors.transparent],
-            stops: [.35, 1],
-          ).createShader(r),
-          child: RepaintBoundary(child: CustomPaint(painter: _Cuadricula(P.texto.withValues(alpha: .09)))),
-        ),
-        const Positioned(right: -80, bottom: -90, child: Opacity(opacity: .07, child: LogoPultec(size: 460))),
-      ],
+      ),
     ),
   );
 }

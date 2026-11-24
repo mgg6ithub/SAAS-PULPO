@@ -534,7 +534,7 @@ Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => s
     );
   },
   pageBuilder: (_, _, _) => Material(
-    color: P.fondo,
+    color: P.superficie,
     child: Stack(
       fit: StackFit.expand,
       children: [

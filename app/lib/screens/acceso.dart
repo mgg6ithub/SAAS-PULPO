@@ -256,8 +256,8 @@ class _Marco extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: P.fondo,
-    // Como la landing: degradado de la marca y cuadrícula detrás de la tarjeta.
+    backgroundColor: P.superficie,
+    // Como la landing: fondo blanco con la cuadrícula suave detrás de la tarjeta.
     body: Stack(
       fit: StackFit.expand,
       children: [
