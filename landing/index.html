@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="assets/app/inicio.webp" media="(min-width: 900px)">
   <script>/* Tema: el que traiga la app (?tema=oscuro|claro, se recuerda) o el guardado; claro por defecto. */ let t = null; const q = new URLSearchParams(location.search).get("tema"); if (q === "oscuro" || q === "claro") { t = q === "oscuro" ? "dark" : "light"; try { localStorage.setItem("pultec-tema", t); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("tema"); history.replaceState(null, "", u); } else { try { t = localStorage.getItem("pultec-tema"); } catch (e) {} } document.documentElement.dataset.theme = t || "light";</script>
-  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -312,42 +312,82 @@
 
         <div class="plans">
           <article class="plan">
-            <h3>Básico</h3>
-            <p class="plan__desc">Para quien lleva el mantenimiento en solitario.</p>
-            <p class="plan__price"><b data-price-mes="39 €" data-price-anio="31 €">39 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p>
+            <div class="plan__top"><h3>Básico</h3></div>
+            <p class="plan__desc">Para quien lleva solo el mantenimiento de una planta pequeña.</p>
+            <div class="plan__precio"><span class="plan__desde"></span><p class="plan__price"><b data-price-mes="39 €" data-price-anio="31 €">39 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p></div>
             <a class="btn btn--ghost btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=basico&amp;periodo=mensual" data-plan-pago>Probar 14 días gratis</a>
+            <p class="plan__nota">Sin operarios incluidos. Operarios extra a <span data-price-mes="12 €" data-price-anio="12 €">12 €</span> al mes cada uno.</p>
+            <p class="plan__incluye">Para empezar:</p>
             <ul class="plan__list">
               <li>1 administrador</li>
+              <li>Hasta 100 activos<small>con su árbol de componentes</small></li>
               <li>Órdenes de trabajo automáticas</li>
-              <li>Calendario y activos</li>
-              <li>Operarios extra con cuota mensual</li>
-            </ul>
-          </article>
-
-          <article class="plan plan--pro">
-            <div class="plan__top"><h3>Premium</h3><span class="plan__badge">Más elegido</span></div>
-            <p class="plan__desc">Para equipos de mantenimiento que quieren tenerlo todo controlado.</p>
-            <p class="plan__price"><b data-price-mes="179 €" data-price-anio="143 €">179 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p>
-            <a class="btn btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=premium&amp;periodo=mensual" data-plan-pago>Probar 14 días gratis</a>
-            <ul class="plan__list">
-              <li><b>Todo lo del Básico</b></li>
-              <li>5 administradores y 25 operarios</li>
-              <li>App del operario en el móvil</li>
-              <li>Incidencias, fotos y adjuntos</li>
-              <li>Informes y descargables ilimitados</li>
+              <li>Calendario de mes, semana y día</li>
+              <li>Prioridad por colores</li>
+              <li>Alertas de mantenimientos vencidos<small>en la app</small></li>
+              <li>Soporte por correo</li>
             </ul>
           </article>
 
           <article class="plan">
-            <h3>Business</h3>
-            <p class="plan__desc">Para varias plantas o delegaciones desde una misma cuenta.</p>
-            <p class="plan__price"><span>desde</span><b data-price-mes="399 €" data-price-anio="399 €">399 €</b><span>al mes</span></p>
-            <a class="btn btn--ghost btn--block" href="https://saas-pulpo.pages.dev/industrial/">Contactar</a>
+            <div class="plan__top"><h3>Estándar</h3></div>
+            <p class="plan__desc">Para equipos pequeños con operarios en la calle.</p>
+            <div class="plan__precio"><span class="plan__desde"></span><p class="plan__price"><b data-price-mes="79 €" data-price-anio="63 €">79 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p></div>
+            <a class="btn btn--ghost btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=estandar&amp;periodo=mensual" data-plan-pago>Probar 14 días gratis</a>
+            <p class="plan__nota">Operarios extra a <span data-price-mes="9 €" data-price-anio="9 €">9 €</span> al mes cada uno.</p>
+            <p class="plan__incluye">Todo lo del Básico, más:</p>
             <ul class="plan__list">
-              <li><b>Todo lo del Premium</b></li>
-              <li>15 administradores y 50 operarios</li>
-              <li>Aún más fotos y adjuntos</li>
-              <li>Varias plantas o delegaciones en una cuenta</li>
+              <li>3 administradores y 10 operarios<small>luego <span data-price-mes="9 €" data-price-anio="9 €">9 €</span> por operario</small></li>
+              <li>Activos ilimitados</li>
+              <li>App del operario en el móvil</li>
+              <li>Incidencias con fotos</li>
+              <li>5 GB de fotos y adjuntos<small>luego 1 € por GB</small></li>
+              <li>30 informes y partes en PDF al mes<small>con tu logo</small></li>
+              <li>Mantenimiento por horas de uso</li>
+              <li>Avisos en vivo y por correo</li>
+              <li>Firma del cliente en el parte</li>
+              <li>Código QR en cada activo</li>
+            </ul>
+          </article>
+
+          <article class="plan">
+            <div class="plan__top"><h3>Premium</h3><span class="plan__badge">Más elegido</span></div>
+            <p class="plan__desc">Para equipos de mantenimiento que quieren tenerlo todo medido.</p>
+            <div class="plan__precio"><span class="plan__desde"></span><p class="plan__price"><b data-price-mes="179 €" data-price-anio="143 €">179 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p></div>
+            <a class="btn btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=premium&amp;periodo=mensual" data-plan-pago>Probar 14 días gratis</a>
+            <p class="plan__nota">Operarios extra a <span data-price-mes="7 €" data-price-anio="7 €">7 €</span> al mes cada uno.</p>
+            <p class="plan__incluye">Todo lo del Estándar, más:</p>
+            <ul class="plan__list">
+              <li>5 administradores y 25 operarios<small>luego <span data-price-mes="7 €" data-price-anio="7 €">7 €</span> por operario</small></li>
+              <li>50 GB de fotos y adjuntos<small>luego 0,50 € por GB</small></li>
+              <li>Informes y descargables ilimitados</li>
+              <li>Estadísticas de fiabilidad<small>MTBF, MTTR y disponibilidad</small></li>
+              <li>Costes por activo y por orden</li>
+              <li>Inventario de repuestos</li>
+              <li>Histórico completo de cada activo</li>
+              <li>Roles y permisos por equipo</li>
+              <li>Rutas del día en el mapa</li>
+              <li>Soporte prioritario</li>
+            </ul>
+          </article>
+
+          <article class="plan">
+            <div class="plan__top"><h3>Business</h3></div>
+            <p class="plan__desc">Para varias plantas o delegaciones desde una misma cuenta.</p>
+            <div class="plan__precio"><span class="plan__desde">Desde</span><p class="plan__price"><b data-price-mes="399 €" data-price-anio="399 €">399 €</b><span>al mes</span></p></div>
+            <a class="btn btn--ghost btn--block" href="https://saas-pulpo.pages.dev/industrial/">Contactar</a>
+            <p class="plan__nota">Incluye 1 planta. Plantas extra desde <span data-price-mes="99 €" data-price-anio="99 €">99 €</span> al mes.</p>
+            <p class="plan__incluye">Todo lo del Premium, más:</p>
+            <ul class="plan__list">
+              <li>15 administradores y 50 operarios<small>ampliable a medida</small></li>
+              <li>Varias plantas o delegaciones</li>
+              <li>200 GB de fotos y adjuntos<small>ampliable</small></li>
+              <li>API e integración con tu ERP</li>
+              <li>Acceso con Google o Microsoft</li>
+              <li>Carga inicial de tus activos</li>
+              <li>Formación para tu equipo</li>
+              <li>Copias de seguridad diarias de 30 días</li>
+              <li>Gestor de cuenta y soporte por teléfono</li>
             </ul>
           </article>
         </div>
