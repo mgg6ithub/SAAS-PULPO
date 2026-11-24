@@ -66,12 +66,20 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
     if (!widget.activa || usuario == null || ajustes.introInicioVista(usuario.id)) return;
     // Se marca al empezar: aunque se cambie de vista a medias, no vuelve a salir.
     ajustes.marcarIntroInicio(usuario.id);
+    _empezar();
+  }
+
+  /// Arranca (o vuelve a arrancar) la presentación desde el principio.
+  void _empezar() {
+    final usuario = Supabase.instance.client.auth.currentUser;
+    if (usuario == null) return;
     final correo = usuario.email ?? '';
     _nombre.value = correo.contains('@') ? correo.substring(0, correo.indexOf('@')) : correo;
     Nube.perfil().then((p) {
       if (p.nombre.trim().isNotEmpty) _nombre.value = p.nombre.trim().split(' ').first;
     }).catchError((_) {});
     IntroInicio.t.value = 0;
+    _ticker?.dispose();
     _ticker = createTicker((e) {
       final s = e.inMicroseconds / 1e6;
       if (s > IntroInicio.fin) {
@@ -105,6 +113,12 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
   Widget build(BuildContext context) => Stack(
     children: [
       widget.child,
+      // TEMPORAL: botón para repetir la presentación mientras se ajusta. Quitar.
+      Positioned(
+        top: 12,
+        right: 16,
+        child: FilledButton.tonal(onPressed: _empezar, child: const Text('Repetir animación')),
+      ),
       // La bienvenida, en el centro: entra con un leve zoom y se va antes de que empiece a escribirse la fecha.
       Positioned.fill(
         child: IgnorePointer(
