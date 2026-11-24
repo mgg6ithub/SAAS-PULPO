@@ -22,13 +22,14 @@ class PuertaNube extends StatefulWidget {
   State<PuertaNube> createState() => _PuertaNubeState();
 }
 
-enum _Fase { acceso, cargando, listo, invitacionMala, fallo }
+enum _Fase { acceso, cargando, nombrar, listo, invitacionMala, fallo }
 
 class _PuertaNubeState extends State<PuertaNube> {
   StreamSubscription<AuthState>? _sub;
   _Fase _fase = _Fase.cargando;
   String? _usuario;
   bool _pedirClave = false;
+  bool _porGoogle = false;
 
   /// La app se abrió desde el primer enlace del cambio de correo (Supabase pide pulsar el de los dos correos).
   static bool _avisoCorreo = (Uri.base.queryParameters['message'] ?? '').contains('other email');
@@ -117,19 +118,15 @@ class _PuertaNubeState extends State<PuertaNube> {
       await store.cargarDesdeNube(await Nube.abrir());
       // Un trabajador entra directo a su vista; un administrador, a la de siempre.
       rolTrabajador.value = store.nube!.esTrabajador ? store.nube!.trabajadorId : null;
-      if (mounted) setState(() => _fase = _Fase.listo);
       // El nombre se pide mientras la empresa siga con el de serie («Mi empresa»): así sale también si se cerró la
-      // pestaña antes de contestar o la cuenta se creó desde la landing.
+      // pestaña antes de contestar o la cuenta se creó desde la landing. Sale directamente, sin ver antes la app.
       if (Nube.creadaAlEntrar || (store.nube!.esAdmin && store.nube!.nombre == 'Mi empresa')) {
         Nube.creadaAlEntrar = false;
         final proveedores = Supabase.instance.client.auth.currentUser?.appMetadata['providers'] as List? ?? [];
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (!mounted) return;
-          // Primero el nombre de la empresa (sale así en Stripe y en las facturas) y después, si toca, el pago.
-          await nombrarEmpresa(context, porGoogle: proveedores.contains('google'));
-          if (mounted) _pago();
-        });
+        _porGoogle = proveedores.contains('google');
+        if (mounted) setState(() => _fase = _Fase.nombrar);
       } else {
+        if (mounted) setState(() => _fase = _Fase.listo);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _pago();
         });
@@ -187,6 +184,16 @@ class _PuertaNubeState extends State<PuertaNube> {
     _Fase.cargando => Scaffold(
       backgroundColor: P.fondo,
       body: const Center(child: CircularProgressIndicator()),
+    ),
+    // Primero el nombre de la empresa (sale así en Stripe y en las facturas) y después, si toca, el pago.
+    _Fase.nombrar => PantallaNombrarEmpresa(
+      porGoogle: _porGoogle,
+      onListo: () {
+        setState(() => _fase = _Fase.listo);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _pago();
+        });
+      },
     ),
     _Fase.listo => Stack(
       children: [

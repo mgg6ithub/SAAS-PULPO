@@ -517,23 +517,16 @@ class _ClaveNuevaState extends State<_ClaveNueva> {
   );
 }
 
-/// Primer arranque de una cuenta sin empresa (DEV-019): se le ha creado una y aquí le pone nombre. Con
-/// [porGoogle] además se explica que se ha creado, por si esperaba unirse a la de otra persona.
-Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => showGeneralDialog<void>(
-  context: context,
-  barrierDismissible: false,
-  // Pantalla propia (no se ve la app vacía detrás): fondo con un degradado suave del morado de la marca, el
-  // pulpo grande y difuminado, y la tarjeta en el centro, que entra con un leve zoom.
-  barrierColor: Colors.transparent,
-  transitionDuration: const Duration(milliseconds: 320),
-  transitionBuilder: (_, anim, _, hijo) {
-    final curva = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
-    return FadeTransition(
-      opacity: curva,
-      child: ScaleTransition(scale: Tween(begin: .97, end: 1.0).animate(curva), child: hijo),
-    );
-  },
-  pageBuilder: (_, _, _) => Material(
+/// Primer arranque de una cuenta sin empresa (DEV-019): se le ha creado una y aquí le pone nombre. Es una
+/// pantalla propia, que sale directamente en lugar de la app (sin verla antes). Con [porGoogle] además se explica
+/// que se ha creado, por si esperaba unirse a la de otra persona. [onListo] se llama al terminar.
+class PantallaNombrarEmpresa extends StatelessWidget {
+  final bool porGoogle;
+  final VoidCallback onListo;
+  const PantallaNombrarEmpresa({super.key, this.porGoogle = false, required this.onListo});
+
+  @override
+  Widget build(BuildContext context) => Material(
     color: P.superficie,
     child: Stack(
       fit: StackFit.expand,
@@ -544,24 +537,25 @@ Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => s
             padding: const EdgeInsets.all(24),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 620),
-              padding: const EdgeInsets.fromLTRB(48, 48, 48, 36),
+              padding: const EdgeInsets.fromLTRB(48, 36, 48, 36),
               decoration: BoxDecoration(
                 color: P.superficie,
                 borderRadius: BorderRadius.circular(P.radio + 6),
                 border: Border.all(color: P.borde),
               ),
-              child: _NombrarEmpresa(porGoogle: porGoogle),
+              child: _NombrarEmpresa(porGoogle: porGoogle, onListo: onListo),
             ),
           ),
         ),
       ],
     ),
-  ),
-);
+  );
+}
 
 class _NombrarEmpresa extends StatefulWidget {
   final bool porGoogle;
-  const _NombrarEmpresa({required this.porGoogle});
+  final VoidCallback onListo;
+  const _NombrarEmpresa({required this.porGoogle, required this.onListo});
 
   @override
   State<_NombrarEmpresa> createState() => _NombrarEmpresaState();
@@ -583,10 +577,9 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
     if (nombre.isEmpty) return setState(() => _aviso = 'Ponle un nombre (luego se puede cambiar).');
     setState(() => _enviando = true);
     try {
-      final nube = store.nube!;
-      Navigator.pop(context);
-      await nube.renombrar(nombre);
+      await store.nube!.renombrar(nombre);
       Nube.reabrir.value++;
+      widget.onListo();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -602,8 +595,27 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Align(alignment: Alignment.centerLeft, child: LogoPultec(size: 52)),
-      const SizedBox(height: 22),
+      // Marca a la izquierda y, arriba a la derecha, el correo de la cuenta recién creada (en tono neutro).
+      Row(
+        children: [
+          const LogoPultec(size: 36),
+          const SizedBox(width: 10),
+          Text(
+            Marca.nombre,
+            style: TextStyle(fontFamily: P.titulos, fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: -.6),
+          ),
+          const Spacer(),
+          Flexible(
+            child: Text(
+              Supabase.instance.client.auth.currentUser?.email ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: P.textoSuave, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 28),
       Text(
         '¿Cómo se llama tu empresa?',
         style: TextStyle(fontFamily: P.titulos, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -.4),
@@ -613,7 +625,7 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
         widget.porGoogle
             ? 'Hemos creado una empresa nueva para tu cuenta. Si querías unirte a la de otra persona, '
                   'pídele un enlace de invitación.'
-            : 'Sale en la barra, en los partes y en los emails. Podrás cambiarlo en Mi cuenta.',
+            : 'Podrás cambiarlo cuando quieras.',
         style: TextStyle(color: P.textoSuave, height: 1.4),
       ),
       const SizedBox(height: 16),
@@ -622,7 +634,7 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
         autofocus: true,
         textCapitalization: TextCapitalization.words,
         onSubmitted: (_) => _enviando ? null : _guardar(),
-        decoration: const InputDecoration(hintText: 'Ascensores Altura'),
+        decoration: const InputDecoration(hintText: 'Tu empresa'),
       ),
       SizedBox(
         height: 32,
@@ -637,9 +649,8 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
           // Sin nombre: «Tu empresa», que se cambia cuando se quiera (en Inicio o en Mi cuenta).
           TextButton(
             onPressed: () {
-              final nube = store.nube!;
-              Navigator.pop(context);
-              nube.renombrar('Tu empresa').then((_) => Nube.reabrir.value++).ignore();
+              store.nube!.renombrar('Tu empresa').then((_) => Nube.reabrir.value++).ignore();
+              widget.onListo();
             },
             child: const Text('Ahora no'),
           ),
