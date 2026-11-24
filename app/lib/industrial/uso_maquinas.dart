@@ -7,6 +7,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../marca.dart' show Marca;
 import '../screens/vista_dias.dart' show meses, diasSemana, lunesDe;
 import 'activo.dart';
 import 'activos.dart' show abrirActivoForm;
@@ -272,7 +273,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   String? _elegida;
   bool _visible(Activo a) => _elegida == null || _elegida == a.id;
 
-  /// Panel con la lista de máquinas, que sale desde la derecha con el botón «Máquinas» de arriba.
+  /// Panel con la lista de máquinas, que sale desde la derecha con el icono de activos de arriba a la derecha.
   bool _panel = false;
 
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
@@ -658,12 +659,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       ),
     ],
     derecha: [
-      BotonAccion(
-        'Máquinas',
-        tooltip: _panel ? 'Ocultar la lista de máquinas' : 'Mostrar la lista de máquinas',
-        onPressed: () => setState(() => _panel = !_panel),
-      ),
-      const SizedBox(width: 8),
       Pestanas(
         opciones: const ['Mes', 'Por máquina'],
         compactas: true,
@@ -691,6 +686,18 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         icon: const Icon(Icons.chevron_right_rounded),
       ),
       TextButton(onPressed: () => setState(() => mes = DateTime(hoy().year, hoy().month)), child: const Text('Hoy')),
+      const SizedBox(width: 4),
+      // Arriba a la derecha, encima de donde sale: abre y cierra el panel de activos (morado mientras está abierto).
+      IconButton(
+        tooltip: _panel ? 'Ocultar los activos' : 'Ver los activos',
+        isSelected: _panel,
+        onPressed: () => setState(() => _panel = !_panel),
+        style: IconButton.styleFrom(
+          backgroundColor: _panel ? P.morado.withValues(alpha: .1) : null,
+          foregroundColor: _panel ? P.morado : null,
+        ),
+        icon: const Icon(Marca.iconoCliente),
+      ),
     ],
   );
 
