@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="assets/app/inicio.webp" media="(min-width: 900px)">
   <script>/* Tema: el que traiga la app (?tema=oscuro|claro, se recuerda) o el guardado; claro por defecto. */ let t = null; const q = new URLSearchParams(location.search).get("tema"); if (q === "oscuro" || q === "claro") { t = q === "oscuro" ? "dark" : "light"; try { localStorage.setItem("pultec-tema", t); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("tema"); history.replaceState(null, "", u); } else { try { t = localStorage.getItem("pultec-tema"); } catch (e) {} } document.documentElement.dataset.theme = t || "light";</script>
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -311,63 +311,6 @@
         </div>
 
         <div class="plans">
-          <article class="plan">
-            <h3>Básico</h3>
-            <p class="plan__desc">Para quien lleva el mantenimiento en solitario.</p>
-            <p class="plan__price"><b data-price-mes="39 €" data-price-anio="31 €">39 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p>
-            <a class="btn btn--ghost btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=basico&amp;periodo=mensual" data-plan-pago>Probar 14 días gratis</a>
-            <ul class="plan__list">
-              <li>1 administrador</li>
-              <li>Órdenes de trabajo automáticas</li>
-              <li>Calendario y activos</li>
-              <li>Operarios extra con cuota mensual</li>
-            </ul>
-          </article>
-
-          <article class="plan plan--pro">
-            <div class="plan__top"><h3>Estándar</h3><span class="plan__badge">Más elegido</span></div>
-            <p class="plan__desc">Para equipos pequeños con técnicos en la calle.</p>
-            <p class="plan__price"><b data-price-mes="79 €" data-price-anio="63 €">79 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p>
-            <a class="btn btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=estandar&amp;periodo=mensual" data-plan-pago>Probar 14 días gratis</a>
-            <ul class="plan__list">
-              <li><b>Todo lo del Básico</b></li>
-              <li>3 administradores y 10 operarios</li>
-              <li>App del operario en el móvil</li>
-              <li>Incidencias, fotos y adjuntos (con límite)</li>
-              <li>Informes y descargables (cupo mensual)</li>
-            </ul>
-          </article>
-
-          <article class="plan">
-            <h3>Premium</h3>
-            <p class="plan__desc">Para equipos de mantenimiento que quieren tenerlo todo controlado.</p>
-            <p class="plan__price"><b data-price-mes="179 €" data-price-anio="143 €">179 €</b><span data-per-mes="al mes" data-per-anio="al mes, facturado al año">al mes</span></p>
-            <a class="btn btn--ghost btn--block" data-acceso="registro" href="https://saas-pulpo.pages.dev/industrial/?registro=1&amp;plan=premium&amp;periodo=mensual" data-plan-pago>Probar 14 días gratis</a>
-            <ul class="plan__list">
-              <li><b>Todo lo del Estándar</b></li>
-              <li>5 administradores y 25 operarios</li>
-              <li>Más fotos y adjuntos</li>
-              <li>Informes y descargables ilimitados</li>
-            </ul>
-          </article>
-
-          <article class="plan">
-            <h3>Business</h3>
-            <p class="plan__desc">Para varias plantas o delegaciones desde una misma cuenta.</p>
-            <p class="plan__price"><span>desde</span><b data-price-mes="399 €" data-price-anio="399 €">399 €</b><span>al mes</span></p>
-            <a class="btn btn--ghost btn--block" href="https://saas-pulpo.pages.dev/industrial/">Contactar</a>
-            <ul class="plan__list">
-              <li><b>Todo lo del Premium</b></li>
-              <li>15 administradores y 50 operarios</li>
-              <li>Aún más fotos y adjuntos</li>
-              <li>Varias plantas o delegaciones en una cuenta</li>
-            </ul>
-          </article>
-        </div>
-
-        <hr class="plans__divider">
-
-        <div class="plans plans--3">
           <article class="plan">
             <h3>Básico</h3>
             <p class="plan__desc">Para quien lleva el mantenimiento en solitario.</p>
