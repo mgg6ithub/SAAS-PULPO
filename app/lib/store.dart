@@ -1454,6 +1454,9 @@ class Store extends ChangeNotifier {
             icono: _activosSimulados[i % _activosSimulados.length].$1,
             tag: 'SIM-${(i + 1).toString().padLeft(3, '0')}',
             nombre: '${_activosSimulados[i % _activosSimulados.length].$2} ${i ~/ _activosSimulados.length + 1}',
+            // Uso por turnos con patrón semanal (lunes a domingo), para el calendario de uso de activos.
+            usoPlanificado: true,
+            patron: const [[2, 2, 2, 2, 2, 0, 0], [3, 3, 3, 3, 3, 1, 0], [1, 1, 1, 1, 1, 0, 0]][i % 3].toList(),
           ),
       ];
     }
