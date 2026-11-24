@@ -631,11 +631,25 @@ class _PrimerosPasos extends StatelessWidget {
     final actual = hechos.indexOf(false);
     // Borde discontinuo: es una guía de paso, no una tarjeta de datos.
     return CustomPaint(
-      foregroundPainter: BordeDiscontinuo(P.gris.withValues(alpha: .4), BorderRadius.circular(P.radio), separacion: 6),
-      child: Tarjeta(
+      foregroundPainter: BordeDiscontinuo(P.gris.withValues(alpha: .4), BorderRadius.circular(P.radio + 6), separacion: 6),
+      // La tarjeta blanca va metida hacia dentro: el borde discontinuo queda por fuera, con aire.
+      child: Padding(
+        padding: const EdgeInsets.all(7),
+        child: Tarjeta(
         color: P.superficie,
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
-        child: Column(
+        child: Stack(
+          children: [
+            // Cuántos pasos van hechos, en la esquina de arriba a la derecha.
+            Positioned(
+              top: 2,
+              right: 0,
+              child: Text(
+                '${hechos.where((h) => h).length} de ${pasos.length}',
+                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+              ),
+            ),
+            Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
@@ -662,11 +676,7 @@ class _PrimerosPasos extends StatelessWidget {
                       painter: _HuellasGuia(P.morado.withValues(alpha: .4)),
                     ),
                   ),
-                const Spacer(),
-                Text(
-                  '${hechos.where((h) => h).length} de ${pasos.length}',
-                  style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-                ),
+                const SizedBox(width: 48),
               ],
             ),
             const SizedBox(height: 12),
@@ -747,6 +757,9 @@ class _PrimerosPasos extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+          ],
+        ),
         ),
       ),
     );
