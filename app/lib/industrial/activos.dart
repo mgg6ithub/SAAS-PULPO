@@ -1610,9 +1610,8 @@ class _ActivoFormState extends State<ActivoForm> {
 
     final que = componente ? 'componente' : 'activo';
     return VentanaFormulario(
-      // Guardar, apagado hasta que tenga tag o nombre y, al crearlo, su contador (si lleva uno propio).
-      puedeGuardar: (tag.text.trim().isNotEmpty || nombre.text.trim().isNotEmpty) &&
-          (existe || (componente && !a.contadorPropio) || horasC.text.trim().isNotEmpty),
+      // Guardar, apagado hasta que tenga tag o nombre. El contador puede quedar vacío: cuenta como 0 h.
+      puedeGuardar: tag.text.trim().isNotEmpty || nombre.text.trim().isNotEmpty,
       onRellenar: existe ? null : _rellenar,
       sinPie: _autoguardado,
       lider: existe ? Icon(Icons.edit_outlined, size: 20, color: P.textoSuave) : null,

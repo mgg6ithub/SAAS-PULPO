@@ -21,6 +21,9 @@ import 'theme.dart' show P, TipoInfo, competencias, iconosTipo, tipos;
 /// en desarrollo `tool/vivo.py` pasa la Supabase local (`supabase start`) y producción no se toca.
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://gvasthxiqckmekwvhtrg.supabase.co');
 
+/// Desarrollo contra la Supabase local (o su pasarela): solo aquí salen las Simulaciones (en producción, no).
+final entornoLocal = supabaseUrl.contains('localhost') || supabaseUrl.contains('127.0.0.1');
+
 /// Clave publicable: está pensada para ir dentro de la app. La secreta (`service_role`) nunca.
 const supabasePublicable =
     String.fromEnvironment('SUPABASE_PUBLICABLE', defaultValue: 'sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ');

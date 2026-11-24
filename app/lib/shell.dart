@@ -7,6 +7,7 @@ import 'forms.dart';
 import 'marca.dart';
 import 'models.dart';
 import 'notificaciones.dart';
+import 'nube.dart' show entornoLocal;
 import 'industrial/activos.dart';
 import 'industrial/estadisticas.dart';
 import 'industrial/incidencias.dart';
@@ -766,15 +767,18 @@ class _BarraState extends State<_Barra> {
                   _menu(vencidas),
                   const SizedBox(height: 14),
                   const Spacer(),
-                  _BotonDemo(
-                    texto: 'Simulaciones',
-                    icono: Icons.science_outlined,
-                    color: P.mejorada ? P.teal : P.morado,
-                    compacta: iconos,
-                    escala: escala,
-                    onTap: () => abrirSimulaciones(context),
-                  ),
-                  const SizedBox(height: 8),
+                  // Simulaciones: solo al desarrollar contra la base local, nunca en producción.
+                  if (entornoLocal) ...[
+                    _BotonDemo(
+                      texto: 'Simulaciones',
+                      icono: Icons.science_outlined,
+                      color: P.mejorada ? P.teal : P.morado,
+                      compacta: iconos,
+                      escala: escala,
+                      onTap: () => abrirSimulaciones(context),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Builder(
                     builder: (context) =>
                         _fila(Icons.settings_outlined, 'Ajustes generales', () => abrirAjustes(context)),
@@ -1345,8 +1349,8 @@ class _BarraInferior extends StatelessWidget {
                     (Icons.unfold_more_rounded, 'Empresas'),
                     (Icons.person_outline_rounded, 'Tu cuenta y ajustes'),
                   ].indexed)
-                    // Cambiar de planta (empresa): solo con cuenta en la nube.
-                    if (i != 2 || store.nube != null)
+                    // Cambiar de planta (empresa): solo con cuenta en la nube. Simulaciones: solo en local.
+                    if ((i != 2 || store.nube != null) && (i != 0 || entornoLocal))
                       (
                         i,
                         Row(
