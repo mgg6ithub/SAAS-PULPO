@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,6 +23,24 @@ class IntroInicio {
 
   /// Lo que tarda un bloque en entrar.
   static const entrada = .45;
+
+  /// Con todo ya dentro, se recorren los primeros pasos de uno en uno (cada uno resaltado [porPaso] segundos) y,
+  /// mientras, el borde discontinuo late entre morado y neutro.
+  static double get recorrido => resto + 2.1;
+  static const porPaso = .8, pasos = 4;
+  static double get fin => recorrido + pasos * porPaso + .3;
+
+  /// El paso resaltado ahora (o -1).
+  static int pasoResaltado(double? t) {
+    if (t == null || t < recorrido || t >= recorrido + pasos * porPaso) return -1;
+    return ((t - recorrido) / porPaso).floor();
+  }
+
+  /// Cuánto morado lleva el borde discontinuo (0 = neutro, 1 = morado): late una vez por paso.
+  static double latido(double? t) {
+    if (pasoResaltado(t) < 0) return 0;
+    return .5 - .5 * cos(2 * pi * (t! - recorrido) / porPaso);
+  }
 }
 
 /// Envuelve Inicio: arranca el reloj si toca y pone la bienvenida encima.
@@ -54,7 +74,7 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
     IntroInicio.t.value = 0;
     _ticker = createTicker((e) {
       final s = e.inMicroseconds / 1e6;
-      if (s > IntroInicio.resto + 2.4) {
+      if (s > IntroInicio.fin) {
         _ticker?.stop();
         IntroInicio.t.value = null;
       } else {

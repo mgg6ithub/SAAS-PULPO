@@ -21,6 +21,7 @@ import '../nube.dart' show Nube;
 import '../industrial/activos.dart' show abrirActivoForm;
 import '../industrial/planes.dart' show abrirPlanForm;
 // import '../industrial/foto_planta.dart'; // Foto de Inicio quitada de momento.
+import '../industrial/tipo_mantenimiento.dart' show puntoTipo;
 import '../industrial/vistazo.dart';
 
 /// Inicio: saludo, cifras clave, lo pendiente, la carga del equipo y los próximos mantenimientos
@@ -357,10 +358,14 @@ class _ComoFunciona extends StatelessWidget {
             (P.azul, 'Tus activos', 'Cada máquina (camión, compresor, prensa…) con sus componentes y subcomponentes.'),
             (
               P.teal,
-              'Sus órdenes de trabajo',
-              'Qué mantenimiento lleva cada componente, cada cuánto y de qué tipo. Pultec calcula cuándo toca y avisa de lo que vence.',
+              'Sus mantenimientos',
+              'Qué mantenimiento lleva cada componente y cada cuánto: por fecha o por horas de uso.',
             ),
-            (P.ambar, 'Pultec organiza', 'Reparte las órdenes de trabajo entre tus técnicos según su categoría.'),
+            (
+              P.ambar,
+              'Órdenes de trabajo automáticas',
+              'Pultec las crea cuando toca cada mantenimiento y las reparte entre tus técnicos según su categoría.',
+            ),
           ]
         : [
             (
@@ -415,88 +420,94 @@ class _ComoFunciona extends StatelessWidget {
           ),
         ),
     ];
-    final cifras = [
-      for (final (color, titulo, texto) in const [
-        (P.azul, 'Para hoy', 'Los mantenimientos que tocan hoy, con su técnico.'),
-        (P.teal, 'Esta semana', 'Lo que viene en los próximos 7 días.'),
-        (P.rojo, 'Vencidos', 'Lo que se pasó de fecha, para recuperarlo antes.'),
-        (P.verde, 'Hechos', 'Lo terminado en los últimos 30 días.'),
-      ])
-        Tarjeta(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(titulo, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(texto, style: TextStyle(fontSize: 12.5, height: 1.4, color: P.textoSuave)),
-            ],
+    // Pultec: los tres tipos de orden de trabajo, cada uno en su bloque con su punto de color.
+    final tipos = [
+      for (final (i, t) in TipoMantenimiento.values.indexed)
+        Aparecer(
+          retraso: 1.35 + i * .14,
+          child: Tarjeta(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    puntoTipo(t.color),
+                    const SizedBox(width: 8),
+                    Text(t.etiqueta, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(t.descripcion, style: TextStyle(fontSize: 12.5, height: 1.4, color: P.textoSuave)),
+              ],
+            ),
           ),
         ),
     ];
+    // De un bloque al siguiente, una flecha (en columna, hacia abajo).
+    Widget flecha(int i) => Aparecer(
+      retraso: .92 + i * .14,
+      child: Icon(
+        columnas ? Icons.chevron_right_rounded : Icons.expand_more_rounded,
+        size: 22,
+        color: P.textoSuave,
+      ),
+    );
+    Widget titulo(String texto) => Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Text(
+        texto,
+        style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 10),
-          child: Text(
-            m('Cómo funciona Pultec'),
-            style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
-          ),
-        ),
+        titulo(m('Cómo funciona Pultec')),
         if (columnas)
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(width: 16), Expanded(child: t)],
+                for (final (i, t) in tarjetas.indexed) ...[
+                  if (i > 0) Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Center(child: flecha(i - 1))),
+                  Expanded(child: t),
+                ],
               ],
             ),
           )
         else
-          for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(height: 12), t],
+          for (final (i, t) in tarjetas.indexed) ...[
+            if (i > 0) Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: flecha(i - 1))),
+            t,
+          ],
         const SizedBox(height: 24),
-        // Pultec: el color de cada máquina, que verá en Inicio en cuanto dé de alta sus activos.
+        // Pultec: el color de cada orden de trabajo, que verá en Inicio en cuanto dé de alta sus activos.
         if (industrial) ...[
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 10),
-            child: Text(
-              'El color de cada máquina',
-              style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
+          titulo('El color de cada máquina'),
+          Aparecer(
+            retraso: 1.3,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 12),
+              child: Text(
+                'Todas las órdenes de trabajo nacen de un mantenimiento, así que por defecto son preventivas. '
+                'Cuando se crea una incidencia, su orden será correctiva: no crítica o crítica.',
+                style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave),
+              ),
             ),
           ),
-          Tarjeta(child: LeyendaEstados(columnas: columnas)),
-          const SizedBox(height: 24),
+          if (columnas)
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, t) in tipos.indexed) ...[if (i > 0) const SizedBox(width: 16), Expanded(child: t)],
+                ],
+              ),
+            )
+          else
+            for (final (i, t) in tipos.indexed) ...[if (i > 0) const SizedBox(height: 12), t],
         ],
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 10),
-          child: Text(
-            'Lo que verás aquí',
-            style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
-          ),
-        ),
-        // Avance de las cifras de Inicio: qué mide cada una, sin ceros.
-        if (columnas)
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final (i, c) in cifras.indexed) ...[if (i > 0) const SizedBox(width: 16), Expanded(child: c)],
-              ],
-            ),
-          )
-        else
-          for (final (i, c) in cifras.indexed) ...[if (i > 0) const SizedBox(height: 12), c],
       ],
     );
   }
@@ -640,8 +651,17 @@ class _PrimerosPasos extends StatelessWidget {
     ];
     final actual = hechos.indexOf(false);
     // Borde discontinuo: es una guía de paso, no una tarjeta de datos.
-    return CustomPaint(
-      foregroundPainter: BordeDiscontinuo(P.gris.withValues(alpha: .4), BorderRadius.circular(P.radio + 6), separacion: 6),
+    // En la presentación, el borde late entre neutro y morado mientras se recorren los pasos.
+    return ValueListenableBuilder<double?>(
+      valueListenable: IntroInicio.t,
+      builder: (context, t, child) => CustomPaint(
+        foregroundPainter: BordeDiscontinuo(
+          Color.lerp(P.gris.withValues(alpha: .4), P.morado, IntroInicio.latido(t))!,
+          BorderRadius.circular(P.radio + 6),
+          separacion: 6,
+        ),
+        child: child,
+      ),
       // La tarjeta blanca va metida hacia dentro: el borde discontinuo queda por fuera, con aire.
       child: Padding(
         padding: const EdgeInsets.all(7),
@@ -694,6 +714,17 @@ class _PrimerosPasos extends StatelessWidget {
               // En la presentación, los pasos entran de uno en uno.
               Aparecer(
                 retraso: .2 + i * .14,
+                // Recorrido de la presentación: el paso del momento, con fondo morado suave.
+                child: ValueListenableBuilder<double?>(
+                  valueListenable: IntroInicio.t,
+                  builder: (context, t, child) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    decoration: BoxDecoration(
+                      color: IntroInicio.pasoResaltado(t) == i ? P.morado.withValues(alpha: .10) : P.morado.withValues(alpha: 0),
+                      borderRadius: BorderRadius.circular(P.radioControl),
+                    ),
+                    child: child,
+                  ),
                 child: IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -722,17 +753,23 @@ class _PrimerosPasos extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AnimatedDefaultTextStyle(
+                            ValueListenableBuilder<double?>(
+                              valueListenable: IntroInicio.t,
+                              builder: (context, t, _) {
+                              final resaltado = IntroInicio.pasoResaltado(t) == i;
+                              return AnimatedDefaultTextStyle(
                               duration: const Duration(milliseconds: 220),
                               style: TextStyle(
                                 fontSize: 14,
                                 height: 1.45,
-                                fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
-                                color: hechos[i] || i == actual ? P.texto : P.textoSuave,
+                                fontWeight: i == actual || resaltado ? FontWeight.w600 : FontWeight.w500,
+                                color: resaltado ? P.morado : hechos[i] || i == actual ? P.texto : P.textoSuave,
                                 decoration: hechos[i] ? TextDecoration.lineThrough : null,
                                 decorationColor: P.textoSuave,
                               ),
                               child: Text(titulo),
+                            );
+                              },
                             ),
                             // El paso en curso, más abierto: explicación y, debajo, dónde se hace o su botón.
                             if (i == actual) ...[
@@ -768,6 +805,7 @@ class _PrimerosPasos extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
               ),
               ),
           ],
