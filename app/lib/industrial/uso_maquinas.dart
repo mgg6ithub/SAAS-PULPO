@@ -278,21 +278,28 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   bool _visible(Activo a) => _elegidas.isEmpty || _elegidas.contains(a.id);
 
   /// Lista de activos a la izquierda, que se abre y cierra con el botón del activo que se ve, bajo el título.
-  bool _panel = false;
+  /// En un [ValueNotifier]: abrirla o cerrarla solo anima el panel y la flecha, sin reconstruir el calendario.
+  final _panel = ValueNotifier(false);
 
   /// El hueco del panel: se abre de golpe al mostrarlo (una sola maquetación del calendario) y se cierra al
   /// terminar de deslizarse; el movimiento es solo una traslación, sin rehacer el calendario en cada fotograma.
   bool _hueco = false;
   void _alternarPanel() {
-    if (_panel) {
-      setState(() => _panel = false);
+    if (_panel.value) {
+      _panel.value = false;
       return;
     }
     // Primero el hueco (con el panel aún fuera) y, en el fotograma siguiente, entra deslizándose.
     setState(() => _hueco = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _panel = true);
+      if (mounted) _panel.value = true;
     });
+  }
+
+  @override
+  void dispose() {
+    _panel.dispose();
+    super.dispose();
   }
 
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
@@ -585,13 +592,17 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                               SizedBox(
                                 width: _anchoPanel + 10,
                                 child: ClipRect(
-                                  child: AnimatedSlide(
-                                    duration: const Duration(milliseconds: 220),
-                                    curve: Curves.easeOutCubic,
-                                    offset: _panel ? Offset.zero : const Offset(-1, 0),
-                                    onEnd: () {
-                                      if (!_panel) setState(() => _hueco = false);
-                                    },
+                                  child: ValueListenableBuilder(
+                                    valueListenable: _panel,
+                                    builder: (context, abierto, hijo) => AnimatedSlide(
+                                      duration: const Duration(milliseconds: 220),
+                                      curve: Curves.easeOutCubic,
+                                      offset: abierto ? Offset.zero : const Offset(-1, 0),
+                                      onEnd: () {
+                                        if (!_panel.value) setState(() => _hueco = false);
+                                      },
+                                      child: hijo,
+                                    ),
                                     child: RepaintBoundary(
                                       child: Padding(
                                         padding: const EdgeInsets.only(right: 10),
@@ -619,7 +630,20 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                                   ),
                                 ),
                               ),
-                            Expanded(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
+                            // Mes y Por máquina con un fundido corto al cambiar de pestaña.
+                            Expanded(
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 180),
+                                switchInCurve: Curves.easeOut,
+                                switchOutCurve: Curves.easeIn,
+                                layoutBuilder: (actual, previos) =>
+                                    Stack(fit: StackFit.expand, children: [...previos, ?actual]),
+                                child: KeyedSubtree(
+                                  key: ValueKey(_vista),
+                                  child: _vista == 0 ? _calendario(activos) : _porMaquina(activos),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -652,8 +676,10 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     final i = _elegidas.length == 1 ? activos.indexWhere((x) => x.id == _elegidas.first) : -1;
     final a = i < 0 ? null : activos[i];
     final color = a == null ? P.textoSuave : _colorDe(i);
-    return Tooltip(
-      message: _panel ? 'Ocultar la lista de activos' : 'Ver la lista de activos',
+    return ValueListenableBuilder(
+      valueListenable: _panel,
+      builder: (context, abierto, _) => Tooltip(
+      message: abierto ? 'Ocultar la lista de activos' : 'Ver la lista de activos',
       child: Material(
         color: a == null ? P.superficie : Color.alphaBlend(color.withValues(alpha: .08), P.superficie),
         shape: RoundedRectangleBorder(
@@ -693,7 +719,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   ],
                   const SizedBox(width: 6),
                   AnimatedRotation(
-                    turns: _panel ? .5 : 0,
+                    turns: abierto ? .5 : 0,
                     duration: const Duration(milliseconds: 200),
                     child: Icon(Icons.expand_more_rounded, size: 18, color: P.textoSuave),
                   ),
@@ -703,6 +729,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -763,7 +790,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       seleccionados: _sel.length,
       total: delMes.length,
       nombre: 'días',
-      textoEliminar: 'Vaciar días',
+      textoEliminar: 'Quitar turnos',
       onTodos: () => _alternar(delMes),
       // Con activos elegidos, vacía solo los suyos, sin preguntar de cuál; con todos, el menú para elegir.
       onEliminar: () => _vaciarSel(elegidos.isEmpty ? activos : elegidos),
@@ -772,7 +799,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     );
   }
 
-  /// «Vaciar días» como menú: todas las máquinas o solo una de las que trabajan en los días elegidos.
+  /// «Quitar turnos» como menú: todas las máquinas o solo una de las que trabajan en los días elegidos.
   Widget _menuVaciar(List<Activo> activos) {
     int diasCon(Activo a) => _sel.where((d) => turnosDe(a, d) > 0).length;
     final con = [
@@ -796,7 +823,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         });
       },
       opciones: [
-        ('*', const Text('Todas las máquinas')),
+        ('*', const Text('Todos los activos')),
         for (final (i, a) in con)
           (
             a.id,
@@ -823,7 +850,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Vaciar días', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            Text('Quitar turnos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             SizedBox(width: 4),
             Icon(Icons.expand_more_rounded, size: 18, color: Colors.white),
           ],
@@ -1412,7 +1439,25 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               ),
             ),
           ),
-          for (final d in dias) SizedBox(width: col, child: _celdaMaquina(a, color, d, marcas[d] ?? const [])),
+          // Los días de la fila, pintados de una vez (sin un widget por celda): tocar uno da su turno o sus opciones.
+          SizedBox(
+            width: col * dias.length,
+            child: _DiasMaquina(
+              a: a,
+              color: color,
+              dias: dias,
+              sel: _sel,
+              conMarca: [for (final d in dias) (marcas[d] ?? const []).any((m) => m.activo.id == a.id)],
+              onTocar: (d, ancla) async {
+                if (turnosDe(a, d) == 0 && !esExcepcion(a, d)) {
+                  _poner(a, d, 1);
+                  return;
+                }
+                final v = await abrirMenu<String>(context, ancla, _opcionesDia(a, d), seleccionado: '${turnosDe(a, d)}');
+                if (v != null) _accionDia(a, d, v);
+              },
+            ),
+          ),
           SizedBox(
             width: total,
             child: Padding(
@@ -1428,93 +1473,171 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       ),
     );
   }
+}
 
-  /// Un día de una máquina: un bloque de su color, más intenso cuantos más turnos; un punto si es una
-  /// excepción al patrón y una rayita abajo si ese día toca un mantenimiento.
-  Widget _celdaMaquina(Activo a, Color color, DateTime d, List<_Marca> marcas) {
-    final n = turnosDe(a, d);
-    final elegido = _sel.contains(d);
-    final festivo = store.festivo(d) != null;
-    final mias = marcas.where((m) => m.activo.id == a.id).toList();
-    final pasado = d.isBefore(hoy()) && !DateUtils.isSameDay(d, hoy());
-    final bloque = Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
-      decoration: BoxDecoration(
-        color: n == 0
-            ? Colors.transparent
-            : color.withValues(alpha: const [0.0, .22, .55, .9][n.clamp(0, 3)] * (pasado ? .6 : 1)),
-        borderRadius: BorderRadius.circular(5),
-        border: n * a.horasTurno > 24 ? Border.all(color: P.rojo, width: 1.5) : null,
-      ),
-      alignment: Alignment.center,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          if (n > 1)
-            Text(
-              '$n',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: n >= 3 ? Colors.white : P.texto),
-            ),
-          if (esExcepcion(a, d))
-            Positioned(
-              top: 2,
-              right: 2,
-              child: Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(color: n >= 2 ? Colors.white : color, shape: BoxShape.circle),
-              ),
-            ),
-        ],
-      ),
-    );
-    final celda = Container(
-      color: elegido
-          ? P.morado.withValues(alpha: .08)
-          : festivo
-          ? P.rojo.withValues(alpha: .035)
-          : d.weekday >= 6
-          ? P.fondo.withValues(alpha: .6)
-          : null,
-      // Los días pasados, más suaves (con el color, sin una capa de opacidad por celda).
-      child: Stack(
-          fit: StackFit.expand,
-          children: [
-            bloque,
-            if (mias.isNotEmpty)
-              Positioned(
-                left: 6,
-                right: 6,
-                bottom: 3,
-                child: Tooltip(
-                  message: mias.map((m) => '${m.estimada ? '≈ ' : ''}${m.plan.nombre}').join('\n'),
-                  child: Container(
-                    height: 3,
-                    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-              ),
-          ],
-        ),
-    );
-    final texto =
-        '${a.titulo} · ${d.day}: ${n == 0 ? 'sin turno' : '${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h'}';
-    return n == 0 && !esExcepcion(a, d)
-        ? Tooltip(
-            message: '$texto. Toca para darle un turno',
-            child: InkWell(onTap: () => _poner(a, d, 1), child: celda),
-          )
-        : BotonMenu<String>(
-            tooltip: texto,
-            seleccionado: '$n',
-            resaltarHover: false,
-            relleno: EdgeInsets.zero,
-            onSelected: (accion) => _accionDia(a, d, accion),
-            opciones: _opcionesDia(a, d),
-            child: celda,
-          );
+/// Los días de una máquina en «Por máquina», en un solo [CustomPaint]: la barra del día (24 h) rellena por la
+/// parte que trabaja, como en la leyenda; un punto si es una excepción al patrón, borde rojo si no cabe en 24 h y
+/// una rayita abajo si ese día toca un mantenimiento. El ratón resalta la celda (sin reconstruir la fila) y al
+/// tocarla se llama a [onTocar] con su rectángulo en pantalla, para abrir sus opciones debajo.
+class _DiasMaquina extends StatefulWidget {
+  final Activo a;
+  final Color color;
+  final List<DateTime> dias;
+  final Set<DateTime> sel;
+  final List<bool> conMarca;
+  final void Function(DateTime d, Rect ancla) onTocar;
+  const _DiasMaquina({
+    required this.a,
+    required this.color,
+    required this.dias,
+    required this.sel,
+    required this.conMarca,
+    required this.onTocar,
+  });
+
+  @override
+  State<_DiasMaquina> createState() => _DiasMaquinaState();
+}
+
+class _DiasMaquinaState extends State<_DiasMaquina> {
+  final _encima = ValueNotifier<int?>(null);
+
+  @override
+  void dispose() {
+    _encima.dispose();
+    super.dispose();
   }
+
+  int _indice(double x, double ancho) => (x / (ancho / widget.dias.length)).floor().clamp(0, widget.dias.length - 1);
+
+  @override
+  Widget build(BuildContext context) {
+    final a = widget.a;
+    final h = hoy();
+    final turnos = [for (final d in widget.dias) turnosDe(a, d)];
+    return LayoutBuilder(
+      builder: (context, box) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (e) => _encima.value = _indice(e.localPosition.dx, box.maxWidth),
+        onExit: (_) => _encima.value = null,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapUp: (e) {
+            final i = _indice(e.localPosition.dx, box.maxWidth);
+            final caja = context.findRenderObject()! as RenderBox;
+            final col = box.maxWidth / widget.dias.length;
+            final origen = caja.localToGlobal(Offset(i * col, 0));
+            widget.onTocar(widget.dias[i], origen & Size(col, box.maxHeight));
+          },
+          child: RepaintBoundary(
+            child: CustomPaint(
+              size: Size(box.maxWidth, box.maxHeight),
+              painter: _PintorDias(
+                encima: _encima,
+                color: widget.color,
+                turnos: turnos,
+                fracciones: [for (final n in turnos) _fraccion(a, n)],
+                excepciones: [for (final d in widget.dias) esExcepcion(a, d)],
+                pasan: [for (final n in turnos) n * a.horasTurno > 24],
+                pasados: [for (final d in widget.dias) d.isBefore(h) && !DateUtils.isSameDay(d, h)],
+                fondos: [
+                  for (final d in widget.dias)
+                    widget.sel.contains(d)
+                        ? P.morado.withValues(alpha: .08)
+                        : store.festivo(d) != null
+                        ? P.rojo.withValues(alpha: .035)
+                        : d.weekday >= 6
+                        ? P.fondo.withValues(alpha: .6)
+                        : null,
+                ],
+                conMarca: widget.conMarca,
+                hover: P.hover,
+                rojo: P.rojo,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PintorDias extends CustomPainter {
+  final ValueNotifier<int?> encima;
+  final Color color, hover, rojo;
+  final List<int> turnos;
+  final List<double> fracciones;
+  final List<bool> excepciones, pasan, pasados, conMarca;
+  final List<Color?> fondos;
+  _PintorDias({
+    required this.encima,
+    required this.color,
+    required this.turnos,
+    required this.fracciones,
+    required this.excepciones,
+    required this.pasan,
+    required this.pasados,
+    required this.fondos,
+    required this.conMarca,
+    required this.hover,
+    required this.rojo,
+  }) : super(repaint: encima);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final col = size.width / turnos.length;
+    final p = Paint();
+    for (var i = 0; i < turnos.length; i++) {
+      final celda = Rect.fromLTWH(i * col, 0, col, size.height);
+      if (fondos[i] case final f?) canvas.drawRect(celda, p..color = f);
+      if (encima.value == i) canvas.drawRect(celda, p..color = hover);
+      final a = pasados[i] ? .6 : 1.0;
+      final bloque = RRect.fromRectAndRadius(
+        Rect.fromLTRB(celda.left + 2, 10, celda.right - 2, size.height - 10),
+        const Radius.circular(5),
+      );
+      if (turnos[i] > 0) {
+        canvas.drawRRect(bloque, p..color = color.withValues(alpha: .15 * a));
+        canvas.save();
+        canvas.clipRRect(bloque);
+        canvas.drawRect(
+          Rect.fromLTWH(bloque.left, bloque.top, bloque.width * fracciones[i], bloque.height),
+          p..color = color.withValues(alpha: .75 * a),
+        );
+        canvas.restore();
+      }
+      if (pasan[i]) {
+        canvas.drawRRect(
+          bloque,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5
+            ..color = rojo,
+        );
+      }
+      if (excepciones[i] && turnos[i] > 0) {
+        canvas.drawCircle(Offset(bloque.right - 4.5, bloque.top + 4.5), 2.5, p..color = color);
+      }
+      if (conMarca[i]) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(celda.left + 6, size.height - 6, col - 12, 3),
+            const Radius.circular(2),
+          ),
+          p..color = color,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PintorDias o) =>
+      o.color != color ||
+      !listEquals(o.fracciones, fracciones) ||
+      !listEquals(o.excepciones, excepciones) ||
+      !listEquals(o.fondos, fondos) ||
+      !listEquals(o.conMarca, conMarca) ||
+      !listEquals(o.pasados, pasados);
 }
 
 /// Algo pulsable sin onda (cabeceras de día y de semana): solo el cursor y un fondo suave al pasar.

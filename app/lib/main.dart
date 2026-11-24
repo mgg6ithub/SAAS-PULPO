@@ -1,5 +1,8 @@
 import 'package:flutter/gestures.dart';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'ajustes.dart';
@@ -56,18 +59,34 @@ class PultecApp extends StatefulWidget {
   State<PultecApp> createState() => _PultecAppState();
 }
 
-class _PultecAppState extends State<PultecApp> with WidgetsBindingObserver {
+class _PultecAppState extends State<PultecApp> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  // Cambio de claro a oscuro con un fundido: una foto de la pantalla con el tema anterior se desvanece encima del
+  // nuevo (la app se repinta una sola vez, debajo).
+  final _raiz = GlobalKey();
+  late final _fundido = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+  ui.Image? _foto;
+  late bool _oscuro = ajustes.oscuro;
+
   @override
   void initState() {
     super.initState();
     ajustes.addListener(_repintar);
     WidgetsBinding.instance.addObserver(this);
+    _fundido.addStatusListener((e) {
+      if (e == AnimationStatus.completed && _foto != null) {
+        final f = _foto;
+        setState(() => _foto = null);
+        f!.dispose();
+      }
+    });
   }
 
   @override
   void dispose() {
     ajustes.removeListener(_repintar);
     WidgetsBinding.instance.removeObserver(this);
+    _fundido.dispose();
+    _foto?.dispose();
     super.dispose();
   }
 
@@ -75,8 +94,25 @@ class _PultecAppState extends State<PultecApp> with WidgetsBindingObserver {
   @override
   void didChangePlatformBrightness() => _repintar();
 
-  /// Los colores de P se leen al construir: hay que reconstruir todo el árbol, no solo el tema.
-  void _repintar() {
+  /// Los colores de P se leen al construir: hay que reconstruir todo el árbol, no solo el tema. Si cambia de claro
+  /// a oscuro, antes se fotografía la pantalla para fundir un tema con el otro.
+  Future<void> _repintar() async {
+    if (ajustes.oscuro != _oscuro) {
+      _oscuro = ajustes.oscuro;
+      final caja = _raiz.currentContext?.findRenderObject();
+      if (caja is RenderRepaintBoundary && !caja.debugNeedsPaint) {
+        try {
+          final foto = await caja.toImage(pixelRatio: MediaQuery.devicePixelRatioOf(context));
+          if (!mounted) return foto.dispose();
+          _foto?.dispose();
+          _foto = foto;
+          _fundido.forward(from: 0);
+        } catch (_) {
+          // Sin foto (p. ej. el renderizador no la admite): el cambio sale de golpe, como antes.
+        }
+      }
+    }
+    if (!mounted) return;
     setState(() {});
     void marcar(Element e) {
       e.markNeedsBuild();
@@ -87,7 +123,24 @@ class _PultecAppState extends State<PultecApp> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.ltr,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        RepaintBoundary(key: _raiz, child: _app()),
+        if (_foto case final foto?)
+          IgnorePointer(
+            child: FadeTransition(
+              opacity: ReverseAnimation(CurvedAnimation(parent: _fundido, curve: Curves.easeOutCubic)),
+              child: RawImage(image: foto, fit: BoxFit.fill),
+            ),
+          ),
+      ],
+    ),
+  );
+
+  Widget _app() => MaterialApp(
     title: Marca.nombre,
     debugShowCheckedModeBanner: false,
     theme: temaPultec(),

@@ -2711,6 +2711,18 @@ class BordeDiscontinuo extends CustomPainter {
 
 // ── Menús ──────────────────────────────────────────────
 
+/// El menú de [BotonMenu] abierto bajo [ancla] (en coordenadas globales), sin un widget por botón: para rejillas
+/// que se pintan de una vez (una celda tocada abre sus opciones). Devuelve la opción elegida o null.
+Future<T?> abrirMenu<T>(BuildContext context, Rect ancla, List<(T, Widget)> opciones, {T? seleccionado}) {
+  final capa = Overlay.of(context).context.findRenderObject()! as RenderBox;
+  final arriba = capa.globalToLocal(ancla.bottomLeft + const Offset(0, 4));
+  return showMenu<T>(
+    context: context,
+    position: RelativeRect.fromRect(arriba & Size(ancla.width, 0), Offset.zero & capa.size),
+    items: [for (final (valor, hijo) in opciones) _OpcionMenu(valor, valor == seleccionado, hijo)],
+  );
+}
+
 /// Botón que abre un menú debajo. Regla para todos los menús de la app:
 /// - al pasar el ratón, fondo suave redondeado (sin el destello cuadrado de PopupMenuButton) y cursor de mano;
 /// - al abrir, el fondo se apaga despacio y la opción actual sale resaltada y con el foco;
