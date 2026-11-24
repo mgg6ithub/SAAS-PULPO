@@ -117,7 +117,9 @@ class _PuertaNubeState extends State<PuertaNube> {
       // Un trabajador entra directo a su vista; un administrador, a la de siempre.
       rolTrabajador.value = store.nube!.esTrabajador ? store.nube!.trabajadorId : null;
       if (mounted) setState(() => _fase = _Fase.listo);
-      if (Nube.creadaAlEntrar) {
+      // El nombre se pide mientras la empresa siga con el de serie («Mi empresa»): así sale también si se cerró la
+      // pestaña antes de contestar o la cuenta se creó desde la landing.
+      if (Nube.creadaAlEntrar || (store.nube!.esAdmin && store.nube!.nombre == 'Mi empresa')) {
         Nube.creadaAlEntrar = false;
         final proveedores = Supabase.instance.client.auth.currentUser?.appMetadata['providers'] as List? ?? [];
         WidgetsBinding.instance.addPostFrameCallback((_) async {

@@ -155,6 +155,8 @@ class _ActivosState extends State<Activos> {
               onPressed: () => abrirActivoForm(context),
             ),
           ),
+          // Sin ningún activo, ni buscador ni accesos: solo el vacío con su botón.
+          if (store.activos.isNotEmpty) ...[
           const SizedBox(height: 8),
           BarraVista(
             // Sin filtro de criticidad: un activo no es crítico; lo son sus mantenimientos (dentro del activo).
@@ -175,6 +177,7 @@ class _ActivosState extends State<Activos> {
             ],
             derecha: const [],
           ),
+          ],
           const SizedBox(height: huecoVista),
           Expanded(
             child: activos.isEmpty

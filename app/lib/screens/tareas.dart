@@ -197,6 +197,8 @@ class _TareasPaginaState extends State<TareasPagina> {
           return (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100));
         });
     final tiposUsados = {for (final t in store.tareas) t.tipo};
+    // Sin ninguna orden de trabajo, ni buscador ni filtros: solo el título, el botón de crear y el vacío.
+    final hayTrabajos = store.tareas.any((t) => !t.esPlantilla);
 
     return Stack(
       children: [
@@ -212,7 +214,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                   TituloVista(m('Trabajos')),
                   // Pultec: pendientes y, aparte, el histórico de las hechas (para que no sea una lista sin fin).
                   // Pultec: buscador y vista junto al título si caben (si no, bajan debajo).
-                  if (industrial) ...[
+                  if (industrial && hayTrabajos) ...[
                     Buscador(hint: 'Buscar orden de trabajo…', width: 280, onChanged: (v) => setState(() => q = v)),
                     SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
                   ],
@@ -225,12 +227,12 @@ class _TareasPaginaState extends State<TareasPagina> {
                     ),
                 ],
                 derecha: [
-                  if (!industrial) Buscador(
+                  if (!industrial && hayTrabajos) Buscador(
                     hint: industrial ? 'Buscar orden de trabajo…' : 'Buscar trabajo…',
                     width: 280,
                     onChanged: (v) => setState(() => q = v),
                   ),
-                  if (!industrial) SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
+                  if (!industrial && hayTrabajos) SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
                 ],
                 principal: BotonPrimario(
                   pestana == 1 ? 'Nueva plantilla' : m('Nuevo trabajo'),
@@ -240,7 +242,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ),
               ),
               // Pultec: Pendientes / Histórico a la izquierda y la criticidad a la derecha del todo.
-              if (industrial) ...[
+              if (industrial && hayTrabajos) ...[
                 const SizedBox(height: huecoVista),
                 SizedBox(
                   width: double.infinity,
@@ -291,14 +293,17 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ),
               ],
               // En el histórico no hacen falta los filtros de lo pendiente.
-              if (!(industrial && historicoTrabajos.value)) ...[
+              if (hayTrabajos && !(industrial && historicoTrabajos.value)) ...[
                 const SizedBox(height: huecoVista),
                 Row(children: [
                   // Pultec: el activo a la izquierda del todo; los filtros, a la derecha (en espejo: «Todos» al final).
-                  if (industrial) ...[
+                  // Sin activos o sin técnicos, su filtro no hace falta.
+                  if (industrial && store.activos.isNotEmpty) ...[
                     ConstrainedBox(constraints: const BoxConstraints(maxWidth: 210), child: SelectorActivo(_activoFiltro,
                       (id) => setState(() => _activoFiltro = id), filtro: true)),
                     const SizedBox(width: 12),
+                  ],
+                  if (industrial && store.trabajadores.isNotEmpty) ...[
                     FiltroTecnico(
                       tecnicoId: filtroTecnicoTrabajos.value,
                       onChanged: (id) => filtroTecnicoTrabajos.value = id,

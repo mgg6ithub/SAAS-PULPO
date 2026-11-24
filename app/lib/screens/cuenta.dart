@@ -522,6 +522,8 @@ class _ClaveNuevaState extends State<_ClaveNueva> {
 Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => showDialog<void>(
   context: context,
   barrierDismissible: false,
+  // Fondo opaco: hasta contestar no se ve nada de la app vacía.
+  barrierColor: P.fondo,
   builder: (_) => _Dialogo(child: _NombrarEmpresa(porGoogle: porGoogle)),
 );
 
@@ -551,7 +553,8 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
     try {
       final nube = store.nube!;
       Navigator.pop(context);
-      await Nube.guardarEmpresa(nube.empresaId, {'nombre': nombre});
+      await nube.renombrar(nombre);
+      Nube.reabrir.value++;
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -597,7 +600,15 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
       Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Ahora no')),
+          // Sin nombre: «Tu empresa», que se cambia cuando se quiera (en Inicio o en Mi cuenta).
+          TextButton(
+            onPressed: () {
+              final nube = store.nube!;
+              Navigator.pop(context);
+              nube.renombrar('Tu empresa').then((_) => Nube.reabrir.value++).ignore();
+            },
+            child: const Text('Ahora no'),
+          ),
           const SizedBox(width: 8),
           FilledButton(onPressed: _enviando ? null : _guardar, child: const Text('Empezar')),
         ],

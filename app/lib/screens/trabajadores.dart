@@ -72,18 +72,26 @@ class _TrabajadoresState extends State<Trabajadores> {
                       izquierda: [
                         // Solo el título: sin icono grande ni frase de relleno debajo.
                         TituloVista(m('Trabajadores')),
-                        Pestanas(
+                        // Sin ningún trabajador, ni filtros ni buscador: solo el título, invitar y crear.
+                        if (store.trabajadores.isNotEmpty) Pestanas(
                           opciones: const ['Todos', 'Disponibles', 'Ocupados', 'Ausentes'],
                           // El punto con el color de cada estado (como en la columna Hoy).
                           colores: [null, for (final e in EstadoHoy.values) e.color],
                           seleccion: estado,
                           onChanged: (i) => setState(() => estado = i),
                         ),
-                        _FiltroCompetencia(competencia, (v) => setState(() => competencia = v)),
+                        if (store.trabajadores.isNotEmpty)
+                          _FiltroCompetencia(competencia, (v) => setState(() => competencia = v)),
                       ],
                       derecha: [
-                        Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
-                        SelectorVista(bloquesPrimero: true, lista: this.lista, onChanged: (v) => setState(() => this.lista = v)),
+                        if (store.trabajadores.isNotEmpty) ...[
+                          Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
+                          SelectorVista(
+                            bloquesPrimero: true,
+                            lista: this.lista,
+                            onChanged: (v) => setState(() => this.lista = v),
+                          ),
+                        ],
                         // Pultec: grupos de técnicos (crear, ver y meter técnicos).
                         // Quién entra en la empresa con su cuenta: invitar con un enlace o quitar el acceso.
                         if (store.nube != null)
@@ -93,7 +101,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                             tooltip: 'Invitar técnicos con un enlace y quitar accesos',
                             onPressed: () => abrirAccesos(context),
                           ),
-                        if (industrial)
+                        if (industrial && store.trabajadores.isNotEmpty)
                           BotonAccion(
                             'Grupo',
                             icono: Icons.add_rounded,
