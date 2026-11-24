@@ -47,6 +47,8 @@ class _AjustesState extends State<_Ajustes> {
     if (store.nube != null) (Icons.person_outline_rounded, P.morado, 'Cuenta', 'Tu perfil, el correo y la contraseña, las sesiones abiertas y borrar la cuenta.'),
     if (industrial && (store.nube?.esAdmin ?? false))
       (Icons.workspace_premium_outlined, P.morado, 'Plan', 'El plan de tu empresa, el pago con tarjeta y las facturas.'),
+    if (industrial && (store.nube?.esAdmin ?? false))
+      (Icons.bolt_rounded, P.ambar, 'Automatizaciones', 'Correos que salen solos: a quién avisar cuando hay una incidencia o se completa una orden.'),
     (Icons.contrast_rounded, P.morado, 'Apariencia', 'Tema claro u oscuro, y el tamaño y el tipo de letra de toda la app.'),
     (Icons.business_outlined, P.morado, 'Empresa', m('Los tipos de trabajo y las competencias de tus trabajadores.')),
     (Icons.keyboard_outlined, P.morado, 'Atajos', 'Atajos de teclado para moverte por la app sin el ratón.'),
@@ -73,6 +75,7 @@ class _AjustesState extends State<_Ajustes> {
         ]),
     ],
     'Plan' => [const _PlanEmpresa()],
+    'Automatizaciones' => [const _Automatizaciones()],
     'Apariencia' => [
       _Grupo(null, [
         _Fila(
@@ -487,6 +490,180 @@ class _Fila extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Automatizaciones de la empresa (solo el admin): por cada ocasión (incidencia nueva, incidencia crítica, OT
+/// completada), los correos a los que se avisa. Cada uno se puede pausar o quitar; abajo, uno nuevo.
+class _Automatizaciones extends StatefulWidget {
+  const _Automatizaciones();
+
+  @override
+  State<_Automatizaciones> createState() => _AutomatizacionesState();
+}
+
+class _AutomatizacionesState extends State<_Automatizaciones> {
+  static const _eventos = [
+    ('incidencia', 'Cuando hay una incidencia', 'Cualquier incidencia nueva, la avise un técnico o la oficina.'),
+    ('incidencia_critica', 'Cuando hay una incidencia crítica', 'Solo las que dejan el activo sin poder funcionar.'),
+    ('ot_completada', 'Cuando se completa una orden de trabajo', 'Al cerrar el técnico o la oficina una orden.'),
+  ];
+
+  List<AvisoCorreo>? _avisos;
+  bool _error = false;
+  final _nuevos = {for (final e in _eventos) e.$1: TextEditingController()};
+  final _avisoCampo = <String, String?>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _nuevos.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _cargar() async {
+    try {
+      final r = await store.nube!.avisosCorreo();
+      if (mounted) {
+        setState(() {
+          _avisos = r;
+          _error = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = true);
+    }
+  }
+
+  static final _correoValido = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  Future<void> _anadir(String evento) async {
+    final c = _nuevos[evento]!;
+    final correo = c.text.trim().toLowerCase();
+    if (!_correoValido.hasMatch(correo)) {
+      setState(() => _avisoCampo[evento] = 'Escribe un correo válido (nombre@empresa.com).');
+      return;
+    }
+    if (_avisos!.any((a) => a.evento == evento && a.correo == correo)) {
+      setState(() => _avisoCampo[evento] = 'Ese correo ya está.');
+      return;
+    }
+    try {
+      await store.nube!.crearAvisoCorreo(evento, correo);
+      c.clear();
+      _avisoCampo[evento] = null;
+      await _cargar();
+    } catch (_) {
+      if (mounted) setState(() => _avisoCampo[evento] = 'No se pudo guardar. Vuelve a intentarlo.');
+    }
+  }
+
+  Future<void> _cambiar(Future<void> Function() accion) async {
+    try {
+      await accion();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('No se pudo guardar el cambio.')));
+      }
+    }
+    await _cargar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_error) {
+      return _Grupo(null, [
+        _Fila(
+          titulo: 'No se pudieron cargar',
+          subtitulo: 'Comprueba la conexión',
+          child: Enlace('Reintentar', onTap: _cargar),
+        ),
+      ]);
+    }
+    final avisos = _avisos;
+    if (avisos == null) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2, color: P.morado)),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (evento, titulo, detalle) in _eventos)
+          _Grupo(titulo, [
+            for (final a in avisos.where((a) => a.evento == evento))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.mail_outline_rounded, size: 18, color: a.activa ? P.ambar : P.textoSuave),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        a.correo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 14, color: a.activa ? P.texto : P.textoSuave),
+                      ),
+                    ),
+                    Tooltip(
+                      message: a.activa ? 'Pausar' : 'Reanudar',
+                      child: Switch(
+                        value: a.activa,
+                        onChanged: (v) => _cambiar(() => store.nube!.activarAvisoCorreo(a.id, v)),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Quitar',
+                      onPressed: () => _cambiar(() => store.nube!.borrarAvisoCorreo(a.id)),
+                      icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
+                    ),
+                  ],
+                ),
+              ),
+            // Añadir un correo a esta ocasión (Intro o «Añadir»).
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(detalle, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nuevos[evento],
+                          keyboardType: TextInputType.emailAddress,
+                          onSubmitted: (_) => _anadir(evento),
+                          onChanged: (_) {
+                            if (_avisoCampo[evento] != null) setState(() => _avisoCampo[evento] = null);
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'correo@empresa.com',
+                            isDense: true,
+                            errorText: _avisoCampo[evento],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      BotonAccion('Añadir', icono: Icons.add_rounded, onPressed: () => _anadir(evento)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ]),
+      ],
+    );
+  }
 }
 
 /// Plan de la empresa (solo el admin): el actual con su estado y, según el caso, pasar a Premium o gestionarlo en

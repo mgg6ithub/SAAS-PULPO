@@ -96,6 +96,9 @@ class UltimoAdministrador implements Exception {
 typedef Acceso = ({String usuarioId, String correo, String nombre, String rol, String? trabajadorId});
 
 /// Una empresa de la cuenta, para el selector de empresas: [icono] es una clave de `iconosTipo`.
+/// Automatización de la empresa: cuando pasa [evento] (`incidencia`, `incidencia_critica`, `ot_completada`), un
+/// correo a [correo].
+typedef AvisoCorreo = ({String id, String evento, String correo, bool activa});
 typedef EmpresaDeCuenta = ({String id, String nombre, String rol, String icono, Color color});
 
 /// Invitación sin usar y sin caducar.
@@ -517,6 +520,25 @@ class Nube {
   /// Manda al cliente el PDF del parte (función `enviar-parte`); la función no lo repite si ya se mandó.
   Future<void> enviarParte(String informeId, Uint8List pdf) =>
       _db.functions.invoke('enviar-parte', body: {'informe_id': informeId, 'pdf': base64Encode(pdf)});
+
+  // ── Automatizaciones de la empresa (Ajustes generales) ──
+  // Reglas «cuando pase X, manda un correo a Y». Los disparadores de la base meten el correo en la cola.
+
+  Future<List<AvisoCorreo>> avisosCorreo() async {
+    final r = await _db.from('avisos_correo').select('id, evento, correo, activa').eq('empresa_id', empresaId).order('created_at');
+    return [
+      for (final x in r)
+        (id: x['id'] as String, evento: x['evento'] as String, correo: x['correo'] as String, activa: x['activa'] as bool),
+    ];
+  }
+
+  Future<void> crearAvisoCorreo(String evento, String correo) =>
+      _db.from('avisos_correo').insert({'empresa_id': empresaId, 'evento': evento, 'correo': correo.trim().toLowerCase()});
+
+  Future<void> activarAvisoCorreo(String id, bool activa) =>
+      _db.from('avisos_correo').update({'activa': activa}).eq('id', id);
+
+  Future<void> borrarAvisoCorreo(String id) => _db.from('avisos_correo').delete().eq('id', id);
 
   // ── Plan y pago (Stripe) ──
   // El plan es de la empresa. La app solo lo lee: lo escriben las funciones con lo que diga Stripe.
