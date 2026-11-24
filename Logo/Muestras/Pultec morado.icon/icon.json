@@ -21,17 +21,28 @@
         "kind": "neutral",
         "opacity": 0.5
       },
-      "translucency": {
-        "enabled": true,
-        "value": 0.4
-      },
       "position": {
         "scale": 0.86,
         "translation-in-points": [
           0,
           10
         ]
-      }
+      },
+      "translucency-specializations": [
+        {
+          "value": {
+            "enabled": false,
+            "value": 0
+          }
+        },
+        {
+          "appearance": "dark",
+          "value": {
+            "enabled": true,
+            "value": 0.4
+          }
+        }
+      ]
     }
   ],
   "supported-platforms": {
