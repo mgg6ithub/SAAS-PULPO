@@ -278,7 +278,9 @@
   });
 
   $("acceso-cambio").addEventListener("click", () => {
-    modo = modo === "registro" ? "entrar" : "registro";
+    // Entrar ya no se hace aquí: lleva a la pantalla de acceso de la app.
+    if (modo === "registro") { location.href = CFG.app; return; }
+    modo = "registro";
     ponerAviso(null);
     pintar();
     correo.focus();
@@ -291,6 +293,8 @@
   document.querySelectorAll("[data-acceso]").forEach((a) => a.addEventListener("click", (e) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; // abrir en otra pestaña: enlace normal
     e.preventDefault();
+    // «Entrar» va directo a la pantalla de acceso de la app (correo y contraseña allí); crear cuenta sigue aquí.
+    if (a.dataset.acceso === "entrar") { location.href = CFG.app; return; }
     const q = new URL(a.href).searchParams;
     modo = a.dataset.acceso;
     plan = q.get("plan");

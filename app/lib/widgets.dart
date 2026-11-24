@@ -3035,28 +3035,79 @@ class _DesplazarTablaState extends State<DesplazarTabla> {
 
 
 /// Fondo de las pantallas de entrada (acceso, nombre de la empresa), como el de la landing: blanco con una
-/// cuadrícula de 64 px muy suave que se desvanece hacia los bordes.
-class FondoMarca extends StatelessWidget {
+/// cuadrícula de 64 px muy suave que se desvanece hacia los bordes. Bajo el cursor (fuera de la tarjeta), las
+/// líneas se tiñen apenas de morado, como las tarjetas de la landing.
+class FondoMarca extends StatefulWidget {
   const FondoMarca({super.key});
 
   @override
-  Widget build(BuildContext context) => IgnorePointer(
+  State<FondoMarca> createState() => _FondoMarcaState();
+}
+
+class _FondoMarcaState extends State<FondoMarca> {
+  // El cursor en un ValueNotifier: moverlo solo repinta el brillo, sin reconstruir nada.
+  final _cursor = ValueNotifier<Offset?>(null);
+
+  @override
+  void dispose() {
+    _cursor.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onHover: (e) => _cursor.value = e.localPosition,
+    onExit: (_) => _cursor.value = null,
     child: ColoredBox(
       color: P.superficie,
-      child: ShaderMask(
-        blendMode: BlendMode.dstIn,
-        shaderCallback: (r) => const RadialGradient(
-          center: Alignment(0, -.4),
-          radius: .75,
-          colors: [Colors.white, Colors.transparent],
-          stops: [.2, 1],
-        ).createShader(r),
-        child: RepaintBoundary(
-          child: SizedBox.expand(child: CustomPaint(painter: _Cuadricula(P.texto.withValues(alpha: .05)))),
-        ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (r) => const RadialGradient(
+              center: Alignment(0, -.4),
+              radius: .75,
+              colors: [Colors.white, Colors.transparent],
+              stops: [.2, 1],
+            ).createShader(r),
+            child: RepaintBoundary(child: CustomPaint(painter: _Cuadricula(P.texto.withValues(alpha: .05)))),
+          ),
+          RepaintBoundary(child: CustomPaint(painter: _BrilloCuadricula(_cursor, P.morado))),
+        ],
       ),
     ),
   );
+}
+
+/// Las líneas de la cuadrícula cerca del cursor, en morado que se apaga al alejarse.
+class _BrilloCuadricula extends CustomPainter {
+  final ValueNotifier<Offset?> cursor;
+  final Color color;
+  _BrilloCuadricula(this.cursor, this.color) : super(repaint: cursor);
+
+  static const _radio = 170.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = cursor.value;
+    if (c == null) return;
+    final p = Paint()
+      ..strokeWidth = 1
+      ..shader = RadialGradient(
+        colors: [color.withValues(alpha: .28), color.withValues(alpha: 0)],
+      ).createShader(Rect.fromCircle(center: c, radius: _radio));
+    const lado = 64.0;
+    for (var x = (size.width / 2) % lado; x < size.width; x += lado) {
+      if ((x - c.dx).abs() < _radio) canvas.drawLine(Offset(x, c.dy - _radio), Offset(x, c.dy + _radio), p);
+    }
+    for (var y = (size.height / 2) % lado; y < size.height; y += lado) {
+      if ((y - c.dy).abs() < _radio) canvas.drawLine(Offset(c.dx - _radio, y), Offset(c.dx + _radio, y), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BrilloCuadricula o) => o.color != color || o.cursor != cursor;
 }
 
 /// Cuadrícula como la de la landing: líneas finas cada 64 px, centrada.
