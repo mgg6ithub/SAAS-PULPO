@@ -8,6 +8,8 @@ import '../ajustes.dart';
 import '../forms.dart';
 import '../marca.dart';
 import '../models.dart';
+import '../importar.dart' show QueImportar;
+import '../screens/importar_exportar.dart' show abrirImportarExportar;
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -146,7 +148,14 @@ class _ActivosState extends State<Activos> {
                 const SizedBox(width: 8), const TituloVista('Activos'),
               ])),
             ],
-            derecha: const [],
+            derecha: [
+              BotonAccion(
+                'Importar CSV',
+                icono: Icons.upload_file_outlined,
+                tooltip: 'Crear muchos activos, componentes y mantenimientos de una vez desde Excel',
+                onPressed: () => abrirImportarExportar(context, que: QueImportar.activos),
+              ),
+            ],
             principal: BotonPrimario(
               'Nuevo activo',
               conIcono: true,

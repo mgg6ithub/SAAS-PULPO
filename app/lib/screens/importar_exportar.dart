@@ -13,14 +13,15 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../marca.dart';
 
-/// Importar clientes, trabajadores y trabajos desde CSV con vista previa, y exportarlo todo a CSV.
-Future<void> abrirImportarExportar(BuildContext context) => showDialog(
+/// Importar clientes, trabajadores y trabajos (Pultec: activos y técnicos) desde CSV con vista previa, y exportarlo
+/// todo a CSV. [que] abre directamente esa pestaña (desde Activos o Técnicos).
+Future<void> abrirImportarExportar(BuildContext context, {QueImportar? que}) => showDialog(
   context: context,
   builder: (_) => Dialog(
     backgroundColor: P.fondo,
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 600, maxHeight: 760),
-      child: const ImportarExportar(),
+      child: ImportarExportar(que: que),
     ),
   ),
 );
@@ -28,16 +29,18 @@ Future<void> abrirImportarExportar(BuildContext context) => showDialog(
 Future<void> _descargarCsv(String nombre, String csv) => descargar(utf8.encode(csv), nombre, 'text/csv');
 
 class ImportarExportar extends StatefulWidget {
-  const ImportarExportar({super.key});
+  final QueImportar? que;
+  const ImportarExportar({super.key, this.que});
 
   @override
   State<ImportarExportar> createState() => _ImportarExportarState();
 }
 
 class _ImportarExportarState extends State<ImportarExportar> {
-  QueImportar que = QueImportar.clientes;
+  late QueImportar que = widget.que ?? importables.first;
   Importacion? vista;
   String? archivo;
+  bool verGuia = false;
 
   Future<void> elegir() async {
     final r = await FilePicker.platform.pickFiles(
@@ -58,8 +61,15 @@ class _ImportarExportarState extends State<ImportarExportar> {
     final imp = vista!;
     imp.aplicar(store);
     _ubicar([...imp.clientes]);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('${imp.total} ${que.etiqueta.toLowerCase()} importados')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          que == QueImportar.activos
+              ? '${_resumen(imp)} importados${imp.planes.isEmpty ? '' : '; sus órdenes de trabajo se crean solas'}'
+              : '${imp.total} ${que.etiqueta.toLowerCase()} importados',
+        ),
+      ),
+    );
     setState(() {
       vista = null;
       archivo = null;
@@ -87,21 +97,34 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ],
       ),
       Text(
-        m('Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.'),
+        industrial
+            ? 'Trae tus activos (con componentes y mantenimientos) y técnicos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.'
+            : m(
+                'Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.',
+              ),
         style: TextStyle(fontSize: 13, color: P.textoSuave),
       ),
       const SizedBox(height: 18),
       _titulo('Importar'),
       Pestanas(
-        opciones: [for (final q in QueImportar.values) q.etiqueta],
-        seleccion: que.index,
+        opciones: [for (final q in importables) q.etiqueta],
+        seleccion: importables.indexOf(que),
         onChanged: (i) => setState(() {
-          que = QueImportar.values[i];
+          que = importables[i];
           vista = null;
           archivo = null;
         }),
       ),
       const SizedBox(height: 12),
+      if (que == QueImportar.activos)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Un solo archivo: una fila por activo o componente («Padre» = tag de su activo). Con «Mantenimiento» rellena, '
+            'le añade ese mantenimiento; repite el tag en otra fila para darle más. Cada mantenimiento sale con su orden de trabajo.',
+            style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+          ),
+        ),
       if (que == QueImportar.trabajos)
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -120,8 +143,14 @@ class _ImportarExportarState extends State<ImportarExportar> {
             'Descargar plantilla',
             onTap: () => _descargarCsv('plantilla_${que.etiqueta.toLowerCase()}.csv', plantillaCsv(que)),
           ),
+          Enlace(verGuia ? 'Ocultar columnas' : 'Ver columnas', onTap: () => setState(() => verGuia = !verGuia)),
+          Enlace(
+            'Descargar guía',
+            onTap: () => descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
+          ),
         ],
       ),
+      if (verGuia) ...[const SizedBox(height: 12), _guia()],
       if (vista != null) ...[const SizedBox(height: 16), _vistaPrevia(vista!)],
       const SizedBox(height: 26),
       _titulo('Exportar'),
@@ -129,7 +158,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         padding: EdgeInsets.zero,
         child: Column(
           children: [
-            for (final q in QueImportar.values)
+            for (final q in importables)
               FilaLista(
                 lider: const SizedBox(width: 4),
                 titulo: q.etiqueta,
@@ -137,18 +166,21 @@ class _ImportarExportarState extends State<ImportarExportar> {
                   QueImportar.clientes => m('${store.clientes.length} clientes'),
                   QueImportar.trabajadores => m('${store.trabajadores.length} trabajadores'),
                   QueImportar.trabajos => m('${store.tareas.where((t) => !t.esPlantilla).length} trabajos'),
+                  QueImportar.activos =>
+                    '${store.activos.length} activos y componentes, ${store.planes.length} mantenimientos',
                 },
                 derecha: Enlace(
                   'Descargar',
                   onTap: () => _descargarCsv('${q.etiqueta.toLowerCase()}.csv', exportarCsv(q, store)),
                 ),
               ),
-            FilaLista(
-              lider: const SizedBox(width: 4),
-              titulo: 'Histórico',
-              subtitulo: 'Cada mantenimiento hecho, con su fecha',
-              derecha: Enlace('Descargar', onTap: () => _descargarCsv('historico.csv', exportarHistorialCsv(store))),
-            ),
+            if (!industrial)
+              FilaLista(
+                lider: const SizedBox(width: 4),
+                titulo: 'Histórico',
+                subtitulo: 'Cada mantenimiento hecho, con su fecha',
+                derecha: Enlace('Descargar', onTap: () => _descargarCsv('historico.csv', exportarHistorialCsv(store))),
+              ),
           ],
         ),
       ),
@@ -163,11 +195,56 @@ class _ImportarExportarState extends State<ImportarExportar> {
     ),
   );
 
+  /// «3 activos, 2 componentes y 5 mantenimientos».
+  String _resumen(Importacion imp) {
+    String n(int x, String uno, String varios) => '$x ${x == 1 ? uno : varios}';
+    final comp = imp.activos.where((a) => a.padreId != null).length;
+    final partes = [
+      n(imp.activos.length - comp, 'activo', 'activos'),
+      if (comp > 0) n(comp, 'componente', 'componentes'),
+      if (imp.planes.isNotEmpty) n(imp.planes.length, 'mantenimiento', 'mantenimientos'),
+    ];
+    return partes.length == 1 ? partes.first : '${partes.take(partes.length - 1).join(', ')} y ${partes.last}';
+  }
+
+  /// Guía de formato: cada columna con lo que lleva.
+  Widget _guia() => Tarjeta(
+    padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (c, texto) in que.guia)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: c,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (texto.isNotEmpty)
+                    TextSpan(
+                      text: '  $texto',
+                      style: TextStyle(color: P.textoSuave),
+                    ),
+                ],
+              ),
+              style: const TextStyle(fontSize: 12.5, height: 1.4),
+            ),
+          ),
+      ],
+    ),
+  );
+
   Widget _vistaPrevia(Importacion imp) {
     final nombres = [
       for (final c in imp.clientes) c.nombre,
       for (final w in imp.trabajadores) w.nombreCompleto,
       for (final t in imp.tareas) '${store.cliente(t.clienteId)?.nombre} · ${t.nombre}',
+      for (final a in imp.activos) '${a.titulo}${a.padreId == null ? '' : ' (componente)'}',
+      for (final p in imp.planes)
+        '${[...store.activos, ...imp.activos].where((a) => a.id == p.activoId).firstOrNull?.tag}: ${p.nombre}',
     ];
     return Tarjeta(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
@@ -178,10 +255,10 @@ class _ImportarExportarState extends State<ImportarExportar> {
           const SizedBox(height: 4),
           Text(
             [
-              '${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}',
+              que == QueImportar.activos ? _resumen(imp) : '${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}',
               if (imp.duplicados > 0) '${imp.duplicados} ya estaban',
               if (imp.avisos.isNotEmpty) '${imp.avisos.length} ${imp.avisos.length == 1 ? 'aviso' : 'avisos'}',
-            ].join(' · '),
+            ].join(', '),
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
           if (nombres.isNotEmpty) ...[

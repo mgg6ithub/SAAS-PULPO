@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../forms.dart';
 import '../models.dart';
+import '../importar.dart' show QueImportar;
+import 'importar_exportar.dart' show abrirImportarExportar;
 import '../store.dart';
 import 'accesos.dart';
 import '../theme.dart';
@@ -100,6 +102,13 @@ class _TrabajadoresState extends State<Trabajadores> {
                             icono: Icons.key_outlined,
                             tooltip: 'Invitar técnicos con un enlace y quitar accesos',
                             onPressed: () => abrirAccesos(context),
+                          ),
+                        if (industrial)
+                          BotonAccion(
+                            'Importar CSV',
+                            icono: Icons.upload_file_outlined,
+                            tooltip: 'Crear muchos técnicos de una vez desde Excel',
+                            onPressed: () => abrirImportarExportar(context, que: QueImportar.trabajadores),
                           ),
                         if (industrial && store.trabajadores.isNotEmpty)
                           BotonAccion(

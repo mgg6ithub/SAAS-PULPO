@@ -96,7 +96,7 @@ void main() {
         historial: [DateTime(2026, 9, 1)],
       ),
     );
-    for (final q in QueImportar.values) {
+    for (final q in importables) {
       final filas = leerCsv(exportarCsv(q, store));
       expect(filas.first, q.columnas);
       final imp = prepararImportacion(q, filas, store);

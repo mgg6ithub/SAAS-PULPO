@@ -1042,10 +1042,14 @@ class Store extends ChangeNotifier {
     List<Cliente> clientes = const [],
     List<Trabajador> trabajadores = const [],
     List<Tarea> tareas = const [],
+    List<Activo> activos = const [],
+    List<PlanMantenimiento> planes = const [],
   }) {
     this.clientes.addAll(clientes);
     this.trabajadores.addAll(trabajadores);
     this.tareas.addAll(tareas);
+    this.activos.addAll(activos);
+    this.planes.addAll(planes);
     _cambio();
   }
 
