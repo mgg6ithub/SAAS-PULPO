@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -272,7 +273,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   String? _elegida;
   bool _visible(Activo a) => _elegida == null || _elegida == a.id;
 
-  /// Panel con la lista de máquinas, que sale desde la derecha con el icono de activos de arriba a la derecha.
+  /// Lista de activos a la izquierda, que se abre y cierra con el botón «Activos» junto al título.
   bool _panel = false;
 
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
@@ -589,32 +590,40 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                       )
                     else ...[
                       Expanded(
-                        child: Stack(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Positioned.fill(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
-                            // Panel de máquinas: entra desde la derecha por encima del calendario (no le quita ancho).
-                            AnimatedPositioned(
-                              duration: const Duration(milliseconds: 240),
+                            // Lista de activos a la izquierda, dentro de la vista: se pliega deslizándose (ancho 0).
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
                               curve: Curves.easeOutCubic,
-                              top: 0,
-                              bottom: 0,
-                              right: _panel ? 0 : -(_anchoPanel + 20),
-                              width: _anchoPanel,
-                              child: _Maquinas(
-                                activos: activos,
-                                colorDe: _colorDe,
-                                horasMes: (a) => _horas(a, _diasMes),
-                                onAccion: _accion,
-                                diasSel: _sel.isEmpty ? null : _dias(_sel.length),
-                                elegida: _elegida,
-                                // Tocar una máquina abre su mes (también desde «Por máquina»); otra vez, todas.
-                                onElegir: (a) => setState(() {
-                                  _elegida = a == null || _elegida == a.id ? null : a.id;
-                                  _vista = 0;
-                                }),
-                                onCerrar: () => setState(() => _panel = false),
+                              width: _panel ? _anchoPanel + 10 : 0,
+                              child: ClipRect(
+                                child: OverflowBox(
+                                  alignment: Alignment.centerLeft,
+                                  minWidth: _anchoPanel + 10,
+                                  maxWidth: _anchoPanel + 10,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 10),
+                                    child: _Maquinas(
+                                      activos: activos,
+                                      colorDe: _colorDe,
+                                      horasMes: (a) => _horas(a, _diasMes),
+                                      onAccion: _accion,
+                                      diasSel: _sel.isEmpty ? null : _dias(_sel.length),
+                                      elegida: _elegida,
+                                      // Tocar un activo abre su mes (también desde «Por máquina»); otra vez, todos.
+                                      onElegir: (a) => setState(() {
+                                        _elegida = a == null || _elegida == a.id ? null : a.id;
+                                        _vista = 0;
+                                      }),
+                                      onCerrar: () => setState(() => _panel = false),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
+                            Expanded(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
                           ],
                         ),
                       ),
@@ -654,6 +663,14 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
             const SizedBox(width: 6),
           ],
           const Flexible(child: TituloVista('Uso de activos')),
+          const SizedBox(width: 12),
+          // A la izquierda, junto al título: abre y cierra la lista de activos (el mismo botón la cierra).
+          BotonAccion(
+            'Activos',
+            icono: Marca.iconoCliente,
+            tooltip: _panel ? 'Ocultar la lista de activos' : 'Ver la lista de activos',
+            onPressed: () => setState(() => _panel = !_panel),
+          ),
         ],
       ),
     ],
@@ -685,17 +702,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         icon: const Icon(Icons.chevron_right_rounded),
       ),
       const SizedBox(width: 4),
-      // Arriba a la derecha, encima de donde sale: abre y cierra el panel de activos (morado mientras está abierto).
-      IconButton(
-        tooltip: _panel ? 'Ocultar los activos' : 'Ver los activos',
-        isSelected: _panel,
-        onPressed: () => setState(() => _panel = !_panel),
-        style: IconButton.styleFrom(
-          backgroundColor: _panel ? P.morado.withValues(alpha: .1) : null,
-          foregroundColor: _panel ? P.morado : null,
-        ),
-        icon: const Icon(Marca.iconoCliente),
-      ),
     ],
   );
 
@@ -793,8 +799,8 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       _altoTurno = 20.0,
       _altoMarca = 18.0,
       _altoCabecera = 26.0,
-      _punto = 20.0,
-      _huecoPunto = 3.0,
+      _punto = 9.0,
+      _huecoPunto = 4.0,
       _anchoHoras = 90.0,
       _maxMarcasTodas = 3,
       _anchoPanel = 260.0;
@@ -1106,7 +1112,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: todas
                               ? [
-                                  _IconosDia(activos, d, _colorDe),
+                                  _PuntosDia(activos, d, _colorDe, puntosPorFila),
                                   if (marcas.isNotEmpty) const SizedBox(height: 4),
                                   for (final m in marcas.take(_maxMarcasTodas))
                                     _MarcaMantenimiento(m, _colorDe(activos.indexOf(m.activo))),
@@ -1706,7 +1712,7 @@ class _Turno extends StatelessWidget {
   }
 }
 
-/// Una máquina en el panel de la derecha: su color e icono, nombre y tag, y debajo su patrón y las horas del mes.
+/// Una máquina en el panel de la izquierda: su color e icono, nombre y tag, y debajo su patrón y las horas del mes.
 class _Ficha extends StatelessWidget {
   final Activo a;
   final Color color;
@@ -1806,59 +1812,75 @@ class _Ficha extends StatelessWidget {
   );
 }
 
-/// Un día con todas las máquinas: el icono de cada una, siempre en el mismo sitio y en su color, con sus turnos
-/// en una cifra pequeña; en gris claro si no trabaja y en rojo suave si es una parada fuera de su patrón. Así se ve
-/// de un vistazo cuáles trabajan y cuánto.
-class _IconosDia extends StatelessWidget {
+/// Un día con todas las máquinas: un punto por máquina, siempre en el mismo sitio y en su color (lleno con 2 o
+/// 3 turnos, suave con 1); un hueco gris si no trabaja y un aro rojo si es una parada fuera de su patrón. Así se
+/// ve de un vistazo cuáles faltan.
+class _PuntosDia extends StatelessWidget {
   final List<Activo> activos;
   final DateTime d;
   final Color Function(int) colorDe;
-  const _IconosDia(this.activos, this.d, this.colorDe);
+  final int porFila;
+  const _PuntosDia(this.activos, this.d, this.colorDe, this.porFila);
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: _UsoMaquinasState._huecoPunto,
-    runSpacing: _UsoMaquinasState._huecoPunto,
-    children: [
-      for (final (i, a) in activos.indexed)
-        if (turnosDe(a, d) case final n)
-          SizedBox.square(
-            dimension: _UsoMaquinasState._punto,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Center(
-                  child: IconoActivo(
-                    a.icono,
-                    size: 15,
-                    color: n > 0
-                        ? colorDe(i)
-                        : (esExcepcion(a, d) ? P.rojo.withValues(alpha: .5) : P.borde),
-                  ),
-                ),
-                if (n > 0)
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(color: n >= 2 ? colorDe(i) : P.superficie, shape: BoxShape.circle),
-                      child: Text(
-                        '$n',
-                        style: TextStyle(
-                          fontSize: 7.5,
-                          height: 1,
-                          fontWeight: FontWeight.w800,
-                          color: n >= 2 ? Colors.white : colorDe(i),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+  Widget build(BuildContext context) {
+    final turnos = [for (final a in activos) turnosDe(a, d)];
+    final paradas = [for (final a in activos) esExcepcion(a, d)];
+    final filas = (activos.length / porFila).ceil();
+    return RepaintBoundary(
+        child: CustomPaint(
+          size: Size(
+            porFila * (_UsoMaquinasState._punto + _UsoMaquinasState._huecoPunto),
+            filas * (_UsoMaquinasState._punto + _UsoMaquinasState._huecoPunto),
           ),
-    ],
-  );
+          painter: _PintorPuntos(
+            colores: [for (var i = 0; i < activos.length; i++) colorDe(i)],
+            turnos: turnos,
+            paradas: paradas,
+            porFila: porFila,
+            hueco: P.borde,
+            rojo: P.rojo,
+          ),
+        ),
+    );
+  }
+}
+
+class _PintorPuntos extends CustomPainter {
+  final List<Color> colores;
+  final List<int> turnos;
+  final List<bool> paradas;
+  final int porFila;
+  final Color hueco, rojo;
+  _PintorPuntos({
+    required this.colores,
+    required this.turnos,
+    required this.paradas,
+    required this.porFila,
+    required this.hueco,
+    required this.rojo,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const p = _UsoMaquinasState._punto, h = _UsoMaquinasState._huecoPunto;
+    final lleno = Paint();
+    final aro = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    for (var i = 0; i < colores.length; i++) {
+      final c = Offset((i % porFila) * (p + h) + p / 2, (i ~/ porFila) * (p + h) + p / 2);
+      if (turnos[i] > 0) {
+        lleno.color = turnos[i] >= 2 ? colores[i] : colores[i].withValues(alpha: .45);
+        canvas.drawCircle(c, p / 2, lleno);
+      } else {
+        aro.color = paradas[i] ? rojo : hueco;
+        canvas.drawCircle(c, p / 2 - .6, aro);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PintorPuntos o) =>
+      !listEquals(o.turnos, turnos) || !listEquals(o.paradas, paradas) || !listEquals(o.colores, colores) || o.porFila != porFila;
 }
