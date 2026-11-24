@@ -165,9 +165,14 @@ class _TrabajadoresState extends State<Trabajadores> {
     );
   }
 
-  void _tocar(Trabajador w) => seleccionando
-      ? setState(() => seleccion.contains(w.id) ? seleccion.remove(w.id) : seleccion.add(w.id))
-      : widget.onAbrir(w.id);
+  void _tocar(Trabajador w) {
+    if (seleccionando) {
+      setState(() => seleccion.contains(w.id) ? seleccion.remove(w.id) : seleccion.add(w.id));
+    } else {
+      store.verNuevo(w.id);
+      widget.onAbrir(w.id);
+    }
+  }
 
   Widget _tabla(List<Trabajador> ws) => SegunTamano(
     clave: (box) => (box.maxWidth > 980, box.maxWidth > 600),
@@ -206,7 +211,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        celdaTexto(w.nombreCompleto, negrita: true),
+                        conNuevo(w.id, celdaTexto(w.nombreCompleto, negrita: true)),
                         if (w.email.isNotEmpty)
                           Text(
                             w.email,

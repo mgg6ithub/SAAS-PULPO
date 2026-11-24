@@ -430,7 +430,10 @@ class _TablaPlanesState extends State<TablaPlanes> {
             seleccionCabecera: s.cabecera,
             columnas: columnas,
             filas: ps.length,
-            onTap: (i) => s.tocar(ps[i].id, () => abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i])),
+            onTap: (i) => s.tocar(ps[i].id, () {
+              store.verNuevo(ps[i].id);
+              abrirPlanForm(context, activoId: ps[i].activoId, original: ps[i]);
+            }),
             pie: pieTabla(ps.length, ps.length == 1 ? 'mantenimiento' : 'mantenimientos'),
             resaltar: (i) => ps[i].id == planDestacado.value ? P.morado : null,
             celdas: (i) {
@@ -532,7 +535,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true),
+                            conNuevo(p.id, celdaTexto(p.nombre.isEmpty ? 'Sin nombre' : p.nombre, negrita: true)),
                             if (p.descripcion.isNotEmpty)
                               Text(
                                 p.descripcion,
@@ -721,7 +724,9 @@ class _PlanFormState extends State<PlanForm> {
       ..avisoCorreos = avisoCorreos.text.trim()
       ..preparar = preparar.text.trim()
       ..empresaExterna = p.subcontratado ? empresaExterna.text.trim() : '';
+    final alta = !store.planes.any((x) => x.id == p.id);
     store.guardarPlan(p);
+    if (alta) store.marcarNuevo(p.id);
     // Su OT pendiente aún sin técnico recibe la asignación nueva (las siguientes ya las asigna la base).
     final ot = store.tareas.where((t) => t.planId == p.id && t.activa && otPendiente(t)).firstOrNull;
     if (ot != null && ot.trabajadorIds.isEmpty && (p.trabajadorId != null || p.grupoId != null)) {

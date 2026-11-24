@@ -397,6 +397,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             if (seleccionando) {
               setState(() => seleccion.contains(ts[i].id) ? seleccion.remove(ts[i].id) : seleccion.add(ts[i].id));
             } else {
+              store.verNuevo(ts[i].id);
               widget.onAbrir(ts[i].id);
             }
           },
@@ -424,7 +425,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        celdaTexto(t.nombre, negrita: true),
+                        conNuevo(t.id, celdaTexto(t.nombre, negrita: true)),
                         // Pultec: debajo, qué hay que hacer (la de la orden, o la de su mantenimiento o incidencia).
                         if (industrial && _descripcion(t).isNotEmpty)
                           Text(

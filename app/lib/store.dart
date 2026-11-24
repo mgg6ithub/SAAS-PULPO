@@ -379,6 +379,7 @@ class Store extends ChangeNotifier {
 
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
+    _cargarNuevos();
     final s = _prefs!.getString(_clave);
     tipos = [...tiposBase];
     competencias = [...competenciasBase];
@@ -745,6 +746,53 @@ class Store extends ChangeNotifier {
     final rama = ramaDe(activoId);
     return [...tareas, ...subtareas].where((t) => rama.contains(t.activoId)).toList();
   }
+
+  /// «Nuevo»: lo que se acaba de crear a mano lleva su píldora hasta que se abre o pasan [_duracionNuevo].
+  /// Es de quien lo mira, no un dato de negocio: se guarda en este navegador y no va a la nube.
+  static const _duracionNuevo = Duration(hours: 48);
+  static const _claveNuevos = 'pultec_nuevos';
+  final Map<String, DateTime> _nuevos = {};
+
+  void _cargarNuevos() {
+    final s = _prefs?.getString(_claveNuevos);
+    if (s == null) return;
+    _nuevos
+      ..clear()
+      ..addAll({
+        for (final e in (jsonDecode(s) as Map<String, dynamic>).entries)
+          e.key: DateTime.fromMillisecondsSinceEpoch(e.value as int),
+      })
+      ..removeWhere((_, t) => DateTime.now().difference(t) >= _duracionNuevo);
+  }
+
+  void _guardarNuevos() => _prefs?.setString(
+    _claveNuevos,
+    jsonEncode({for (final e in _nuevos.entries) e.key: e.value.millisecondsSinceEpoch}),
+  );
+
+  bool esNuevo(String id) {
+    final t = _nuevos[id];
+    return t != null && DateTime.now().difference(t) < _duracionNuevo;
+  }
+
+  void marcarNuevo(String id) {
+    _nuevos[id] = DateTime.now();
+    _guardarNuevos();
+    notifyListeners();
+  }
+
+  /// Abierto: deja de ser nuevo.
+  void verNuevo(String id) {
+    if (_nuevos.remove(id) == null) return;
+    _guardarNuevos();
+    notifyListeners();
+  }
+
+  /// Cuántos de [ids] son nuevos (para el aviso de la barra lateral).
+  int nuevosEntre(Iterable<String> ids) => ids.where(esNuevo).length;
+
+  /// Activos, componentes y sus mantenimientos nuevos.
+  int get activosNuevos => nuevosEntre([...activos.map((a) => a.id), ...planes.map((p) => p.id)]);
 
   void guardarActivo(Activo a) {
     _poner(activos, a, (x) => x.id == a.id);

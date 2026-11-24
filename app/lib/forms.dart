@@ -1213,7 +1213,9 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         }
       });
     }
+    final alta = store.trabajador(w.id) == null;
     store.guardarTrabajador(w.copia());
+    if (alta) store.marcarNuevo(w.id);
     if (widget.incrustada) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('${w.nombreCompleto} guardado')),
@@ -1697,7 +1699,10 @@ class _TareaFormState extends State<TareaForm> {
     if (error != null) return _irA(_claveNombre);
     if (errorHorario != null) return _irA(_claveCuando);
     _volcar();
+    final alta = store.tarea(t.id) == null;
     store.guardarTarea(t);
+    // OT creada a mano: con su píldora «Nuevo» hasta que se abra.
+    if (alta) store.marcarNuevo(t.id);
     if (widget.incrustada) {
       ScaffoldMessenger.of(
         context,
