@@ -300,9 +300,24 @@ class _AjustesState extends State<_Ajustes> {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
-                        const LogoPultec(size: 18),
-                        const SizedBox(width: 8),
-                        Text(Marca.nombre, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: P.textoSuave)),
+                        // Logo y nombre llevan a la web de Pultec (la landing).
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => abrirEnlace(landingUrl),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const LogoPultec(size: 26),
+                                const SizedBox(width: 8),
+                                Text(
+                                  Marca.nombre,
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                         const Spacer(),
                         Text('versión $versionApp', style: TextStyle(fontSize: 12, color: P.textoSuave)),
                       ],
