@@ -537,13 +537,28 @@ class PantallaNombrarEmpresa extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 620),
-              padding: const EdgeInsets.fromLTRB(48, 36, 48, 36),
               decoration: BoxDecoration(
                 color: P.superficie,
                 borderRadius: BorderRadius.circular(P.radio + 6),
                 border: Border.all(color: P.borde),
               ),
-              child: _NombrarEmpresa(porGoogle: porGoogle, onListo: onListo),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 36, 32, 32),
+                    child: _NombrarEmpresa(porGoogle: porGoogle, onListo: onListo),
+                  ),
+                  // En la esquina de arriba a la derecha, el correo de la cuenta recién creada (en tono neutro).
+                  Positioned(
+                    top: 14,
+                    right: 18,
+                    child: Text(
+                      Supabase.instance.client.auth.currentUser?.email ?? '',
+                      style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -595,7 +610,6 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      // Marca a la izquierda y, arriba a la derecha, el correo de la cuenta recién creada (en tono neutro).
       Row(
         children: [
           const LogoPultec(size: 36),
@@ -603,15 +617,6 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
           Text(
             Marca.nombre,
             style: TextStyle(fontFamily: P.titulos, fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: -.6),
-          ),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              Supabase.instance.client.auth.currentUser?.email ?? '',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: P.textoSuave, fontSize: 13),
-            ),
           ),
         ],
       ),
