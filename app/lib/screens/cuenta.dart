@@ -588,8 +588,8 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
   }
 
   Future<void> _guardar() async {
-    final nombre = _nombre.text.trim();
-    if (nombre.isEmpty) return setState(() => _aviso = 'Ponle un nombre (luego se puede cambiar).');
+    // Sin nombre se empieza igual, con «Tu empresa» (se cambia cuando se quiera).
+    final nombre = _nombre.text.trim().isEmpty ? 'Tu empresa' : _nombre.text.trim();
     setState(() => _enviando = true);
     try {
       await store.nube!.renombrar(nombre);
