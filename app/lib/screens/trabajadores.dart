@@ -137,6 +137,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                               )
                             : null,
                         flecha: store.trabajadores.isEmpty,
+                        varianteFlecha: 1,
                       )
                     : this.lista
                     ? _tabla(lista)
