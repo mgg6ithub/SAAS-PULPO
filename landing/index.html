@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="assets/app/inicio.webp" media="(min-width: 900px)">
   <script>/* Tema: el que traiga la app (?tema=oscuro|claro, se recuerda) o el guardado; claro por defecto. */ let t = null; const q = new URLSearchParams(location.search).get("tema"); if (q === "oscuro" || q === "claro") { t = q === "oscuro" ? "dark" : "light"; try { localStorage.setItem("pultec-tema", t); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("tema"); history.replaceState(null, "", u); } else { try { t = localStorage.getItem("pultec-tema"); } catch (e) {} } document.documentElement.dataset.theme = t || "light";</script>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <a class="skip" href="#contenido">Saltar al contenido</a>
@@ -450,6 +450,6 @@
     </form>
   </dialog>
 
-  <script src="main.js?v=11" defer></script>
+  <script src="main.js?v=12" defer></script>
 </body>
 </html>
