@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -271,8 +272,8 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   String? _elegida;
   bool _visible(Activo a) => _elegida == null || _elegida == a.id;
 
-  /// Panel lateral con la lista de máquinas, plegable con el botón «Máquinas» de arriba.
-  bool _panel = true;
+  /// Panel con la lista de máquinas, que sale desde la derecha con el botón «Máquinas» de arriba.
+  bool _panel = false;
 
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
   DateTime? _desde;
@@ -588,36 +589,32 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                       )
                     else ...[
                       Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                        child: Stack(
                           children: [
-                            // Panel de máquinas a la izquierda: se pliega deslizándose (ancho 0) sin desmontarse.
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 220),
+                            Positioned.fill(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
+                            // Panel de máquinas: entra desde la derecha por encima del calendario (no le quita ancho).
+                            AnimatedPositioned(
+                              duration: const Duration(milliseconds: 240),
                               curve: Curves.easeOutCubic,
-                              width: _panel ? _anchoPanel + 10 : 0,
-                              child: ClipRect(
-                                child: OverflowBox(
-                                  alignment: Alignment.centerLeft,
-                                  minWidth: _anchoPanel,
-                                  maxWidth: _anchoPanel,
-                                  child: _Maquinas(
-                                    activos: activos,
-                                    colorDe: _colorDe,
-                                    horasMes: (a) => _horas(a, _diasMes),
-                                    onAccion: _accion,
-                                    diasSel: _sel.isEmpty ? null : _dias(_sel.length),
-                                    elegida: _elegida,
-                                    // Tocar una máquina abre su mes (también desde «Por máquina»); otra vez, todas.
-                                    onElegir: (a) => setState(() {
-                                      _elegida = a == null || _elegida == a.id ? null : a.id;
-                                      _vista = 0;
-                                    }),
-                                  ),
-                                ),
+                              top: 0,
+                              bottom: 0,
+                              right: _panel ? 0 : -(_anchoPanel + 20),
+                              width: _anchoPanel,
+                              child: _Maquinas(
+                                activos: activos,
+                                colorDe: _colorDe,
+                                horasMes: (a) => _horas(a, _diasMes),
+                                onAccion: _accion,
+                                diasSel: _sel.isEmpty ? null : _dias(_sel.length),
+                                elegida: _elegida,
+                                // Tocar una máquina abre su mes (también desde «Por máquina»); otra vez, todas.
+                                onElegir: (a) => setState(() {
+                                  _elegida = a == null || _elegida == a.id ? null : a.id;
+                                  _vista = 0;
+                                }),
+                                onCerrar: () => setState(() => _panel = false),
                               ),
                             ),
-                            Expanded(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
                           ],
                         ),
                       ),
@@ -1425,7 +1422,9 @@ class _Maquinas extends StatelessWidget {
   /// Sin días seleccionados, tocar una máquina abre su mes ([elegida]; null = todas); sus acciones, en su flecha.
   final String? elegida;
   final ValueChanged<Activo?> onElegir;
+  final VoidCallback onCerrar;
   const _Maquinas({
+    required this.onCerrar,
     required this.activos,
     required this.colorDe,
     required this.horasMes,
@@ -1534,10 +1533,9 @@ class _Maquinas extends StatelessWidget {
     ),
   );
 
-  // Lista vertical (virtualizada) en su tarjeta; la primera fila vuelve a todas.
+  // Lista vertical (virtualizada) en su tarjeta; la primera fila vuelve a todas. La X, arriba a la derecha.
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(right: 10),
     foregroundDecoration: BoxDecoration(
       borderRadius: BorderRadius.circular(P.radio),
       border: Border.all(color: P.borde),
@@ -1546,7 +1544,16 @@ class _Maquinas extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(padding: const EdgeInsets.fromLTRB(6, 6, 6, 4), child: _todas),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 6, 4, 4),
+          child: Row(
+            children: [
+              Expanded(child: _todas),
+              const SizedBox(width: 4),
+              IconButton(tooltip: 'Cerrar', onPressed: onCerrar, icon: const Icon(CupertinoIcons.xmark, size: 18)),
+            ],
+          ),
+        ),
         Divider(height: 1, color: P.borde),
         Expanded(
           child: ListView.builder(
@@ -1639,7 +1646,7 @@ class _Turno extends StatelessWidget {
   }
 }
 
-/// Una máquina en el panel de la izquierda: su color e icono, nombre y tag, y debajo su patrón y las horas del mes.
+/// Una máquina en el panel de la derecha: su color e icono, nombre y tag, y debajo su patrón y las horas del mes.
 class _Ficha extends StatelessWidget {
   final Activo a;
   final Color color;
