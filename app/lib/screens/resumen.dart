@@ -490,8 +490,8 @@ class _ComoFunciona extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 12),
               child: Text(
-                'Todas las órdenes de trabajo nacen de un mantenimiento, así que por defecto son preventivas. '
-                'Cuando se crea una incidencia, su orden será correctiva: no crítica o crítica.',
+                'Las órdenes que salen de un mantenimiento son preventivas. Las que creas tú o salen de una '
+                'incidencia pueden ser correctivas: no críticas o críticas.',
                 style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave),
               ),
             ),
