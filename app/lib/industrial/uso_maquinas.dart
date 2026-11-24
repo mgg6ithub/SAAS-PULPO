@@ -273,7 +273,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   String? _elegida;
   bool _visible(Activo a) => _elegida == null || _elegida == a.id;
 
-  /// Lista de activos a la izquierda, que se abre y cierra con el botón «Activos» junto al título.
+  /// Lista de activos a la izquierda, que se abre y cierra con el botón del activo que se ve, bajo el título.
   bool _panel = false;
 
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
@@ -573,6 +573,11 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   children: [
                     _cabecera(),
                     const SizedBox(height: 10),
+                    // Debajo del título: el activo que se ve (o todos); abre y cierra la lista de activos.
+                    if (activos.isNotEmpty) ...[
+                      Align(alignment: Alignment.centerLeft, child: _botonActivos(activos)),
+                      const SizedBox(height: 10),
+                    ],
                     const Consejo(
                       'Cada máquina tiene su patrón semanal; aquí marcas las excepciones. Selecciona días (tocando, '
                       'arrastrando o por el día de la semana) y toca una máquina para elegir qué hace '
@@ -649,6 +654,16 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     );
   }
 
+  Widget _botonActivos(List<Activo> activos) {
+    final a = activos.where((x) => x.id == _elegida).firstOrNull;
+    return BotonAccion(
+      a == null ? 'Todos los activos' : a.titulo,
+      icono: a == null ? Marca.iconoCliente : iconoIndustrial(a.icono),
+      tooltip: _panel ? 'Ocultar la lista de activos' : 'Ver la lista de activos',
+      onPressed: () => setState(() => _panel = !_panel),
+    );
+  }
+
   Widget _cabecera() => BarraVista(
     izquierda: [
       Row(
@@ -663,14 +678,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
             const SizedBox(width: 6),
           ],
           const Flexible(child: TituloVista('Uso de activos')),
-          const SizedBox(width: 12),
-          // A la izquierda, junto al título: abre y cierra la lista de activos (el mismo botón la cierra).
-          BotonAccion(
-            'Activos',
-            icono: Marca.iconoCliente,
-            tooltip: _panel ? 'Ocultar la lista de activos' : 'Ver la lista de activos',
-            onPressed: () => setState(() => _panel = !_panel),
-          ),
         ],
       ),
     ],
