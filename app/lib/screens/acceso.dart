@@ -269,7 +269,7 @@ class _Marco extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460),
           child: Tarjeta(
-            padding: const EdgeInsets.fromLTRB(36, 26, 36, 32),
+            padding: const EdgeInsets.fromLTRB(36, 26, 36, 22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -424,7 +424,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
   static String _traducir(String m) {
     final t = m.toLowerCase();
     if (t.contains('invalid login')) {
-      return 'Correo o contraseña incorrectos. Revísalos o pulsa «¿Has olvidado la contraseña?».';
+      return 'Correo o contraseña incorrectos.';
     }
     if (t.contains('already registered') || t.contains('already been registered')) {
       return 'Ya hay una cuenta con ese correo. Entra con ella o recupera la contraseña.';
