@@ -461,58 +461,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     },
   );
 
-  /// Marca (con su nombre) o desmarca como festivos los días seleccionados.
-  Future<void> _festivoSel(List<Activo> activos) async {
-    final dias = _sel.toList();
-    final todos = dias.every((d) => store.festivo(d) != null);
-    var nombre = '';
-    if (!todos) {
-      final r = await _pedirNombre();
-      if (r == null) return;
-      nombre = r;
-    }
-    if (!await _confirmarPasado(dias)) return;
-    final antes = _fechasOts(activos);
-    store.deshacible(
-      todos
-          ? 'Quitado festivo en ${_dias(dias.length)}'
-          : '${nombre.isEmpty ? 'Festivo' : nombre}: ${_dias(dias.length)}',
-      () {
-        store.ponerFestivos(dias, festivo: !todos, nombre: nombre);
-        for (final a in activos) {
-          reprogramarOts(a);
-        }
-      },
-      aviso: false,
-    );
-    if (!mounted) return;
-    setState(() {});
-    _avisarOts(context, antes, abajo: _abajoAviso);
-  }
-
-  Future<String?> _pedirNombre() {
-    final c = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Marcar como festivo'),
-        content: SizedBox(
-          width: 340,
-          child: TextField(
-            controller: c,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Festivo, vacaciones, parada…'),
-            onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, c.text.trim()), child: const Text('Marcar')),
-        ],
-      ),
-    );
-  }
-
   /// Acciones de una máquina: con días seleccionados, las de esos días; si no, editarla, su patrón y rellenar
   /// el mes.
   void _accion(Activo a, Color color, String accion) {
@@ -806,11 +754,10 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     ],
   );
 
-  /// Barra de selección de días, como la de las listas: cuántos, todo el mes, festivo, vaciar los días y salir
+  /// Barra de selección de días, como la de las listas: cuántos, todo el mes, vaciar los días y salir
   /// (también con Esc). Lo de cada máquina sale al tocarla.
   Widget _barraSeleccion(List<Activo> activos) {
     final delMes = _diasMes.toList();
-    final festivos = _sel.every((d) => store.festivo(d) != null);
     final elegidos = activos.where((a) => _elegidas.contains(a.id)).toList();
     return BarraSeleccion(
       seleccionados: _sel.length,
@@ -822,14 +769,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       onEliminar: () => _vaciarSel(elegidos.isEmpty ? activos : elegidos),
       eliminar: elegidos.isEmpty ? _menuVaciar(activos) : null,
       onSalir: _deseleccionar,
-      acciones: [
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: Colors.white),
-          onPressed: () => _festivoSel(activos),
-          child: Text(festivos ? 'Quitar festivo' : 'Festivo'),
-        ),
-        const SizedBox(width: 6),
-      ],
     );
   }
 
@@ -1024,17 +963,21 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   /// Horas de la semana, pegadas a la derecha. Con activos elegidos, las de cada uno con su icono, a la altura de
   /// su línea; con todos, la suma.
   Widget _horasSemana(List<Activo> activos, List<DateTime> dias) {
-    // El icono al final, pegado a la derecha: así quedan todos en columna aunque cambien los dígitos.
+    // Primero el icono y luego las horas, en un hueco fijo alineado a la derecha: así los iconos quedan en
+    // columna aunque cambien los dígitos.
     Widget linea(Widget icono, double h) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '${h.toStringAsFixed(0)} h',
-          maxLines: 1,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: h == 0 ? P.textoSuave : P.texto),
-        ),
-        const SizedBox(width: 4),
         icono,
+        SizedBox(
+          width: 42,
+          child: Text(
+            '${h.toStringAsFixed(0)} h',
+            maxLines: 1,
+            textAlign: TextAlign.right,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: h == 0 ? P.textoSuave : P.texto),
+          ),
+        ),
       ],
     );
     final hijo = _elegidas.isEmpty
