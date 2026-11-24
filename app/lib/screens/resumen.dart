@@ -1391,8 +1391,8 @@ extension on _HeroState {
         : [Marca.iconoCliente, Marca.iconoTrabajo, Marca.iconoTrabajador];
     // Presentación: fecha, nombre y frase se escriben uno detrás de otro; luego entran los bloques.
     const dFecha = IntroInicio.fecha;
-    final dNombre = dFecha + this.fecha.length / 45 + .15;
-    final dFrase = dNombre + saludo.length / 14 + .2;
+    final dNombre = dFecha + this.fecha.length / 60 + .1;
+    final dFrase = dNombre + saludo.length / 22 + .15;
     IntroInicio.resto = dFrase + frase.length / 90 + .15;
     final texto = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1401,7 +1401,7 @@ extension on _HeroState {
           this.fecha,
           estilo: TextStyle(color: P.textoSuave, fontSize: 14, fontWeight: FontWeight.w500),
           desde: dFecha,
-          porSegundo: 45,
+          porSegundo: 60,
         ),
         const SizedBox(height: 8),
         Builder(builder: (_) {
@@ -1418,8 +1418,9 @@ extension on _HeroState {
           final nube = store.nube;
           return ValueListenableBuilder<double?>(
             valueListenable: IntroInicio.t,
-            builder: (context, t, _) => t != null
-                ? Escribir(saludo, estilo: estilo, desde: dNombre, porSegundo: 14)
+            // Escrito el nombre, vuelve a ser editable aunque la presentación siga (el borde aún late).
+            builder: (context, t, _) => t != null && t < IntroInicio.resto
+                ? Escribir(saludo, estilo: estilo, desde: dNombre, porSegundo: 22)
                 : industrial && nube != null && nube.esAdmin
                 ? _NombreEmpresa(nube, estilo)
                 : Text(saludo, style: estilo),

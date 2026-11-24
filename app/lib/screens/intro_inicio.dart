@@ -16,7 +16,7 @@ class IntroInicio {
   static final t = ValueNotifier<double?>(null);
 
   /// Cuándo se empieza a escribir la fecha (antes, la bienvenida).
-  static const fecha = 1.5;
+  static const fecha = 1.0;
 
   /// Cuándo empiezan a entrar los bloques (lo fija la cabecera según lo que tarde en escribirse).
   static double resto = 3.5;
@@ -27,14 +27,14 @@ class IntroInicio {
   /// Con todo ya dentro, las huellas de «Primeros pasos» salen de una en una (la del momento, más opaca y morada)
   /// y, mientras, el borde discontinuo pasa despacio de neutro a morado y vuelve, dos veces.
   static double get recorrido => resto + 2.1;
-  static const latidoSeg = 1.6, latidos = 2;
+  static const latidoSeg = 1.6, latidos = 9, huellasSeg = 3.2;
   static double get fin => recorrido + latidoSeg * latidos + .3;
 
   /// Avance de las huellas en el recorrido (en huellas; null fuera de él: se ven tal cual).
   static double? huellas(double? t, int n) {
     if (t == null) return null;
     if (t < recorrido) return -1;
-    return (t - recorrido) / (latidoSeg * latidos / n);
+    return (t - recorrido) / (huellasSeg / n);
   }
 
   /// Cuánto morado lleva el borde discontinuo (0 = neutro, 1 = morado).
@@ -127,8 +127,8 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
             valueListenable: IntroInicio.t,
             builder: (context, t, _) {
               if (t == null || t >= IntroInicio.fecha) return const SizedBox.shrink();
-              final entra = Curves.easeOutCubic.transform((t / .4).clamp(0, 1));
-              final sale = 1 - Curves.easeInCubic.transform(((t - 1.1) / .35).clamp(0, 1));
+              final entra = Curves.easeOutCubic.transform((t / .3).clamp(0, 1));
+              final sale = 1 - Curves.easeInCubic.transform(((t - .7) / .28).clamp(0, 1));
               return Opacity(
                 opacity: entra * sale,
                 child: Transform.scale(
@@ -153,13 +153,13 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
                                   builder: (_) {
                                     final mitad = (nombre.characters.length - 1) / 2;
                                     final lejos = mitad == 0 ? 0.0 : (k - mitad).abs() / mitad;
-                                    final v = Curves.easeOutBack.transform(
-                                      ((t - .15 - lejos * .45) / .35).clamp(0.0, 1.0),
+                                    final v = Curves.easeOutCubic.transform(
+                                      ((t - .05 - lejos * .18) / .25).clamp(0.0, 1.0),
                                     );
                                     return Opacity(
-                                      opacity: v.clamp(0.0, 1.0),
+                                      opacity: v,
                                       child: Transform.translate(
-                                        offset: Offset((k - mitad).sign * 10 * (1 - v), 6 * (1 - v)),
+                                        offset: Offset((k - mitad).sign * 3 * (1 - v), 0),
                                         child: Text(
                                           letra,
                                           style: TextStyle(
