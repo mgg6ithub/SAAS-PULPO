@@ -1243,6 +1243,9 @@ class Vacio extends StatelessWidget {
   /// Con scroll si no cabe (por defecto). Sin él, se puede medir su alto natural (p. ej. dentro de un
   /// IntrinsicHeight, que no admite listas desplazables).
   final bool desplazable;
+
+  /// Debajo de [accion], una flecha discontinua que se dibuja sola desde abajo, hace un bucle y apunta al botón.
+  final bool flecha;
   const Vacio({
     super.key,
     required this.icono,
@@ -1251,6 +1254,7 @@ class Vacio extends StatelessWidget {
     this.accion,
     this.color,
     this.desplazable = true,
+    this.flecha = false,
   });
 
   @override
@@ -1279,6 +1283,7 @@ class Vacio extends StatelessWidget {
             style: TextStyle(color: P.textoSuave, fontSize: 14),
           ),
           if (accion != null) ...[const SizedBox(height: 16), accion!],
+          if (accion != null && flecha) ...[const SizedBox(height: 4), const FlechaAlBoton()],
         ],
       ),
     ),
@@ -1287,6 +1292,91 @@ class Vacio extends StatelessWidget {
   Widget _envolver(Widget hijo) => desplazable
       ? SingleChildScrollView(padding: const EdgeInsets.all(24), child: hijo)
       : Padding(padding: const EdgeInsets.all(24), child: hijo);
+}
+
+/// Flecha discontinua que se dibuja marca a marca desde abajo, hace un bucle y acaba apuntando hacia arriba (al
+/// botón que tiene encima). Se vuelve a dibujar cada vez que su vista se muestra (al activarse su `TickerMode`).
+class FlechaAlBoton extends StatefulWidget {
+  const FlechaAlBoton({super.key});
+
+  @override
+  State<FlechaAlBoton> createState() => _FlechaAlBotonState();
+}
+
+class _FlechaAlBotonState extends State<FlechaAlBoton> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1700));
+  bool _visible = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (visible && !_visible) {
+      if (MediaQuery.of(context).disableAnimations) {
+        _c.value = 1;
+      } else {
+        _c.forward(from: 0);
+      }
+    }
+    _visible = visible;
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: RepaintBoundary(
+      child: CustomPaint(
+        size: const Size(140, 150),
+        painter: _Flecha(CurvedAnimation(parent: _c, curve: Curves.easeInOutCubic), P.morado.withValues(alpha: .7)),
+      ),
+    ),
+  );
+}
+
+class _Flecha extends CustomPainter {
+  final Animation<double> avance;
+  final Color color;
+  _Flecha(this.avance, this.color) : super(repaint: avance);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    // Sale de abajo a la izquierda, sube hacia la derecha, da una vuelta y sube recta al botón.
+    final camino = Path()
+      ..moveTo(w * .26, h - 2)
+      ..cubicTo(w * .80, h * .92, w * .88, h * .56, w * .58, h * .54)
+      ..cubicTo(w * .28, h * .52, w * .30, h * .84, w * .52, h * .78)
+      ..cubicTo(w * .70, h * .73, w * .52, h * .30, w * .50, h * .07);
+    final pinta = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    final m = camino.computeMetrics().first;
+    final hasta = m.length * avance.value;
+    const marca = 6.0, hueco = 5.0;
+    for (var d = 0.0; d < hasta; d += marca + hueco) {
+      canvas.drawPath(m.extractPath(d, min(d + marca, hasta)), pinta);
+    }
+    // La punta, al llegar: en la dirección del final del camino.
+    if (avance.value > .92) {
+      final fin = m.getTangentForOffset(m.length)!;
+      final a = fin.angle, p = fin.position;
+      final punta = ((avance.value - .92) / .08).clamp(0.0, 1.0) * 9;
+      for (final lado in [-1, 1]) {
+        final ang = -a + pi + lado * .55;
+        canvas.drawLine(p, p + Offset(cos(ang), sin(ang)) * punta, pinta);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Flecha old) => old.color != color;
 }
 
 // ── Tablas ───────────────────────────────────────────────

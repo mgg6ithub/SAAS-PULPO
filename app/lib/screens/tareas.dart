@@ -444,7 +444,9 @@ class _TareasPaginaState extends State<TareasPagina> {
                 child: filtradas.isEmpty
                     ? Vacio(
                         icono: Marca.iconoTrabajo,
-                        titulo: store.tareas.isEmpty ? m('Aún no hay trabajos') : null,
+                        titulo: store.tareas.isEmpty
+                            ? (industrial ? 'Aún no tienes órdenes de trabajo' : m('Aún no hay trabajos'))
+                            : null,
                         texto: pestana == 0 && nTrabajos == 0
                             ? (industrial
                                   ? 'Crea tu primera orden de trabajo.'
@@ -458,11 +460,12 @@ class _TareasPaginaState extends State<TareasPagina> {
                                   pestana == 1
                                       ? 'Nueva plantilla'
                                       : nTrabajos == 0
-                                      ? m('Añadir el primer trabajo')
+                                      ? (industrial ? 'Añadir la primera orden de trabajo' : m('Añadir el primer trabajo'))
                                       : m('Nuevo trabajo'),
                                 ),
                               )
                             : null,
+                        flecha: store.tareas.isEmpty,
                       )
                     : lista
                     ? TablaTrabajos(filtradas, onAbrir: widget.onAbrir, marcada: otMarcada.value)

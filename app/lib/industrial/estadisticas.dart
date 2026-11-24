@@ -66,7 +66,14 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
           ),
           const SizedBox(height: huecoVista),
           Expanded(
-            child: switch (apartado) {
+            // Sin activos ni órdenes no hay nada que medir: un vacío en lugar de paneles a cero.
+            child: store.activos.isEmpty && !store.tareas.any((t) => !t.esPlantilla)
+                ? const Vacio(
+                    icono: Icons.insights_outlined,
+                    titulo: 'Sin estadísticas',
+                    texto: 'Aparecerán cuando tengas activos y órdenes de trabajo.',
+                  )
+                : switch (apartado) {
               0 => _PorActivo(
                 activoId: activoId ?? store.hijosDe(null).firstOrNull?.id,
                 desde: desde,

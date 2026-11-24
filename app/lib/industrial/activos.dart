@@ -190,9 +190,10 @@ class _ActivosState extends State<Activos> {
                     accion: q.isEmpty
                         ? FilledButton(
                             onPressed: () => abrirActivoForm(context),
-                            child: const Text('Añadir el primero'),
+                            child: const Text('Añadir el primer activo'),
                           )
                         : null,
+                    flecha: q.isEmpty,
                   )
                 : _TablaActivos(activos, (id) {
                     // Al cambiar de vista con el ratón encima de un tipo, su aviso se quedaba pegado.

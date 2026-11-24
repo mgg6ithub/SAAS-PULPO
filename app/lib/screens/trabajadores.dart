@@ -133,9 +133,10 @@ class _TrabajadoresState extends State<Trabajadores> {
                         accion: store.trabajadores.isEmpty
                             ? FilledButton(
                                 onPressed: () => abrirTrabajadorForm(context),
-                                child: Text(m('Añadir el primer trabajador')),
+                                child: Text(industrial ? 'Añadir el primer técnico' : m('Añadir el primer trabajador')),
                               )
                             : null,
+                        flecha: store.trabajadores.isEmpty,
                       )
                     : this.lista
                     ? _tabla(lista)
