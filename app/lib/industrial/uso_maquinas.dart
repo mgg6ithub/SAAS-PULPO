@@ -1480,27 +1480,6 @@ class _Maquinas extends StatelessWidget {
     );
   }
 
-  /// Leyenda: claro = 1 turno, lleno = 2 o 3; rombo = mantenimiento.
-  Widget get _leyenda => Wrap(
-    spacing: 14,
-    runSpacing: 6,
-    crossAxisAlignment: WrapCrossAlignment.center,
-    children: [
-      _item(_Muestra(P.textoSuave, 1), '1 turno'),
-      _item(_Muestra(P.textoSuave, 2), '2 o 3 turnos'),
-      _item(Transform.rotate(angle: .785, child: Container(width: 7, height: 7, color: P.textoSuave)), 'Mantenimiento'),
-    ],
-  );
-
-  Widget _item(Widget muestra, String texto) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      muestra,
-      const SizedBox(width: 6),
-      Text(texto, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-    ],
-  );
-
   // Una sola fila de 40 px que se desplaza en horizontal: así el calendario se lleva casi todo el alto
   // aunque haya muchas máquinas.
   @override
@@ -1521,8 +1500,6 @@ class _Maquinas extends StatelessWidget {
             itemBuilder: (_, i) => _ficha(i, activos[i]),
           ),
         ),
-        const SizedBox(width: 16),
-        _leyenda,
       ],
     ),
   );
@@ -1594,24 +1571,6 @@ class _Turno extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Muestra de la leyenda: claro (1 turno) o lleno (2 o 3).
-class _Muestra extends StatelessWidget {
-  final Color color;
-  final int n;
-  const _Muestra(this.color, this.n);
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 18,
-    height: 12,
-    decoration: BoxDecoration(
-      color: n >= 2 ? color : color.withValues(alpha: .15),
-      borderRadius: BorderRadius.circular(3),
-      border: Border(left: BorderSide(color: color, width: 3)),
-    ),
-  );
 }
 
 /// Una máquina en la fila de arriba (40 px): su color, icono, nombre y tag; el patrón y las horas, en el tooltip.
