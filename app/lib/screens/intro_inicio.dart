@@ -24,22 +24,23 @@ class IntroInicio {
   /// Lo que tarda un bloque en entrar.
   static const entrada = .45;
 
-  /// Con todo ya dentro, se recorren los primeros pasos de uno en uno (cada uno resaltado [porPaso] segundos) y,
-  /// mientras, el borde discontinuo late entre morado y neutro.
+  /// Con todo ya dentro, las huellas de «Primeros pasos» salen de una en una (la del momento, más opaca y morada)
+  /// y, mientras, el borde discontinuo pasa despacio de neutro a morado y vuelve, dos veces.
   static double get recorrido => resto + 2.1;
-  static const porPaso = .8, pasos = 4;
-  static double get fin => recorrido + pasos * porPaso + .3;
+  static const latidoSeg = 1.6, latidos = 2;
+  static double get fin => recorrido + latidoSeg * latidos + .3;
 
-  /// El paso resaltado ahora (o -1).
-  static int pasoResaltado(double? t) {
-    if (t == null || t < recorrido || t >= recorrido + pasos * porPaso) return -1;
-    return ((t - recorrido) / porPaso).floor();
+  /// Avance de las huellas en el recorrido (en huellas; null fuera de él: se ven tal cual).
+  static double? huellas(double? t, int n) {
+    if (t == null) return null;
+    if (t < recorrido) return -1;
+    return (t - recorrido) / (latidoSeg * latidos / n);
   }
 
-  /// Cuánto morado lleva el borde discontinuo (0 = neutro, 1 = morado): late una vez por paso.
+  /// Cuánto morado lleva el borde discontinuo (0 = neutro, 1 = morado).
   static double latido(double? t) {
-    if (pasoResaltado(t) < 0) return 0;
-    return .5 - .5 * cos(2 * pi * (t! - recorrido) / porPaso);
+    if (t == null || t < recorrido || t > recorrido + latidoSeg * latidos) return 0;
+    return .5 - .5 * cos(2 * pi * (t - recorrido) / latidoSeg);
   }
 }
 
@@ -143,15 +144,37 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
                             style: TextStyle(color: P.textoSuave, fontSize: 18, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 6),
-                          Text(
-                            nombre,
-                            style: TextStyle(
-                              fontFamily: P.titulos,
-                              fontSize: 40,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -1.2,
-                              color: P.morado,
-                            ),
+                          // El nombre sale letra a letra desde el centro hacia los lados.
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (final (k, letra) in nombre.characters.indexed)
+                                Builder(
+                                  builder: (_) {
+                                    final mitad = (nombre.characters.length - 1) / 2;
+                                    final lejos = mitad == 0 ? 0.0 : (k - mitad).abs() / mitad;
+                                    final v = Curves.easeOutBack.transform(
+                                      ((t - .15 - lejos * .45) / .35).clamp(0.0, 1.0),
+                                    );
+                                    return Opacity(
+                                      opacity: v.clamp(0.0, 1.0),
+                                      child: Transform.translate(
+                                        offset: Offset((k - mitad).sign * 10 * (1 - v), 6 * (1 - v)),
+                                        child: Text(
+                                          letra,
+                                          style: TextStyle(
+                                            fontFamily: P.titulos,
+                                            fontSize: 40,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -1.2,
+                                            color: P.morado,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                            ],
                           ),
                         ],
                       ),

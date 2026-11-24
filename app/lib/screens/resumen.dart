@@ -701,9 +701,13 @@ class _PrimerosPasos extends StatelessWidget {
                 // Pasitos que caminan hacia la derecha, en onda, junto al título (en móvil no caben).
                 if (!esMovil(context))
                   ExcludeSemantics(
-                    child: CustomPaint(
-                      size: const Size(150, 30),
-                      painter: _HuellasGuia(P.morado.withValues(alpha: .4)),
+                    // En la presentación, las huellas salen de una en una (la del momento, más morada).
+                    child: ValueListenableBuilder<double?>(
+                      valueListenable: IntroInicio.t,
+                      builder: (context, t, _) => CustomPaint(
+                        size: const Size(150, 30),
+                        painter: _HuellasGuia(P.morado.withValues(alpha: .4), t: t),
+                      ),
                     ),
                   ),
                 const SizedBox(width: 48),
@@ -714,17 +718,6 @@ class _PrimerosPasos extends StatelessWidget {
               // En la presentación, los pasos entran de uno en uno.
               Aparecer(
                 retraso: .2 + i * .14,
-                // Recorrido de la presentación: el paso del momento, con fondo morado suave.
-                child: ValueListenableBuilder<double?>(
-                  valueListenable: IntroInicio.t,
-                  builder: (context, t, child) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    decoration: BoxDecoration(
-                      color: IntroInicio.pasoResaltado(t) == i ? P.morado.withValues(alpha: .10) : P.morado.withValues(alpha: 0),
-                      borderRadius: BorderRadius.circular(P.radioControl),
-                    ),
-                    child: child,
-                  ),
                 child: IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -753,23 +746,17 @@ class _PrimerosPasos extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ValueListenableBuilder<double?>(
-                              valueListenable: IntroInicio.t,
-                              builder: (context, t, _) {
-                              final resaltado = IntroInicio.pasoResaltado(t) == i;
-                              return AnimatedDefaultTextStyle(
+                            AnimatedDefaultTextStyle(
                               duration: const Duration(milliseconds: 220),
                               style: TextStyle(
                                 fontSize: 14,
                                 height: 1.45,
-                                fontWeight: i == actual || resaltado ? FontWeight.w600 : FontWeight.w500,
-                                color: resaltado ? P.morado : hechos[i] || i == actual ? P.texto : P.textoSuave,
+                                fontWeight: i == actual ? FontWeight.w600 : FontWeight.w500,
+                                color: hechos[i] || i == actual ? P.texto : P.textoSuave,
                                 decoration: hechos[i] ? TextDecoration.lineThrough : null,
                                 decorationColor: P.textoSuave,
                               ),
                               child: Text(titulo),
-                            );
-                              },
                             ),
                             // El paso en curso, más abierto: explicación y, debajo, dónde se hace o su botón.
                             if (i == actual) ...[
@@ -805,7 +792,6 @@ class _PrimerosPasos extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
               ),
               ),
           ],
@@ -1576,7 +1562,10 @@ const _sangriaHero = 22.0;
 /// Pasitos que caminan de izquierda a derecha en una onda (arriba y abajo), junto al título de la guía.
 class _HuellasGuia extends CustomPainter {
   final Color color;
-  const _HuellasGuia(this.color);
+
+  /// Reloj de la presentación (null: todas las huellas tal cual).
+  final double? t;
+  const _HuellasGuia(this.color, {this.t});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1586,7 +1575,18 @@ class _HuellasGuia extends CustomPainter {
     double y(double x) => centro - amplitud * sin(2 * pi * x / ancho);
     double pendiente(double x) => -amplitud * cos(2 * pi * x / ancho) * 2 * pi / ancho;
     final n = max(4, (ancho / 26).floor());
+    final avance = IntroInicio.huellas(t, n);
     for (var i = 0; i < n; i++) {
+      // Presentación: invisible hasta su turno; al salir, opaca y morada; después, vuelve a como está siempre.
+      if (avance != null) {
+        final d = avance - i;
+        if (d <= 0) continue;
+        final fuerte = d < 1 ? 1.0 : (1 - (d - 1) / .6).clamp(0.0, 1.0);
+        final c = Color.lerp(color, P.morado, fuerte)!;
+        relleno.color = c.withValues(alpha: c.a * (d / .25).clamp(0.0, 1.0));
+      } else {
+        relleno.color = color;
+      }
       final x = 4 + i * (ancho - 4) / (n - 1);
       canvas.save();
       canvas.translate(x, y(x));
@@ -1601,7 +1601,7 @@ class _HuellasGuia extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_HuellasGuia old) => false;
+  bool shouldRepaint(_HuellasGuia old) => old.t != t || old.color != color;
 }
 
 /// Ilustraciones vectoriales del saludo: amanecer, sol y luna con estrellas.
