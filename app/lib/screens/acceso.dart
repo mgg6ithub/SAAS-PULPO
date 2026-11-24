@@ -511,11 +511,11 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
             ],
           ),
         ),
-        // Hueco fijo para el aviso (dos líneas): al salir un error no empuja el botón.
+        // Hueco fijo para el aviso (una línea): al salir un error corto no empuja el botón.
         Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 37),
+            constraints: const BoxConstraints(minHeight: 18),
             child: _aviso == null
                 ? const SizedBox(width: double.infinity)
                 : Text(
