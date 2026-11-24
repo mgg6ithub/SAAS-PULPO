@@ -68,7 +68,7 @@ class _AjustesState extends State<_Ajustes> {
           _Fila(
             titulo: 'Web de Pultec',
             subtitulo: 'Planes, precios y preguntas frecuentes',
-            child: Enlace('Abrir', onTap: () => abrirEnlace(landingUrl)),
+            child: Enlace('Abrir', onTap: () => abrirEnlace(_landingConTema())),
           ),
         ]),
     ],
@@ -304,7 +304,7 @@ class _AjustesState extends State<_Ajustes> {
                         MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: GestureDetector(
-                            onTap: () => abrirEnlace(landingUrl),
+                            onTap: () => abrirEnlace(_landingConTema()),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -599,4 +599,10 @@ class _PlanEmpresaState extends State<_PlanEmpresa> {
   );
 
   Nube get nube => store.nube!;
+}
+
+/// La landing con el tema de la app, para que se abra igual (claro u oscuro).
+String _landingConTema() {
+  final u = Uri.parse(landingUrl);
+  return u.replace(queryParameters: {...u.queryParameters, 'tema': ajustes.oscuro ? 'oscuro' : 'claro'}).toString();
 }
