@@ -269,7 +269,7 @@ class _Marco extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460),
           child: Tarjeta(
-            padding: const EdgeInsets.fromLTRB(36, 36, 36, 32),
+            padding: const EdgeInsets.fromLTRB(36, 26, 36, 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -443,6 +443,10 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
     return 'Algo ha fallado. Vuelve a intentarlo en un momento.';
   }
 
+  // En el acceso, campos y botones algo más altos que en el resto de la app.
+  static const _altoCampo = 48.0;
+  static const _rellenoCampo = EdgeInsets.symmetric(horizontal: 14, vertical: 16);
+
   @override
   Widget build(BuildContext context) {
     final suave = TextStyle(color: P.textoSuave, fontSize: 13.5, height: 1.4);
@@ -467,6 +471,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
         ),
         const SizedBox(height: 20),
         OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, _altoCampo)),
           onPressed: _enviando ? null : () => _intentar(Nube.entrarConGoogle),
           icon: SvgPicture.string(_logoGoogle, width: 18, height: 18),
           label: const Text('Continuar con Google'),
@@ -491,7 +496,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(hintText: 'Correo'),
+                decoration: const InputDecoration(hintText: 'Correo', contentPadding: _rellenoCampo),
               ),
               const SizedBox(height: 10),
               TextField(
@@ -500,6 +505,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
                 autofillHints: [_nueva ? AutofillHints.newPassword : AutofillHints.password],
                 onSubmitted: (_) => _enviando ? null : _enviar(),
                 decoration: InputDecoration(
+                  contentPadding: _rellenoCampo,
                   hintText: _nueva ? 'Contraseña (mín. 6 caracteres)' : 'Contraseña',
                   suffixIcon: IconButton(
                     tooltip: _verClave ? 'Ocultar contraseña' : 'Ver contraseña',
@@ -525,6 +531,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
           ),
         ),
         FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(0, _altoCampo)),
           onPressed: _enviando ? null : _enviar,
           child: _enviando
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
