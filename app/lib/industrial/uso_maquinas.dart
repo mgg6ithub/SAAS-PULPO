@@ -270,8 +270,9 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   DateTime? _ultimoSel;
 
   /// Máquina elegida en el panel: el mes muestra solo la suya (null = todas, un punto por máquina en cada día).
-  String? _elegida;
-  bool _visible(Activo a) => _elegida == null || _elegida == a.id;
+  /// Activos elegidos en la lista: el mes muestra solo los suyos, una línea por activo (vacío = todos, en puntos).
+  final _elegidas = <String>{};
+  bool _visible(Activo a) => _elegidas.isEmpty || _elegidas.contains(a.id);
 
   /// Lista de activos a la izquierda, que se abre y cierra con el botón del activo que se ve, bajo el título.
   bool _panel = false;
@@ -649,10 +650,15 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                                       horasMes: (a) => _horas(a, _diasMes),
                                       onAccion: _accion,
                                       diasSel: _sel.isEmpty ? null : _dias(_sel.length),
-                                      elegida: _elegida,
+                                      elegidas: _elegidas,
                                       // Tocar un activo abre su mes (también desde «Por máquina»); otra vez, todos.
                                       onElegir: (a) => setState(() {
-                                        _elegida = a == null || _elegida == a.id ? null : a.id;
+                                        // Tocar uno lo añade o lo quita; «Todos los activos», ninguno.
+                                        if (a == null) {
+                                          _elegidas.clear();
+                                        } else if (!_elegidas.remove(a.id)) {
+                                          _elegidas.add(a.id);
+                                        }
                                         _vista = 0;
                                       }),
                                       onCerrar: _alternarPanel,
@@ -692,7 +698,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
 
   /// El activo que se ve (o todos), del mismo ancho que la lista y con el color del activo: abre y cierra la lista.
   Widget _botonActivos(List<Activo> activos) {
-    final i = activos.indexWhere((x) => x.id == _elegida);
+    final i = _elegidas.length == 1 ? activos.indexWhere((x) => x.id == _elegidas.first) : -1;
     final a = i < 0 ? null : activos[i];
     final color = a == null ? P.textoSuave : _colorDe(i);
     return Tooltip(
@@ -720,7 +726,11 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      a == null ? 'Todos los activos' : a.nombre.isEmpty ? a.tag : a.nombre,
+                      a != null
+                          ? (a.nombre.isEmpty ? a.tag : a.nombre)
+                          : _elegidas.isEmpty
+                          ? 'Todos los activos'
+                          : '${_elegidas.length} activos',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600),
@@ -798,16 +808,16 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   Widget _barraSeleccion(List<Activo> activos) {
     final delMes = _diasMes.toList();
     final festivos = _sel.every((d) => store.festivo(d) != null);
-    final elegido = activos.where((a) => a.id == _elegida).firstOrNull;
+    final elegidos = activos.where((a) => _elegidas.contains(a.id)).toList();
     return BarraSeleccion(
       seleccionados: _sel.length,
       total: delMes.length,
       nombre: 'días',
       textoEliminar: 'Vaciar días',
       onTodos: () => _alternar(delMes),
-      // Con un activo elegido, vacía solo los suyos, sin preguntar de cuál; con todos, el menú para elegir.
-      onEliminar: () => _vaciarSel(elegido == null ? activos : [elegido]),
-      eliminar: elegido == null ? _menuVaciar(activos) : null,
+      // Con activos elegidos, vacía solo los suyos, sin preguntar de cuál; con todos, el menú para elegir.
+      onEliminar: () => _vaciarSel(elegidos.isEmpty ? activos : elegidos),
+      eliminar: elegidos.isEmpty ? _menuVaciar(activos) : null,
       onSalir: _deseleccionar,
       acciones: [
         TextButton(
@@ -891,7 +901,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       _altoCabecera = 26.0,
       _punto = 9.0,
       _huecoPunto = 4.0,
-      _anchoHoras = 70.0,
+      _anchoHoras = 64.0,
       _maxMarcasTodas = 3,
       _anchoPanel = 260.0;
 
@@ -899,8 +909,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: .6, color: P.textoSuave);
 
   /// Máquinas (visibles) que salen en un día: con turnos o con una parada que es excepción.
-  int _enDia(List<Activo> activos, DateTime d) =>
-      activos.where((a) => _visible(a) && (turnosDe(a, d) > 0 || esExcepcion(a, d))).length;
+  int _enDia(List<Activo> activos, DateTime d) => activos.where(_visible).length;
 
   /// Alto de un día. Todas: las filas de puntos y hasta tres mantenimientos (más una línea «+N»). Una máquina:
   /// su pastilla y sus mantenimientos.
@@ -918,7 +927,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       for (final e in _marcas(activos, inicio, masDias(inicio, semanas * 7 - 1)).entries)
         e.key: [for (final m in e.value) if (_visible(m.activo)) m],
     };
-    final todas = _elegida == null;
+    final todas = _elegidas.isEmpty;
     return LayoutBuilder(
       builder: (context, box) {
         final ancho = box.maxWidth < 640 ? 640.0 : box.maxWidth;
@@ -965,8 +974,8 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                       width: _anchoHoras,
                       height: _altoCabecera,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 2, 0, 0),
-                        child: Text('HORAS', style: _estiloCabecera),
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('HORAS', textAlign: TextAlign.right, style: _estiloCabecera),
                       ),
                     ),
                   ],
@@ -1003,19 +1012,19 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   }
 
   Widget _horasSemana(List<Activo> activos, List<DateTime> dias) {
-    final a = _elegida == null ? null : activos.where((x) => x.id == _elegida).firstOrNull;
-    final h = a != null ? _horas(a, dias) : activos.fold(0.0, (t, x) => t + _horas(x, dias));
+    final a = _elegidas.length == 1 ? activos.where((x) => x.id == _elegidas.first).firstOrNull : null;
+    final h = activos.where(_visible).fold(0.0, (t, x) => t + _horas(x, dias));
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 10, 0, 0),
+      padding: const EdgeInsets.only(top: 10),
       child: Align(
-        alignment: Alignment.topLeft,
+        alignment: Alignment.topRight,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             a != null
                 ? IconoActivo(a.icono, size: 15, color: _colorDe(activos.indexOf(a)))
                 : Icon(Marca.iconoCliente, size: 15, color: P.textoSuave),
-            const SizedBox(width: 5),
+            const SizedBox(width: 4),
             Flexible(
               child: Text(
                 '${h.toStringAsFixed(0)} h',
@@ -1225,13 +1234,13 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                                     ),
                                 ]
                               : [
-                            // La máquina elegida: su pastilla a lo ancho, con sus turnos.
+                            // Los activos elegidos: una pastilla a lo ancho por activo, con sus turnos (o «Sin turnos»).
                             Wrap(
                               spacing: 3,
                               runSpacing: 3,
                               children: [
                                 for (final (i, a) in activos.indexed)
-                                  if (_visible(a) && (turnosDe(a, d) > 0 || esExcepcion(a, d)))
+                                  if (_visible(a))
                                     SizedBox(
                                       width: anchoTurno,
                                       height: _altoTurno,
@@ -1239,8 +1248,10 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                                         a,
                                         _colorDe(i),
                                         turnosDe(a, d),
-                                        excepcion: esExcepcion(a, d),
-                                        texto: turnosDe(a, d) == 0 ? 'Parada' : _turnos(turnosDe(a, d)),
+                                        // Uno: sus turnos en texto. Varios: su tag (los turnos, por la intensidad).
+                                        texto: _elegidas.length > 1
+                                            ? (a.tag.isEmpty ? a.nombre : a.tag)
+                                            : (turnosDe(a, d) == 0 ? 'Sin turnos' : _turnos(turnosDe(a, d))),
                                         opciones: _opcionesDia(a, d),
                                         onAccion: (accion) => _accionDia(a, d, accion),
                                       ),
@@ -1590,7 +1601,7 @@ class _Maquinas extends StatelessWidget {
   final String? diasSel;
 
   /// Sin días seleccionados, tocar una máquina abre su mes ([elegida]; null = todas); sus acciones, en su flecha.
-  final String? elegida;
+  final Set<String> elegidas;
   final ValueChanged<Activo?> onElegir;
   final VoidCallback onCerrar;
   const _Maquinas({
@@ -1599,7 +1610,7 @@ class _Maquinas extends StatelessWidget {
     required this.colorDe,
     required this.horasMes,
     required this.onAccion,
-    required this.elegida,
+    required this.elegidas,
     required this.onElegir,
     this.diasSel,
   });
@@ -1641,7 +1652,9 @@ class _Maquinas extends StatelessWidget {
             )
           // Sin días elegidos: tocarla abre su mes; la flecha saca sus acciones.
           : Tooltip(
-              message: elegida == a.id ? 'Toca para volver a ver todas' : 'Toca para ver su mes; arrástrala a un día',
+              message: elegidas.contains(a.id)
+                  ? 'Toca para quitarlo del mes'
+                  : 'Toca para verlo en el mes (puedes elegir varios); arrástralo a un día',
               child: Material(
                 type: MaterialType.transparency,
                 child: InkWell(
@@ -1652,7 +1665,7 @@ class _Maquinas extends StatelessWidget {
                     a,
                     color,
                     h,
-                    elegida: elegida == a.id,
+                    elegida: elegidas.contains(a.id),
                     menu: BotonMenu<String>(
                       tooltip: 'Acciones de ${a.titulo}',
                       relleno: EdgeInsets.zero,
@@ -1673,7 +1686,7 @@ class _Maquinas extends StatelessWidget {
 
   /// Primera fila: todas las máquinas (un punto por máquina en cada día).
   Widget get _todas => Material(
-    color: elegida == null ? P.morado.withValues(alpha: .07) : Colors.transparent,
+    color: elegidas.isEmpty ? P.morado.withValues(alpha: .07) : Colors.transparent,
     borderRadius: BorderRadius.circular(P.radioControl),
     child: InkWell(
       borderRadius: BorderRadius.circular(P.radioControl),
@@ -1688,7 +1701,7 @@ class _Maquinas extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Todos los activos',
-                  style: TextStyle(fontWeight: FontWeight.w600, color: elegida == null ? P.morado : P.texto),
+                  style: TextStyle(fontWeight: FontWeight.w600, color: elegidas.isEmpty ? P.morado : P.texto),
                 ),
               ),
               Text('${activos.length}', style: TextStyle(color: P.textoSuave)),
@@ -1740,8 +1753,6 @@ class _Turno extends StatelessWidget {
   final Activo a;
   final Color color;
   final int n;
-  final bool excepcion;
-
   /// Lo que pone (por defecto, su tag): con una sola máquina en el mes, sus turnos («2 turnos»).
   final String? texto;
   final List<(String, Widget)> opciones;
@@ -1752,19 +1763,18 @@ class _Turno extends StatelessWidget {
     this.n, {
     required this.onAccion,
     required this.opciones,
-    this.excepcion = false,
     this.texto,
   });
 
   @override
   Widget build(BuildContext context) {
-    final lleno = n >= 2;
-    final tinta = lleno ? Colors.white : color;
+    // Tres intensidades, como en la leyenda: 1 turno suave, 2 medio, 3 lleno; sin turnos, solo el borde.
+    final tinta = n >= 3 ? Colors.white : (n == 2 ? P.texto : color);
     final pasa = n * a.horasTurno > 24;
     return BotonMenu<String>(
       tooltip: n == 0
           ? '${a.titulo}: parada (su patrón trabaja este día)'
-          : '${a.titulo}: ${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h${excepcion ? ', excepción al patrón' : ''}'
+          : '${a.titulo}: ${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h'
                 '${pasa ? ', no caben en 24 h' : ''}',
       seleccionado: '$n',
       resaltarHover: false,
@@ -1774,12 +1784,12 @@ class _Turno extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: n == 0 ? Colors.transparent : (lleno ? color : color.withValues(alpha: .12)),
+          color: n == 0 ? Colors.transparent : color.withValues(alpha: const [0.0, .14, .45, 1.0][n.clamp(0, 3)]),
           borderRadius: BorderRadius.circular(5),
           border: pasa
               ? Border.all(color: P.rojo, width: 1.5)
               : n == 0
-              ? Border.all(color: color.withValues(alpha: .35))
+              ? Border.all(color: P.borde)
               : Border(left: BorderSide(color: color, width: 3)),
         ),
         child: Row(
@@ -1793,18 +1803,9 @@ class _Turno extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: n == 0 ? P.textoSuave : tinta,
-                  decoration: n == 0 ? TextDecoration.lineThrough : null,
                 ),
               ),
             ),
-            if (excepcion && n > 0) ...[
-              const SizedBox(width: 3),
-              Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(color: tinta, shape: BoxShape.circle),
-              ),
-            ],
           ],
         ),
       ),
@@ -1812,7 +1813,7 @@ class _Turno extends StatelessWidget {
   }
 }
 
-/// Leyenda del mes, arriba a la derecha: suave = 1 turno, lleno = 2 o 3, aro = sin turnos, rombo = mantenimiento.
+/// Leyenda del mes, arriba a la derecha: de suave a lleno, 1, 2 o 3 turnos; aro = sin turnos; rombo = mantenimiento.
 class _Leyenda extends StatelessWidget {
   const _Leyenda();
 
@@ -1840,8 +1841,9 @@ class _Leyenda extends StatelessWidget {
     spacing: 16,
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
-      _item(_punto(lleno: true, alfa: .45), '1 turno'),
-      _item(_punto(lleno: true), '2 o 3 turnos'),
+      _item(_punto(lleno: true, alfa: .35), '1 turno'),
+      _item(_punto(lleno: true, alfa: .7), '2 turnos'),
+      _item(_punto(lleno: true), '3 turnos'),
       _item(_punto(lleno: false), 'Sin turnos'),
       _item(Transform.rotate(angle: .785, child: Container(width: 7, height: 7, color: P.textoSuave)), 'Mantenimiento'),
     ],
@@ -1949,9 +1951,9 @@ class _Ficha extends StatelessWidget {
   );
 }
 
-/// Un día con todas las máquinas: un punto por máquina, siempre en el mismo sitio y en su color (lleno con 2 o
-/// 3 turnos, suave con 1); un hueco gris si no trabaja y un aro rojo si es una parada fuera de su patrón. Así se
-/// ve de un vistazo cuáles faltan.
+/// Un día con todas las máquinas: un punto por máquina, siempre en el mismo sitio y en su color (más intenso
+/// cuantos más turnos: 1, 2 o 3) y un aro gris si no tiene turnos, como en la leyenda. Así se ve de un vistazo
+/// cuáles faltan.
 class _PuntosDia extends StatelessWidget {
   final List<Activo> activos;
   final DateTime d;
@@ -1962,7 +1964,6 @@ class _PuntosDia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final turnos = [for (final a in activos) turnosDe(a, d)];
-    final paradas = [for (final a in activos) esExcepcion(a, d)];
     final filas = (activos.length / porFila).ceil();
     return RepaintBoundary(
         child: CustomPaint(
@@ -1973,10 +1974,8 @@ class _PuntosDia extends StatelessWidget {
           painter: _PintorPuntos(
             colores: [for (var i = 0; i < activos.length; i++) colorDe(i)],
             turnos: turnos,
-            paradas: paradas,
             porFila: porFila,
             hueco: P.borde,
-            rojo: P.rojo,
           ),
         ),
     );
@@ -1986,16 +1985,13 @@ class _PuntosDia extends StatelessWidget {
 class _PintorPuntos extends CustomPainter {
   final List<Color> colores;
   final List<int> turnos;
-  final List<bool> paradas;
   final int porFila;
-  final Color hueco, rojo;
+  final Color hueco;
   _PintorPuntos({
     required this.colores,
     required this.turnos,
-    required this.paradas,
     required this.porFila,
     required this.hueco,
-    required this.rojo,
   });
 
   @override
@@ -2008,10 +2004,10 @@ class _PintorPuntos extends CustomPainter {
     for (var i = 0; i < colores.length; i++) {
       final c = Offset((i % porFila) * (p + h) + p / 2, (i ~/ porFila) * (p + h) + p / 2);
       if (turnos[i] > 0) {
-        lleno.color = turnos[i] >= 2 ? colores[i] : colores[i].withValues(alpha: .45);
+        lleno.color = colores[i].withValues(alpha: const [0.0, .35, .7, 1.0][turnos[i].clamp(0, 3)]);
         canvas.drawCircle(c, p / 2, lleno);
       } else {
-        aro.color = paradas[i] ? rojo : hueco;
+        aro.color = hueco;
         canvas.drawCircle(c, p / 2 - .6, aro);
       }
     }
@@ -2019,5 +2015,5 @@ class _PintorPuntos extends CustomPainter {
 
   @override
   bool shouldRepaint(_PintorPuntos o) =>
-      !listEquals(o.turnos, turnos) || !listEquals(o.paradas, paradas) || !listEquals(o.colores, colores) || o.porFila != porFila;
+      !listEquals(o.turnos, turnos) || !listEquals(o.colores, colores) || o.porFila != porFila;
 }
