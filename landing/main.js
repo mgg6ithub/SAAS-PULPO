@@ -106,8 +106,8 @@ const conTema = (url) => {
     document.querySelectorAll("[data-billing]").forEach((x) => x.classList.toggle("is-on", x === b));
     document.querySelectorAll("[data-price-mes]").forEach((p) => { p.textContent = p.dataset["price" + k]; });
     document.querySelectorAll("[data-per-mes]").forEach((p) => { p.textContent = p.dataset["per" + k]; });
-    // «Empezar con Premium» lleva el periodo elegido a la app (lo usará el paso de pago).
-    document.querySelectorAll("[data-plan-premium]").forEach((a) => {
+    // Los botones de los planes llevan el periodo elegido a la app (lo usará el paso de pago).
+    document.querySelectorAll("[data-plan-pago]").forEach((a) => {
       a.href = a.href.replace(/periodo=\w+/, "periodo=" + (k === "Mes" ? "mensual" : "anual"));
     });
   }));
@@ -135,10 +135,10 @@ const conTema = (url) => {
   let modo = "registro", plan = null, periodo = null, enviando = false;
 
   const TEXTOS = {
-    registro: { titulo: "Crea tu cuenta", sub: "Gratis y sin tarjeta. En dos minutos tienes tu primera máquina.", boton: "Crear cuenta",
+    registro: { titulo: "Crea tu cuenta", sub: "14 días gratis y sin tarjeta. En dos minutos tienes tu primera máquina.", boton: "Crear cuenta",
                 cambioTexto: "¿Ya tienes cuenta?", cambio: "Entra" },
     entrar:   { titulo: "Entra en Pultec", sub: "Con tu correo y tu contraseña.", boton: "Entrar",
-                cambioTexto: "¿Aún no tienes cuenta?", cambio: "Créala gratis" },
+                cambioTexto: "¿Aún no tienes cuenta?", cambio: "Pruébalo gratis" },
   };
 
   // Dirección de la app a la que se vuelve (con el plan elegido, si lo hay).
@@ -152,8 +152,8 @@ const conTema = (url) => {
   const pintar = () => {
     const t = TEXTOS[modo];
     $("acceso-titulo").textContent = t.titulo;
-    $("acceso-sub").textContent = plan === "premium" && modo === "registro"
-      ? "Crea tu cuenta gratis; activas Premium cuando quieras desde Ajustes → Plan." : t.sub;
+    $("acceso-sub").textContent = plan && modo === "registro"
+      ? "14 días gratis y sin tarjeta; activas el plan cuando quieras desde Ajustes → Plan." : t.sub;
     enviar.textContent = t.boton;
     $("acceso-cambio-texto").textContent = t.cambioTexto;
     $("acceso-cambio").textContent = t.cambio;
@@ -161,7 +161,7 @@ const conTema = (url) => {
     clave.autocomplete = modo === "entrar" ? "current-password" : "new-password";
     const p = $("acceso-plan");
     p.hidden = !plan || modo !== "registro";
-    p.textContent = plan === "premium" ? `Plan Premium · ${periodo === "anual" ? "anual" : "mensual"}` : "Plan Básico · gratis";
+    p.textContent = `Plan ${plan === "esencial" ? "Esencial" : "Premium"} ${periodo === "anual" ? "anual" : "mensual"}`;
   };
 
   const ponerAviso = (texto, bueno = false, accion = null) => {
