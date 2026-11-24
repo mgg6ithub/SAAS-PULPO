@@ -1024,16 +1024,17 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   /// Horas de la semana, pegadas a la derecha. Con activos elegidos, las de cada uno con su icono, a la altura de
   /// su línea; con todos, la suma.
   Widget _horasSemana(List<Activo> activos, List<DateTime> dias) {
+    // El icono al final, pegado a la derecha: así quedan todos en columna aunque cambien los dígitos.
     Widget linea(Widget icono, double h) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        icono,
-        const SizedBox(width: 4),
         Text(
           '${h.toStringAsFixed(0)} h',
           maxLines: 1,
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: h == 0 ? P.textoSuave : P.texto),
         ),
+        const SizedBox(width: 4),
+        icono,
       ],
     );
     final hijo = _elegidas.isEmpty
@@ -1883,7 +1884,7 @@ class _Leyenda extends StatelessWidget {
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
       color: P.morado.withValues(alpha: .12),
-      borderRadius: BorderRadius.circular(2),
+      borderRadius: BorderRadius.circular(3.5),
       border: Border.all(color: P.morado.withValues(alpha: .4)),
     ),
     child: FractionallySizedBox(
@@ -2054,9 +2055,9 @@ class _PintorPuntos extends CustomPainter {
       final r = Rect.fromLTWH((i % porFila) * (w + h), (i ~/ porFila) * (alto + h), w, alto);
       fondo.color = colores[i].withValues(alpha: .22);
       lleno.color = colores[i];
-      canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(2)), fondo);
+      canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(2.5)), fondo);
       canvas.save();
-      canvas.clipRRect(RRect.fromRectAndRadius(r, const Radius.circular(2)));
+      canvas.clipRRect(RRect.fromRectAndRadius(r, const Radius.circular(2.5)));
       canvas.drawRect(Rect.fromLTWH(r.left, r.top, w * fracciones[i], alto), lleno);
       canvas.restore();
     }
