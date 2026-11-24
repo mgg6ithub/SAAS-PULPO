@@ -148,6 +148,16 @@ class Store extends ChangeNotifier {
     'Sarriko',
     'Uribarri',
   ];
+  static const _activosSimulados = [
+    ('camion', 'Camión'),
+    ('compresor', 'Compresor'),
+    ('bomba', 'Bomba de agua'),
+    ('fabrica', 'Máquina industrial'),
+    ('motor', 'Motor'),
+    ('brazo', 'Brazo industrial'),
+    ('electrico', 'Equipo eléctrico'),
+    ('tractor', 'Tractor'),
+  ];
   static String _clienteSimulado(int i) =>
       '${_tiposClienteSimulados[i % 10]} ${_lugaresClienteSimulados[(i * 7 + i ~/ 10) % 20]}';
   static String _trabajadorSimulado(int i) =>
@@ -1435,7 +1445,20 @@ class Store extends ChangeNotifier {
         ),
     ];
     final sitios = _coordsDemo.values.toList();
-    clientes = [
+    // En Pultec industrial el campo «Activos» crea máquinas (activos), no clientes.
+    if (industrial) {
+      activos = [
+        for (var i = 0; i < cuentas; i++)
+          Activo(
+            id: 'c$i',
+            icono: _activosSimulados[i % _activosSimulados.length].$1,
+            tag: 'SIM-${(i + 1).toString().padLeft(3, '0')}',
+            nombre: '${_activosSimulados[i % _activosSimulados.length].$2} ${i ~/ _activosSimulados.length + 1}',
+          ),
+      ];
+    }
+    String nombreCuenta(int i) => industrial ? activos[i].nombre : clientes[i].nombre;
+    clientes = industrial ? [] : [
       for (var i = 0; i < cuentas; i++)
         Cliente(
           id: 'c$i',
@@ -1458,9 +1481,10 @@ class Store extends ChangeNotifier {
         ..id = 'd$i'
         ..plantilla = false
         ..nombre =
-            '${_variantesSimuladas[t.tipo]?[(i ~/ plantillas.length) % 8] ?? t.nombre} · ${cuentas == 0 ? _ubicacionesSimuladas[(i ~/ 8) % _ubicacionesSimuladas.length] : clientes[i % cuentas].nombre}'
+            '${_variantesSimuladas[t.tipo]?[(i ~/ plantillas.length) % 8] ?? t.nombre} · ${cuentas == 0 ? _ubicacionesSimuladas[(i ~/ 8) % _ubicacionesSimuladas.length] : nombreCuenta(i % cuentas)}'
         ..ubicacion = _ubicacionesSimuladas[(i * 5) % _ubicacionesSimuladas.length]
-        ..clienteId = cuentas == 0 ? null : clientes[i % cuentas].id
+        ..clienteId = cuentas == 0 || industrial ? null : clientes[i % cuentas].id
+        ..activoId = cuentas == 0 || !industrial ? null : activos[i % cuentas].id
         ..proximo = diaSimulado
         ..inicioMin = horaSimulada
         ..duracionMin = permitirSolapes ? 60 : [30, 60, 90, 120][r.nextInt(4)]
@@ -1499,7 +1523,7 @@ class Store extends ChangeNotifier {
 
   /// Los ids de ejemplo son cortos (c0, w3, d17); los reales son marcas de tiempo largas.
   static final _idDemo = RegExp(r'^[cwds]\d{1,4}$');
-  bool get _hayDemo => clientes.any((c) => _idDemo.hasMatch(c.id)) || trabajadores.any((w) => _idDemo.hasMatch(w.id));
+  bool get _hayDemo => clientes.any((c) => _idDemo.hasMatch(c.id)) || activos.any((a) => _idDemo.hasMatch(a.id)) || trabajadores.any((w) => _idDemo.hasMatch(w.id));
 
   /// Quita los datos de ejemplo y deja la cuenta como estaba antes de cargarlos.
   /// Sin respaldo, borra solo lo que es de ejemplo y conserva lo que hayas creado tú.
@@ -1513,6 +1537,7 @@ class Store extends ChangeNotifier {
       return;
     }
     clientes.removeWhere((c) => _idDemo.hasMatch(c.id));
+    activos.removeWhere((a) => _idDemo.hasMatch(a.id));
     trabajadores.removeWhere((w) => _idDemo.hasMatch(w.id));
     tareas.removeWhere((t) => _idDemo.hasMatch(t.id) || (t.clienteId != null && cliente(t.clienteId) == null));
     subtareas.removeWhere((t) => tarea(t.padreId) == null || _idDemo.hasMatch(t.id));
