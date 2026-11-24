@@ -613,10 +613,10 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
       Row(
         children: [
           const LogoPultec(size: 52),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Text(
             Marca.nombre,
-            style: TextStyle(fontFamily: P.titulos, fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: -.6),
+            style: TextStyle(fontFamily: P.titulos, fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: -.8),
           ),
         ],
       ),
