@@ -114,12 +114,6 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
   Widget build(BuildContext context) => Stack(
     children: [
       widget.child,
-      // TEMPORAL: botón para repetir la presentación mientras se ajusta. Quitar.
-      Positioned(
-        top: 12,
-        right: 16,
-        child: FilledButton.tonal(onPressed: _empezar, child: const Text('Repetir animación')),
-      ),
       // La bienvenida, en el centro: entra con un leve zoom y se va antes de que empiece a escribirse la fecha.
       Positioned.fill(
         child: IgnorePointer(

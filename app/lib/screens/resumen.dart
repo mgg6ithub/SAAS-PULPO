@@ -385,7 +385,7 @@ class _ComoFunciona extends StatelessWidget {
             ),
           ];
     final tarjetas = [
-      for (final (i, (color, titulo, texto)) in etapas.indexed)
+      for (final (i, (_, titulo, texto)) in etapas.indexed)
         Aparecer(
           retraso: .85 + i * .14,
           child: Tarjeta(
@@ -393,22 +393,18 @@ class _ComoFunciona extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Barrita de color en lugar de icono, con el número de la etapa.
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 4,
-                    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${i + 1}',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: color),
-                  ),
-                ],
+              // El número de la etapa, grande y neutro.
+              Text(
+                '${i + 1}',
+                style: TextStyle(
+                  fontFamily: P.titulos,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  color: P.textoSuave,
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 titulo,
                 style: TextStyle(fontFamily: P.titulos, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -.2),
@@ -1571,11 +1567,12 @@ class _HuellasGuia extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final relleno = Paint()..color = color;
-    final centro = size.height / 2, ancho = size.width - 8, amplitud = size.height / 2 - 4;
+    final centro = size.height / 2, ancho = size.width - 8, amplitud = (size.height / 2 - 4) * .5;
     // Una onda completa y marcada: arriba en la primera mitad, abajo en la segunda.
     double y(double x) => centro - amplitud * sin(2 * pi * x / ancho);
     double pendiente(double x) => -amplitud * cos(2 * pi * x / ancho) * 2 * pi / ancho;
-    final n = max(4, (ancho / 26).floor());
+    // Pasos cortos, como al andar: uno cada ~15 px, alternando izquierda y derecha.
+    final n = max(4, (ancho / 15).floor());
     final avance = IntroInicio.huellas(t, n);
     for (var i = 0; i < n; i++) {
       // Presentación: invisible hasta su turno; al salir, opaca y morada; después, vuelve a como está siempre.
@@ -1593,10 +1590,11 @@ class _HuellasGuia extends CustomPainter {
       canvas.translate(x, y(x));
       canvas.rotate(atan(pendiente(x)));
       // Pie izquierdo y derecho alternos, a cada lado del camino.
-      canvas.translate(0, i.isEven ? -3.6 : 3.6);
-      // Planta delante (hacia la derecha) y talón detrás: se ve hacia dónde camina.
-      canvas.drawOval(Rect.fromCenter(center: const Offset(2, 0), width: 8.5, height: 5.4), relleno);
-      canvas.drawOval(Rect.fromCenter(center: const Offset(-5.5, 0), width: 4.4, height: 3.8), relleno);
+      canvas.translate(0, i.isEven ? -3.2 : 3.2);
+      // Algo abierta hacia fuera, como un pie de verdad: planta delante (hacia la derecha) y talón detrás.
+      canvas.rotate(i.isEven ? -.18 : .18);
+      canvas.drawOval(Rect.fromCenter(center: const Offset(1.6, 0), width: 6.6, height: 4.2), relleno);
+      canvas.drawOval(Rect.fromCenter(center: const Offset(-4.2, 0), width: 3.4, height: 3.0), relleno);
       canvas.restore();
     }
   }
