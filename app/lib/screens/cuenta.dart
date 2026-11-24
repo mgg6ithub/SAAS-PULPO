@@ -519,12 +519,62 @@ class _ClaveNuevaState extends State<_ClaveNueva> {
 
 /// Primer arranque de una cuenta sin empresa (DEV-019): se le ha creado una y aquí le pone nombre. Con
 /// [porGoogle] además se explica que se ha creado, por si esperaba unirse a la de otra persona.
-Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => showDialog<void>(
+Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => showGeneralDialog<void>(
   context: context,
   barrierDismissible: false,
-  // Fondo opaco: hasta contestar no se ve nada de la app vacía.
-  barrierColor: P.fondo,
-  builder: (_) => _Dialogo(child: _NombrarEmpresa(porGoogle: porGoogle)),
+  // Pantalla propia (no se ve la app vacía detrás): fondo con un degradado suave del morado de la marca, el
+  // pulpo grande y difuminado, y la tarjeta en el centro, que entra con un leve zoom.
+  barrierColor: Colors.transparent,
+  transitionDuration: const Duration(milliseconds: 320),
+  transitionBuilder: (_, anim, _, hijo) {
+    final curva = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+    return FadeTransition(
+      opacity: curva,
+      child: ScaleTransition(scale: Tween(begin: .97, end: 1.0).animate(curva), child: hijo),
+    );
+  },
+  pageBuilder: (_, _, _) => Material(
+    color: P.fondo,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(-.7, -.8),
+              radius: 1.3,
+              colors: [P.morado.withValues(alpha: .16), P.morado.withValues(alpha: 0)],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(.9, .9),
+              radius: 1.1,
+              colors: [P.morado.withValues(alpha: .10), P.morado.withValues(alpha: 0)],
+            ),
+          ),
+        ),
+        const Positioned(right: -80, bottom: -90, child: Opacity(opacity: .07, child: LogoPultec(size: 460))),
+        Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 480),
+              padding: const EdgeInsets.fromLTRB(36, 36, 36, 28),
+              decoration: BoxDecoration(
+                color: P.superficie,
+                borderRadius: BorderRadius.circular(P.radio + 6),
+                border: Border.all(color: P.borde),
+              ),
+              child: _NombrarEmpresa(porGoogle: porGoogle),
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
 );
 
 class _NombrarEmpresa extends StatefulWidget {
@@ -570,9 +620,11 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      const Align(alignment: Alignment.centerLeft, child: LogoPultec(size: 44)),
+      const SizedBox(height: 18),
       Text(
         '¿Cómo se llama tu empresa?',
-        style: TextStyle(fontFamily: P.titulos, fontSize: 18, fontWeight: FontWeight.w700),
+        style: TextStyle(fontFamily: P.titulos, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -.3),
       ),
       const SizedBox(height: 8),
       Text(

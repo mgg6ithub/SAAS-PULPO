@@ -281,20 +281,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   /// En un [ValueNotifier]: abrirla o cerrarla solo anima el panel y la flecha, sin reconstruir el calendario.
   final _panel = ValueNotifier(false);
 
-  /// El hueco del panel: se abre de golpe al mostrarlo (una sola maquetación del calendario) y se cierra al
-  /// terminar de deslizarse; el movimiento es solo una traslación, sin rehacer el calendario en cada fotograma.
-  bool _hueco = false;
-  void _alternarPanel() {
-    if (_panel.value) {
-      _panel.value = false;
-      return;
-    }
-    // Primero el hueco (con el panel aún fuera) y, en el fotograma siguiente, entra deslizándose.
-    setState(() => _hueco = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _panel.value = true;
-    });
-  }
+  void _alternarPanel() => _panel.value = !_panel.value;
 
   @override
   void dispose() {
@@ -571,7 +558,10 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                     ),
                     // Debajo del título: el activo que se ve (o todos); abre y cierra la lista de activos.
                     if (activos.isNotEmpty) ...[
-                      Row(children: [_botonActivos(activos), const Spacer(), const _Leyenda()]),
+                      SizedBox(
+                        height: 40,
+                        child: Row(children: [if (_vista == 0) _botonActivos(activos), const Spacer(), const _Leyenda()]),
+                      ),
                       const SizedBox(height: 10),
                     ],
                     if (activos.isEmpty)
@@ -588,21 +578,22 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Lista de activos a la izquierda, dentro de la vista: se pliega deslizándose (ancho 0).
-                            if (_hueco)
-                              SizedBox(
-                                width: _anchoPanel + 10,
+                            // Lista de activos: su hueco crece y el calendario se recoloca en cada fotograma sin
+                            // reconstruirse (SegunTamano). En «Por máquina» no hace falta: las filas ya son los activos.
+                            if (_vista == 0)
+                              ValueListenableBuilder(
+                                valueListenable: _panel,
+                                builder: (context, abierto, hijo) => AnimatedContainer(
+                                  duration: const Duration(milliseconds: 260),
+                                  curve: Curves.easeOutCubic,
+                                  width: abierto ? _anchoPanel + 10 : 0,
+                                  child: hijo,
+                                ),
                                 child: ClipRect(
-                                  child: ValueListenableBuilder(
-                                    valueListenable: _panel,
-                                    builder: (context, abierto, hijo) => AnimatedSlide(
-                                      duration: const Duration(milliseconds: 220),
-                                      curve: Curves.easeOutCubic,
-                                      offset: abierto ? Offset.zero : const Offset(-1, 0),
-                                      onEnd: () {
-                                        if (!_panel.value) setState(() => _hueco = false);
-                                      },
-                                      child: hijo,
-                                    ),
+                                  child: OverflowBox(
+                                    alignment: Alignment.centerLeft,
+                                    minWidth: _anchoPanel + 10,
+                                    maxWidth: _anchoPanel + 10,
                                     child: RepaintBoundary(
                                       child: Padding(
                                         padding: const EdgeInsets.only(right: 10),
@@ -898,14 +889,17 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         e.key: [for (final m in e.value) if (_visible(m.activo)) m],
     };
     final todas = _elegidas.isEmpty;
-    return LayoutBuilder(
+    // Barritas por fila según el ancho útil de un día (menos márgenes y bordes).
+    int porLineaDe(double ancho) =>
+        (((ancho < 640 ? 640.0 : ancho) - _anchoHoras) / 7 - 22 + _huecoPunto) ~/ (_punto + _huecoPunto);
+    // Solo se rehace si cambia lo que cambia la estructura (barritas por fila, alto o si cabe sin desplazar): al
+    // abrir la lista de activos o cambiar el ancho de la ventana, el calendario solo se recoloca, sin reconstruirse.
+    return SegunTamano(
+      clave: (box) => (porLineaDe(box.maxWidth), box.maxHeight.round(), box.maxWidth < 640),
       builder: (context, box) {
-        final ancho = box.maxWidth < 640 ? 640.0 : box.maxWidth;
-        // Hueco útil de un día (menos márgenes y bordes): la pastilla de la máquina elegida lo ocupa entero y,
-        // con todas, caben tantos puntos por fila.
-        final util = (ancho - _anchoHoras) / 7 - 22;
-        final anchoTurno = util;
-        final porLinea = ((util + _huecoPunto) / (_punto + _huecoPunto)).floor().clamp(1, 40);
+        final estrecho = box.maxWidth < 640;
+        const anchoTurno = double.infinity;
+        final porLinea = porLineaDe(box.maxWidth).clamp(1, 40);
         final minimo = ((box.maxHeight - _altoCabecera) / semanas).clamp(90.0, double.infinity);
         final altos = [
           for (var s = 0; s < semanas; s++)
@@ -916,12 +910,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   _altoDia(activos, d, marcas[d]?.length ?? 0, porLinea, todas),
             ].reduce((x, y) => x > y ? x : y),
         ];
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: ancho,
-            height: box.maxHeight,
-            child: Column(
+        final contenido = Column(
               children: [
                 // Cabecera: tocar un día de la semana selecciona todos los de ese día del mes.
                 Row(
@@ -974,9 +963,14 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   ),
                 ),
               ],
-            ),
-          ),
-        );
+            );
+        // En una ventana muy estrecha, el mes con su ancho mínimo y desplazable de lado.
+        return estrecho
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(width: 640, height: box.maxHeight, child: contenido),
+              )
+            : contenido;
       },
     );
   }
@@ -1048,10 +1042,12 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     double anchoTurno,
     bool todas,
     int puntosPorFila,
-  ) => LayoutBuilder(
-    builder: (context, box) {
+  ) => Builder(
+    // Sin LayoutBuilder: el ancho se mira al arrastrar, así cambiarlo no reconstruye la rejilla.
+    builder: (context) {
       DateTime diaEn(Offset p) {
-        final col = (p.dx / (box.maxWidth / 7)).floor().clamp(0, 6);
+        final ancho = (context.findRenderObject()! as RenderBox).size.width;
+        final col = (p.dx / (ancho / 7)).floor().clamp(0, 6);
         var fila = 0;
         var y = p.dy;
         while (fila < altos.length - 1 && y >= altos[fila]) {

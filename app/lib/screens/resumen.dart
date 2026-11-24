@@ -1454,7 +1454,13 @@ class _NombreEmpresaState extends State<_NombreEmpresa> {
   }
 
   @override
-  Widget build(BuildContext context) => TextField(
+  Widget build(BuildContext context) {
+    // Si el nombre cambia por otro lado (p. ej. el aviso del primer arranque) y no se está escribiendo, se pone.
+    if (!_foco.hasFocus && _texto.text != widget.nube.nombre) _texto.text = widget.nube.nombre;
+    return _campo();
+  }
+
+  Widget _campo() => TextField(
     controller: _texto,
     focusNode: _foco,
     style: widget.estilo,
