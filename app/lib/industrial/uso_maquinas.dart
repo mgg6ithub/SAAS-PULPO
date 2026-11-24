@@ -276,6 +276,21 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   /// Lista de activos a la izquierda, que se abre y cierra con el botón del activo que se ve, bajo el título.
   bool _panel = false;
 
+  /// El hueco del panel: se abre de golpe al mostrarlo (una sola maquetación del calendario) y se cierra al
+  /// terminar de deslizarse; el movimiento es solo una traslación, sin rehacer el calendario en cada fotograma.
+  bool _hueco = false;
+  void _alternarPanel() {
+    if (_panel) {
+      setState(() => _panel = false);
+      return;
+    }
+    // Primero el hueco (con el panel aún fuera) y, en el fotograma siguiente, entra deslizándose.
+    setState(() => _hueco = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _panel = true);
+    });
+  }
+
   /// Selección arrastrando: desde qué día y qué había seleccionado antes.
   DateTime? _desde;
   Set<DateTime> _antes = {};
@@ -592,7 +607,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                     ),
                     // Debajo del título: el activo que se ve (o todos); abre y cierra la lista de activos.
                     if (activos.isNotEmpty) ...[
-                      Align(alignment: Alignment.centerLeft, child: _botonActivos(activos)),
+                      Row(children: [_botonActivos(activos), const Spacer(), const _Leyenda()]),
                       const SizedBox(height: 10),
                     ],
                     if (activos.isEmpty)
@@ -609,18 +624,21 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Lista de activos a la izquierda, dentro de la vista: se pliega deslizándose (ancho 0).
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutCubic,
-                              width: _panel ? _anchoPanel + 10 : 0,
-                              child: ClipRect(
-                                child: OverflowBox(
-                                  alignment: Alignment.centerLeft,
-                                  minWidth: _anchoPanel + 10,
-                                  maxWidth: _anchoPanel + 10,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: _Maquinas(
+                            if (_hueco)
+                              SizedBox(
+                                width: _anchoPanel + 10,
+                                child: ClipRect(
+                                  child: AnimatedSlide(
+                                    duration: const Duration(milliseconds: 220),
+                                    curve: Curves.easeOutCubic,
+                                    offset: _panel ? Offset.zero : const Offset(-1, 0),
+                                    onEnd: () {
+                                      if (!_panel) setState(() => _hueco = false);
+                                    },
+                                    child: RepaintBoundary(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 10),
+                                        child: _Maquinas(
                                       activos: activos,
                                       colorDe: _colorDe,
                                       horasMes: (a) => _horas(a, _diasMes),
@@ -632,12 +650,13 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                                         _elegida = a == null || _elegida == a.id ? null : a.id;
                                         _vista = 0;
                                       }),
-                                      onCerrar: () => setState(() => _panel = false),
+                                      onCerrar: _alternarPanel,
+                                    ),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
                             Expanded(child: _vista == 0 ? _calendario(activos) : _porMaquina(activos)),
                           ],
                         ),
@@ -682,7 +701,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         child: InkWell(
           borderRadius: BorderRadius.circular(P.radioControl),
           hoverColor: P.hover,
-          onTap: () => setState(() => _panel = !_panel),
+          onTap: _alternarPanel,
           child: SizedBox(
             width: _anchoPanel,
             height: 40,
@@ -831,7 +850,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                   decoration: BoxDecoration(color: _colorDe(i), shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 10),
-                Text(a.titulo),
+                Flexible(child: Text(a.titulo, maxLines: 1, overflow: TextOverflow.ellipsis)),
                 const SizedBox(width: 12),
                 Text(_dias(diasCon(a)), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
               ],
@@ -865,7 +884,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       _altoCabecera = 26.0,
       _punto = 9.0,
       _huecoPunto = 4.0,
-      _anchoHoras = 90.0,
+      _anchoHoras = 70.0,
       _maxMarcasTodas = 3,
       _anchoPanel = 260.0;
 
@@ -937,8 +956,9 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                       ),
                     SizedBox(
                       width: _anchoHoras,
+                      height: _altoCabecera,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 2, 0, 0),
+                        padding: const EdgeInsets.fromLTRB(8, 2, 0, 0),
                         child: Text('HORAS', style: _estiloCabecera),
                       ),
                     ),
@@ -979,10 +999,11 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     final a = _elegida == null ? null : activos.where((x) => x.id == _elegida).firstOrNull;
     final h = a != null ? _horas(a, dias) : activos.fold(0.0, (t, x) => t + _horas(x, dias));
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 0, 0),
+      padding: const EdgeInsets.fromLTRB(8, 10, 0, 0),
       child: Align(
         alignment: Alignment.topLeft,
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             a != null
                 ? IconoActivo(a.icono, size: 15, color: _colorDe(activos.indexOf(a)))
@@ -1156,6 +1177,11 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 3),
+                        Text(
+                          meses[d.month - 1].substring(0, 3).toLowerCase(),
+                          style: TextStyle(fontSize: 11, color: P.textoSuave.withValues(alpha: delMes ? 1 : .6)),
+                        ),
                         if (festivo != null) ...[
                           const SizedBox(width: 4),
                           Expanded(
@@ -1251,6 +1277,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               final col = ((box.maxWidth - ancho - total) / dias.length).clamp(26.0, 80.0);
               final contenido = SizedBox(
                 width: ancho + total + col * dias.length,
+                height: box.maxHeight,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1280,13 +1307,18 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                         ],
                       ),
                     ),
-                    for (final (i, a) in activos.indexed) _filaMaquina(i, a, dias, col, ancho, total, marcas),
+                    // Solo se construyen las filas que se ven (alto fijo): cambiar de vista y desplazarse va fluido.
+                    Expanded(
+                      child: ListView.builder(
+                        itemExtent: 52,
+                        itemCount: activos.length,
+                        itemBuilder: (_, i) => _filaMaquina(i, activos[i], dias, col, ancho, total, marcas),
+                      ),
+                    ),
                   ],
                 ),
               );
-              return SingleChildScrollView(
-                child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: contenido),
-              );
+              return SingleChildScrollView(scrollDirection: Axis.horizontal, child: contenido);
             },
           ),
         ),
@@ -1407,10 +1439,13 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     final elegido = _sel.contains(d);
     final festivo = store.festivo(d) != null;
     final mias = marcas.where((m) => m.activo.id == a.id).toList();
+    final pasado = d.isBefore(hoy()) && !DateUtils.isSameDay(d, hoy());
     final bloque = Container(
       margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
       decoration: BoxDecoration(
-        color: n == 0 ? Colors.transparent : color.withValues(alpha: const [0.0, .22, .55, .9][n.clamp(0, 3)]),
+        color: n == 0
+            ? Colors.transparent
+            : color.withValues(alpha: const [0.0, .22, .55, .9][n.clamp(0, 3)] * (pasado ? .6 : 1)),
         borderRadius: BorderRadius.circular(5),
         border: n * a.horasTurno > 24 ? Border.all(color: P.rojo, width: 1.5) : null,
       ),
@@ -1445,9 +1480,8 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
           : d.weekday >= 6
           ? P.fondo.withValues(alpha: .6)
           : null,
-      child: Opacity(
-        opacity: d.isBefore(hoy()) && !DateUtils.isSameDay(d, hoy()) ? .6 : 1,
-        child: Stack(
+      // Los días pasados, más suaves (con el color, sin una capa de opacidad por celda).
+      child: Stack(
           fit: StackFit.expand,
           children: [
             bloque,
@@ -1466,7 +1500,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
               ),
           ],
         ),
-      ),
     );
     final texto =
         '${a.titulo} · ${d.day}: ${n == 0 ? 'sin turno' : '${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h'}';
@@ -1770,6 +1803,42 @@ class _Turno extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Leyenda del mes, arriba a la derecha: suave = 1 turno, lleno = 2 o 3, aro = sin turnos, rombo = mantenimiento.
+class _Leyenda extends StatelessWidget {
+  const _Leyenda();
+
+  Widget _item(Widget muestra, String texto) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      muestra,
+      const SizedBox(width: 6),
+      Text(texto, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+    ],
+  );
+
+  Widget _punto({required bool lleno, double alfa = 1}) => Container(
+    width: 9,
+    height: 9,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: lleno ? P.morado.withValues(alpha: alfa) : null,
+      border: lleno ? null : Border.all(color: P.borde, width: 1.2),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 16,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      _item(_punto(lleno: true, alfa: .45), '1 turno'),
+      _item(_punto(lleno: true), '2 o 3 turnos'),
+      _item(_punto(lleno: false), 'Sin turnos'),
+      _item(Transform.rotate(angle: .785, child: Container(width: 7, height: 7, color: P.textoSuave)), 'Mantenimiento'),
+    ],
+  );
 }
 
 /// Una máquina en el panel de la izquierda: su color e icono, nombre y tag, y debajo su patrón y las horas del mes.
