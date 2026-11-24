@@ -5,6 +5,13 @@
   root.classList.add("js");
   const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // En local, «Probar» y «Entrar» llevan a la app de Pultec en local (python3 tool/vivo.py --industrial, puerto 8000).
+  if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+    document.querySelectorAll('a[href^="https://saas-pulpo.pages.dev/industrial/"]').forEach((a) => {
+      a.href = a.href.replace("https://saas-pulpo.pages.dev/industrial/", "http://localhost:8000/");
+    });
+  }
+
   // Tema: el botón alterna y se recuerda en este navegador
   const oscuroSistema = matchMedia("(prefers-color-scheme: dark)");
   const temaActual = () => root.dataset.theme || (oscuroSistema.matches ? "dark" : "light");
@@ -91,6 +98,207 @@
     document.querySelectorAll("[data-billing]").forEach((x) => x.classList.toggle("is-on", x === b));
     document.querySelectorAll("[data-price-mes]").forEach((p) => { p.textContent = p.dataset["price" + k]; });
     document.querySelectorAll("[data-per-mes]").forEach((p) => { p.textContent = p.dataset["per" + k]; });
+    // «Empezar con Premium» lleva el periodo elegido a la app (lo usará el paso de pago).
+    document.querySelectorAll("[data-plan-premium]").forEach((a) => {
+      a.href = a.href.replace(/periodo=\w+/, "periodo=" + (k === "Mes" ? "mensual" : "anual"));
+    });
   }));
 
+})();
+
+// Entrar / crear cuenta sin salir de la landing. Habla con Supabase Auth por HTTP (sin librerías) y, con la sesión,
+// lleva a la app con los tokens en el fragmento (#access_token=…): supabase_flutter los recoge, guarda la sesión y
+// limpia la dirección. El plan elegido (?plan=…&periodo=…) viaja en la query para el paso de pago.
+// Sin JS (o si algo falla al cargar) los botones son enlaces normales a la pantalla de acceso de la app.
+(() => {
+  const dlg = document.getElementById("acceso");
+  if (!dlg || typeof dlg.showModal !== "function") return;
+
+  const local = ["localhost", "127.0.0.1"].includes(location.hostname);
+  // Clave publicable: es pública por diseño (va también en la app). Local = la de serie de `supabase start`.
+  const CFG = local
+    // En local, Supabase va por la misma dirección que la landing (tool/landing_local.py la reenvía por dentro).
+    ? { api: location.origin, clave: "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH", app: `${location.protocol}//${location.hostname}:8000/` }
+    : { api: "https://gvasthxiqckmekwvhtrg.supabase.co", clave: "sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ", app: "https://saas-pulpo.pages.dev/industrial/" };
+
+  const $ = (id) => document.getElementById(id);
+  const form = $("acceso-form"), correo = $("acceso-correo"), clave = $("acceso-clave"), enviar = $("acceso-enviar");
+  const aviso = $("acceso-aviso"), google = $("acceso-google");
+  let modo = "registro", plan = null, periodo = null, enviando = false;
+
+  const TEXTOS = {
+    registro: { titulo: "Crea tu cuenta", sub: "Gratis y sin tarjeta. En dos minutos tienes tu primera máquina.", boton: "Crear cuenta",
+                cambioTexto: "¿Ya tienes cuenta?", cambio: "Entra" },
+    entrar:   { titulo: "Entra en Pultec", sub: "Con tu correo y tu contraseña.", boton: "Entrar",
+                cambioTexto: "¿Aún no tienes cuenta?", cambio: "Créala gratis" },
+  };
+
+  // Dirección de la app a la que se vuelve (con el plan elegido, si lo hay).
+  const urlApp = () => {
+    const u = new URL(CFG.app);
+    if (plan) u.searchParams.set("plan", plan);
+    if (periodo) u.searchParams.set("periodo", periodo);
+    return u.toString();
+  };
+
+  const pintar = () => {
+    const t = TEXTOS[modo];
+    $("acceso-titulo").textContent = t.titulo;
+    $("acceso-sub").textContent = plan === "premium" && modo === "registro"
+      ? "Crea tu cuenta gratis; activas Premium cuando quieras desde Ajustes → Plan." : t.sub;
+    enviar.textContent = t.boton;
+    $("acceso-cambio-texto").textContent = t.cambioTexto;
+    $("acceso-cambio").textContent = t.cambio;
+    $("acceso-olvido").hidden = modo !== "entrar";
+    clave.autocomplete = modo === "entrar" ? "current-password" : "new-password";
+    const p = $("acceso-plan");
+    p.hidden = !plan || modo !== "registro";
+    p.textContent = plan === "premium" ? `Plan Premium · ${periodo === "anual" ? "anual" : "mensual"}` : "Plan Básico · gratis";
+  };
+
+  const ponerAviso = (texto, bueno = false, accion = null) => {
+    aviso.hidden = !texto;
+    aviso.classList.toggle("es-bueno", bueno);
+    aviso.textContent = texto || "";
+    if (accion) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = accion.texto;
+      b.addEventListener("click", accion.hacer);
+      aviso.append(" ", b);
+    }
+  };
+
+  // Los errores de Supabase llegan en inglés: cada uno con una frase que diga qué hacer (las mismas que la app).
+  const traducir = (m) => {
+    const t = String(m || "").toLowerCase();
+    if (t.includes("invalid login")) return "Correo o contraseña incorrectos. Revísalos o pulsa «¿Has olvidado la contraseña?».";
+    if (t.includes("already registered") || t.includes("already been registered")) return "Ya hay una cuenta con ese correo. Entra con ella o recupera la contraseña.";
+    if (t.includes("not confirmed")) return "Falta confirmar el correo. Abre el enlace que te enviamos o pide otro.";
+    if (t.includes("rate limit") || t.includes("security purposes")) return "Demasiados intentos seguidos. Espera un minuto y vuelve a probar.";
+    if (t.includes("password")) return "La contraseña no vale: usa al menos 6 caracteres.";
+    if (t.includes("email") && (t.includes("invalid") || t.includes("validate"))) return "Ese correo no es válido. Revisa que esté bien escrito.";
+    if (t.includes("signups not allowed") || t.includes("signup is disabled")) return "Ahora no se pueden crear cuentas. Pide a tu empresa que te invite.";
+    return "Algo ha fallado. Vuelve a intentarlo en un momento.";
+  };
+
+  const auth = async (ruta, cuerpo, redirigir = false) => {
+    const q = redirigir ? `${ruta.includes("?") ? "&" : "?"}redirect_to=${encodeURIComponent(urlApp())}` : "";
+    let r;
+    try {
+      r = await fetch(`${CFG.api}/auth/v1/${ruta}${q}`, {
+        method: "POST",
+        headers: { apikey: CFG.clave, "Content-Type": "application/json" },
+        body: JSON.stringify(cuerpo),
+      });
+    } catch {
+      throw new Error("sin-conexion");
+    }
+    const datos = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(datos.msg || datos.error_description || datos.message || datos.error || "error");
+    return datos;
+  };
+
+  // Lleva a la app con la sesión: supabase_flutter necesita access_token, refresh_token, expires_in y token_type.
+  const irALaApp = (s) => {
+    const f = new URLSearchParams({
+      access_token: s.access_token,
+      refresh_token: s.refresh_token,
+      expires_in: String(s.expires_in),
+      expires_at: String(s.expires_at || ""),
+      token_type: s.token_type || "bearer",
+      type: modo === "registro" ? "signup" : "login",
+    });
+    location.assign(`${urlApp()}#${f}`);
+  };
+
+  const ocupado = (si) => {
+    enviando = si;
+    enviar.disabled = si;
+    enviar.textContent = si ? "Un momento…" : TEXTOS[modo].boton;
+  };
+
+  const intentar = async (fn) => {
+    if (enviando) return;
+    ponerAviso(null);
+    ocupado(true);
+    try {
+      await fn();
+    } catch (e) {
+      ponerAviso(e.message === "sin-conexion" ? "No se pudo conectar. Comprueba la conexión y vuelve a intentarlo." : traducir(e.message));
+      ocupado(false);
+    }
+  };
+
+  const correoValido = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.value.trim());
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = correo.value.trim(), password = clave.value;
+    if (!correoValido()) return ponerAviso("Revisa el correo: falta algo (como nombre@empresa.com).");
+    if (password.length < 6) return ponerAviso("La contraseña necesita al menos 6 caracteres.");
+    intentar(async () => {
+      if (modo === "entrar") return irALaApp(await auth("token?grant_type=password", { email, password }));
+      const r = await auth("signup", { email, password }, true);
+      if (r.access_token) return irALaApp(r);
+      // Con confirmación de correo activada no hay sesión todavía: el enlace del correo abre la app ya dentro.
+      ocupado(false);
+      ponerAviso(`Te hemos enviado un correo a ${email}. Ábrelo para confirmar la cuenta y entrarás directamente.`, true,
+        { texto: "Reenviar", hacer: () => intentar(async () => {
+          await auth("resend", { type: "signup", email }, true);
+          ocupado(false);
+          ponerAviso("Te lo hemos vuelto a enviar. Mira también en spam.", true);
+        }) });
+    });
+  });
+
+  $("acceso-olvido").addEventListener("click", () => {
+    if (!correoValido()) return ponerAviso("Escribe arriba tu correo y vuelve a pulsar.");
+    intentar(async () => {
+      await auth("recover", { email: correo.value.trim() }, true);
+      ocupado(false);
+      ponerAviso("Si hay una cuenta con ese correo, te llegará un enlace para poner otra contraseña.", true);
+    });
+  });
+
+  // Google solo si está activado en esta Supabase (en local normalmente no). Vuelve a la app con la sesión.
+  fetch(`${CFG.api}/auth/v1/settings`, { headers: { apikey: CFG.clave } })
+    .then((r) => r.json())
+    .then((s) => { if (s?.external?.google) { google.hidden = false; $("acceso-o").hidden = false; } })
+    .catch(() => {});
+  google.addEventListener("click", () => {
+    location.assign(`${CFG.api}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(urlApp())}`);
+  });
+
+  $("acceso-ver").addEventListener("click", (e) => {
+    const ver = clave.type === "password";
+    clave.type = ver ? "text" : "password";
+    e.currentTarget.textContent = ver ? "Ocultar" : "Ver";
+    e.currentTarget.setAttribute("aria-pressed", String(ver));
+  });
+
+  $("acceso-cambio").addEventListener("click", () => {
+    modo = modo === "registro" ? "entrar" : "registro";
+    ponerAviso(null);
+    pintar();
+    correo.focus();
+  });
+
+  const cerrar = () => dlg.close();
+  dlg.querySelector("[data-cerrar]").addEventListener("click", cerrar);
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) cerrar(); }); // clic fuera de la tarjeta
+
+  document.querySelectorAll("[data-acceso]").forEach((a) => a.addEventListener("click", (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; // abrir en otra pestaña: enlace normal
+    e.preventDefault();
+    const q = new URL(a.href).searchParams;
+    modo = a.dataset.acceso;
+    plan = q.get("plan");
+    periodo = q.get("periodo");
+    ponerAviso(null);
+    ocupado(false);
+    pintar();
+    dlg.showModal();
+    correo.focus();
+  }));
 })();

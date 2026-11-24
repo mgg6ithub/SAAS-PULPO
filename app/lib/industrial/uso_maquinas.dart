@@ -679,6 +679,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       textoEliminar: 'Vaciar días',
       onTodos: () => _alternar(delMes),
       onEliminar: () => _vaciarSel(activos),
+      eliminar: _menuVaciar(activos),
       onSalir: _deseleccionar,
       acciones: [
         TextButton(
@@ -688,6 +689,66 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         ),
         const SizedBox(width: 6),
       ],
+    );
+  }
+
+  /// «Vaciar días» como menú: todas las máquinas o solo una de las que trabajan en los días elegidos.
+  Widget _menuVaciar(List<Activo> activos) {
+    int diasCon(Activo a) => _sel.where((d) => turnosDe(a, d) > 0).length;
+    final con = [
+      for (final (i, a) in activos.indexed)
+        if (diasCon(a) > 0) (i, a),
+    ];
+    return BotonMenu<String>(
+      tooltip: 'Quitar los turnos de los días elegidos',
+      resaltarHover: false,
+      relleno: EdgeInsets.zero,
+      onSelected: (v) {
+        if (v == '*') {
+          _vaciarSel(activos);
+          return;
+        }
+        final a = activos.firstWhere((x) => x.id == v);
+        _cambiar('${_quien(a)}: sin turnos en ${_dias(_sel.length)}', _sel, [a], () {
+          for (final d in _sel) {
+            ponerTurnos(a, d, 0);
+          }
+        });
+      },
+      opciones: [
+        ('*', const Text('Todas las máquinas')),
+        for (final (i, a) in con)
+          (
+            a.id,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: _colorDe(i), shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 10),
+                Text(a.titulo),
+                const SizedBox(width: 12),
+                Text(_dias(diasCon(a)), style: TextStyle(color: P.textoSuave, fontSize: 12.5)),
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.fromLTRB(16, 0, 10, 0),
+        decoration: BoxDecoration(color: P.rojo, borderRadius: BorderRadius.circular(P.radioControl)),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Vaciar días', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            SizedBox(width: 4),
+            Icon(Icons.expand_more_rounded, size: 18, color: Colors.white),
+          ],
+        ),
+      ),
     );
   }
 

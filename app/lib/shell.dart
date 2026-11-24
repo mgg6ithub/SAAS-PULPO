@@ -909,8 +909,7 @@ class _BarraState extends State<_Barra> {
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       // Pultec: cuántas órdenes asignadas van atrasadas (como las vencidas de Planificación).
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, industrial ? otsAtrasadas().length : 0),
-      // Estadísticas, oculta de momento (pedido 20/11/2026).
-      // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
+      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     final subs = [if (conUso && !iconos) (Icons.event_note_outlined, 'Uso de activos', Seccion.usoActivos)];
@@ -971,6 +970,16 @@ class _BarraState extends State<_Barra> {
                 texto,
                 s,
                 aviso: aviso,
+                // Pultec: activos recién creados, en morado (no es un aviso, solo «hay algo nuevo»).
+                nuevos: !industrial
+                    ? 0
+                    : switch (s) {
+                        Seccion.clientes => store.activosNuevos,
+                        Seccion.tareas => store.nuevosEntre(store.tareas.map((t) => t.id)),
+                        Seccion.incidencias => store.nuevosEntre(store.incidencias.map((x) => x.id)),
+                        Seccion.trabajadores => store.nuevosEntre(store.trabajadores.map((w) => w.id)),
+                        _ => 0,
+                      },
                 desplegable: s == Seccion.clientes && subs.isNotEmpty ? abierto : null,
               ),
               if (s == Seccion.clientes && subs.isNotEmpty) _grupo(subs, abierto, altoGrupo),
@@ -1131,14 +1140,18 @@ class _BarraState extends State<_Barra> {
   );
 
   /// [desplegable]: cabeza de un grupo, con su flecha (true = abierto); null = opción normal.
-  Widget _item(IconData icono, String texto, Seccion s, {int aviso = 0, bool? desplegable}) {
+  Widget _item(IconData icono, String texto, Seccion s, {int aviso = 0, int nuevos = 0, bool? desplegable}) {
     final sel = s == widget.seccion;
     // Solo iconos: «Uso de activos» cuelga de Activos con una rama, como en el grupo desplegado.
     if (iconos && s == Seccion.usoActivos) return _hijoIconos(icono, texto, s, sel);
     return Padding(
       padding: const EdgeInsets.only(bottom: _hueco),
       child: _ConEtiqueta(
-        texto: aviso > 0 ? '$texto · $aviso ${s == Seccion.trabajadores ? 'atrasadas' : 'vencidos'}' : texto,
+        texto: aviso > 0
+            ? '$texto · $aviso ${s == Seccion.trabajadores ? 'atrasadas' : 'vencidos'}'
+            : nuevos > 0
+            ? '$texto · $nuevos ${nuevos == 1 ? 'nuevo' : 'nuevos'}'
+            : texto,
         activa: iconos,
         child: InkWell(
           borderRadius: BorderRadius.circular(P.radioControl),
@@ -1171,7 +1184,7 @@ class _BarraState extends State<_Barra> {
                       builder: (_, c, _) => Icon(icono, size: 20 * escala, color: c),
                     ),
                     // Solo iconos: el aviso queda como un punto rojo sobre el icono.
-                    if (iconos && aviso > 0)
+                    if (iconos && (aviso > 0 || nuevos > 0))
                       Positioned(
                         right: -3,
                         top: -2,
@@ -1179,7 +1192,7 @@ class _BarraState extends State<_Barra> {
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: P.rojo,
+                            color: aviso > 0 ? P.rojo : P.morado,
                             shape: BoxShape.circle,
                             border: Border.all(color: P.barra, width: 1.5),
                           ),
@@ -1214,6 +1227,18 @@ class _BarraState extends State<_Barra> {
                         '$aviso',
                         style: TextStyle(color: P.rojo, fontSize: 11.5 * escala, fontWeight: FontWeight.w700),
                       ),
+                    )
+                  else if (nuevos > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: P.morado.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        '$nuevos',
+                        style: TextStyle(color: P.morado, fontSize: 11.5 * escala, fontWeight: FontWeight.w700),
+                      ),
                     ),
                 ],
               ],
@@ -1246,8 +1271,7 @@ class _BarraInferior extends StatelessWidget {
       if (industrial) (Icons.report_outlined, 'Incidencias', Seccion.incidencias, 0),
       // Pultec: cuántas órdenes asignadas van atrasadas (como las vencidas de Planificación).
       (Marca.iconoTrabajador, m('Trabajadores'), Seccion.trabajadores, industrial ? otsAtrasadas().length : 0),
-      // Estadísticas, oculta de momento (pedido 20/11/2026).
-      // if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
+      if (industrial) (Icons.insights_outlined, 'Estadísticas', Seccion.estadisticas, 0),
       if (Marca.finanzas) (Icons.euro_rounded, 'Finanzas', Seccion.finanzas, 0),
     ];
     return Container(

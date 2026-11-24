@@ -7,6 +7,7 @@ el reload (cambios de estructura), hot restart (R).
 
 Uso (desde app/):  python3 tool/vivo.py     · Ctrl+C para parar.
                    python3 tool/vivo.py --industrial  → Pultec (MARCA=industrial) en :8081.
+                   Usa la Supabase local (`supabase start`, localhost:54321). Con --produccion, la de producción.
 """
 
 import os
@@ -17,6 +18,14 @@ import time
 
 APP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDUSTRIAL = "--industrial" in sys.argv
+PRODUCCION = "--produccion" in sys.argv
+# Supabase local de `supabase start`: URL y clave publicable son las de serie de la CLI (iguales en cualquier equipo).
+SUPABASE_LOCAL = [
+    # Con ./entorno.sh la app va por la pasarela de la landing (:8001); si no, directa a la Supabase local.
+    "--dart-define=SUPABASE_URL=" + os.environ.get("SUPABASE_LOCAL_URL", "http://localhost:54321"),
+    "--dart-define=SUPABASE_PUBLICABLE=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
+    "--dart-define=LANDING_URL=http://localhost:8001/",  # landing local: ./entorno.sh landing
+]
 PUERTO = os.environ.get("PUERTO", "8081" if INDUSTRIAL else "8080")
 # Windows: la consola no es UTF-8 por defecto (emoji y tildes rompían el print).
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -41,7 +50,8 @@ def huella(rutas):
 def main():
     flutter = subprocess.Popen(
         ["flutter.bat" if os.name == "nt" else "flutter", "run", "-d", "web-server", "--web-port", PUERTO, "--web-hostname", "localhost"]
-        + (["--dart-define=MARCA=industrial"] if INDUSTRIAL else []),
+        + (["--dart-define=MARCA=industrial"] if INDUSTRIAL else [])
+        + ([] if PRODUCCION else SUPABASE_LOCAL),
         cwd=APP,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -51,7 +61,7 @@ def main():
         errors="replace",
         bufsize=1,
     )
-    print(f"\n🐙 {'Pultec' if INDUSTRIAL else 'Pulcón'} en vivo → http://localhost:{PUERTO}  (Ctrl+C para parar)\n", flush=True)
+    print(f"\n🐙 {'Pultec' if INDUSTRIAL else 'Pulcón'} en vivo → http://localhost:{PUERTO}  · Supabase {'PRODUCCIÓN' if PRODUCCION else 'local'}  (Ctrl+C para parar)\n", flush=True)
 
     def enviar(tecla):
         try:

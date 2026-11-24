@@ -113,6 +113,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
         i.fotos = fotos.map(base64Encode).toList();
         store.guardarIncidencia(i);
       }
+      store.marcarNuevo(i.id);
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(

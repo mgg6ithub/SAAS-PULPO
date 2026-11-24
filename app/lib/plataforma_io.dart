@@ -13,4 +13,8 @@ Future<void> descargar(Uint8List bytes, String nombre, String tipo) async {
 void abrirEnlace(String url) =>
     Process.run(Platform.isWindows ? 'explorer' : (Platform.isMacOS ? 'open' : 'xdg-open'), [url]);
 
+void irA(String url) => abrirEnlace(url);
+
 void ponerPestana(String icono, String titulo) {}
+
+void quitarDeLaDireccion(String parametro) {}

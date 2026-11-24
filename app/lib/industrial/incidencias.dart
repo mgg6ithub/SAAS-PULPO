@@ -164,7 +164,9 @@ class _TablaIncidencias extends StatelessWidget {
               children: [
                 Tooltip(message: x.gravedad.etiqueta, child: puntoTipo(x.gravedad.color, tam: 10)),
                 const SizedBox(width: 10),
-                Expanded(child: celdaTexto(x.descripcion.isEmpty ? 'Sin descripción' : x.descripcion, negrita: true)),
+                Expanded(
+                  child: conNuevo(x.id, celdaTexto(x.descripcion.isEmpty ? 'Sin descripción' : x.descripcion, negrita: true)),
+                ),
               ],
             ),
             if (medio) celdaTexto(dondeEs(x.activoId), suave: true),
@@ -182,7 +184,10 @@ class _TablaIncidencias extends StatelessWidget {
             if (medio) BotonPdf(() => descargarInformeIncidencia(context, x), tooltip: 'Descargar el informe en PDF'),
           ];
         },
-        onTap: (i) => s.tocar(lista[i].$1.id, () => abrirIncidenciaForm(context, original: lista[i].$1)),
+        onTap: (i) => s.tocar(lista[i].$1.id, () {
+          store.verNuevo(lista[i].$1.id);
+          abrirIncidenciaForm(context, original: lista[i].$1);
+        }),
         pie: pieTabla(lista.length, lista.length == 1 ? 'incidencia' : 'incidencias'),
       ),
       );

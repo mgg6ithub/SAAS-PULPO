@@ -94,6 +94,18 @@ class Pill extends StatelessWidget {
   }
 }
 
+/// Nombre de una fila con la píldora «Nuevo» detrás si se acaba de crear a mano ([Store.esNuevo]).
+Widget conNuevo(String id, Widget nombre) => !store.esNuevo(id)
+    ? nombre
+    : Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: nombre),
+          const SizedBox(width: 8),
+          Pill('Nuevo', P.morado),
+        ],
+      );
+
 /// Píldora gris con un punto de color delante: "● Caldera". Para categorías.
 class Etiqueta extends StatelessWidget {
   final String texto;
@@ -2402,9 +2414,13 @@ class BarraSeleccion extends StatelessWidget {
 
   /// Texto del botón rojo (Pultec cancela las OT en vez de borrarlas).
   final String textoEliminar;
+
+  /// En vez del botón rojo, este (p. ej. un menú para elegir qué se quita).
+  final Widget? eliminar;
   const BarraSeleccion({
     super.key,
     this.acciones = const [],
+    this.eliminar,
     this.textoEliminar = 'Eliminar',
     required this.seleccionados,
     required this.total,
@@ -2437,11 +2453,12 @@ class BarraSeleccion extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           ...acciones,
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: P.rojo),
-            onPressed: seleccionados == 0 ? null : onEliminar,
-            child: Text(textoEliminar),
-          ),
+          eliminar ??
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: P.rojo),
+                onPressed: seleccionados == 0 ? null : onEliminar,
+                child: Text(textoEliminar),
+              ),
           IconButton(
             tooltip: 'Salir de la selección',
             onPressed: onSalir,

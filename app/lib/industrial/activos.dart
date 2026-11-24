@@ -355,7 +355,7 @@ class _TablaActivosState extends State<_TablaActivos> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: a.descripcion.isEmpty
-                          ? celdaTexto(nombre, negrita: true)
+                          ? _celdaNombre(nombre, a.id)
                           // Con descripción: debajo del nombre, como en los mantenimientos.
                           : Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -363,7 +363,7 @@ class _TablaActivosState extends State<_TablaActivos> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  celdaTexto(nombre, negrita: true),
+                                  _celdaNombre(nombre, a.id),
                                   const SizedBox(height: 2),
                                   Text(
                                     a.descripcion,
@@ -399,7 +399,10 @@ class _TablaActivosState extends State<_TablaActivos> {
                 if (medio) const SizedBox(),
               ];
             },
-            onTap: (i) => s.tocar(activos[i].id, () => widget.onAbrir(activos[i].id)),
+            onTap: (i) => s.tocar(activos[i].id, () {
+              store.verNuevo(activos[i].id);
+              widget.onAbrir(activos[i].id);
+            }),
             pie: pieTabla(
               activos.length,
               componentes
@@ -412,6 +415,9 @@ class _TablaActivosState extends State<_TablaActivos> {
     },
   );
 }
+
+/// Nombre del activo en la tabla; recién creado, con su píldora «Nuevo» detrás.
+Widget _celdaNombre(String nombre, String id) => conNuevo(id, celdaTexto(nombre, negrita: true));
 
 /// Mantenimientos del activo y de todos sus componentes.
 List<PlanMantenimiento> planesRama(String id) {
@@ -1580,7 +1586,10 @@ class _ActivoFormState extends State<ActivoForm> {
     if (error != null) return _irA(_claveIdentificacion);
     if (_erroresMantenimiento.isNotEmpty) return _irA(_claveMantenimiento);
     _volcar();
+    final alta = store.activo(a.id) == null;
     store.guardarActivo(a);
+    // Creado a mano: con su píldora «Nuevo» hasta que se abra.
+    if (alta) store.marcarNuevo(a.id);
     if (a.padreId == null) reprogramarOts(a);
     if (widget.incrustada) {
       widget.onTerminar?.call();
