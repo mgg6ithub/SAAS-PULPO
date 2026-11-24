@@ -46,6 +46,9 @@ const _letras = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 String _turnos(int n) => '$n ${n == 1 ? 'turno' : 'turnos'}';
 
+/// Parte del día (24 h) que ocupan [n] turnos de la máquina: 1 turno de 8 h, un tercio; 3, lleno.
+double _fraccion(Activo a, int n) => (n * a.horasTurno / 24).clamp(0, 1).toDouble();
+
 /// El patrón semanal en pocas palabras: «L–V · 1 turno», «L–S · 2 turnos», «L1 M1 X2…» o «Sin patrón».
 String resumenPatron(Activo a) {
   final p = a.patron;
@@ -899,7 +902,8 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
       _altoTurno = 20.0,
       _altoMarca = 18.0,
       _altoCabecera = 26.0,
-      _punto = 9.0,
+      _punto = 12.0,
+      _puntoAlto = 7.0,
       _huecoPunto = 4.0,
       _anchoHoras = 64.0,
       _maxMarcasTodas = 3,
@@ -915,7 +919,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   /// su pastilla y sus mantenimientos.
   double _altoDia(List<Activo> activos, DateTime d, int marcas, int puntosPorFila, bool todas) => todas
       ? _altoBaseDia +
-            (activos.length / puntosPorFila).ceil() * (_punto + _huecoPunto) +
+            (activos.length / puntosPorFila).ceil() * (_puntoAlto + _huecoPunto) +
             (marcas > _maxMarcasTodas ? _maxMarcasTodas + 1 : marcas) * _altoMarca
       : _altoBaseDia + _enDia(activos, d) * (_altoTurno + 3) + marcas * _altoMarca;
 
@@ -1011,32 +1015,56 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     );
   }
 
+  /// Clave de la selección de activos, para animar lo que cambia al elegir otros.
+  String get _claveSel => _elegidas.join(',');
+
+  /// Desde arriba de un día hasta su primera línea de turnos (margen, borde, relleno, número y hueco).
+  static const _arribaLineas = 34.5;
+
+  /// Horas de la semana, pegadas a la derecha. Con activos elegidos, las de cada uno con su icono, a la altura de
+  /// su línea; con todos, la suma.
   Widget _horasSemana(List<Activo> activos, List<DateTime> dias) {
-    final a = _elegidas.length == 1 ? activos.where((x) => x.id == _elegidas.first).firstOrNull : null;
-    final h = activos.where(_visible).fold(0.0, (t, x) => t + _horas(x, dias));
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Align(
-        alignment: Alignment.topRight,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            a != null
-                ? IconoActivo(a.icono, size: 15, color: _colorDe(activos.indexOf(a)))
-                : Icon(Marca.iconoCliente, size: 15, color: P.textoSuave),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                '${h.toStringAsFixed(0)} h',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: h == 0 ? P.textoSuave : P.texto),
-              ),
-            ),
-          ],
+    Widget linea(Widget icono, double h) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        icono,
+        const SizedBox(width: 4),
+        Text(
+          '${h.toStringAsFixed(0)} h',
+          maxLines: 1,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: h == 0 ? P.textoSuave : P.texto),
         ),
-      ),
+      ],
     );
+    final hijo = _elegidas.isEmpty
+        ? Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: linea(
+              Icon(Marca.iconoCliente, size: 15, color: P.textoSuave),
+              activos.fold(0.0, (t, x) => t + _horas(x, dias)),
+            ),
+          )
+        : Padding(
+            padding: const EdgeInsets.only(top: _arribaLineas),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (final (i, a) in activos.indexed)
+                  if (_visible(a))
+                    SizedBox(
+                      height: _altoTurno + 3,
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: SizedBox(
+                          height: _altoTurno,
+                          child: linea(IconoActivo(a.icono, size: 14, color: _colorDe(i)), _horas(a, dias)),
+                        ),
+                      ),
+                    ),
+              ],
+            ),
+          );
+    return Align(alignment: Alignment.topRight, child: _Aparece(clave: _claveSel, child: hijo));
   }
 
   /// La rejilla de días, con su borde redondeado encima (el fondo de las celdas no lo tapa) y la selección
@@ -1212,8 +1240,11 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                       ],
                     ),
                     const SizedBox(height: 4),
+                    // Al cambiar los activos elegidos, lo de cada día se desvanece y entra con un leve zoom.
                     Expanded(
-                      child: SingleChildScrollView(
+                      child: _Aparece(
+                        clave: _claveSel,
+                        child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: todas
@@ -1234,7 +1265,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                                     ),
                                 ]
                               : [
-                            // Los activos elegidos: una pastilla a lo ancho por activo, con sus turnos (o «Sin turnos»).
+                            // Los activos elegidos: una pastilla a lo ancho por activo, con sus turnos.
                             Wrap(
                               spacing: 3,
                               runSpacing: 3,
@@ -1244,14 +1275,17 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                                     SizedBox(
                                       width: anchoTurno,
                                       height: _altoTurno,
-                                      child: _Turno(
+                                      // Sin turnos, el hueco en blanco (mantiene alineadas las líneas y sus horas).
+                                      child: turnosDe(a, d) == 0
+                                          ? null
+                                          : _Turno(
                                         a,
                                         _colorDe(i),
                                         turnosDe(a, d),
-                                        // Uno: sus turnos en texto. Varios: su tag (los turnos, por la intensidad).
+                                        // Uno: sus turnos en texto. Varios: su tag (los turnos, por la barra).
                                         texto: _elegidas.length > 1
                                             ? (a.tag.isEmpty ? a.nombre : a.tag)
-                                            : (turnosDe(a, d) == 0 ? 'Sin turnos' : _turnos(turnosDe(a, d))),
+                                            : _turnos(turnosDe(a, d)),
                                         opciones: _opcionesDia(a, d),
                                         onAccion: (accion) => _accionDia(a, d, accion),
                                       ),
@@ -1262,6 +1296,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                             for (final m in marcas) _MarcaMantenimiento(m, _colorDe(activos.indexOf(m.activo))),
                           ],
                         ),
+                      ),
                       ),
                     ),
                   ],
@@ -1746,63 +1781,55 @@ class _Maquinas extends StatelessWidget {
   );
 }
 
-/// Una máquina en un día, en una pastilla de una línea: su tag en su color, claro con 1 turno y lleno con 2 o 3
-/// (el número exacto, con el nombre y las horas, en el tooltip). Una excepción al patrón lleva un punto; una parada
-/// (0 en un día que el patrón trabaja) sale tachada con borde. Al tocarlo, sus opciones.
+/// Una máquina en un día, en una pastilla de una línea: la barra del día (24 h) rellena por la parte que trabaja,
+/// con su tag o sus turnos (el detalle, en el tooltip). Al tocarla, sus opciones.
 class _Turno extends StatelessWidget {
   final Activo a;
   final Color color;
   final int n;
+
   /// Lo que pone (por defecto, su tag): con una sola máquina en el mes, sus turnos («2 turnos»).
   final String? texto;
   final List<(String, Widget)> opciones;
   final ValueChanged<String> onAccion;
-  const _Turno(
-    this.a,
-    this.color,
-    this.n, {
-    required this.onAccion,
-    required this.opciones,
-    this.texto,
-  });
+  const _Turno(this.a, this.color, this.n, {required this.onAccion, required this.opciones, this.texto});
 
   @override
   Widget build(BuildContext context) {
-    // Tres intensidades, como en la leyenda: 1 turno suave, 2 medio, 3 lleno; sin turnos, solo el borde.
-    final tinta = n >= 3 ? Colors.white : (n == 2 ? P.texto : color);
     final pasa = n * a.horasTurno > 24;
     return BotonMenu<String>(
-      tooltip: n == 0
-          ? '${a.titulo}: parada (su patrón trabaja este día)'
-          : '${a.titulo}: ${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h'
-                '${pasa ? ', no caben en 24 h' : ''}',
+      tooltip:
+          '${a.titulo}: ${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h${pasa ? ', no caben en 24 h' : ''}',
       seleccionado: '$n',
       resaltarHover: false,
       relleno: EdgeInsets.zero,
       onSelected: onAccion,
       opciones: opciones,
+      // Una barra del día (24 h) rellena por la parte que trabaja, como en la leyenda: 1 turno, un tercio.
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: n == 0 ? Colors.transparent : color.withValues(alpha: const [0.0, .14, .45, 1.0][n.clamp(0, 3)]),
+          color: color.withValues(alpha: .1),
           borderRadius: BorderRadius.circular(5),
-          border: pasa
-              ? Border.all(color: P.rojo, width: 1.5)
-              : n == 0
-              ? Border.all(color: P.borde)
-              : Border(left: BorderSide(color: color, width: 3)),
+          border: pasa ? Border.all(color: P.rojo, width: 1.5) : Border.all(color: color.withValues(alpha: .35)),
         ),
-        child: Row(
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Expanded(
-              child: Text(
-                texto ?? (a.tag.isEmpty ? a.nombre : a.tag),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: n == 0 ? P.textoSuave : tinta,
+            FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: _fraccion(a, n),
+              child: ColoredBox(color: color.withValues(alpha: .4)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  texto ?? (a.tag.isEmpty ? a.nombre : a.tag),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: P.texto),
                 ),
               ),
             ),
@@ -1813,7 +1840,31 @@ class _Turno extends StatelessWidget {
   }
 }
 
-/// Leyenda del mes, arriba a la derecha: de suave a lleno, 1, 2 o 3 turnos; aro = sin turnos; rombo = mantenimiento.
+/// Cambia su contenido con un fundido y un leve zoom cuando cambia [clave] (al elegir otros activos).
+class _Aparece extends StatelessWidget {
+  final String clave;
+  final Widget child;
+  const _Aparece({required this.clave, required this.child});
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: const Duration(milliseconds: 220),
+    switchInCurve: Curves.easeOutCubic,
+    switchOutCurve: Curves.easeInCubic,
+    layoutBuilder: (actual, previos) => Stack(
+      alignment: Alignment.topLeft,
+      children: [...previos, ?actual],
+    ),
+    transitionBuilder: (hijo, anim) => FadeTransition(
+      opacity: anim,
+      child: ScaleTransition(scale: Tween(begin: .96, end: 1.0).animate(anim), alignment: Alignment.topLeft, child: hijo),
+    ),
+    child: KeyedSubtree(key: ValueKey(clave), child: child),
+  );
+}
+
+/// Leyenda del mes, arriba a la derecha: la barra del día (24 h) llena un tercio con 1 turno, dos con 2 y entera
+/// con 3; el rombo, un mantenimiento. Sin turnos, el día queda en blanco.
 class _Leyenda extends StatelessWidget {
   const _Leyenda();
 
@@ -1826,13 +1877,19 @@ class _Leyenda extends StatelessWidget {
     ],
   );
 
-  Widget _punto({required bool lleno, double alfa = 1}) => Container(
-    width: 9,
+  Widget _barra(double f) => Container(
+    width: 18,
     height: 9,
+    clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: lleno ? P.morado.withValues(alpha: alfa) : null,
-      border: lleno ? null : Border.all(color: P.borde, width: 1.2),
+      color: P.morado.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(2),
+      border: Border.all(color: P.morado.withValues(alpha: .4)),
+    ),
+    child: FractionallySizedBox(
+      alignment: Alignment.centerLeft,
+      widthFactor: f,
+      child: ColoredBox(color: P.morado.withValues(alpha: .7)),
     ),
   );
 
@@ -1841,10 +1898,9 @@ class _Leyenda extends StatelessWidget {
     spacing: 16,
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
-      _item(_punto(lleno: true, alfa: .35), '1 turno'),
-      _item(_punto(lleno: true, alfa: .7), '2 turnos'),
-      _item(_punto(lleno: true), '3 turnos'),
-      _item(_punto(lleno: false), 'Sin turnos'),
+      _item(_barra(1 / 3), '1 turno'),
+      _item(_barra(2 / 3), '2 turnos'),
+      _item(_barra(1), '3 turnos'),
       _item(Transform.rotate(angle: .785, child: Container(width: 7, height: 7, color: P.textoSuave)), 'Mantenimiento'),
     ],
   );
@@ -1951,9 +2007,8 @@ class _Ficha extends StatelessWidget {
   );
 }
 
-/// Un día con todas las máquinas: un punto por máquina, siempre en el mismo sitio y en su color (más intenso
-/// cuantos más turnos: 1, 2 o 3) y un aro gris si no tiene turnos, como en la leyenda. Así se ve de un vistazo
-/// cuáles faltan.
+/// Un día con todas las máquinas: una barrita por máquina, siempre en el mismo sitio y en su color, rellena por
+/// la parte del día que trabaja (como en la leyenda); sin turnos, el hueco en blanco.
 class _PuntosDia extends StatelessWidget {
   final List<Activo> activos;
   final DateTime d;
@@ -1969,13 +2024,13 @@ class _PuntosDia extends StatelessWidget {
         child: CustomPaint(
           size: Size(
             porFila * (_UsoMaquinasState._punto + _UsoMaquinasState._huecoPunto),
-            filas * (_UsoMaquinasState._punto + _UsoMaquinasState._huecoPunto),
+            filas * (_UsoMaquinasState._puntoAlto + _UsoMaquinasState._huecoPunto),
           ),
           painter: _PintorPuntos(
             colores: [for (var i = 0; i < activos.length; i++) colorDe(i)],
             turnos: turnos,
+            fracciones: [for (final (i, a) in activos.indexed) _fraccion(a, turnos[i])],
             porFila: porFila,
-            hueco: P.borde,
           ),
         ),
     );
@@ -1985,35 +2040,29 @@ class _PuntosDia extends StatelessWidget {
 class _PintorPuntos extends CustomPainter {
   final List<Color> colores;
   final List<int> turnos;
+  final List<double> fracciones;
   final int porFila;
-  final Color hueco;
-  _PintorPuntos({
-    required this.colores,
-    required this.turnos,
-    required this.porFila,
-    required this.hueco,
-  });
+  _PintorPuntos({required this.colores, required this.turnos, required this.fracciones, required this.porFila});
 
   @override
   void paint(Canvas canvas, Size size) {
-    const p = _UsoMaquinasState._punto, h = _UsoMaquinasState._huecoPunto;
-    final lleno = Paint();
-    final aro = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
+    const w = _UsoMaquinasState._punto, alto = _UsoMaquinasState._puntoAlto, h = _UsoMaquinasState._huecoPunto;
+    final fondo = Paint(), lleno = Paint();
     for (var i = 0; i < colores.length; i++) {
-      final c = Offset((i % porFila) * (p + h) + p / 2, (i ~/ porFila) * (p + h) + p / 2);
-      if (turnos[i] > 0) {
-        lleno.color = colores[i].withValues(alpha: const [0.0, .35, .7, 1.0][turnos[i].clamp(0, 3)]);
-        canvas.drawCircle(c, p / 2, lleno);
-      } else {
-        aro.color = hueco;
-        canvas.drawCircle(c, p / 2 - .6, aro);
-      }
+      // Sin turnos, nada (el hueco en blanco); con turnos, la barra del día rellena por su parte.
+      if (turnos[i] == 0) continue;
+      final r = Rect.fromLTWH((i % porFila) * (w + h), (i ~/ porFila) * (alto + h), w, alto);
+      fondo.color = colores[i].withValues(alpha: .22);
+      lleno.color = colores[i];
+      canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(2)), fondo);
+      canvas.save();
+      canvas.clipRRect(RRect.fromRectAndRadius(r, const Radius.circular(2)));
+      canvas.drawRect(Rect.fromLTWH(r.left, r.top, w * fracciones[i], alto), lleno);
+      canvas.restore();
     }
   }
 
   @override
   bool shouldRepaint(_PintorPuntos o) =>
-      !listEquals(o.turnos, turnos) || !listEquals(o.colores, colores) || o.porFila != porFila;
+      !listEquals(o.fracciones, fracciones) || !listEquals(o.colores, colores) || o.porFila != porFila;
 }
