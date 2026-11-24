@@ -151,7 +151,7 @@ class _ActivosState extends State<Activos> {
             derecha: [
               BotonAccion(
                 'Importar CSV',
-                icono: Icons.upload_file_outlined,
+                icono: Icons.file_download_outlined,
                 tooltip: 'Crear muchos activos, componentes y mantenimientos de una vez desde Excel',
                 onPressed: () => abrirImportarExportar(context, que: QueImportar.activos),
               ),

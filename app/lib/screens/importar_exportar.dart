@@ -41,6 +41,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
   Importacion? vista;
   String? archivo;
   bool verGuia = false;
+  bool get solo => widget.que != null;
 
   Future<void> elegir() async {
     final r = await FilePicker.platform.pickFiles(
@@ -85,7 +86,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         children: [
           Expanded(
             child: Text(
-              'Importar y exportar',
+              solo ? 'Importar y exportar ${que.etiqueta.toLowerCase()}' : 'Importar y exportar',
               style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
             ),
           ),
@@ -96,35 +97,36 @@ class _ImportarExportarState extends State<ImportarExportar> {
           ),
         ],
       ),
-      Text(
-        industrial
-            ? 'Trae tus activos (con componentes y mantenimientos) y técnicos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.'
-            : m(
-                'Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.',
-              ),
-        style: TextStyle(fontSize: 13, color: P.textoSuave),
-      ),
+      Text(switch (widget.que) {
+        QueImportar.activos =>
+          'Crea de una vez tus activos, con sus componentes y mantenimientos, desde un Excel guardado como CSV. '
+              'Cada mantenimiento sale con su orden de trabajo. Lo que ya está en Pultec no se duplica.',
+        QueImportar.trabajadores => m(
+          'Crea de una vez a tus trabajadores desde un Excel guardado como CSV. Lo que ya está en Pultec no se duplica.',
+        ),
+        _ when industrial => 'Trae tus activos (con componentes y mantenimientos) y técnicos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.',
+        _ => m(
+          'Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.',
+        ),
+      }, style: TextStyle(fontSize: 13, color: P.textoSuave)),
       const SizedBox(height: 18),
       _titulo('Importar'),
-      Pestanas(
-        opciones: [for (final q in importables) q.etiqueta],
-        seleccion: importables.indexOf(que),
-        onChanged: (i) => setState(() {
-          que = importables[i];
-          vista = null;
-          archivo = null;
-        }),
-      ),
-      const SizedBox(height: 12),
-      if (que == QueImportar.activos)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Text(
-            'Un solo archivo: una fila por activo o componente («Padre» = tag de su activo). Con «Mantenimiento» rellena, '
-            'le añade ese mantenimiento; repite el tag en otra fila para darle más. Cada mantenimiento sale con su orden de trabajo.',
-            style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+      // Desde Activos o Técnicos, solo lo suyo; con todo (Ajustes), una pestaña por tipo, a su ancho.
+      if (!solo) ...[
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Pestanas(
+            opciones: [for (final q in importables) q.etiqueta],
+            seleccion: importables.indexOf(que),
+            onChanged: (i) => setState(() {
+              que = importables[i];
+              vista = null;
+              archivo = null;
+            }),
           ),
         ),
+        const SizedBox(height: 12),
+      ],
       if (que == QueImportar.trabajos)
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -158,7 +160,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         padding: EdgeInsets.zero,
         child: Column(
           children: [
-            for (final q in importables)
+            for (final q in solo ? [que] : importables)
               FilaLista(
                 lider: const SizedBox(width: 4),
                 titulo: q.etiqueta,

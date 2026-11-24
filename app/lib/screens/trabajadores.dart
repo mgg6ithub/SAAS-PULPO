@@ -106,7 +106,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                         if (industrial)
                           BotonAccion(
                             'Importar CSV',
-                            icono: Icons.upload_file_outlined,
+                            icono: Icons.file_download_outlined,
                             tooltip: 'Crear muchos técnicos de una vez desde Excel',
                             onPressed: () => abrirImportarExportar(context, que: QueImportar.trabajadores),
                           ),
