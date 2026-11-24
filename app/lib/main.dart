@@ -23,6 +23,13 @@ Future<void> main() async {
   if (barra != null) ajustes.anchoBarra = barra;
   final oscuro = Uri.base.queryParameters['oscuro'];
   if (oscuro != null) ajustes.tema = oscuro == '1' ? ThemeMode.dark : ThemeMode.light;
+  // ?tema=oscuro / ?tema=claro: el tema de la landing al pulsar Entrar o crear cuenta. Se guarda y se quita de la
+  // dirección, así el acceso, el nombre de la empresa y la app siguen con el aspecto de la landing.
+  final tema = Uri.base.queryParameters['tema'];
+  if (tema == 'oscuro' || tema == 'claro') {
+    ajustes.ponerTema(tema == 'oscuro' ? ThemeMode.dark : ThemeMode.light);
+    quitarDeLaDireccion('tema');
+  }
   // Por defecto, con Supabase. ?local=1 abre la versión de pruebas con datos en el navegador.
   final local = Uri.base.queryParameters['local'] == '1';
   if (local) {

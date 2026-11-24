@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="assets/app/inicio.webp" media="(min-width: 900px)">
-  <script>try { const t = localStorage.getItem("pultec-tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <script>let t = null; try { t = localStorage.getItem("pultec-tema"); } catch (e) {} document.documentElement.dataset.theme = t || "light"; /* claro por defecto */</script>
   <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>

@@ -15,6 +15,12 @@
   // Tema: el botón alterna y se recuerda en este navegador
   const oscuroSistema = matchMedia("(prefers-color-scheme: dark)");
   const temaActual = () => root.dataset.theme || (oscuroSistema.matches ? "dark" : "light");
+  // La app se abre con el mismo tema que la landing (acceso y nombre de la empresa incluidos).
+  const conTema = (url) => {
+    const u = new URL(url);
+    u.searchParams.set("tema", temaActual() === "dark" ? "oscuro" : "claro");
+    return u.toString();
+  };
   document.getElementById("tema")?.addEventListener("click", () => {
     const nuevo = temaActual() === "dark" ? "light" : "dark";
     root.dataset.theme = nuevo;
@@ -138,7 +144,7 @@
     const u = new URL(CFG.app);
     if (plan) u.searchParams.set("plan", plan);
     if (periodo) u.searchParams.set("periodo", periodo);
-    return u.toString();
+    return conTema(u.toString());
   };
 
   const pintar = () => {
@@ -279,7 +285,7 @@
 
   $("acceso-cambio").addEventListener("click", () => {
     // Entrar ya no se hace aquí: lleva a la pantalla de acceso de la app.
-    if (modo === "registro") { location.href = CFG.app; return; }
+    if (modo === "registro") { location.href = conTema(CFG.app); return; }
     modo = "registro";
     ponerAviso(null);
     pintar();
@@ -294,7 +300,7 @@
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; // abrir en otra pestaña: enlace normal
     e.preventDefault();
     // «Entrar» va directo a la pantalla de acceso de la app (correo y contraseña allí); crear cuenta sigue aquí.
-    if (a.dataset.acceso === "entrar") { location.href = CFG.app; return; }
+    if (a.dataset.acceso === "entrar") { location.href = conTema(CFG.app); return; }
     const q = new URL(a.href).searchParams;
     modo = a.dataset.acceso;
     plan = q.get("plan");
