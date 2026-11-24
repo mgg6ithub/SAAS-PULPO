@@ -71,6 +71,11 @@ class Ajustes extends ChangeNotifier {
 
   void marcarGuiaPultec(String empresa) => _prefs?.setBool('ajustes_guia_pultec_$empresa', true);
 
+  /// Presentación animada de Inicio ya vista por esta cuenta en este navegador (sale una sola vez).
+  bool introInicioVista(String usuario) => _prefs?.getBool('ajustes_intro_inicio_$usuario') ?? false;
+
+  void marcarIntroInicio(String usuario) => _prefs?.setBool('ajustes_intro_inicio_$usuario', true);
+
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     tema = ThemeMode.values[_prefs!.getInt('ajustes_tema') ?? ThemeMode.light.index];

@@ -12,6 +12,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'estadisticas.dart';
+import 'intro_inicio.dart';
 import 'planificacion.dart';
 import 'tarea_card.dart';
 import 'tareas.dart' show filtroFechaTrabajos, filtroCriticidadTrabajos, historicoTrabajos;
@@ -70,7 +71,8 @@ class Resumen extends StatelessWidget {
           ];
 
     // Solo se reconstruye al pasar de una a dos columnas; el resto del ancho lo resuelve la maquetación.
-    return SegunTamano(
+    // La primera vez de una cuenta nueva (Pultec, guía sin hacer), con la presentación animada.
+    final vista = SegunTamano(
       clave: (box) => (P.mejorada, min(1080.0, box.maxWidth - margenPagina.horizontal) > 760, _columnasKpi(box), box.maxWidth > 1180),
       builder: (context, box) {
         final dosCol = min(1080.0, box.maxWidth - margenPagina.horizontal) > 760;
@@ -104,9 +106,13 @@ class Resumen extends StatelessWidget {
                 children: [
                   _Hero(conFecha: conFecha, pasos: pasos),
                   const SizedBox(height: 16),
-                  if (pasos.contains(false)) ...[_PrimerosPasos(pasos, onIr: onIr), const SizedBox(height: 16)],
+                  if (pasos.contains(false)) ...[
+                    Aparecer(child: _PrimerosPasos(pasos, onIr: onIr)),
+                    const SizedBox(height: 16),
+                  ],
                   // Sin ningún trabajo todo serían ceros y paneles vacíos: en su lugar, cómo funciona Pultec.
-                  if (!hayTarea && (industrial ? !guiaHecha : !ajustes.guiaOrganizar)) _ComoFunciona(columnas: dosCol),
+                  if (!hayTarea && (industrial ? !guiaHecha : !ajustes.guiaOrganizar))
+                    Aparecer(retraso: .75, child: _ComoFunciona(columnas: dosCol)),
                   // Guía ya hecha y sin órdenes (todo borrado, o solo activos): sin tutorial, solo cómo seguir.
                   if (industrial && !hayTarea && guiaHecha && !P.mejorada) const _SinMaquinas(),
                   // Pultec con la guía hecha: el panel siempre, aunque esté vacío (cifras a cero y, en lugar de las
@@ -267,6 +273,7 @@ class Resumen extends StatelessWidget {
         );
       },
     );
+    return IntroInicioMarco(activa: industrial && !guiaHecha, child: vista);
   }
 }
 
@@ -374,7 +381,9 @@ class _ComoFunciona extends StatelessWidget {
           ];
     final tarjetas = [
       for (final (i, (color, titulo, texto)) in etapas.indexed)
-        Tarjeta(
+        Aparecer(
+          retraso: .85 + i * .14,
+          child: Tarjeta(
           padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,6 +411,7 @@ class _ComoFunciona extends StatelessWidget {
               const SizedBox(height: 4),
               Text(texto, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
             ],
+          ),
           ),
         ),
     ];
@@ -681,7 +691,10 @@ class _PrimerosPasos extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             for (final (i, (titulo, detalle, ruta, boton)) in pasos.indexed)
-              IntrinsicHeight(
+              // En la presentación, los pasos entran de uno en uno.
+              Aparecer(
+                retraso: .2 + i * .14,
+                child: IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -755,6 +768,7 @@ class _PrimerosPasos extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
               ),
           ],
         ),
@@ -1351,10 +1365,20 @@ extension on _HeroState {
     final iconos = industrial
         ? const [Marca.iconoCliente, Icons.assignment_outlined, Icons.groups_outlined]
         : [Marca.iconoCliente, Marca.iconoTrabajo, Marca.iconoTrabajador];
+    // Presentación: fecha, nombre y frase se escriben uno detrás de otro; luego entran los bloques.
+    const dFecha = IntroInicio.fecha;
+    final dNombre = dFecha + this.fecha.length / 45 + .15;
+    final dFrase = dNombre + saludo.length / 14 + .2;
+    IntroInicio.resto = dFrase + frase.length / 90 + .15;
     final texto = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(this.fecha, style: TextStyle(color: P.textoSuave, fontSize: 14, fontWeight: FontWeight.w500)),
+        Escribir(
+          this.fecha,
+          estilo: TextStyle(color: P.textoSuave, fontSize: 14, fontWeight: FontWeight.w500),
+          desde: dFecha,
+          porSegundo: 45,
+        ),
         const SizedBox(height: 8),
         Builder(builder: (_) {
           final estilo = TextStyle(
@@ -1366,16 +1390,27 @@ extension on _HeroState {
             color: P.texto,
           );
           // Pultec: el nombre de la empresa se cambia escribiendo encima; se guarda solo.
+          // Durante la presentación, se escribe solo; después, el campo editable.
           final nube = store.nube;
-          return industrial && nube != null && nube.esAdmin
-              ? _NombreEmpresa(nube, estilo)
-              : Text(saludo, style: estilo);
+          return ValueListenableBuilder<double?>(
+            valueListenable: IntroInicio.t,
+            builder: (context, t, _) => t != null
+                ? Escribir(saludo, estilo: estilo, desde: dNombre, porSegundo: 14)
+                : industrial && nube != null && nube.esAdmin
+                ? _NombreEmpresa(nube, estilo)
+                : Text(saludo, style: estilo),
+          );
         }),
         const SizedBox(height: 8),
-        Text(frase, style: TextStyle(color: P.textoSuave, fontSize: 16)),
+        Escribir(frase, estilo: TextStyle(color: P.textoSuave, fontSize: 16), desde: dFrase, porSegundo: 90),
         const SizedBox(height: 18),
         if (sinDatos)
-          Text('Completa los primeros pasos', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: P.texto))
+          Aparecer(
+            child: Text(
+              'Completa los primeros pasos',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: P.texto),
+            ),
+          )
         else
           Wrap(
             spacing: 10,
