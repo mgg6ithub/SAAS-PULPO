@@ -274,7 +274,7 @@ class _Marco extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(child: LogoPultec(size: 44)),
+                const Center(child: LogoPultec(size: 52)),
                 const SizedBox(height: 20),
                 ...children,
               ],
@@ -461,7 +461,7 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
               ? 'Empiezas con Premium${Nube.periodo == 'anual' ? ' anual' : ''}: creas la cuenta y lo activas al entrar.'
               : _nueva
               ? 'Solo correo y contraseña. El nombre de la empresa, al entrar.'
-              : m('Tu empresa, tus clientes y tus trabajos.'),
+              : 'Tus mantenimientos, en piloto automático.',
           textAlign: TextAlign.center,
           style: Nube.invitacion != null ? suave.copyWith(color: P.texto, fontWeight: FontWeight.w600) : suave,
         ),
@@ -511,34 +511,18 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
             ],
           ),
         ),
-        // Con aire arriba y abajo: el fondo del hover no toca la contraseña ni el botón Entrar.
-        if (!_nueva)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                style: _enlace,
-                onPressed: _enviando ? null : _recuperar,
-                child: const Text('¿Has olvidado la contraseña?'),
-              ),
-            ),
-          )
-        else
-          const SizedBox(height: 10),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: _aviso == null
-              ? const SizedBox(width: double.infinity)
-              : Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
+        // Hueco fijo para el aviso (dos líneas): al salir un error no empuja el botón.
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 37),
+            child: _aviso == null
+                ? const SizedBox(width: double.infinity)
+                : Text(
                     _aviso!,
                     style: TextStyle(color: _avisoMalo ? P.rojo : P.verde, fontSize: 13, height: 1.4),
                   ),
-                ),
+          ),
         ),
         FilledButton(
           onPressed: _enviando ? null : _enviar,
@@ -562,6 +546,14 @@ class _PantallaAccesoState extends State<PantallaAcceso> {
             ),
           ],
         ),
+        if (!_nueva)
+          Center(
+            child: TextButton(
+              style: _enlace,
+              onPressed: _enviando ? null : _recuperar,
+              child: const Text('¿Has olvidado la contraseña?'),
+            ),
+          ),
       ],
     );
   }
