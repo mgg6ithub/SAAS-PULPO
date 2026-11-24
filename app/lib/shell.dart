@@ -7,7 +7,7 @@ import 'forms.dart';
 import 'marca.dart';
 import 'models.dart';
 import 'notificaciones.dart';
-import 'nube.dart' show entornoLocal;
+// import 'nube.dart' show entornoLocal; // para cuando vuelvan las Simulaciones
 import 'industrial/activos.dart';
 import 'industrial/estadisticas.dart';
 import 'industrial/incidencias.dart';
@@ -757,28 +757,28 @@ class _BarraState extends State<_Barra> {
                     const SizedBox(height: 10),
                   ] else
                     const SizedBox(height: 18),
-                  // Cambiar de planta (empresa), encima de Crear.
-                  if (store.nube != null) ...[
-                    SelectorEmpresa(compacto: iconos, escala: escala),
-                    SizedBox(height: iconos ? 8 : 10),
-                  ],
+                  // De momento sin selector de empresa (planta) encima de Crear.
+                  // if (store.nube != null) ...[
+                  //   SelectorEmpresa(compacto: iconos, escala: escala),
+                  //   SizedBox(height: iconos ? 8 : 10),
+                  // ],
                   _BotonCrear(compacto: iconos, menu: widget.crear),
                   SizedBox(height: iconos ? 10 : 14),
                   _menu(vencidas),
                   const SizedBox(height: 14),
                   const Spacer(),
-                  // Simulaciones: solo al desarrollar contra la base local, nunca en producción.
-                  if (entornoLocal) ...[
-                    _BotonDemo(
-                      texto: 'Simulaciones',
-                      icono: Icons.science_outlined,
-                      color: P.mejorada ? P.teal : P.morado,
-                      compacta: iconos,
-                      escala: escala,
-                      onTap: () => abrirSimulaciones(context),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                  // De momento sin Simulaciones (solo existían en local).
+                  // if (entornoLocal) ...[
+                  //   _BotonDemo(
+                  //     texto: 'Simulaciones',
+                  //     icono: Icons.science_outlined,
+                  //     color: P.mejorada ? P.teal : P.morado,
+                  //     compacta: iconos,
+                  //     escala: escala,
+                  //     onTap: () => abrirSimulaciones(context),
+                  //   ),
+                  //   const SizedBox(height: 8),
+                  // ],
                   Builder(
                     builder: (context) =>
                         _fila(Icons.settings_outlined, 'Ajustes generales', () => abrirAjustes(context)),
@@ -786,10 +786,11 @@ class _BarraState extends State<_Barra> {
                   const SizedBox(height: 8),
                   Divider(height: 1, color: P.bordeBarra),
                   const SizedBox(height: 8),
-                  Builder(
-                    builder: (context) =>
-                        _fila(Marca.iconoTrabajador, m('Vista de trabajador'), () => abrirVistaTrabajador(context)),
-                  ),
+                  // De momento sin «Vista de técnico».
+                  // Builder(
+                  //   builder: (context) =>
+                  //       _fila(Marca.iconoTrabajador, m('Vista de trabajador'), () => abrirVistaTrabajador(context)),
+                  // ),
                   BotonUsuario(compacto: iconos, escala: escala),
                 ],
               ),
@@ -1349,8 +1350,9 @@ class _BarraInferior extends StatelessWidget {
                     (Icons.unfold_more_rounded, 'Empresas'),
                     (Icons.person_outline_rounded, 'Tu cuenta y ajustes'),
                   ].indexed)
-                    // Cambiar de planta (empresa): solo con cuenta en la nube. Simulaciones: solo en local.
-                    if ((i != 2 || store.nube != null) && (i != 0 || entornoLocal))
+                    // De momento solo la cuenta: Simulaciones, vista de técnico y empresas, quitadas.
+                    // if ((i != 2 || store.nube != null) && (i != 0 || entornoLocal))
+                    if (i == 3)
                       (
                         i,
                         Row(
@@ -1518,6 +1520,7 @@ class _Icono extends StatelessWidget {
 }
 
 /// Botón provisional de datos de ejemplo: una fila de texto discreta con su punto de color.
+// ignore: unused_element (las Simulaciones están quitadas de momento)
 class _BotonDemo extends StatelessWidget {
   final String texto;
   final IconData icono;
