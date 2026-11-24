@@ -556,13 +556,24 @@ Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => s
             ),
           ),
         ),
+        // Cuadrícula de 64 px como la de la landing, que se desvanece hacia los bordes.
+        ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (r) => const RadialGradient(
+            center: Alignment(0, -.35),
+            radius: .9,
+            colors: [Colors.white, Colors.transparent],
+            stops: [.3, 1],
+          ).createShader(r),
+          child: CustomPaint(painter: _Cuadricula(P.texto.withValues(alpha: .06))),
+        ),
         const Positioned(right: -80, bottom: -90, child: Opacity(opacity: .07, child: LogoPultec(size: 460))),
         Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 480),
-              padding: const EdgeInsets.fromLTRB(36, 36, 36, 28),
+              constraints: const BoxConstraints(maxWidth: 560),
+              padding: const EdgeInsets.fromLTRB(48, 48, 48, 36),
               decoration: BoxDecoration(
                 color: P.superficie,
                 borderRadius: BorderRadius.circular(P.radio + 6),
@@ -576,6 +587,30 @@ Future<void> nombrarEmpresa(BuildContext context, {bool porGoogle = false}) => s
     ),
   ),
 );
+
+/// Cuadrícula de fondo como la de la landing: líneas finas cada 64 px, centrada arriba.
+class _Cuadricula extends CustomPainter {
+  final Color color;
+  const _Cuadricula(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const lado = 64.0;
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    final x0 = (size.width / 2) % lado;
+    for (var x = x0; x < size.width; x += lado) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), p);
+    }
+    for (var y = 0.0; y < size.height; y += lado) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Cuadricula o) => o.color != color;
+}
 
 class _NombrarEmpresa extends StatefulWidget {
   final bool porGoogle;
@@ -620,11 +655,11 @@ class _NombrarEmpresaState extends State<_NombrarEmpresa> {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Align(alignment: Alignment.centerLeft, child: LogoPultec(size: 44)),
-      const SizedBox(height: 18),
+      const Align(alignment: Alignment.centerLeft, child: LogoPultec(size: 52)),
+      const SizedBox(height: 22),
       Text(
         '¿Cómo se llama tu empresa?',
-        style: TextStyle(fontFamily: P.titulos, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -.3),
+        style: TextStyle(fontFamily: P.titulos, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -.4),
       ),
       const SizedBox(height: 8),
       Text(
