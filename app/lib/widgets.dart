@@ -1287,7 +1287,7 @@ class Vacio extends StatelessWidget {
             style: TextStyle(color: P.textoSuave, fontSize: 14),
           ),
           if (accion != null) ...[const SizedBox(height: 16), accion!],
-          if (accion != null && flecha) ...[const SizedBox(height: 4), FlechaAlBoton(variante: varianteFlecha)],
+          if (accion != null && flecha) ...[const SizedBox(height: 18), FlechaAlBoton(variante: varianteFlecha)],
         ],
       ),
     ),
@@ -1298,9 +1298,9 @@ class Vacio extends StatelessWidget {
       : Padding(padding: const EdgeInsets.all(24), child: hijo);
 }
 
-/// Tres flechas discontinuas (desde el suroeste, el sur y el sureste) que se dibujan marca a marca, cada una con
-/// un pequeño bucle, y acaban apuntando hacia arriba (al botón que tienen encima). [variante] cambia los bucles,
-/// para que cada vista tenga las suyas. Se vuelven a dibujar cada vez que su vista se muestra (`TickerMode`).
+/// Flecha discontinua que se dibuja marca a marca desde abajo, hace un bucle y acaba apuntando hacia arriba (al
+/// botón que tiene encima). [variante] 1 la dibuja en espejo, para que cada vista tenga la suya. Se vuelve a dibujar
+/// cada vez que su vista se muestra (al activarse su `TickerMode`).
 class FlechaAlBoton extends StatefulWidget {
   final int variante;
   const FlechaAlBoton({super.key, this.variante = 0});
@@ -1310,7 +1310,7 @@ class FlechaAlBoton extends StatefulWidget {
 }
 
 class _FlechaAlBotonState extends State<FlechaAlBoton> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1700));
   bool _visible = false;
 
   @override
@@ -1337,93 +1337,68 @@ class _FlechaAlBotonState extends State<FlechaAlBoton> with SingleTickerProvider
   Widget build(BuildContext context) => ExcludeSemantics(
     child: RepaintBoundary(
       child: CustomPaint(
-        size: const Size(300, 150),
-        painter: _Flechas(_c, P.morado.withValues(alpha: .7), widget.variante),
+        size: const Size(140, 150),
+        painter: _Flecha(
+          CurvedAnimation(parent: _c, curve: Curves.easeInOutCubic),
+          P.morado.withValues(alpha: .7),
+          widget.variante,
+        ),
       ),
     ),
   );
 }
 
-class _Flechas extends CustomPainter {
+class _Flecha extends CustomPainter {
   final Animation<double> avance;
   final Color color;
   final int variante;
-  _Flechas(this.avance, this.color, this.variante) : super(repaint: avance);
-
-  /// (salida, llegada, dónde va el bucle (0-1, o null sin bucle), hacia qué lado gira, combado, retraso).
-  List<(Offset, Offset, double?, double, double, double)> _flechas(Size s) {
-    final w = s.width, h = s.height;
-    return variante == 1
-        ? [
-            (Offset(w * .04, h - 4), Offset(w * .42, 12), .38, 1, 10, .18),
-            (Offset(w * .50, h - 2), Offset(w * .50, 6), null, 1, 12, 0),
-            (Offset(w * .96, h - 4), Offset(w * .58, 12), .38, -1, -10, .30),
-          ]
-        : [
-            (Offset(w * .06, h - 2), Offset(w * .42, 12), .5, -1, -6, 0),
-            (Offset(w * .50, h - 2), Offset(w * .50, 6), .45, 1, 0, .16),
-            (Offset(w * .94, h - 2), Offset(w * .58, 12), .55, 1, 6, .30),
-          ];
-  }
-
-  /// Camino casi recto de [a] a [b], algo combado, con un bucle (trocoide) alrededor de [bucle].
-  static Path _camino(Offset a, Offset b, double? bucle, double lado, double comba) {
-    final d = b - a, largo = d.distance;
-    final dir = d / largo, perp = Offset(-dir.dy, dir.dx);
-    const r = 11.0, ventana = .16;
-    final p = Path();
-    for (var i = 0; i <= 120; i++) {
-      final u = i / 120;
-      var q = a + d * u + perp * (comba * sin(pi * u));
-      if (bucle != null && (u - bucle).abs() < ventana / 2) {
-        final th = 2 * pi * (u - bucle + ventana / 2) / ventana;
-        q += dir * (-r * sin(th)) + perp * (lado * r * (1 - cos(th)));
-      }
-      i == 0 ? p.moveTo(q.dx, q.dy) : p.lineTo(q.dx, q.dy);
-    }
-    return p;
-  }
+  _Flecha(this.avance, this.color, this.variante) : super(repaint: avance);
 
   @override
   void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    // Variante 1: en espejo (sale de abajo a la derecha y el bucle gira al otro lado).
+    double x(double f) => variante == 1 ? w * (1 - f) : w * f;
+    // Sale de abajo a un lado, sube hacia el otro, da una vuelta y sube recta al botón.
+    final camino = Path()
+      ..moveTo(x(.26), h - 2)
+      ..cubicTo(x(.80), h * .92, x(.88), h * .56, x(.58), h * .54)
+      ..cubicTo(x(.28), h * .52, x(.30), h * .84, x(.52), h * .78)
+      ..cubicTo(x(.70), h * .73, x(.52), h * .30, x(.50), h * .07);
     final trazo = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
-    final relleno = Paint()..color = color;
-    for (final (a, b, bucle, lado, comba, retraso) in _flechas(size)) {
-      final v = Curves.easeInOutCubic.transform(((avance.value - retraso) / (1 - .3)).clamp(0.0, 1.0));
-      if (v <= 0) continue;
-      final m = _camino(a, b, bucle, lado, comba).computeMetrics().first;
-      final hasta = m.length * v;
-      const marca = 6.0, hueco = 5.0;
-      for (var d = 0.0; d < hasta - 4; d += marca + hueco) {
-        canvas.drawPath(m.extractPath(d, min(d + marca, hasta - 4)), trazo);
-      }
-      // Punta cerrada y rellena, en la dirección del trazo, que crece al llegar.
-      if (v > .9) {
-        final t = m.getTangentForOffset(hasta)!;
-        final ang = -t.angle;
-        final k = ((v - .9) / .1).clamp(0.0, 1.0);
-        final largo = 10 * k, ancho = 5 * k;
-        final f = Offset(cos(ang), sin(ang)), n = Offset(-f.dy, f.dx);
-        final punta = t.position + f * 2;
-        canvas.drawPath(
-          Path()
-            ..moveTo(punta.dx, punta.dy)
-            ..lineTo((punta - f * largo + n * ancho).dx, (punta - f * largo + n * ancho).dy)
-            ..lineTo((punta - f * largo * .7).dx, (punta - f * largo * .7).dy)
-            ..lineTo((punta - f * largo - n * ancho).dx, (punta - f * largo - n * ancho).dy)
-            ..close(),
-          relleno,
-        );
-      }
+    final m = camino.computeMetrics().first;
+    final hasta = m.length * avance.value;
+    const marca = 6.0, hueco = 5.0;
+    for (var d = 0.0; d < hasta - 4; d += marca + hueco) {
+      canvas.drawPath(m.extractPath(d, min(d + marca, hasta - 4)), trazo);
+    }
+    // Punta cerrada y rellena, en la dirección del trazo, que crece al llegar.
+    if (avance.value > .9) {
+      final t = m.getTangentForOffset(hasta)!;
+      final ang = -t.angle;
+      final k = ((avance.value - .9) / .1).clamp(0.0, 1.0);
+      final largo = 10 * k, ancho = 5 * k;
+      final f = Offset(cos(ang), sin(ang)), n = Offset(-f.dy, f.dx);
+      final punta = t.position + f * 2;
+      final a = punta - f * largo + n * ancho, b = punta - f * largo * .7, c = punta - f * largo - n * ancho;
+      canvas.drawPath(
+        Path()
+          ..moveTo(punta.dx, punta.dy)
+          ..lineTo(a.dx, a.dy)
+          ..lineTo(b.dx, b.dy)
+          ..lineTo(c.dx, c.dy)
+          ..close(),
+        Paint()..color = color,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(_Flechas old) => old.color != color || old.variante != variante;
+  bool shouldRepaint(_Flecha old) => old.color != color || old.variante != variante;
 }
 
 // ── Tablas ───────────────────────────────────────────────
