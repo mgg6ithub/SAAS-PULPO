@@ -241,10 +241,10 @@ typedef _Marca = ({Activo activo, PlanMantenimiento plan, bool estimada});
 /// Calendario de uso de las máquinas por turnos. Dos vistas: el mes en cuadrícula o una fila por máquina.
 ///
 /// · Cada máquina tiene su patrón semanal (se repite solo); en el calendario se marcan las excepciones.
-/// · Se seleccionan días (tocándolos, arrastrando, por la cabecera del día de la semana o por la semana) y al
+/// · Se seleccionan días (tocándolos, arrastrando o por la cabecera del día de la semana) y al
 ///   tocar una máquina salen sus opciones para esos días (turnos, su patrón o parada). También se marcan como
 ///   festivos.
-/// · Se ve en su día cada mantenimiento (≈ si la fecha es estimada por horas) y las horas de cada semana.
+/// · Se ve en su día cada mantenimiento (≈ si la fecha es estimada por horas).
 /// · Cambiar días pasados pide confirmación: altera las horas estimadas del contador.
 /// · Tras cada cambio se avisa de las órdenes de trabajo que cambian de fecha (sin aviso de «Deshacer»).
 class UsoMaquinas extends StatefulWidget {
@@ -284,15 +284,6 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
   String get _nombreMes => meses[mes.month - 1].toLowerCase();
   String _dias(int n) => '$n ${n == 1 ? 'día' : 'días'}';
   bool _laborable(DateTime d) => d.weekday <= 5 && store.festivo(d) == null;
-
-  /// Número de semana ISO (la de su jueves).
-  int _semana(DateTime lunes) {
-    final jueves = masDias(lunes, 3);
-    final primero = DateTime(jueves.year, 1, 1);
-    return DateTime.utc(jueves.year, jueves.month, jueves.day).difference(DateTime.utc(primero.year, 1, 1)).inDays ~/
-            7 +
-        1;
-  }
 
   Color _colorDe(int i) => paletaActivos[i % paletaActivos.length];
   String _quien(Activo a) => a.tag.isEmpty ? a.nombre : a.tag;
@@ -574,7 +565,7 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                     const SizedBox(height: 10),
                     const Consejo(
                       'Cada máquina tiene su patrón semanal; aquí marcas las excepciones. Selecciona días (tocando, '
-                      'arrastrando, por el día de la semana o por la semana) y toca una máquina para elegir qué hace '
+                      'arrastrando o por el día de la semana) y toca una máquina para elegir qué hace '
                       'esos días.',
                       clave: 'uso-activos-5',
                     ),
@@ -754,10 +745,16 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
 
   // ── Mes en cuadrícula ──
 
-  static const _anchoSemana = 34.0, _anchoTotales = 104.0;
+  // Medidas de un día: cabecera (número), cada línea de turnos y cada mantenimiento. Con ellas, cada semana mide
+  // lo que pida su día más lleno (y al menos lo que toque para llenar el alto): con muchas máquinas el
+  // calendario crece y se desplaza en vertical en vez de amontonar los turnos.
+  static const _altoBaseDia = 50.0, _altoTurno = 20.0, _altoMarca = 18.0, _anchoTurnoMin = 58.0, _altoCabecera = 26.0;
 
   TextStyle get _estiloCabecera =>
       TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: .6, color: P.textoSuave);
+
+  /// Máquinas que salen en un día (con turnos o con una parada que es excepción).
+  int _enDia(List<Activo> activos, DateTime d) => activos.where((a) => turnosDe(a, d) > 0 || esExcepcion(a, d)).length;
 
   Widget _calendario(List<Activo> activos) {
     final inicio = lunesDe(mes);
@@ -765,182 +762,136 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
     final semanas = ((fin.difference(inicio).inDays + 1) / 7).ceil();
     final marcas = _marcas(activos, inicio, masDias(inicio, semanas * 7 - 1));
     return LayoutBuilder(
-      builder: (context, box) => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: box.maxWidth < 820 ? 820 : box.maxWidth,
-          height: box.maxHeight,
-          child: SingleChildScrollView(
-            child: SizedBox(
-              height: box.maxHeight < 460 ? 460 : box.maxHeight,
-              child: Column(
-                children: [
-                  // Cabecera: tocar un día de la semana selecciona todos los de ese día del mes.
-                  Row(
-                    children: [
-                      const SizedBox(width: _anchoSemana),
-                      for (var i = 0; i < 7; i++)
-                        Expanded(
-                          child: _Pulsable(
-                            tooltip: 'Seleccionar todos los ${diasSemana[i].toLowerCase()} del mes',
-                            onTap: () => _alternar(_diasMes.where((d) => d.weekday == i + 1)),
+      builder: (context, box) {
+        final ancho = box.maxWidth < 820 ? 820.0 : box.maxWidth;
+        // Hueco útil de un día (menos márgenes y bordes) y cuántos turnos caben por línea.
+        final util = ancho / 7 - 22;
+        final porLinea = ((util + 3) / (_anchoTurnoMin + 3)).floor().clamp(1, 4);
+        final anchoTurno = (util - (porLinea - 1) * 3) / porLinea;
+        final minimo = ((box.maxHeight - _altoCabecera) / semanas).clamp(90.0, double.infinity);
+        final altos = [
+          for (var s = 0; s < semanas; s++)
+            [
+              minimo,
+              for (var i = 0; i < 7; i++)
+                if (masDias(inicio, s * 7 + i) case final d)
+                  _altoBaseDia +
+                      (_enDia(activos, d) / porLinea).ceil() * (_altoTurno + 3) +
+                      (marcas[d]?.length ?? 0) * _altoMarca,
+            ].reduce((x, y) => x > y ? x : y),
+        ];
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: ancho,
+            height: box.maxHeight,
+            child: Column(
+              children: [
+                // Cabecera: tocar un día de la semana selecciona todos los de ese día del mes.
+                Row(
+                  children: [
+                    for (var i = 0; i < 7; i++)
+                      Expanded(
+                        child: _Pulsable(
+                          tooltip: 'Seleccionar todos los ${diasSemana[i].toLowerCase()} del mes',
+                          onTap: () => _alternar(_diasMes.where((d) => d.weekday == i + 1)),
+                          child: SizedBox(
+                            height: _altoCabecera,
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(10, 4, 4, 8),
+                              padding: const EdgeInsets.fromLTRB(10, 2, 4, 0),
                               child: Text(diasSemana[i].toUpperCase(), style: _estiloCabecera),
                             ),
                           ),
                         ),
-                      SizedBox(
-                        width: _anchoTotales,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 4, 0, 8),
-                          child: Text('SEMANA', style: _estiloCabecera),
-                        ),
                       ),
-                    ],
-                  ),
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Número de semana: al tocarlo, la semana entera.
-                        SizedBox(
-                          width: _anchoSemana,
-                          child: Column(
-                            children: [
-                              for (var s = 0; s < semanas; s++)
-                                Expanded(
-                                  child: _Pulsable(
-                                    tooltip: 'Seleccionar la semana',
-                                    onTap: () => _alternar([for (var i = 0; i < 7; i++) masDias(inicio, s * 7 + i)]),
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: Text(
-                                        'S${_semana(masDias(inicio, s * 7))}',
-                                        style: TextStyle(fontSize: 10.5, color: P.textoSuave.withValues(alpha: .8)),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        Expanded(child: _rejilla(activos, inicio, semanas, marcas)),
-                        // Horas de cada máquina en la semana (en rojo si algún día no le caben).
-                        SizedBox(
-                          width: _anchoTotales,
-                          child: Column(
-                            children: [
-                              for (var s = 0; s < semanas; s++)
-                                Expanded(
-                                  child: _totalSemana(activos, [
-                                    for (var i = 0; i < 7; i++) masDias(inicio, s * 7 + i),
-                                  ]),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                Expanded(
+                  child: SingleChildScrollView(child: _rejilla(activos, inicio, altos, marcas, anchoTurno)),
+                ),
+              ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   /// La rejilla de días, con su borde redondeado encima (el fondo de las celdas no lo tapa) y la selección
-  /// arrastrando por encima de los días.
-  Widget _rejilla(List<Activo> activos, DateTime inicio, int semanas, Map<DateTime, List<_Marca>> marcas) =>
-      LayoutBuilder(
-        builder: (context, box) {
-          DateTime diaEn(Offset p) {
-            final col = (p.dx / (box.maxWidth / 7)).floor().clamp(0, 6);
-            final fila = (p.dy / (box.maxHeight / semanas)).floor().clamp(0, semanas - 1);
-            return masDias(inicio, fila * 7 + col);
-          }
+  /// arrastrando por encima de los días. [altos]: el alto de cada semana.
+  Widget _rejilla(
+    List<Activo> activos,
+    DateTime inicio,
+    List<double> altos,
+    Map<DateTime, List<_Marca>> marcas,
+    double anchoTurno,
+  ) => LayoutBuilder(
+    builder: (context, box) {
+      DateTime diaEn(Offset p) {
+        final col = (p.dx / (box.maxWidth / 7)).floor().clamp(0, 6);
+        var fila = 0;
+        var y = p.dy;
+        while (fila < altos.length - 1 && y >= altos[fila]) {
+          y -= altos[fila];
+          fila++;
+        }
+        return masDias(inicio, fila * 7 + col);
+      }
 
-          return GestureDetector(
-            onPanStart: (e) {
-              _desde = diaEn(e.localPosition);
-              _antes = {..._sel};
-              _arrastrar(_desde!);
-            },
-            onPanUpdate: (e) => _arrastrar(diaEn(e.localPosition)),
-            onPanEnd: (_) => _desde = null,
-            child: DecoratedBox(
-              position: DecorationPosition.foreground,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(P.radio),
-                border: Border.all(color: P.borde),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(P.radio),
-                child: Column(
-                  children: [
-                    for (var s = 0; s < semanas; s++)
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (var i = 0; i < 7; i++)
-                              Expanded(
-                                child: _dia(
-                                  masDias(inicio, s * 7 + i),
-                                  activos,
-                                  marcas[masDias(inicio, s * 7 + i)] ?? const [],
-                                  derecha: i < 6,
-                                  abajo: s < semanas - 1,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          );
+      return GestureDetector(
+        onPanStart: (e) {
+          _desde = diaEn(e.localPosition);
+          _antes = {..._sel};
+          _arrastrar(_desde!);
         },
-      );
-
-  Widget _totalSemana(List<Activo> activos, List<DateTime> dias) => Padding(
-    padding: const EdgeInsets.fromLTRB(14, 8, 0, 0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final (i, a) in activos.indexed)
-          if (_horas(a, dias) case final h when h > 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Row(
-                children: [
-                  // El icono de la máquina, en su color (en vez de un punto).
-                  IconoActivo(a.icono, size: 14, color: _colorDe(i)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      activos.length > 1 ? '${_quien(a)} ${h.toStringAsFixed(0)} h' : '${h.toStringAsFixed(0)} h',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: dias.any((d) => turnosDe(a, d) * a.horasTurno > 24) ? P.rojo : P.textoSuave,
-                      ),
+        onPanUpdate: (e) => _arrastrar(diaEn(e.localPosition)),
+        onPanEnd: (_) => _desde = null,
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(P.radio),
+            border: Border.all(color: P.borde),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(P.radio),
+            child: Column(
+              children: [
+                for (var s = 0; s < altos.length; s++)
+                  SizedBox(
+                    height: altos[s],
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < 7; i++)
+                          Expanded(
+                            child: _dia(
+                              masDias(inicio, s * 7 + i),
+                              activos,
+                              marcas[masDias(inicio, s * 7 + i)] ?? const [],
+                              anchoTurno,
+                              derecha: i < 6,
+                              abajo: s < altos.length - 1,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-      ],
-    ),
+          ),
+        ),
+      );
+    },
   );
 
-  Widget _dia(DateTime d, List<Activo> activos, List<_Marca> marcas, {bool derecha = true, bool abajo = true}) {
+  Widget _dia(
+    DateTime d,
+    List<Activo> activos,
+    List<_Marca> marcas,
+    double anchoTurno, {
+    bool derecha = true,
+    bool abajo = true,
+  }) {
     final delMes = d.month == mes.month;
     final esHoy = DateUtils.isSameDay(d, hoy());
     final pasado = d.isBefore(hoy());
@@ -1033,20 +984,28 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            for (final (i, a) in activos.indexed)
-                              if (turnosDe(a, d) > 0 || esExcepcion(a, d))
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 3),
-                                  child: _Turno(
-                                    a,
-                                    _colorDe(i),
-                                    turnosDe(a, d),
-                                    excepcion: esExcepcion(a, d),
-                                    conNombre: activos.length > 1 && a.tag.isNotEmpty,
-                                    opciones: _opcionesDia(a, d),
-                                    onAccion: (accion) => _accionDia(a, d, accion),
-                                  ),
-                                ),
+                            // Turnos en pastillas pequeñas, varias por línea.
+                            Wrap(
+                              spacing: 3,
+                              runSpacing: 3,
+                              children: [
+                                for (final (i, a) in activos.indexed)
+                                  if (turnosDe(a, d) > 0 || esExcepcion(a, d))
+                                    SizedBox(
+                                      width: anchoTurno,
+                                      height: _altoTurno,
+                                      child: _Turno(
+                                        a,
+                                        _colorDe(i),
+                                        turnosDe(a, d),
+                                        excepcion: esExcepcion(a, d),
+                                        opciones: _opcionesDia(a, d),
+                                        onAccion: (accion) => _accionDia(a, d, accion),
+                                      ),
+                                    ),
+                              ],
+                            ),
+                            if (marcas.isNotEmpty) const SizedBox(height: 3),
                             for (final m in marcas) _MarcaMantenimiento(m, _colorDe(activos.indexOf(m.activo))),
                           ],
                         ),
@@ -1417,13 +1376,14 @@ class _Maquinas extends StatelessWidget {
       data: a.id,
       feedback: Material(
         color: Colors.transparent,
-        child: SizedBox(width: 250, child: _Ficha(a, color, h, elevada: true)),
+        child: _Ficha(a, color, h, elevada: true),
       ),
       childWhenDragging: Opacity(opacity: .4, child: _Ficha(a, color, h)),
       child: BotonMenu<String>(
-        tooltip: diasSel == null
-            ? 'Arrastra a un día o toca para ver las acciones'
-            : 'Toca para elegir qué hace en los $diasSel',
+        // Lo que antes ocupaba la ficha (patrón y horas del mes) va en el tooltip.
+        tooltip:
+            '${a.titulo}\n${resumenPatron(a)}, ${h.toStringAsFixed(0)} h este mes\n'
+            '${diasSel == null ? 'Arrastra a un día o toca para ver las acciones' : 'Toca para elegir qué hace en los $diasSel'}',
         resaltarHover: false,
         relleno: EdgeInsets.zero,
         onSelected: (accion) => onAccion(a, color, accion),
@@ -1457,42 +1417,39 @@ class _Maquinas extends StatelessWidget {
     ],
   );
 
+  // Una sola fila de 40 px que se desplaza en horizontal: así el calendario se lleva casi todo el alto
+  // aunque haya muchas máquinas.
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [for (final (i, a) in activos.indexed) SizedBox(width: 250, child: _ficha(i, a))],
+  Widget build(BuildContext context) => SizedBox(
+    height: 40,
+    child: Row(
+      children: [
+        Expanded(
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: activos.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
+            itemBuilder: (_, i) => _ficha(i, activos[i]),
+          ),
         ),
-      ),
-      const SizedBox(width: 16),
-      Padding(padding: const EdgeInsets.only(top: 8), child: _leyenda),
-    ],
+        const SizedBox(width: 16),
+        _leyenda,
+      ],
+    ),
   );
 }
 
-/// Una máquina en un día: su color, claro con 1 turno y lleno con 2 o 3 («×2», «×3»). Con [conNombre], el
-/// nombre debajo del tag, en neutro. Una excepción al patrón lleva un punto; una parada (0 en un día que el
-/// patrón trabaja) sale en blanco con borde. Al tocarlo, sus opciones.
+/// Una máquina en un día, en una pastilla de una línea: su tag en su color, claro con 1 turno y lleno con 2 o 3
+/// (el número exacto, con el nombre y las horas, en el tooltip). Una excepción al patrón lleva un punto; una parada
+/// (0 en un día que el patrón trabaja) sale tachada con borde. Al tocarlo, sus opciones.
 class _Turno extends StatelessWidget {
   final Activo a;
   final Color color;
   final int n;
-  final bool conNombre, excepcion;
+  final bool excepcion;
   final List<(String, Widget)> opciones;
   final ValueChanged<String> onAccion;
-  const _Turno(
-    this.a,
-    this.color,
-    this.n, {
-    required this.onAccion,
-    required this.opciones,
-    this.conNombre = false,
-    this.excepcion = false,
-  });
+  const _Turno(this.a, this.color, this.n, {required this.onAccion, required this.opciones, this.excepcion = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1502,65 +1459,47 @@ class _Turno extends StatelessWidget {
     return BotonMenu<String>(
       tooltip: n == 0
           ? '${a.titulo}: parada (su patrón trabaja este día)'
-          : '${a.titulo}: ${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h${excepcion ? ' · excepción al patrón' : ''}'
-                '${pasa ? ' · no caben en 24 h' : ''}',
+          : '${a.titulo}: ${_turnos(n)}, ${(n * a.horasTurno).toStringAsFixed(0)} h${excepcion ? ', excepción al patrón' : ''}'
+                '${pasa ? ', no caben en 24 h' : ''}',
       seleccionado: '$n',
       resaltarHover: false,
       relleno: EdgeInsets.zero,
       onSelected: onAccion,
       opciones: opciones,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 3, 6, 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: n == 0 ? Colors.transparent : (lleno ? color : color.withValues(alpha: .12)),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(5),
           border: pasa
               ? Border.all(color: P.rojo, width: 1.5)
               : n == 0
               ? Border.all(color: color.withValues(alpha: .35))
               : Border(left: BorderSide(color: color, width: 3)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    n == 0 ? '${a.tag.isEmpty ? a.nombre : a.tag} · parada' : (a.tag.isEmpty ? a.nombre : a.tag),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: n == 0 ? P.textoSuave : tinta,
-                      decoration: n == 0 ? TextDecoration.lineThrough : null,
-                    ),
-                  ),
-                ),
-                if (lleno)
-                  Text(
-                    '×$n',
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: tinta),
-                  ),
-                if (excepcion && n > 0) ...[
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(color: tinta, shape: BoxShape.circle),
-                  ),
-                ],
-              ],
-            ),
-            if (conNombre && n > 0)
-              Text(
-                a.nombre,
+            Expanded(
+              child: Text(
+                a.tag.isEmpty ? a.nombre : a.tag,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10.5, color: lleno ? Colors.white.withValues(alpha: .85) : P.textoSuave),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: n == 0 ? P.textoSuave : tinta,
+                  decoration: n == 0 ? TextDecoration.lineThrough : null,
+                ),
               ),
+            ),
+            if (excepcion && n > 0) ...[
+              const SizedBox(width: 3),
+              Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(color: tinta, shape: BoxShape.circle),
+              ),
+            ],
           ],
         ),
       ),
@@ -1586,7 +1525,7 @@ class _Muestra extends StatelessWidget {
   );
 }
 
-/// Una máquina: su color, icono, nombre y tag, su patrón y las horas del mes.
+/// Una máquina en la fila de arriba (40 px): su color, icono, nombre y tag; el patrón y las horas, en el tooltip.
 class _Ficha extends StatelessWidget {
   final Activo a;
   final Color color;
@@ -1605,7 +1544,8 @@ class _Ficha extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+    height: 40,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
     decoration: BoxDecoration(
       color: Color.alphaBlend(color.withValues(alpha: aplicar ? .12 : .06), P.superficie),
       borderRadius: BorderRadius.circular(P.radioControl),
@@ -1613,57 +1553,33 @@ class _Ficha extends StatelessWidget {
       boxShadow: elevada ? [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 12)] : null,
     ),
     child: Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        IconoActivo(a.icono, size: 18, color: color),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      a.nombre.isEmpty ? a.tag : a.nombre,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  if (a.tag.isNotEmpty && a.nombre.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      a.tag,
-                      style: TextStyle(fontSize: 11.5, color: color, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '${resumenPatron(a)} · ${horasMes.toStringAsFixed(0)} h este mes',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, color: P.textoSuave),
-              ),
-              if (_desviada) ...[
-                const SizedBox(height: 2),
-                Tooltip(
-                  message:
-                      'La última lectura del contador (${fecha(a.fechaLectura)}) se aleja de lo que suman sus turnos. '
-                      'Revisa su patrón o los días marcados.',
-                  child: Text(
-                    'Lectura real ${a.desvio! > 0 ? '+' : '−'}${a.desvio!.abs().toStringAsFixed(0)} h sobre sus turnos',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5, color: P.ambar, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ],
-          ),
+        IconoActivo(a.icono, size: 16, color: color),
+        const SizedBox(width: 8),
+        Text(
+          a.nombre.isEmpty ? a.tag : a.nombre,
+          maxLines: 1,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
+        if (a.tag.isNotEmpty && a.nombre.isNotEmpty) ...[
+          const SizedBox(width: 6),
+          Text(a.tag, style: TextStyle(fontSize: 11.5, color: color, fontWeight: FontWeight.w600)),
+        ],
+        // La última lectura se aleja de sus turnos: un punto ámbar con su explicación.
+        if (_desviada) ...[
+          const SizedBox(width: 8),
+          Tooltip(
+            message:
+                'Lectura real ${a.desvio! > 0 ? '+' : '−'}${a.desvio!.abs().toStringAsFixed(0)} h sobre sus turnos '
+                '(${fecha(a.fechaLectura)}). Revisa su patrón o los días marcados.',
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(color: P.ambar, shape: BoxShape.circle),
+            ),
+          ),
+        ],
       ],
     ),
   );
