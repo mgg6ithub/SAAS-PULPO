@@ -336,7 +336,7 @@ const conTema = (url) => {
   const capa = document.getElementById("intro-pulpo");
   if (!capa || !root.classList.contains("intro")) return;
   const svg = capa.querySelector("svg");
-  const cabeza = capa.querySelector(".intro-pulpo__cuerpo");
+  const cabeza = capa.querySelector(".intro-pulpo__cabeza");
   const ojos = capa.querySelectorAll(".intro-pulpo__ojos circle");
   const tentaculos = [...capa.querySelectorAll(".intro-t")];
   const destino = document.querySelector(".nav .brand img");
@@ -355,7 +355,7 @@ const conTema = (url) => {
   const saltar = () => { anims.forEach((x) => x.finish()); terminar(); };
   ["click", "keydown", "wheel", "touchstart"].forEach((e) => addEventListener(e, saltar, { passive: true }));
 
-  // 1. Cae y rebota (estira y aplasta), ya con el arranque de los tentáculos para que no se vea la base plana.
+  // 1. La cabeza cae y rebota (estira y aplasta).
   a(cabeza, [
     { opacity: 0, transform: "translateY(-120px) scale(.6, .9)" },
     { opacity: 1, transform: "translateY(0) scale(1.12, .86)", offset: 0.55 },
@@ -368,7 +368,7 @@ const conTema = (url) => {
   orden.forEach((i, n) => {
     const t = tentaculos[i];
     const lado = i < 3 ? -1 : 1;
-    a(t, [{ strokeDashoffset: 0.8 }, { strokeDashoffset: 0 }], { duration: 650, delay: 350 + n * 90, easing: "cubic-bezier(.2,.8,.2,1)" });
+    a(t, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 650, delay: 450 + n * 90, easing: "cubic-bezier(.2,.8,.2,1)" });
     a(t, [
       { transform: `rotate(${lado * -18}deg)` },
       { transform: `rotate(${lado * 8}deg)`, offset: 0.5 },
