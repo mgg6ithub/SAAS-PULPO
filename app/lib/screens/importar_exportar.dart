@@ -42,6 +42,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
   Importacion? vista;
   String? archivo;
   FormatoExportar formato = FormatoExportar.pdf;
+  bool verExportar = false;
   bool get solo => widget.que != null;
 
   Future<void> elegir() async {
@@ -91,6 +92,14 @@ class _ImportarExportarState extends State<ImportarExportar> {
               style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
             ),
           ),
+          // Importar o exportar: una cosa cada vez, junto a la X.
+          Pestanas(
+            compactas: true,
+            opciones: const ['Importar', 'Exportar'],
+            seleccion: verExportar ? 1 : 0,
+            onChanged: (i) => setState(() => verExportar = i == 1),
+          ),
+          const SizedBox(width: 8),
           IconButton(
             tooltip: 'Cerrar',
             onPressed: () => Navigator.pop(context),
@@ -99,6 +108,8 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ],
       ),
       Text(switch (widget.que) {
+        _ when verExportar =>
+          'Descarga ${solo ? 'tus ${que.etiqueta.toLowerCase()}' : 'tus datos'} en PDF para leer o imprimir, en CSV para Excel o en JSON para otros programas.',
         QueImportar.activos =>
           'Crea de una vez tus activos, con sus componentes y mantenimientos, desde un Excel guardado como CSV. '
               'Cada mantenimiento sale con su orden de trabajo. Lo que ya está en Pultec no se duplica.',
@@ -111,87 +122,89 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ),
       }, style: TextStyle(fontSize: 13, color: P.textoSuave)),
       const SizedBox(height: 18),
-      _titulo('Importar', exportar: false),
-      // Desde Activos o Técnicos, solo lo suyo; con todo (Ajustes), una pestaña por tipo, a su ancho.
-      if (!solo) ...[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Pestanas(
-            opciones: [for (final q in importables) q.etiqueta],
-            seleccion: importables.indexOf(que),
-            onChanged: (i) => setState(() {
-              que = importables[i];
-              vista = null;
-              archivo = null;
-            }),
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
-      if (que == QueImportar.trabajos)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Text(
-            m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.'),
-            style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-          ),
-        ),
-      // Sin archivo, la plantilla a la vista; con archivo, lo que se va a crear.
-      AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        switchInCurve: Curves.easeOutCubic,
-        child: vista == null ? _plantilla() : _vistaPrevia(vista!),
-      ),
-      const SizedBox(height: 26),
-      // Título y, a su derecha, el formato de la descarga (PDF por defecto).
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(child: _titulo('Exportar', exportar: true)),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+      if (!verExportar) ...[
+        _titulo('Importar', exportar: false),
+        // Desde Activos o Técnicos, solo lo suyo; con todo (Ajustes), una pestaña por tipo, a su ancho.
+        if (!solo) ...[
+          Align(
+            alignment: Alignment.centerLeft,
             child: Pestanas(
-              compactas: true,
-              opciones: [for (final f in FormatoExportar.values) f.etiqueta],
-              seleccion: formato.index,
-              onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
+              opciones: [for (final q in importables) q.etiqueta],
+              seleccion: importables.indexOf(que),
+              onChanged: (i) => setState(() {
+                que = importables[i];
+                vista = null;
+                archivo = null;
+              }),
             ),
           ),
+          const SizedBox(height: 12),
         ],
-      ),
-      Tarjeta(
-        padding: EdgeInsets.zero,
-        child: Column(
+        if (que == QueImportar.trabajos)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.'),
+              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+            ),
+          ),
+        // Sin archivo, la plantilla a la vista; con archivo, lo que se va a crear.
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          child: vista == null ? _plantilla() : _vistaPrevia(vista!),
+        ),
+      ] else ...[
+        // Título y, a su derecha, el formato de la descarga (PDF por defecto).
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            for (final q in solo ? [que] : importables)
-              FilaLista(
-                titulo: q.etiqueta,
-                subtitulo: switch (q) {
-                  QueImportar.clientes => m('${store.clientes.length} clientes'),
-                  QueImportar.trabajadores => m('${store.trabajadores.length} trabajadores'),
-                  QueImportar.trabajos => m('${store.tareas.where((t) => !t.esPlantilla).length} trabajos'),
-                  QueImportar.activos =>
-                    '${store.activos.length} ${store.activos.length == 1 ? 'activo o componente' : 'activos y componentes'}, '
-                        '${store.planes.length} ${store.planes.length == 1 ? 'mantenimiento' : 'mantenimientos'}',
-                },
-                derecha: Enlace(
-                  'Descargar ${formato.etiqueta}',
-                  onTap: () =>
-                      _exportar(q.etiqueta, [q.columnas, ...filasExportar(q, store)], columnasPdf: columnasPdf(q)),
-                ),
+            Expanded(child: _titulo('Exportar', exportar: true)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Pestanas(
+                compactas: true,
+                opciones: [for (final f in FormatoExportar.values) f.etiqueta],
+                seleccion: formato.index,
+                onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
               ),
-            if (!industrial)
-              FilaLista(
-                titulo: 'Histórico',
-                subtitulo: 'Cada mantenimiento hecho, con su fecha',
-                derecha: Enlace(
-                  'Descargar ${formato.etiqueta}',
-                  onTap: () => _exportar('Histórico', filasHistorial(store)),
-                ),
-              ),
+            ),
           ],
         ),
-      ),
+        Tarjeta(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (final q in solo ? [que] : importables)
+                FilaLista(
+                  titulo: q.etiqueta,
+                  subtitulo: switch (q) {
+                    QueImportar.clientes => m('${store.clientes.length} clientes'),
+                    QueImportar.trabajadores => m('${store.trabajadores.length} trabajadores'),
+                    QueImportar.trabajos => m('${store.tareas.where((t) => !t.esPlantilla).length} trabajos'),
+                    QueImportar.activos =>
+                      '${store.activos.length} ${store.activos.length == 1 ? 'activo o componente' : 'activos y componentes'}, '
+                          '${store.planes.length} ${store.planes.length == 1 ? 'mantenimiento' : 'mantenimientos'}',
+                  },
+                  derecha: Enlace(
+                    'Descargar ${formato.etiqueta}',
+                    onTap: () =>
+                        _exportar(q.etiqueta, [q.columnas, ...filasExportar(q, store)], columnasPdf: columnasPdf(q)),
+                  ),
+                ),
+              if (!industrial)
+                FilaLista(
+                  titulo: 'Histórico',
+                  subtitulo: 'Cada mantenimiento hecho, con su fecha',
+                  derecha: Enlace(
+                    'Descargar ${formato.etiqueta}',
+                    onTap: () => _exportar('Histórico', filasHistorial(store)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     ],
   );
 

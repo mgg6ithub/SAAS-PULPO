@@ -131,7 +131,11 @@ void main() {
       await tester.tap(find.text('Trabajos').last);
       await tester.pumpAndSettle();
       expect(find.text('Elegir archivo CSV'), findsOneWidget);
-      await tester.drag(find.text('Importar y exportar'), const Offset(0, -3000));
+      if (find.text('Exportar').evaluate().isEmpty) {
+        await tester.tap(find.text('Importar').first);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Exportar').last);
       await tester.pumpAndSettle();
       expect(find.text('Histórico'), findsOneWidget);
       expect(tester.takeException(), isNull);
