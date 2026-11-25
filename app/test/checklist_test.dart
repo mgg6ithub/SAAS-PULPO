@@ -71,6 +71,10 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(body: EditorChecklist(const ['Uno'], (x) => ultimo = x)),
     ));
+    // Con pasos se abre cerrada: «Editar» la abre.
+    expect(find.text('Añadir paso'), findsNothing);
+    await tester.tap(find.text('Editar'));
+    await tester.pump();
     await tester.tap(find.text('Añadir paso'));
     await tester.pump();
     await tester.enterText(find.byType(TextField).last, 'Dos');
@@ -78,6 +82,11 @@ void main() {
     await tester.tap(find.byTooltip('Quitar paso').first);
     await tester.pump();
     expect(ultimo, ['Dos']);
+    // «Listo» la cierra: ya no se puede escribir.
+    await tester.tap(find.text('Listo'));
+    await tester.pump();
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Dos'), findsOneWidget);
   });
 
   testWidgets('el formulario de mantenimiento trae el bloque Checklist y Más opciones plegado', (tester) async {

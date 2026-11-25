@@ -86,6 +86,39 @@ class _EditorChecklistState extends State<EditorChecklist> {
 
   FocusNode? _nuevo;
 
+  /// Editando los pasos; con «Listo» se cierra y quedan solo para leer («Editar» lo vuelve a abrir).
+  late bool _editando = _campos.isEmpty;
+
+  /// Vista de solo lectura: los pasos numerados y «Editar».
+  Widget _cerrada() => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (i, c) in _campos.where((c) => c.text.trim().isNotEmpty).indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 26,
+                  child: Text(
+                    '${i + 1}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: P.textoSuave, fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(child: Text(c.text.trim(), style: const TextStyle(fontSize: 14))),
+              ],
+            ),
+          ),
+        Enlace('Editar', onTap: () => setState(() => _editando = true)),
+      ],
+    ),
+  );
+
   void _usar(List<String> pasos) {
     setState(() {
       for (final c in _campos) {
@@ -100,6 +133,7 @@ class _EditorChecklistState extends State<EditorChecklist> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_editando && _campos.any((c) => c.text.trim().isNotEmpty)) return _cerrada();
     final guardadas = checklistsGuardadas(salvo: widget.propio);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -159,26 +193,48 @@ class _EditorChecklistState extends State<EditorChecklist> {
                   ),
               ],
             ),
-          Wrap(
-            spacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
-              Enlace('Añadir paso', onTap: _anadir),
-              if (guardadas.isNotEmpty)
-                BotonMenu<int>(
-                  tooltip: 'Copiar los pasos de otra checklist',
-                  opciones: [
-                    for (final (i, (nombre, pasos)) in guardadas.indexed)
-                      (i, Text('$nombre (${pasos.length} ${pasos.length == 1 ? 'paso' : 'pasos'})')),
+              Expanded(
+                child: Wrap(
+                  spacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Enlace('Añadir paso', onTap: _anadir),
+                    if (guardadas.isNotEmpty)
+                      BotonMenu<int>(
+                        tooltip: 'Copiar los pasos de otra checklist',
+                        opciones: [
+                          for (final (i, (nombre, pasos)) in guardadas.indexed)
+                            (i, Text('$nombre (${pasos.length} ${pasos.length == 1 ? 'paso' : 'pasos'})')),
+                        ],
+                        onSelected: (i) => _usar(guardadas[i].$2),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: Text(
+                            'Usar una ya hecha',
+                            style: TextStyle(color: P.morado, fontSize: 13.5, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
                   ],
-                  onSelected: (i) => _usar(guardadas[i].$2),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    child: Text(
-                      'Usar una ya hecha',
-                      style: TextStyle(color: P.morado, fontSize: 13.5, fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                ),
+              ),
+              // Cierra la edición: los pasos quedan fijos hasta pulsar «Editar».
+              if (_campos.any((c) => c.text.trim().isNotEmpty))
+                BotonAccion(
+                  'Listo',
+                  icono: Icons.check_rounded,
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    setState(() {
+                      for (final c in _campos.where((c) => c.text.trim().isEmpty).toList()) {
+                        _campos.remove(c);
+                        c.dispose();
+                      }
+                      _editando = false;
+                    });
+                  },
                 ),
             ],
           ),
@@ -260,61 +316,64 @@ class ChecklistOt extends StatelessWidget {
     final pasos = checklistDe(t);
     final hechos = pasos.where((p) => p.hecho).length;
     final filas = [
-        Padding(
-          padding: sinTarjeta ? const EdgeInsets.fromLTRB(0, 6, 0, 6) : const EdgeInsets.fromLTRB(18, 12, 18, 6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: pasos.isEmpty ? 0 : hechos / pasos.length,
-              minHeight: 4,
-              color: hechos == pasos.length ? P.verde : P.morado,
-              backgroundColor: P.borde,
+      Padding(
+        padding: sinTarjeta ? const EdgeInsets.fromLTRB(0, 6, 0, 6) : const EdgeInsets.fromLTRB(18, 12, 18, 6),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: LinearProgressIndicator(
+            value: pasos.isEmpty ? 0 : hechos / pasos.length,
+            minHeight: 4,
+            color: hechos == pasos.length ? P.verde : P.morado,
+            backgroundColor: P.borde,
+          ),
+        ),
+      ),
+      for (final (i, p) in pasos.indexed)
+        InkWell(
+          onTap: puedeMarcar ? () => _marcar(context, i) : null,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(sinTarjeta ? 0 : 14, 8, 6, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(
+                    p.hecho ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    size: 22,
+                    color: p.hecho ? P.verde : P.textoSuave,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.paso, style: TextStyle(fontSize: 14, color: p.hecho ? P.textoSuave : null)),
+                      if (p.hecho && p.cuando != null)
+                        Text(
+                          '${_hora(p.cuando!)}, ${quienMarco(p.por)}',
+                          style: TextStyle(fontSize: 12, color: P.textoSuave),
+                        ),
+                      if (p.nota.isNotEmpty)
+                        Text(
+                          p.nota,
+                          style: TextStyle(fontSize: 12.5, color: P.texto, fontStyle: FontStyle.italic),
+                        ),
+                    ],
+                  ),
+                ),
+                if (puedeMarcar)
+                  IconButton(
+                    tooltip: p.nota.isEmpty ? 'Añadir nota' : 'Cambiar la nota',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.edit_note_rounded, size: 20, color: p.nota.isEmpty ? P.textoSuave : P.morado),
+                    onPressed: () => _nota(context, i),
+                  ),
+              ],
             ),
           ),
         ),
-        for (final (i, p) in pasos.indexed)
-          InkWell(
-            onTap: puedeMarcar ? () => _marcar(context, i) : null,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(sinTarjeta ? 0 : 14, 8, 6, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Icon(
-                      p.hecho ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                      size: 22,
-                      color: p.hecho ? P.verde : P.textoSuave,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(p.paso, style: TextStyle(fontSize: 14, color: p.hecho ? P.textoSuave : null)),
-                        if (p.hecho && p.cuando != null)
-                          Text(
-                            '${_hora(p.cuando!)}, ${quienMarco(p.por)}',
-                            style: TextStyle(fontSize: 12, color: P.textoSuave),
-                          ),
-                        if (p.nota.isNotEmpty)
-                          Text(p.nota, style: TextStyle(fontSize: 12.5, color: P.texto, fontStyle: FontStyle.italic)),
-                      ],
-                    ),
-                  ),
-                  if (puedeMarcar)
-                    IconButton(
-                      tooltip: p.nota.isEmpty ? 'Añadir nota' : 'Cambiar la nota',
-                      visualDensity: VisualDensity.compact,
-                      icon: Icon(Icons.edit_note_rounded, size: 20, color: p.nota.isEmpty ? P.textoSuave : P.morado),
-                      onPressed: () => _nota(context, i),
-                    ),
-                ],
-              ),
-            ),
-          ),
     ];
     if (sinTarjeta) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: filas);
     return SeccionTarjeta(titulo: 'Checklist', subtitulo: '$hechos de ${pasos.length}', children: filas);
