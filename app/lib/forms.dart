@@ -227,7 +227,8 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
     if (!acoplada) {
       // Que la cabecera nunca se salga de la pantalla al arrastrar.
       left = ((pantalla.width - ancho) / 2 + desplazamiento.dx).clamp(120 - ancho, pantalla.width - 120).toDouble();
-      top = ((pantalla.height - alto) / 2 + desplazamiento.dy).clamp(0, pantalla.height - 80).toDouble();
+      // Centrada en vertical según su alto real (corta, no se queda arriba): el arrastre la mueve entera.
+      top = desplazamiento.dy.clamp((alto - pantalla.height) / 2, pantalla.height - 80 - (pantalla.height - alto) / 2).toDouble();
     }
     return Stack(
       children: [
@@ -236,9 +237,12 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
           curve: Curves.easeOutCubic,
           left: left,
           top: top,
+          bottom: acoplada ? null : -top,
           width: ancho,
           height: acoplada ? alto : null,
-          child: ConstrainedBox(
+          child: Align(
+            alignment: acoplada ? Alignment.topCenter : Alignment.center,
+            child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: alto),
             child: Material(
             color: P.superficie,
@@ -278,6 +282,7 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                 _pie(),
               ],
             ),
+          ),
           ),
           ),
         ),

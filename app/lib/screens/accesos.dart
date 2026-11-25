@@ -22,8 +22,10 @@ Future<void> abrirAccesos(BuildContext context) => showDialog<void>(
       borderRadius: BorderRadius.circular(P.radio),
       side: BorderSide(color: P.borde),
     ),
-    child: ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: 600, maxHeight: MediaQuery.sizeOf(c).height * .85),
+    // Tamaño fijo desde el principio: al cargar la lista no salta ni crece.
+    child: SizedBox(
+      width: 600,
+      height: (MediaQuery.sizeOf(c).height * .85).clamp(320.0, 640.0),
       child: const Accesos(),
     ),
   ),
@@ -37,8 +39,13 @@ class Accesos extends StatefulWidget {
 }
 
 class _AccesosState extends State<Accesos> {
-  List<Acceso>? _accesos;
-  List<InvitacionPendiente> _invitaciones = [];
+  /// La última lista leída (por empresa): al volver a abrir se ve al instante y se refresca por detrás.
+  static String? _deEmpresa;
+  static List<Acceso>? _ultimos;
+  static List<InvitacionPendiente> _ultimasInvitaciones = [];
+
+  late List<Acceso>? _accesos = _deEmpresa == store.nube?.empresaId ? _ultimos : null;
+  late List<InvitacionPendiente> _invitaciones = _deEmpresa == store.nube?.empresaId ? _ultimasInvitaciones : [];
   bool _fallo = false;
 
   Nube get _nube => store.nube!;
@@ -54,8 +61,9 @@ class _AccesosState extends State<Accesos> {
       final r = await Future.wait([_nube.accesos(), _nube.invitacionesPendientes()]);
       if (!mounted) return;
       setState(() {
-        _accesos = r[0] as List<Acceso>;
-        _invitaciones = r[1] as List<InvitacionPendiente>;
+        _accesos = _ultimos = r[0] as List<Acceso>;
+        _invitaciones = _ultimasInvitaciones = r[1] as List<InvitacionPendiente>;
+        _deEmpresa = _nube.empresaId;
         _fallo = false;
       });
     } catch (e) {
@@ -95,7 +103,6 @@ class _AccesosState extends State<Accesos> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
@@ -125,28 +132,41 @@ class _AccesosState extends State<Accesos> {
             ],
           ),
           const SizedBox(height: 16),
-          if (_fallo)
-            Text('No se pudieron leer los accesos. Comprueba la conexión.', style: TextStyle(color: P.rojo))
-          else if (_accesos == null)
-            const Center(
-              child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(strokeWidth: 2)),
-            )
-          else
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    _seccion('Con acceso', [for (final a in _accesos!) _filaAcceso(a)]),
-                    if (_invitaciones.isNotEmpty)
-                      _seccion('Invitaciones pendientes', [..._invitaciones.map(_filaInvitacion)]),
-                    if (sinCuenta.isNotEmpty)
-                      _seccion(m('Trabajadores sin cuenta'), [for (final w in sinCuenta) _filaSinCuenta(w)]),
-                  ],
-                ),
-              ),
+          // La lista entra con un fundido; mientras, una barra fina arriba (sin saltos de tamaño).
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: _fallo
+                  ? Align(
+                      alignment: Alignment.topLeft,
+                      child: Text('No se pudieron leer los accesos. Comprueba la conexión.', style: TextStyle(color: P.rojo)),
+                    )
+                  : _accesos == null
+                  ? Align(
+                      alignment: Alignment.topCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8, top: 4),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(minHeight: 3, color: P.morado, backgroundColor: P.moradoSuave),
+                        ),
+                      ),
+                    )
+                  : Padding(
+                      key: const ValueKey('lista'),
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ListView(
+                        children: [
+                          _seccion('Con acceso', [for (final a in _accesos!) _filaAcceso(a)]),
+                          if (_invitaciones.isNotEmpty)
+                            _seccion('Invitaciones pendientes', [..._invitaciones.map(_filaInvitacion)]),
+                          if (sinCuenta.isNotEmpty)
+                            _seccion(m('Trabajadores sin cuenta'), [for (final w in sinCuenta) _filaSinCuenta(w)]),
+                        ],
+                      ),
+                    ),
             ),
+          ),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.only(right: 8),
