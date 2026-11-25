@@ -84,67 +84,64 @@ class _GrupoFormState extends State<GrupoForm> {
           'Técnicos',
           descripcion: 'Un técnico puede estar en varios grupos. Lo que se asigna al grupo va al más libre.',
           [
-            if (ws.isEmpty)
-              Text('Aún no hay técnicos.', style: TextStyle(color: P.textoSuave))
-            else
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final w in ws)
-                      _PildoraTecnico(
-                        w,
-                        dentro: miembros.contains(w.id),
-                        onTap: () => setState(() => miembros.contains(w.id) ? miembros.remove(w.id) : miembros.add(w.id)),
+            // Solo los que están; los demás se añaden desde «+ Técnico».
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (final w in ws.where((w) => miembros.contains(w.id)))
+                    InputChip(
+                      avatar: Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
+                      label: Text(w.nombreCompleto),
+                      onDeleted: () => setState(() => miembros.remove(w.id)),
+                      deleteButtonTooltipMessage: 'Sacar del grupo',
+                      backgroundColor: P.superficie,
+                      side: BorderSide(color: P.borde),
+                      shape: const StadiumBorder(),
+                    ),
+                  if (ws.any((w) => !miembros.contains(w.id)))
+                    BotonMenu<String>(
+                      tooltip: 'Meter un técnico en el grupo',
+                      opciones: [
+                        for (final w in ws.where((w) => !miembros.contains(w.id)))
+                          (
+                            w.id,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
+                                const SizedBox(width: 8),
+                                Text(w.nombreCompleto),
+                              ],
+                            ),
+                          ),
+                      ],
+                      onSelected: (id) => setState(() => miembros.add(id)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_rounded, size: 16, color: P.morado),
+                            const SizedBox(width: 4),
+                            Text('Técnico', style: TextStyle(color: P.morado, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                  ],
-                ),
+                    )
+                  else if (ws.isEmpty)
+                    Text('Aún no hay técnicos.', style: TextStyle(color: P.textoSuave)),
+                ],
               ),
+            ),
           ],
         ),
       ],
     );
   }
-}
-
-/// Técnico que se mete o se saca del grupo con un toque: dentro, en morado con su check.
-class _PildoraTecnico extends StatelessWidget {
-  final Trabajador w;
-  final bool dentro;
-  final VoidCallback onTap;
-  const _PildoraTecnico(this.w, {required this.dentro, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: dentro ? P.moradoSuave : P.superficie,
-    shape: StadiumBorder(side: BorderSide(color: dentro ? P.morado.withValues(alpha: .45) : P.borde)),
-    child: InkWell(
-      customBorder: const StadiumBorder(),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(5, 5, 12, 5),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 24),
-            const SizedBox(width: 8),
-            Text(w.nombreCompleto, style: TextStyle(fontWeight: dentro ? FontWeight.w600 : FontWeight.w400)),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 150),
-              child: dentro
-                  ? Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: Icon(Icons.check_rounded, size: 16, color: P.morado),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 /// Grupos de un técnico (en su ficha): se marcan o desmarcan varios; al final, crear uno nuevo.
@@ -182,56 +179,32 @@ class SelectorGrupos extends StatelessWidget {
   );
 }
 
-/// Filtro por grupo junto al buscador de técnicos: sin elegir, el icono de grupo; elegido, su nombre en morado.
+/// Filtro por grupo al final del buscador de técnicos: solo el icono de grupo (morado si hay uno elegido); al
+/// tocarlo, el menú con los grupos.
 class FiltroGrupo extends StatelessWidget {
   final String? valor;
   final ValueChanged<String?> onChanged;
   const FiltroGrupo(this.valor, this.onChanged, {super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final g = store.grupo(valor);
-    return BotonMenu<String>(
-      tooltip: 'Filtrar por grupo',
-      seleccionado: valor ?? '',
-      opciones: [
-        ('', const Text('Todos los grupos')),
-        for (final x in gruposOrdenados())
-          (
-            x.id,
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [Icon(iconoGrupo, size: 18, color: P.textoSuave), const SizedBox(width: 8), Text(x.nombre)],
-            ),
+  Widget build(BuildContext context) => BotonMenu<String>(
+    tooltip: 'Filtrar por grupo',
+    seleccionado: valor ?? '',
+    opciones: [
+      ('', const Text('Todos los grupos')),
+      for (final x in gruposOrdenados())
+        (
+          x.id,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [Icon(iconoGrupo, size: 18, color: P.textoSuave), const SizedBox(width: 8), Text(x.nombre)],
           ),
-      ],
-      onSelected: (v) => onChanged(v.isEmpty ? null : v),
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(P.radioControl),
-          border: Border.all(color: g == null ? P.borde : P.morado.withValues(alpha: .45)),
-          color: g == null ? P.superficie : P.moradoSuave,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(iconoGrupo, size: 18, color: g == null ? P.textoSuave : P.morado),
-            const SizedBox(width: 6),
-            Text(
-              g?.nombre ?? 'Grupo',
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                color: g == null ? P.texto : P.morado,
-              ),
-            ),
-            const SizedBox(width: 2),
-            Icon(Icons.expand_more_rounded, size: 18, color: g == null ? P.textoSuave : P.morado),
-          ],
-        ),
-      ),
-    );
-  }
+    ],
+    onSelected: (v) => onChanged(v.isEmpty ? null : v),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Icon(iconoGrupo, size: 20, color: store.grupo(valor) == null ? P.textoSuave : P.morado),
+    ),
+  );
 }

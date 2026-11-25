@@ -807,7 +807,10 @@ class Buscador extends StatelessWidget {
   final String hint;
   final ValueChanged<String> onChanged;
   final double width;
-  const Buscador({super.key, required this.hint, required this.onChanged, this.width = 240});
+
+  /// Al final del campo, dentro de él (p. ej. el filtro por grupo de Técnicos).
+  final Widget? sufijo;
+  const Buscador({super.key, required this.hint, required this.onChanged, this.width = 240, this.sufijo});
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -841,6 +844,8 @@ class Buscador extends StatelessWidget {
           ),
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 34),
+        suffixIcon: sufijo,
+        suffixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34),
       ),
     ),
   );

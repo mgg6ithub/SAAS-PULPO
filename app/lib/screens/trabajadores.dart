@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../forms.dart';
 import '../models.dart';
@@ -37,6 +38,29 @@ class _TrabajadoresState extends State<Trabajadores> {
   /// Modo selección: para eliminar varios de golpe.
   bool seleccionando = false;
   final seleccion = <String>{};
+
+  // G: nuevo grupo (como N para un técnico), si no se está escribiendo ni hay una ventana encima.
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_teclaG);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_teclaG);
+    super.dispose();
+  }
+
+  bool _teclaG(KeyEvent e) {
+    if (!industrial || e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.keyG || !mounted) return false;
+    final teclado = HardwareKeyboard.instance;
+    if (teclado.isControlPressed || teclado.isMetaPressed || teclado.isAltPressed) return false;
+    if (primaryFocus?.context?.findAncestorStateOfType<EditableTextState>() != null) return false;
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return false;
+    abrirGrupoForm(context);
+    return true;
+  }
 
   void salirSeleccion() => setState(() {
     seleccionando = false;
@@ -93,10 +117,17 @@ class _TrabajadoresState extends State<Trabajadores> {
                       ],
                       derecha: [
                         if (store.trabajadores.isNotEmpty) ...[
-                          Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
-                          // Pultec: filtrar por grupo, junto al buscador.
-                          if (industrial && store.grupos.isNotEmpty)
-                            FiltroGrupo(grupo, (v) => setState(() => grupo = v)),
+                          // Pultec: busca también por grupo y, al final del campo, el filtro por grupo.
+                          Buscador(
+                            hint: industrial && store.grupos.isNotEmpty ? 'Buscar técnico o grupo…' : m('Buscar trabajador…'),
+                            width: industrial && store.grupos.isNotEmpty ? 290 : 240,
+                            onChanged: (v) => setState(() => q = v),
+                            sufijo: industrial && store.grupos.isNotEmpty
+                                ? FiltroGrupo(grupo, (v) => setState(() => grupo = v))
+                                : null,
+                          ),
+                          if (industrial && store.grupo(grupo) != null)
+                            Pill(store.grupo(grupo)!.nombre, P.morado, icono: iconoGrupo),
                           SelectorVista(
                             bloquesPrimero: true,
                             lista: this.lista,
@@ -127,7 +158,7 @@ class _TrabajadoresState extends State<Trabajadores> {
                             BotonPrimario(
                               'Nuevo grupo',
                               conIcono: true,
-                              icono: iconoGrupo,
+                              tecla: 'G',
                               onPressed: () => abrirGrupoForm(context),
                             ),
                             const SizedBox(width: 8),

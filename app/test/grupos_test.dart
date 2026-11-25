@@ -42,9 +42,14 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: GrupoForm(original: store.grupo('g2')))));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Irene'));
-    await tester.tap(find.text('Iker'));
-    await tester.pump();
+    // Solo salen los que están: Iker. Irene se añade desde «+ Técnico»; a Iker se le saca con su aspa.
+    expect(find.text('Irene'), findsNothing);
+    await tester.tap(find.text('Técnico'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Irene').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Sacar del grupo').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar'));
     await tester.pumpAndSettle();
     expect(store.trabajador('w2')!.grupoIds, containsAll(['g1', 'g2']));
