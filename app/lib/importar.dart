@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'hoja_calculo.dart';
 import 'industrial/activo.dart';
 import 'industrial/iconos.dart';
 import 'industrial/plan.dart';
@@ -303,6 +305,47 @@ List<List<String>> leerCsv(String texto) {
   return filas;
 }
 
+/// JSON exportado por Pultec (o hecho a mano): una lista de objetos `{"Columna": "valor"}`, o `{"filas": [...]}`.
+/// La cabecera son todas las claves, en el orden en que aparecen.
+List<List<String>> leerJson(String texto) {
+  final Object? j;
+  try {
+    j = jsonDecode(texto);
+  } catch (_) {
+    throw const FormatException('El JSON no es válido.');
+  }
+  final lista = j is List ? j : (j is Map && j['filas'] is List ? j['filas'] as List : null);
+  if (lista == null) throw const FormatException('El JSON tiene que ser una lista de filas.');
+  final cab = <String>[];
+  for (final o in lista.whereType<Map>()) {
+    for (final k in o.keys) {
+      if (!cab.contains('$k')) cab.add('$k');
+    }
+  }
+  String texto_(Object? v) => switch (v) {
+    null => '',
+    List() => v.join(', '),
+    num() when v == v.roundToDouble() => '${v.round()}',
+    _ => '$v',
+  };
+  return [
+    cab,
+    for (final o in lista.whereType<Map>()) [for (final c in cab) texto_(o[c]).trim()],
+  ];
+}
+
+/// Excel (.xlsx), JSON o CSV/TXT según la extensión de [nombre].
+List<List<String>> leerArchivo(String nombre, List<int> bytes) {
+  final ext = nombre.toLowerCase().split('.').last;
+  if (ext == 'xlsx') return leerXlsx(bytes);
+  final texto = utf8.decode(bytes, allowMalformed: true);
+  if (ext == 'json') return leerJson(texto);
+  return leerCsv(texto);
+}
+
+/// Extensiones que se pueden importar.
+const extensionesImportar = ['xlsx', 'csv', 'txt', 'json'];
+
 /// CSV con `;` y BOM, como lo abre Excel en español sin preguntar.
 String escribirCsv(List<List<String>> filas) {
   String celda(String x) => x.contains(RegExp('[;"\n\r]')) ? '"${x.replaceAll('"', '""')}"' : x;
@@ -314,6 +357,12 @@ String _fecha(DateTime? d) => d == null ? '' : fecha(d);
 /// dd/mm/aaaa, d/m/aa o aaaa-mm-dd.
 DateTime? leerFecha(String s) {
   s = s.trim();
+  // Fecha de Excel guardada como número de serie (días desde el 30/12/1899), p. ej. 46000.
+  final serie = RegExp(r'^(\d{5})(\.\d+)?$').firstMatch(s);
+  if (serie != null) {
+    final n = int.parse(serie[1]!);
+    if (n >= 20000 && n <= 80000) return DateTime(1899, 12, 30 + n);
+  }
   var m = RegExp(r'^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$').firstMatch(s);
   if (m != null) {
     final y = int.parse(m[3]!);
@@ -856,11 +905,40 @@ List<List<String>> filasHistorial(Store s) {
 }
 
 /// Formatos de exportación. PDF para leer o imprimir; CSV para Excel (y volver a importar); JSON para otros programas.
-enum FormatoExportar { pdf, csv, json }
+enum FormatoExportar { pdf, excel, csv, json }
 
 extension FormatoExportarX on FormatoExportar {
-  String get etiqueta => const ['PDF', 'CSV', 'JSON'][index];
-  String get tipo => const ['application/pdf', 'text/csv', 'application/json'][index];
+  String get etiqueta => const ['PDF', 'Excel', 'CSV', 'JSON'][index];
+  String get extension => const ['pdf', 'xlsx', 'csv', 'json'][index];
+  String get tipo => const [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/csv',
+    'application/json',
+  ][index];
+}
+
+/// La guía de formato en filas: columna, si es obligatoria, qué lleva y un ejemplo (de la primera fila de la
+/// plantilla que lo tenga).
+List<List<String>> guiaFilas(QueImportar que) => [
+  ['Columna', 'Obligatoria', 'Qué lleva', 'Ejemplo'],
+  for (final (i, (c, texto)) in que.guia.indexed)
+    [
+      c,
+      texto.startsWith('Obligatoria') ? 'Sí' : 'No',
+      texto.startsWith('Obligatoria') ? texto.replaceFirst(RegExp(r'^Obligatoria\.\s*'), '') : texto,
+      que.ejemplos.map((f) => i < f.length ? f[i] : '').firstWhere((x) => x.isNotEmpty, orElse: () => ''),
+    ],
+];
+
+/// La plantilla para rellenar en [formato]: Excel con la hoja «Guía» al lado, CSV o JSON (el PDF no se rellena).
+Uint8List plantillaBytes(QueImportar que, FormatoExportar formato) {
+  final filas = [que.columnas, ...que.ejemplos];
+  return switch (formato) {
+    FormatoExportar.excel => escribirXlsx([('Plantilla', filas), ('Guía', guiaFilas(que))]),
+    FormatoExportar.json => utf8.encode(filasJson(filas)),
+    _ => utf8.encode(plantillaCsv(que)),
+  };
 }
 
 /// Columnas que caben en el PDF (en horizontal); el resto va en CSV y JSON.

@@ -48,6 +48,9 @@ dependencies:
   crypto: 3.0.8
   pdf: ^3.13.1
   image: ^4.12.0
+  # Importar y exportar en Excel (.xlsx): zip con XML dentro.
+  archive: ^4.0.2
+  xml: ^7.0.1
   web: ^1.1.2
   flutter_svg: ^2.3.2
   printing: ^5.15.1

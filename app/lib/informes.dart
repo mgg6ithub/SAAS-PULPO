@@ -1068,6 +1068,100 @@ Future<Uint8List> incidenciaPdf(Incidencia x, {EdicionPdf? e}) async {
   return doc.save();
 }
 
+/// Guía de importación en PDF: para qué sirve, cómo rellenarla en tres pasos y una tabla con cada columna (si
+/// es obligatoria, qué lleva y un ejemplo). [guia] lleva la cabecera en la primera fila.
+Future<Uint8List> guiaPdf(String que, List<List<String>> guia, {List<String> notas = const []}) async {
+  final empresa = store.nube?.nombre ?? '';
+  final doc = pw.Document(title: 'Guía para importar $que', author: empresa.isEmpty ? Marca.nombre : empresa);
+  final marca = PdfColor.fromInt(P.morado.toARGB32());
+  final marcaSuave = PdfColor.fromInt(Color.alphaBlend(P.morado.withValues(alpha: .08), Colors.white).toARGB32());
+  pw.Widget paso(int n, String texto) => pw.Padding(
+    padding: const pw.EdgeInsets.only(bottom: 6),
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Container(
+          width: 16,
+          height: 16,
+          alignment: pw.Alignment.center,
+          decoration: pw.BoxDecoration(color: marca, shape: pw.BoxShape.circle),
+          child: pw.Text('$n', style: pw.TextStyle(fontSize: 8.5, color: PdfColors.white, fontWeight: pw.FontWeight.bold)),
+        ),
+        pw.SizedBox(width: 8),
+        pw.Expanded(child: pw.Text(texto, style: pw.TextStyle(fontSize: 10, color: _tintaPdf))),
+      ],
+    ),
+  );
+  pw.Widget celda(String t, {bool cab = false, bool negrita = false, PdfColor? color}) => pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+    child: pw.Text(
+      // La letra del PDF no trae «…».
+      t.replaceAll('…', '...'),
+      style: pw.TextStyle(
+        fontSize: cab ? 8.5 : 9.5,
+        color: color ?? (cab ? _suavePdf : _tintaPdf),
+        fontWeight: cab || negrita ? pw.FontWeight.bold : pw.FontWeight.normal,
+      ),
+    ),
+  );
+  doc.addPage(
+    _paginaPdf(
+      logo: await _logoPdf(),
+      empresa: empresa,
+      titulo: 'Guía para importar',
+      numero: que,
+      cuando: fecha(DateTime.now()),
+      build: (_) => [
+        pw.Text('Cómo importar $que', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: _tintaPdf)),
+        pw.SizedBox(height: 12),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(color: marcaSuave, borderRadius: pw.BorderRadius.circular(6)),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              paso(1, 'Descarga la plantilla en Excel (trae esta guía en la hoja «Guía») o en CSV.'),
+              paso(2, 'Rellena una fila por cada elemento. El orden de las columnas da igual y las que no uses pueden faltar.'),
+              paso(3, 'En ${Marca.nombre}, «Elegir archivo» con tu Excel, CSV o JSON: verás lo que se va a crear y los avisos por fila antes de guardar.'),
+            ],
+          ),
+        ),
+        for (final n in notas) ...[
+          pw.SizedBox(height: 8),
+          pw.Text(n, style: pw.TextStyle(fontSize: 10, color: _suavePdf)),
+        ],
+        pw.SizedBox(height: 16),
+        pw.Table(
+          columnWidths: const {
+            0: pw.FlexColumnWidth(2.2),
+            1: pw.FlexColumnWidth(1.2),
+            2: pw.FlexColumnWidth(5),
+            3: pw.FlexColumnWidth(2.4),
+          },
+          border: pw.TableBorder(horizontalInside: pw.BorderSide(color: _bordePdf, width: .6)),
+          children: [
+            pw.TableRow(
+              repeat: true,
+              decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: _tintaPdf, width: .8))),
+              children: [for (final c in guia.first) celda(c, cab: true)],
+            ),
+            for (final f in guia.skip(1))
+              pw.TableRow(
+                children: [
+                  celda(f[0], negrita: true),
+                  celda(f[1], color: f[1] == 'Sí' ? marca : _suavePdf, negrita: f[1] == 'Sí'),
+                  celda(f[2].isEmpty ? '-' : f[2]),
+                  celda(f[3], color: _suavePdf),
+                ],
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+  return doc.save();
+}
+
 /// Listado en PDF (exportar activos, técnicos…): A4 en horizontal con la cabecera de la empresa y una tabla.
 Future<Uint8List> listadoPdf(String titulo, List<List<String>> conCabecera) async {
   final empresa = store.nube?.nombre ?? '';

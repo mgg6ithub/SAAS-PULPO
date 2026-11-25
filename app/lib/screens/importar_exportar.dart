@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 
 import '../geo.dart';
 import '../importar.dart';
-import '../informes.dart' show listadoPdf;
+import '../hoja_calculo.dart';
+import '../informes.dart' show guiaPdf, listadoPdf;
 import '../models.dart';
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 import '../store.dart';
@@ -28,8 +29,6 @@ Future<void> abrirImportarExportar(BuildContext context, {QueImportar? que}) => 
   ),
 );
 
-Future<void> _descargarCsv(String nombre, String csv) => descargar(utf8.encode(csv), nombre, 'text/csv');
-
 class ImportarExportar extends StatefulWidget {
   final QueImportar? que;
   const ImportarExportar({super.key, this.que});
@@ -49,15 +48,21 @@ class _ImportarExportarState extends State<ImportarExportar> {
   Future<void> elegir() async {
     final r = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['csv', 'txt'],
+      allowedExtensions: extensionesImportar,
       withData: true,
     );
     final f = r?.files.firstOrNull;
     if (f?.bytes == null) return;
-    final texto = utf8.decode(f!.bytes!, allowMalformed: true);
+    final List<List<String>> filas;
+    try {
+      filas = leerArchivo(f!.name, f.bytes!);
+    } on FormatException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${f!.name}: ${e.message}')));
+      return;
+    }
     setState(() {
       archivo = f.name;
-      vista = prepararImportacion(que, leerCsv(texto), store);
+      vista = prepararImportacion(que, filas, store);
     });
   }
 
@@ -115,11 +120,11 @@ class _ImportarExportarState extends State<ImportarExportar> {
         child: Text(
           verExportar
               ? 'Así saldrán tus ${que.etiqueta.toLowerCase()}. Elige el formato: PDF para leer o imprimir (con las '
-                    'columnas que caben), CSV para Excel o JSON para otros programas.'
+                    'columnas que caben), Excel o CSV para hojas de cálculo, o JSON para otros programas.'
               : que == QueImportar.trabajos
               ? m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.')
-              : 'Rellena tu Excel con estas columnas y guárdalo como CSV. Pasa el ratón por cada columna para ver qué '
-                    'lleva; las de * son obligatorias y el orden da igual. Lo que ya está en Pultec no se duplica.',
+              : 'Rellena la plantilla con estas columnas y súbela tal cual (Excel, CSV o JSON). Pasa el ratón por cada '
+                    'columna para ver qué lleva; las de * son obligatorias. Lo que ya está en Pultec no se duplica.',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 13, color: P.textoSuave),
@@ -190,27 +195,60 @@ class _ImportarExportarState extends State<ImportarExportar> {
             spacing: 16,
             runSpacing: 6,
             children: [
-              Enlace(
+              // La plantilla en el formato que se prefiera; la de Excel trae la guía en otra hoja.
+              _MenuEnlace(
                 'Descargar plantilla',
-                onTap: () => _descargarCsv('plantilla_${que.etiqueta.toLowerCase()}.csv', plantillaCsv(que)),
+                opciones: [
+                  for (final f in [FormatoExportar.excel, FormatoExportar.csv, FormatoExportar.json])
+                    (
+                      f == FormatoExportar.excel ? 'Excel, con la guía en otra hoja' : f.etiqueta,
+                      () => descargar(
+                        plantillaBytes(que, f),
+                        'plantilla_${que.etiqueta.toLowerCase()}.${f.extension}',
+                        f.tipo,
+                      ),
+                    ),
+                ],
               ),
-              Enlace(
+              _MenuEnlace(
                 'Descargar guía',
-                onTap: () =>
-                    descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
+                opciones: [
+                  (
+                    'PDF',
+                    () async => descargar(
+                      await guiaPdf(
+                        que.etiqueta.toLowerCase(),
+                        guiaFilas(que),
+                        notas: [if (que == QueImportar.activos) _notaActivos],
+                      ),
+                      'guia_${que.etiqueta.toLowerCase()}.pdf',
+                      FormatoExportar.pdf.tipo,
+                    ),
+                  ),
+                  (
+                    'Excel',
+                    () => descargar(
+                      escribirXlsx([('Guía', guiaFilas(que))]),
+                      'guia_${que.etiqueta.toLowerCase()}.xlsx',
+                      FormatoExportar.excel.tipo,
+                    ),
+                  ),
+                  (
+                    'Texto',
+                    () =>
+                        descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
+                  ),
+                ],
               ),
             ],
           ),
           contenido: _tablaPlantilla(),
           sobran: que.ejemplos.length - _maxFilas,
           pie: [
-            FilledButton(onPressed: elegir, child: const Text('Elegir archivo CSV')),
+            FilledButton(onPressed: elegir, child: const Text('Elegir archivo')),
             const SizedBox(width: 14),
             Flexible(
-              child: Text(
-                'En Excel: Archivo, Guardar como, CSV.',
-                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-              ),
+              child: Text('Excel (.xlsx), CSV o JSON.', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
             ),
           ],
         ),
@@ -339,8 +377,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
       ),
       FormatoExportar.csv => utf8.encode(escribirCsv(conCabecera)),
       FormatoExportar.json => utf8.encode(filasJson(conCabecera)),
+      FormatoExportar.excel => escribirXlsx([(titulo, conCabecera)]),
     };
-    await descargar(bytes, '$nombre.${formato.name}', formato.tipo);
+    await descargar(bytes, '$nombre.${formato.extension}', formato.tipo);
   }
 
   /// Título de sección con su flecha (la de descargar para importar; girada 180 grados para exportar), como el
@@ -579,4 +618,34 @@ Future<void> _ubicar(List<Cliente> clientes) async {
     }
     await Future<void>.delayed(const Duration(milliseconds: 1100));
   }
+}
+
+/// Pultec: cómo va el archivo de activos (para la guía en PDF).
+const _notaActivos =
+    'Un solo archivo para todo: una fila por activo o componente («Padre» = el tag de su activo). Con «Mantenimiento» '
+    'rellena, le añade ese mantenimiento; repite el tag en otra fila para darle más. Cada mantenimiento sale ya con su '
+    'orden de trabajo en la fecha que le toca.';
+
+/// Enlace morado que abre un menú pequeño con [opciones] (texto y qué hace).
+class _MenuEnlace extends StatelessWidget {
+  final String texto;
+  final List<(String, VoidCallback)> opciones;
+  const _MenuEnlace(this.texto, {required this.opciones});
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    alignmentOffset: const Offset(0, 6),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      for (final (t, accion) in opciones)
+        MenuItemButton(
+          onPressed: accion,
+          child: Text(t, style: const TextStyle(fontSize: 13.5)),
+        ),
+    ],
+    builder: (context, menu, _) => Enlace(texto, onTap: () => menu.isOpen ? menu.close() : menu.open()),
+  );
 }

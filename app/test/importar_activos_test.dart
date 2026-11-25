@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pultec/informes.dart' show listadoPdf;
+import 'package:pultec/hoja_calculo.dart';
+import 'package:pultec/informes.dart' show guiaPdf, listadoPdf;
 import 'package:pultec/importar.dart';
 import 'package:pultec/industrial/activo.dart';
 import 'package:pultec/industrial/plan.dart';
@@ -176,5 +177,55 @@ void main() {
     expect(pdf[1].first, 'P');
     final bytes = await listadoPdf('Activos', pdf);
     expect(ascii.decode(bytes.sublist(0, 4)), '%PDF');
+  });
+
+  test('Excel: lo escrito se vuelve a leer igual, con tildes, saltos y celdas vacías', () {
+    final filas = [
+      ['Tag', 'Nombre', 'Notas'],
+      ['PST-01', 'Planta de secado', 'Línea 1\nturno <noche> & "fin"'],
+      ['C-1', '', 'Válvula'],
+    ];
+    final bytes = escribirXlsx([('Activos', filas), ('Guía', guiaFilas(QueImportar.activos))]);
+    expect(bytes.sublist(0, 2), [0x50, 0x4b]); // zip
+    expect(leerXlsx(bytes), filas);
+    expect(() => leerXlsx([1, 2, 3]), throwsFormatException);
+  });
+
+  test('fechas de Excel como número de serie', () {
+    expect(leerFecha('46022'), DateTime(2025, 12, 31));
+    expect(leerFecha('12345'), isNull);
+  });
+
+  test('importar activos desde Excel y desde JSON da lo mismo que desde CSV', () {
+    const csv = 'Tag;Nombre;Padre;Mantenimiento;Cada;Última vez\nP;Planta;;Rev;6 meses;01/10/2026\nC;Comp;P;;;';
+    final filas = leerCsv(csv);
+    final desdeCsv = preparar(QueImportar.activos, csv);
+    for (final (nombre, bytes) in [
+      ('activos.xlsx', escribirXlsx([('Activos', filas)])),
+      ('activos.json', utf8.encode(filasJson(filas))),
+    ]) {
+      final imp = prepararImportacion(QueImportar.activos, leerArchivo(nombre, bytes), store);
+      expect(imp.avisos, isEmpty, reason: nombre);
+      expect([for (final a in imp.activos) a.tag], [for (final a in desdeCsv.activos) a.tag], reason: nombre);
+      expect(imp.planes.single.cadaDias, 182, reason: nombre);
+      expect(imp.planes.single.ultimo, DateTime(2026, 10, 1), reason: nombre);
+    }
+    expect(() => leerArchivo('x.json', utf8.encode('{"a":')), throwsFormatException);
+  });
+
+  test('plantillas en Excel, CSV y JSON se importan sin avisos; guía en PDF', () async {
+    for (final f in [FormatoExportar.excel, FormatoExportar.csv, FormatoExportar.json]) {
+      final imp = prepararImportacion(
+        QueImportar.activos,
+        leerArchivo('plantilla.${f.extension}', plantillaBytes(QueImportar.activos, f)),
+        store,
+      );
+      expect(imp.avisos, isEmpty, reason: f.etiqueta);
+      expect(imp.planes, hasLength(3), reason: f.etiqueta);
+    }
+    final guia = guiaFilas(QueImportar.activos);
+    expect(guia[1], ['Tag', 'Sí', startsWith('Código único'), 'PST-01']);
+    final pdf = await guiaPdf('activos', guia);
+    expect(ascii.decode(pdf.sublist(0, 4)), '%PDF');
   });
 }
