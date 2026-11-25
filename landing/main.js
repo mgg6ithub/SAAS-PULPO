@@ -418,7 +418,7 @@ const conTema = (url) => {
   // 3. Parpadeo.
   ojos.forEach((o) => a(o, [
     { transform: "scaleY(1)" }, { transform: "scaleY(.1)", offset: 0.5 }, { transform: "scaleY(1)" },
-  ], { duration: 220, delay: 1650, easing: "ease-in-out" }));
+  ], { duration: 220, delay: 1450, easing: "ease-in-out" }));
 
   // 4. Vuela a la barra (de su tamaño y posición al del logo de arriba) y la capa se desvanece.
   setTimeout(() => {
