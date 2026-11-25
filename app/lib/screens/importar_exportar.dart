@@ -226,12 +226,8 @@ class _ImportarExportarState extends State<ImportarExportar> {
       if (verExportar)
         _cara(
           exportar: true,
-          cabecera: [
-            () {
-              final n = filasExportar(que, store).length;
-              return _pastilla('$n ${n == 1 ? 'fila' : 'filas'}', _iconoTipo(que));
-            }(),
-          ],
+          // Sin pastilla de filas: cuántas hay ya se ve abajo («y N filas más»).
+          cabecera: const [],
           contenido: _tablaExportar(),
           sobran: filasExportar(que, store).length - _maxFilas,
           controles: [
@@ -254,11 +250,24 @@ class _ImportarExportarState extends State<ImportarExportar> {
       else
         _cara(
           exportar: false,
-          cabecera: [_pastilla('Plantilla con ${que.ejemplos.length} filas de ejemplo', Icons.table_chart_outlined)],
-          contenido: _tablaPlantilla(),
-          sobran: que.ejemplos.length - _maxFilas,
-          nota: haciendo ?? 'Excel (.xlsx), CSV o JSON',
-          controles: [
+          // Arriba a la derecha, como siempre: la plantilla y la guía.
+          cabecera: [
+            // La plantilla en el formato que se prefiera; la de Excel trae la guía en otra hoja.
+            _MenuEnlace(
+              'Descargar plantilla',
+              opciones: [
+                for (final f in [FormatoExportar.excel, FormatoExportar.csv, FormatoExportar.json])
+                  (
+                    f == FormatoExportar.excel ? 'Excel, con la guía en otra hoja' : f.etiqueta,
+                    () => descargar(
+                      plantillaBytes(que, f),
+                      'plantilla_${que.etiqueta.toLowerCase()}.${f.extension}',
+                      f.tipo,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 8),
             _MenuEnlace(
               'Descargar guía',
               opciones: [
@@ -288,23 +297,11 @@ class _ImportarExportarState extends State<ImportarExportar> {
                 ),
               ],
             ),
-            // La plantilla en el formato que se prefiera; la de Excel trae la guía en otra hoja.
-            _MenuEnlace(
-              'Descargar plantilla',
-              opciones: [
-                for (final f in [FormatoExportar.excel, FormatoExportar.csv, FormatoExportar.json])
-                  (
-                    f == FormatoExportar.excel ? 'Excel, con la guía en otra hoja' : f.etiqueta,
-                    () => descargar(
-                      plantillaBytes(que, f),
-                      'plantilla_${que.etiqueta.toLowerCase()}.${f.extension}',
-                      f.tipo,
-                    ),
-                  ),
-              ],
-            ),
-            FilledButton(onPressed: progreso == null ? elegir : null, child: const Text('Elegir archivo')),
           ],
+          contenido: _tablaPlantilla(),
+          sobran: que.ejemplos.length - _maxFilas,
+          nota: haciendo ?? 'Excel (.xlsx), CSV o JSON',
+          controles: [FilledButton(onPressed: progreso == null ? elegir : null, child: const Text('Elegir archivo'))],
         ),
     ],
   );
@@ -408,9 +405,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
   );
 
   /// Las primeras [_maxFilas] filas; desplegada («y N filas más»), todas, desplazándose dentro del mismo hueco.
-  Widget _tablaCorta(List<Col> columnas, List<List<Widget>> filas) => verTodas
+  Widget _tablaCorta(List<Col> columnas, List<List<Widget>> filas, {int maxFilas = _maxFilas}) => verTodas
       ? SingleChildScrollView(child: _tabla(columnas, filas, maxFilas: filas.length))
-      : _tabla(columnas, filas.take(_maxFilas).toList(), maxFilas: _maxFilas);
+      : _tabla(columnas, filas.take(maxFilas).toList(), maxFilas: maxFilas);
 
   /// «y 6 filas más», en morado: lo que no cabe en la tabla.
   /// Al pulsarlo, despliega todas las filas; desplegado, «Ver menos» las recoge.
@@ -703,37 +700,16 @@ class _ImportarExportarState extends State<ImportarExportar> {
     final avisos = _enOrden(imp.avisos);
     return _cara(
       exportar: false,
+      // Arriba a la derecha, el archivo leído con su marca de hecho (sale al terminar de leerlo).
       cabecera: [
-        // Qué se va a crear, en neutro con el icono de cada cosa.
-        if (que == QueImportar.activos && imp.total > 0)
-          for (final (t, ic) in _partes(imp)) _pastilla(t, ic)
-        else
-          _pastilla('${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}', _iconoTipo(que)),
-        if (imp.duplicados > 0) _pastilla('${imp.duplicados} ya estaban', Icons.done_all_rounded),
-        // Pulsando los avisos, se ven en lugar de la tabla (y otra vez, la tabla).
-        if (avisos.isNotEmpty)
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () => setState(() => verAvisos = !verAvisos),
-              child: Pill(
-                verAvisos ? 'Ver la tabla' : '${avisos.length} ${avisos.length == 1 ? 'aviso' : 'avisos'}',
-                P.ambar,
-                icono: Icons.warning_amber_rounded,
-              ),
-            ),
-          ),
-        const SizedBox(width: 8),
-        // El archivo leído, con su marca de hecho.
-        // Mientras se lee o se guarda, sin marca: sale al terminar.
         AnimatedOpacity(
           opacity: progreso == null ? 1 : 0,
           duration: const Duration(milliseconds: 200),
-          child: const Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
+          child: const Icon(Icons.check_circle_rounded, size: 17, color: P.verde),
         ),
-        const SizedBox(width: 2),
+        const SizedBox(width: 4),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 240),
+          constraints: const BoxConstraints(maxWidth: 280),
           child: Text(
             archivo ?? '',
             maxLines: 1,
@@ -742,31 +718,73 @@ class _ImportarExportarState extends State<ImportarExportar> {
           ),
         ),
       ],
-      contenido: verAvisos || filas.isEmpty
-          ? Tarjeta(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              child: avisos.isEmpty
-                  ? Text('No hay nada nuevo que importar.', style: TextStyle(fontSize: 13, color: P.textoSuave))
-                  : ListView(
-                      shrinkWrap: true,
-                      children: [
-                        for (final a in avisos)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+      // Debajo de «Importar», a la izquierda, qué se va a crear; la tabla, una fila menos para caber en el hueco.
+      contenido: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 28,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final (i, w) in <Widget>[
+                    if (que == QueImportar.activos && imp.total > 0)
+                      for (final (t, ic) in _partes(imp)) _pastilla(t, ic)
+                    else
+                      _pastilla('${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}', _iconoTipo(que)),
+                    if (imp.duplicados > 0) _pastilla('${imp.duplicados} ya estaban', Icons.done_all_rounded),
+                    // Pulsando los avisos, se ven en lugar de la tabla (y otra vez, la tabla).
+                    if (avisos.isNotEmpty)
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => setState(() => verAvisos = !verAvisos),
+                          child: Pill(
+                            verAvisos ? 'Ver la tabla' : '${avisos.length} ${avisos.length == 1 ? 'aviso' : 'avisos'}',
+                            P.ambar,
+                            icono: Icons.warning_amber_rounded,
+                          ),
+                        ),
+                      ),
+                  ].indexed) ...[if (i > 0) const SizedBox(width: 8), w],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: verAvisos || filas.isEmpty
+                  ? Tarjeta(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      child: avisos.isEmpty
+                          ? Text('No hay nada nuevo que importar.', style: TextStyle(fontSize: 13, color: P.textoSuave))
+                          : ListView(
+                              shrinkWrap: true,
                               children: [
-                                const Icon(Icons.warning_amber_rounded, size: 16, color: P.ambar),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text(a, style: const TextStyle(fontSize: 13))),
+                                for (final a in avisos)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.warning_amber_rounded, size: 16, color: P.ambar),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(a, style: const TextStyle(fontSize: 13))),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
-                          ),
-                      ],
-                    ),
-            )
-          : _tablaCorta(columnas, filas),
-      sobran: verAvisos ? 0 : filas.length - _maxFilas,
+                    )
+                  : _tablaCorta(columnas, filas, maxFilas: _maxFilas - 1),
+            ),
+          ),
+        ],
+      ),
+      sobran: verAvisos ? 0 : filas.length - (_maxFilas - 1),
       nota: haciendo,
       controles: [
         _neutro('Elegir otro archivo', progreso == null ? elegir : null),
