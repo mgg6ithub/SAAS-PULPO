@@ -386,5 +386,3 @@ html.intro .nav .brand img { visibility: hidden; }
 .intro-pulpo__cabeza { transform-origin: 50% 100%; opacity: 0; }
 .intro-pulpo__ojos circle { transform-origin: center; }
 .intro-t { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
-.intro-t--i { transform-origin: 100% 0%; }
-.intro-t--d { transform-origin: 0% 0%; }

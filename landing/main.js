@@ -363,19 +363,48 @@ const conTema = (url) => {
     { opacity: 1, transform: "none" },
   ], { duration: 700, easing: "ease-out" });
 
-  // 2. Los tentáculos salen uno a uno, de dentro hacia fuera, alternando lados, y se mecen.
+  // 2. Los tentáculos salen uno a uno, de dentro hacia fuera, alternando lados. Mientras salen se doblan
+  // como en el agua: cada punto gira sobre la base tanto más cuanto más cerca de la punta, con una onda
+  // que recorre el tentáculo de la base a la punta; se cierran hacia el cuerpo y se calman hasta su forma.
   const orden = [0, 3, 1, 4, 2, 5];
-  orden.forEach((i, n) => {
+  const inicio = performance.now();
+  const ondas = orden.map((i, n) => {
     const t = tentaculos[i];
-    const lado = i < 3 ? -1 : 1;
-    a(t, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 650, delay: 450 + n * 90, easing: "cubic-bezier(.2,.8,.2,1)" });
-    a(t, [
-      { transform: `rotate(${lado * -18}deg)` },
-      { transform: `rotate(${lado * 8}deg)`, offset: 0.5 },
-      { transform: `rotate(${lado * -4}deg)`, offset: 0.75 },
-      { transform: "none" },
-    ], { duration: 1100, delay: 450 + n * 90, easing: "ease-in-out" });
+    const d0 = t.getAttribute("d");
+    const num = d0.match(/-?\d+(\.\d+)?/g).map(Number);
+    const pts = [];
+    for (let k = 0; k < num.length; k += 2) pts.push([num[k], num[k + 1]]);
+    let largo = 0;
+    const acum = pts.map((p, k) => (k ? (largo += Math.hypot(p[0] - pts[k - 1][0], p[1] - pts[k - 1][1])) : 0));
+    const w = acum.map((x) => x / largo); // 0 en la base, 1 en la punta
+    const retraso = 450 + n * 90;
+    a(t, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 650, delay: retraso, easing: "cubic-bezier(.2,.8,.2,1)" });
+    return { t, d0, pts, w, retraso, lado: i < 3 ? -1 : 1, fase: n * 0.8 };
   });
+  const suave = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  const mover = (ahora) => {
+    if (fin) return;
+    let vivo = false;
+    ondas.forEach(({ t, d0, pts, w, retraso, lado, fase }) => {
+      const ms = ahora - inicio - retraso;
+      const dur = 2000;
+      if (ms >= dur) { t.setAttribute("d", d0); return; }
+      vivo = true;
+      const s = Math.max(0, ms) / 1000;
+      const cierre = lado * -0.45 * (1 - suave(ms / 1100)); // abiertos al salir, se cierran hacia el cuerpo
+      const amp = 0.32 * suave(ms / 250) * (1 - suave((ms - 300) / (dur - 300))); // la onda sube rápido y se apaga
+      const [bx, by] = pts[0];
+      const q = pts.map(([x, y], k) => {
+        const ang = w[k] * (cierre + amp * Math.sin(s * 9 - w[k] * 4.5 + fase));
+        const c = Math.cos(ang), sn = Math.sin(ang);
+        const dx = x - bx, dy = y - by;
+        return [(bx + dx * c - dy * sn).toFixed(1), (by + dx * sn + dy * c).toFixed(1)];
+      });
+      t.setAttribute("d", `M${q[0]}C${q[1]} ${q[2]} ${q[3]}C${q[4]} ${q[5]} ${q[6]}`);
+    });
+    if (vivo) requestAnimationFrame(mover);
+  };
+  requestAnimationFrame(mover);
 
   // 3. Parpadeo.
   ojos.forEach((o) => a(o, [
