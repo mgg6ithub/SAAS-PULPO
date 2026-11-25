@@ -108,6 +108,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
           ),
         ],
       ),
+      const SizedBox(height: 10),
       // Qué se hace aquí; mismo alto en Importar y en Exportar, para que la ventana no salte al cambiar.
       SizedBox(
         height: 38,
@@ -152,6 +153,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
             onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
           ),
           contenido: _tablaExportar(),
+          sobran: filasExportar(que, store).length - _maxFilas,
           pie: [
             FilledButton(
               onPressed: () =>
@@ -200,6 +202,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
             ],
           ),
           contenido: _tablaPlantilla(),
+          sobran: que.ejemplos.length - _maxFilas,
           pie: [
             FilledButton(onPressed: elegir, child: const Text('Elegir archivo CSV')),
             const SizedBox(width: 14),
@@ -221,8 +224,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
   double get _altoTabla {
     final datos = filasExportar(que, store).length;
     final filas = [que.ejemplos.length, datos, 1].reduce(max).clamp(1, _maxFilas);
-    final mas = datos > _maxFilas || que.ejemplos.length > _maxFilas;
-    return 46 + 57.0 * filas + 2 + (mas ? 30 : 0);
+    return 46 + 57.0 * filas + 2;
   }
 
   /// Esqueleto común de Importar y Exportar: título con su flecha (y el tipo, desde Ajustes) y [derecha] en una
@@ -232,6 +234,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
     required Widget derecha,
     required Widget contenido,
     required List<Widget> pie,
+    int sobran = 0,
   }) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -258,25 +261,34 @@ class _ImportarExportarState extends State<ImportarExportar> {
         child: Align(alignment: Alignment.topLeft, child: contenido),
       ),
       const SizedBox(height: 14),
-      SizedBox(height: 40, child: Row(children: pie)),
+      // Abajo: el botón a la izquierda y, a la derecha del todo, cuántas filas más hay.
+      SizedBox(
+        height: 40,
+        child: Row(
+          children: [
+            Expanded(child: Row(children: pie)),
+            if (sobran > 0) ...[const SizedBox(width: 16), _mas(sobran)],
+          ],
+        ),
+      ),
     ],
   );
 
-  /// Tabla con como mucho [_maxFilas] filas y, debajo a la izquierda, cuántas más hay.
-  Widget _tablaCorta(List<Col> columnas, List<List<Widget>> filas) => Column(
+  /// Tabla con como mucho [_maxFilas] filas y, debajo a la derecha, cuántas más hay.
+  Widget _tablaCorta(List<Col> columnas, List<List<Widget>> filas, {bool conMas = true}) => Column(
     mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.end,
     children: [
       _tabla(columnas, filas.take(_maxFilas).toList(), maxFilas: _maxFilas),
-      if (filas.length > _maxFilas)
-        Padding(
-          padding: const EdgeInsets.only(top: 10, left: 4),
-          child: Text(
-            'y ${filas.length - _maxFilas} ${filas.length - _maxFilas == 1 ? 'fila' : 'filas'} más',
-            style: TextStyle(fontSize: 13, color: P.textoSuave),
-          ),
-        ),
+      if (conMas && filas.length > _maxFilas)
+        Padding(padding: const EdgeInsets.only(top: 10, right: 4), child: _mas(filas.length - _maxFilas)),
     ],
+  );
+
+  /// «y 6 filas más», en morado: lo que no cabe en la tabla.
+  Widget _mas(int n) => Text(
+    'y $n ${n == 1 ? 'fila' : 'filas'} más',
+    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.morado),
   );
 
   /// Ancho de una columna según su título.
@@ -291,6 +303,8 @@ class _ImportarExportarState extends State<ImportarExportar> {
     [
       for (final f in que.ejemplos) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
     ],
+    // Las filas de más van abajo a la derecha, junto al botón.
+    conMas: false,
   );
 
   /// Lo que se va a exportar, con las columnas del formato elegido (en PDF, las que caben).
@@ -311,6 +325,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
       [
         for (final f in filas.skip(1)) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
       ],
+      conMas: false,
     );
   }
 
