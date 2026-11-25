@@ -120,4 +120,20 @@ void main() {
     store.ponerChecklists([remota]);
     expect(store.tarea('ot1')!.checklist.single.paso, 'Nuevo paso');
   });
+
+  testWidgets('al abrir Más opciones baja un poco para verlas', (tester) async {
+    tester.view.physicalSize = const Size(1400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: PlanForm(activoId: 'a1'))));
+    await tester.pumpAndSettle();
+    final lista = tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+    await tester.ensureVisible(find.text('Mostrar'));
+    await tester.pumpAndSettle();
+    final antes = lista.pixels;
+    await tester.tap(find.text('Mostrar'));
+    await tester.pumpAndSettle();
+    expect(lista.pixels, greaterThan(antes));
+    expect(find.text('Ocultar'), findsOneWidget);
+  });
 }

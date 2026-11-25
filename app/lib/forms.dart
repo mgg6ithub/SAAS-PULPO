@@ -722,7 +722,7 @@ class FilaInterruptor extends StatelessWidget {
                     onChanged: onChanged,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     activeThumbColor: Colors.white,
-                    activeTrackColor: P.texto,
+                    activeTrackColor: P.morado,
                     inactiveThumbColor: P.textoSuave,
                     inactiveTrackColor: P.hover,
                     trackOutlineColor: WidgetStateProperty.resolveWith(
@@ -762,12 +762,31 @@ class MasOpciones extends StatefulWidget {
 
 class _MasOpcionesState extends State<MasOpciones> {
   bool _encima = false;
+  final _cabecera = GlobalKey();
+
+  /// Al abrir, un pequeño desplazamiento hacia abajo para que se vean las opciones nuevas.
+  @override
+  void didUpdateWidget(MasOpciones antes) {
+    super.didUpdateWidget(antes);
+    if (!widget.abierto || antes.abierto) return;
+    Future.delayed(const Duration(milliseconds: 120), () {
+      final c = _cabecera.currentContext;
+      if (c == null || !c.mounted) return;
+      Scrollable.ensureVisible(
+        c,
+        alignment: .1,
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Padding(
+        key: _cabecera,
         padding: const EdgeInsets.only(bottom: 8),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -795,30 +814,34 @@ class _MasOpcionesState extends State<MasOpciones> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    height: 34,
-                    padding: const EdgeInsets.only(left: 12, right: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(P.radioControl),
-                      border: Border.all(color: _encima ? P.textoSuave.withValues(alpha: .5) : P.borde),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.abierto ? 'Ocultar' : 'Mostrar',
-                          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  // Solo la palabra y la flecha, sin borde: la flecha gira con un pequeño rebote.
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.abierto ? 'Ocultar' : 'Mostrar',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: _encima ? P.morado : P.texto,
                         ),
-                        const SizedBox(width: 4),
-                        AnimatedRotation(
-                          turns: widget.abierto ? .5 : 0,
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOutCubic,
-                          child: Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
+                      ),
+                      const SizedBox(width: 2),
+                      AnimatedRotation(
+                        turns: widget.abierto ? .5 : 0,
+                        duration: const Duration(milliseconds: 420),
+                        curve: Curves.easeOutBack,
+                        child: AnimatedScale(
+                          scale: _encima ? 1.15 : 1,
+                          duration: const Duration(milliseconds: 180),
+                          child: Icon(
+                            Icons.expand_more_rounded,
+                            size: 22,
+                            color: _encima ? P.morado : P.textoSuave,
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -1819,7 +1819,7 @@ class _ActivoFormState extends State<ActivoForm> {
           campo('Repuestos', repuestos, lineas: 3),
         ]),
         Bloque('Notas', [campo('Notas internas', notas, lineas: 3)]),
-        Bloque('Checklist', descripcion: 'Pasos que marca el técnico en sus órdenes, si el mantenimiento no trae otros.', [
+        Bloque('Checklist', descripcion: 'Guía de lo que el técnico tiene que comprobar, si el mantenimiento no trae otra. La ve en su orden de trabajo y sale en el parte.', [
           EditorChecklist(a.checklist, (pasos) {
             setState(() => a.checklist = pasos);
             _programarGuardado();

@@ -941,7 +941,7 @@ class _PlanFormState extends State<PlanForm> {
               onChanged: (v) => setState(() => p.activa = v),
             ),
           ]),
-        Bloque('Checklist', descripcion: 'Pasos que marca el técnico en la orden.', [
+        Bloque('Checklist', descripcion: 'Guía de lo que el técnico tiene que comprobar. La ve en su orden de trabajo, marca cada paso y sale en el parte.', [
           EditorChecklist(p.checklist, (pasos) => setState(() => p.checklist = pasos), propio: p.id),
         ]),
         MasOpciones(
@@ -949,7 +949,8 @@ class _PlanFormState extends State<PlanForm> {
           texto: 'Repuestos, procedimiento, medición y preparación.',
           onTap: () => setState(() => _mas = !_mas),
           children: [
-          Bloque('Repuestos', [
+          // Sin línea encima: sale justo debajo de «Más opciones».
+          Bloque('Repuestos', primero: true, [
             campo('Repuestos', repuestos, hint: 'Filtro de aceite, 12 l de aceite 15W40…', lineas: 3),
           ]),
           Bloque('Procedimiento', [
