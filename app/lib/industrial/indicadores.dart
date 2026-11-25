@@ -173,12 +173,12 @@ class IndicadoresPultec extends StatelessWidget {
               return Tabla(
                 columnas: [
                   const Col('Activo', flex: 3),
-                  const Col('Disponibilidad', flex: 3),
-                  const Col('Averías', ancho: 90),
-                  const Col('MTBF', ancho: 120),
-                  const Col('MTTR', ancho: 100),
-                  if (ancho) const Col('Preventivo', ancho: 110),
-                  if (ancho) const Col('Cumplimiento', ancho: 120),
+                  Col('Disponibilidad', flex: 3, ayuda: ayudaEstadisticas['Disponibilidad']),
+                  const Col('Averías', ancho: 90, ayuda: 'Incidencias avisadas en el periodo, sin las desestimadas.'),
+                  Col('MTBF', ancho: 120, ayuda: ayudaEstadisticas['MTBF, entre averías']),
+                  Col('MTTR', ancho: 100, ayuda: ayudaEstadisticas['MTTR, en reparar']),
+                  if (ancho) Col('Preventivo', ancho: 110, ayuda: ayudaEstadisticas['Preventivo']),
+                  if (ancho) Col('Cumplimiento', ancho: 120, ayuda: ayudaEstadisticas['Cumplimiento del plan']),
                 ],
                 filas: filas.length,
                 celdas: (n) {

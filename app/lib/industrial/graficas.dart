@@ -12,6 +12,71 @@ import '../widgets.dart';
 /// Tono [i] de [n] del morado: del pleno al casi fondo, para segmentos y series.
 Color tonoMorado(int i, int n) => Color.lerp(P.morado, P.superficie, n <= 1 ? 0 : i / (n - 1) * .72)!;
 
+/// Qué significa cada cifra y gráfica de Estadísticas, para el globo negro al pasar el ratón.
+const ayudaEstadisticas = <String, String>{
+  'MTBF, entre averías':
+      'Tiempo medio entre averías (MTBF). Cuántos días aguanta una máquina sin romperse, de media. Cuanto más alto, mejor.',
+  'MTTR, en reparar':
+      'Tiempo medio de reparación (MTTR). Horas desde que se avisa de una incidencia hasta que queda resuelta. Cuanto más bajo, mejor.',
+  'Disponibilidad':
+      'Parte del periodo en que las máquinas pudieron trabajar: se descuenta el tiempo con una incidencia grave abierta.',
+  'Preventivo':
+      'De todas las órdenes hechas, cuántas fueron mantenimiento programado. Si baja, se está reparando más de lo que se previene.',
+  'Cumplimiento del plan':
+      'Preventivos hechos frente a los que siguen vencidos sin hacer. 100 % es ir al día con el plan.',
+  'Preventivo frente a correctivo':
+      'Preventivo: mantenimiento programado para evitar averías. Correctivo: reparaciones de algo que ya falló.',
+  'Menos disponibles': 'Las máquinas que más tiempo han estado paradas por incidencias graves en el periodo.',
+  'Hechas en el periodo': 'Órdenes de trabajo terminadas de este activo y sus componentes en el periodo elegido.',
+  'Pendientes': 'Órdenes de trabajo abiertas ahora mismo, estén o no en fecha.',
+  'Atrasadas': 'Órdenes pendientes cuya fecha ya ha pasado.',
+  'Incidencias': 'Averías o problemas avisados en el periodo.',
+  'Con problema en el parte': 'Órdenes que el técnico cerró indicando un problema o que no se pudieron hacer.',
+  'Contador': 'Horas de uso acumuladas de la máquina, según la última lectura.',
+  'Órdenes hechas': 'Cuántas órdenes se terminaron en cada día, semana o mes del periodo.',
+  'Estado de las órdenes': 'Hechas en el periodo frente a las pendientes de ahora, separando las que van atrasadas.',
+  'Medidas': 'Cuántas veces se apuntó el valor en el periodo.',
+  'Última': 'El último valor apuntado y su tendencia reciente.',
+  'Media': 'La media de los valores apuntados en el periodo.',
+  'Fuera de límites': 'Medidas por debajo del mínimo o por encima del máximo admitido. Cada una abre una incidencia.',
+  'Órdenes hechas por el equipo': 'Órdenes terminadas por todos los técnicos en cada día, semana o mes.',
+  'Quién hace más': 'Los técnicos con más órdenes terminadas en el periodo.',
+  'Incidencias en el tiempo': 'Cuántas incidencias se avisaron en cada día, semana o mes.',
+  'Cómo acabaron': 'Las incidencias del periodo: abiertas, resueltas o desestimadas porque no hacía falta intervenir.',
+};
+
+/// Globo negro con la explicación al pasar el ratón por encima (sin texto, deja el hijo tal cual).
+class Ayuda extends StatelessWidget {
+  final String? texto;
+  final Widget child;
+  const Ayuda(this.texto, {super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) => texto == null
+      ? child
+      : Tooltip(
+          message: texto,
+          waitDuration: const Duration(milliseconds: 250),
+          preferBelow: false,
+          constraints: const BoxConstraints(maxWidth: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(color: P.tinta, borderRadius: BorderRadius.circular(P.radioControl)),
+          textStyle: const TextStyle(fontSize: 13, color: Colors.white, height: 1.4),
+          child: child,
+        );
+}
+
+/// La etiqueta y, si tiene explicación, un «?» pequeño que avisa de que hay globo.
+Widget _conAyuda(Widget etiqueta, bool hay) => !hay
+    ? etiqueta
+    : Row(
+        children: [
+          Flexible(child: etiqueta),
+          const SizedBox(width: 5),
+          Icon(Icons.help_outline_rounded, size: 14, color: P.textoSuave.withValues(alpha: .7)),
+        ],
+      );
+
 /// Avance 0 → 1 de la entrada de una gráfica (750 ms, easeOutCubic). Se repite si cambia la [key].
 class EntradaGrafica extends StatelessWidget {
   final Widget Function(double v) builder;
@@ -48,9 +113,15 @@ class TarjetaGrafica extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    titulo,
-                    style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
+                  Ayuda(
+                    ayudaEstadisticas[titulo],
+                    child: _conAyuda(
+                      Text(
+                        titulo,
+                        style: TextStyle(fontFamily: P.titulos, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -.3),
+                      ),
+                      ayudaEstadisticas.containsKey(titulo),
+                    ),
                   ),
                   if (nota != null) Text(nota!, style: TextStyle(fontSize: 13, color: P.textoSuave)),
                 ],
@@ -80,14 +151,20 @@ class CifraGrafica extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final grande = TextStyle(fontFamily: P.titulos, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -.8, height: 1.1);
-    return Tarjeta(
+    final ayuda = ayudaEstadisticas[etiqueta];
+    return Ayuda(
+      ayuda,
+      child: Tarjeta(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       child: EntradaGrafica(
         ms: 900,
         builder: (v) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(etiqueta, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: P.textoSuave)),
+            _conAyuda(
+              Text(etiqueta, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: P.textoSuave)),
+              ayuda != null,
+            ),
             const SizedBox(height: 8),
             SizedBox(
               height: 36,
@@ -116,6 +193,7 @@ class CifraGrafica extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
