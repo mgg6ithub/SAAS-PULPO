@@ -1262,7 +1262,11 @@ class Nube {
         final remoto = _filas(Store()..ponerDeLaNube(d));
         final aqui = _filas(s);
         final visto = _comoClaves(_enviado), base = _comoClaves(remoto), local = _comoClaves(aqui);
-        if (mapEquals(visto, base)) continue;
+        if (mapEquals(visto, base)) {
+          // Solo ha cambiado una checklist (no va en las filas que se sincronizan): se pone tal cual.
+          s.ponerChecklists(d.tareas);
+          continue;
+        }
         final pendientes = [
           for (final k in {...visto.keys, ...local.keys})
             if (visto[k] != local[k]) k,

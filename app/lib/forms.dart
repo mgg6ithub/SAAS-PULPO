@@ -1692,6 +1692,8 @@ class _TareaFormState extends State<TareaForm> {
     final ahora = jsonEncode(t.toJson());
     if (ahora == _guardado) return;
     _guardado = ahora;
+    // La checklist la guarda su función: se queda la de la tienda (quizá ya marcada por el técnico).
+    t.checklist = store.tarea(t.id)?.checklist ?? t.checklist;
     store.guardarTarea(t);
   }
 
@@ -1701,9 +1703,17 @@ class _TareaFormState extends State<TareaForm> {
     if (errorHorario != null) return _irA(_claveCuando);
     _volcar();
     final alta = store.tarea(t.id) == null;
+    if (!alta) t.checklist = store.tarea(t.id)!.checklist;
     store.guardarTarea(t);
     // OT creada a mano: con su píldora «Nuevo» hasta que se abra.
     if (alta) store.marcarNuevo(t.id);
+    // Su checklist, en cuanto la orden esté en la base (la guarda su función, no la sincronización).
+    final nube = store.nube, pasos = t.checklist;
+    if (industrial && alta && nube != null && pasos.isNotEmpty) {
+      nube.guardado.then((_) => nube.marcarChecklist(t.id, pasos)).catchError((Object e) {
+        debugPrint('Pultec: no se pudo guardar la checklist de la orden nueva: $e');
+      });
+    }
     if (widget.incrustada) {
       ScaffoldMessenger.of(
         context,
@@ -1989,9 +1999,9 @@ class _TareaFormState extends State<TareaForm> {
           ],
         ),
         // Pultec: la checklist de la orden, en vivo (lo que va marcando el técnico); la oficina también puede marcar.
-        if (industrial && !t.esPlantilla && checklistDe(store.tarea(t.id) ?? t).isNotEmpty)
-          Bloque('Checklist', descripcion: 'Lo que marca el técnico, en vivo.', [
-            ChecklistOt(store.tarea(t.id) ?? t, puedeMarcar: t.estado.abierta && !widget.soloLectura, sinTarjeta: true),
+        if (industrial && !t.esPlantilla && !widget.soloLectura)
+          Bloque('Checklist', descripcion: 'Se guarda sola y el técnico la ve al momento.', [
+            ChecklistEnOt(store.tarea(t.id) ?? t, puedeMarcar: t.estado.abierta, borrador: nueva),
           ]),
         if (!industrial)
           Bloque('Precio', descripcion: 'Lo que se cobra cada vez que se hace, sin IVA. Solo lo ves tú.', [

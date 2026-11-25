@@ -1061,6 +1061,21 @@ class Store extends ChangeNotifier {
     await nube?.marcarChecklist(t.id, pasos);
   }
 
+  /// Pone las checklists de las OT leídas de la base (no van en la sincronización: las escribe su función), para
+  /// ver al momento lo que marca o cambia otra persona.
+  void ponerChecklists(List<Tarea> deLaNube) {
+    var cambio = false;
+    for (final x in deLaNube) {
+      final t = tarea(x.id);
+      if (t == null || jsonEncode([for (final p in t.checklist) p.toJson()]) == jsonEncode([for (final p in x.checklist) p.toJson()])) {
+        continue;
+      }
+      t.checklist = x.checklist;
+      cambio = true;
+    }
+    if (cambio) notifyListeners();
+  }
+
   void guardarTarea(Tarea t) {
     if (t.padreId != null) {
       // El subtrabajo comparte el cliente de su padre.

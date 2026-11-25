@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
@@ -53,7 +55,13 @@ class EditorChecklist extends StatefulWidget {
 
   /// Id del activo o mantenimiento que se edita, para no ofrecerse a sí mismo al copiar.
   final String? propio;
-  const EditorChecklist(this.pasos, this.onChanged, {super.key, this.propio});
+
+  /// Se abre editando (por defecto, solo si está vacía).
+  final bool? abierta;
+
+  /// «Listo» lo hace quien lo usa (p. ej. la orden vuelve a la lista para marcar); si no, se cierra aquí.
+  final VoidCallback? onListo;
+  const EditorChecklist(this.pasos, this.onChanged, {super.key, this.propio, this.abierta, this.onListo});
 
   @override
   State<EditorChecklist> createState() => _EditorChecklistState();
@@ -87,7 +95,7 @@ class _EditorChecklistState extends State<EditorChecklist> {
   FocusNode? _nuevo;
 
   /// Editando los pasos; con «Listo» se cierra y quedan solo para leer («Editar» lo vuelve a abrir).
-  late bool _editando = _campos.isEmpty;
+  late bool _editando = widget.abierta ?? _campos.isEmpty;
 
   /// Vista de solo lectura: los pasos numerados y «Editar».
   Widget _cerrada() => Padding(
@@ -234,6 +242,8 @@ class _EditorChecklistState extends State<EditorChecklist> {
                       }
                       _editando = false;
                     });
+                    _avisar();
+                    widget.onListo?.call();
                   },
                 ),
             ],
@@ -377,5 +387,89 @@ class ChecklistOt extends StatelessWidget {
     ];
     if (sinTarjeta) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: filas);
     return SeccionTarjeta(titulo: 'Checklist', subtitulo: '$hechos de ${pasos.length}', children: filas);
+  }
+}
+
+/// Los pasos de [antes] que siguen en [textos] conservan lo hecho (hora, quién, nota); los nuevos, sin hacer.
+List<PasoChecklist> pasosConLoHecho(List<PasoChecklist> antes, List<String> textos) {
+  final quedan = [...antes];
+  return [
+    for (final x in textos)
+      if (quedan.indexWhere((p) => p.paso == x) case final i when i >= 0) quedan.removeAt(i) else PasoChecklist(x),
+  ];
+}
+
+/// La checklist dentro de la orden: se marca y, con «Editar pasos», se cambian los pasos de esta orden (o se
+/// añade una si no tenía). Se guarda sola al momento y el técnico la ve en vivo. Con [borrador] (orden aún sin
+/// crear) solo cambia la orden: se guarda al crearla.
+class ChecklistEnOt extends StatefulWidget {
+  final Tarea t;
+  final bool puedeMarcar, borrador;
+  const ChecklistEnOt(this.t, {super.key, this.puedeMarcar = true, this.borrador = false});
+
+  @override
+  State<ChecklistEnOt> createState() => _ChecklistEnOtState();
+}
+
+class _ChecklistEnOtState extends State<ChecklistEnOt> {
+  bool _editando = false;
+  Timer? _espera;
+  List<PasoChecklist>? _pendiente;
+
+  @override
+  void dispose() {
+    if (_espera?.isActive ?? false) _guardar();
+    super.dispose();
+  }
+
+  void _cambiar(List<String> textos) {
+    final pasos = pasosConLoHecho(checklistDe(widget.t), textos);
+    if (widget.borrador) {
+      widget.t.checklist = pasos;
+      return;
+    }
+    // Un momento después de dejar de escribir, no a cada letra.
+    _pendiente = pasos;
+    _espera?.cancel();
+    _espera = Timer(const Duration(milliseconds: 600), _guardar);
+  }
+
+  Future<void> _guardar() async {
+    _espera?.cancel();
+    final pasos = _pendiente;
+    _pendiente = null;
+    if (pasos == null) return;
+    try {
+      await store.marcarChecklist(widget.t, pasos);
+    } catch (e) {
+      debugPrint('Pultec: no se pudo guardar la checklist: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_editando) {
+      return EditorChecklist(
+        [for (final p in checklistDe(widget.t)) p.paso],
+        _cambiar,
+        propio: widget.t.planId,
+        abierta: true,
+        onListo: () {
+          _guardar();
+          setState(() => _editando = false);
+        },
+      );
+    }
+    final vacia = checklistDe(widget.t).isEmpty;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!vacia) ChecklistOt(widget.t, puedeMarcar: widget.puedeMarcar && !widget.borrador, sinTarjeta: true),
+          Enlace(vacia ? 'Añadir checklist' : 'Editar pasos', onTap: () => setState(() => _editando = true)),
+        ],
+      ),
+    );
   }
 }

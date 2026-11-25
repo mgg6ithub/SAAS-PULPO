@@ -105,4 +105,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Qué se mide'), findsOneWidget);
   });
+
+  test('al editar los pasos de la orden, los que siguen conservan lo hecho', () {
+    final antes = [PasoChecklist('A', hecho: true, nota: 'ok'), PasoChecklist('B')];
+    final r = pasosConLoHecho(antes, ['B', 'C', 'A']);
+    expect([for (final p in r) p.paso], ['B', 'C', 'A']);
+    expect(r.last.hecho, true);
+    expect(r.last.nota, 'ok');
+    expect(r[1].hecho, false);
+  });
+
+  test('los cambios de checklist de otra persona llegan sin tocar lo demás', () {
+    final remota = Tarea.fromJson(ot.toJson())..checklist = [PasoChecklist('Nuevo paso')];
+    store.ponerChecklists([remota]);
+    expect(store.tarea('ot1')!.checklist.single.paso, 'Nuevo paso');
+  });
 }
