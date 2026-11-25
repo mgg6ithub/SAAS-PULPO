@@ -8,6 +8,7 @@ import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../informes.dart' show FotoGuardada;
 import 'invitar.dart';
 import '../marca.dart';
 
@@ -22,7 +23,7 @@ Future<void> abrirAccesos(BuildContext context) => showDialog<void>(
       side: BorderSide(color: P.borde),
     ),
     child: ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: 560, maxHeight: MediaQuery.sizeOf(c).height * .85),
+      constraints: BoxConstraints(maxWidth: 600, maxHeight: MediaQuery.sizeOf(c).height * .85),
       child: const Accesos(),
     ),
   ),
@@ -89,121 +90,172 @@ class _AccesosState extends State<Accesos> {
   bool _invitado(Trabajador w) => _invitaciones.any((i) => _nube.esFicha(w.id, i.trabajadorId));
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(20),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Accesos de ${_nube.nombre}',
-                style: TextStyle(color: P.texto, fontSize: 16, fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) {
+    final sinCuenta = _accesos == null ? <Trabajador>[] : _sinCuenta.where((w) => !_invitado(w)).toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Accesos',
+                      style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, color: P.texto),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Quién entra en ${_nube.nombre} con su cuenta y qué puede hacer.',
+                      style: TextStyle(color: P.textoSuave, fontSize: 13.5, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cerrar',
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(CupertinoIcons.xmark, size: 18, color: P.textoSuave),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_fallo)
+            Text('No se pudieron leer los accesos. Comprueba la conexión.', style: TextStyle(color: P.rojo))
+          else if (_accesos == null)
+            const Center(
+              child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    _seccion('Con acceso', [for (final a in _accesos!) _filaAcceso(a)]),
+                    if (_invitaciones.isNotEmpty)
+                      _seccion('Invitaciones pendientes', [..._invitaciones.map(_filaInvitacion)]),
+                    if (sinCuenta.isNotEmpty)
+                      _seccion(m('Trabajadores sin cuenta'), [for (final w in sinCuenta) _filaSinCuenta(w)]),
+                  ],
+                ),
               ),
             ),
-            IconButton(
-              tooltip: 'Cerrar',
-              onPressed: () => Navigator.pop(context),
-              icon: Icon(CupertinoIcons.xmark, size: 18, color: P.textoSuave),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Quién entra con su propia cuenta y qué puede hacer.',
-          style: TextStyle(color: P.textoSuave, fontSize: 13.5, height: 1.4),
-        ),
-        const SizedBox(height: 12),
-        if (_fallo)
-          Text('No se pudieron leer los accesos. Comprueba la conexión.', style: TextStyle(color: P.rojo))
-        else if (_accesos == null)
-          const Center(
-            child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(strokeWidth: 2)),
-          )
-        else
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                _titulo('Con acceso'),
-                for (final a in _accesos!) _filaAcceso(a),
-                if (_invitaciones.isNotEmpty) ...[
-                  _titulo('Invitaciones pendientes'),
-                  ..._invitaciones.map(_filaInvitacion),
-                ],
-                if (_sinCuenta.where((w) => !_invitado(w)).isNotEmpty) ...[
-                  _titulo(m('Trabajadores sin cuenta')),
-                  for (final w in _sinCuenta.where((w) => !_invitado(w))) _filaSinCuenta(w),
-                ],
-              ],
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: BotonAccion(
+                'Invitar a un socio',
+                icono: Icons.person_add_alt_1_rounded,
+                tooltip: 'Otra persona que lo gestiona todo contigo',
+                onPressed: () async {
+                  await invitarAdministrador(context);
+                  await _cargar();
+                },
+              ),
             ),
           ),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerRight,
-          child: OutlinedButton(
-            onPressed: () async {
-              await invitarAdministrador(context);
-              await _cargar();
-            },
-            child: const Text('Invitar a un socio'),
+        ],
+      ),
+    );
+  }
+
+  /// Un bloque: título con cuántos y sus filas en una tarjeta de borde fino, separadas por líneas.
+  Widget _seccion(String titulo, List<Widget> filas) => Padding(
+    padding: const EdgeInsets.only(bottom: 18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 8),
+          child: Row(
+            children: [
+              Text(titulo, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: P.texto)),
+              const SizedBox(width: 6),
+              Text('${filas.length}', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+            ],
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(P.radio),
+            border: Border.all(color: P.borde),
+          ),
+          child: Column(
+            children: [
+              for (final (i, f) in filas.indexed) ...[
+                if (i > 0) Divider(height: 1, color: P.borde),
+                f,
+              ],
+            ],
           ),
         ),
       ],
     ),
   );
 
-  Widget _titulo(String t) => Padding(
-    padding: const EdgeInsets.only(top: 12, bottom: 4),
-    child: Text(
-      t.toUpperCase(),
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.textoSuave),
+  /// Foto del técnico si la tiene; si no, sus iniciales en su color.
+  Widget _cara(Trabajador? w, String nombre, Color color) => w != null && w.foto.isNotEmpty
+      ? ClipOval(child: FotoGuardada(w.foto, width: 36, height: 36))
+      : Avatar(inicialesDe(nombre), w == null ? color : colorPaleta(w.color), size: 36);
+
+  Widget _fila({
+    required Widget lider,
+    required String titulo,
+    required String subtitulo,
+    Widget? etiqueta,
+    required Widget accion,
+  }) => Padding(
+    padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+    child: Row(
+      children: [
+        lider,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                titulo,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: P.texto, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              if (subtitulo.isNotEmpty)
+                Text(
+                  subtitulo,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: P.textoSuave, fontSize: 12.5),
+                ),
+            ],
+          ),
+        ),
+        if (etiqueta != null) ...[etiqueta, const SizedBox(width: 6)],
+        accion,
+      ],
     ),
   );
-
-  Widget _fila({required Widget lider, required String titulo, required String subtitulo, required Widget accion}) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            lider,
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    titulo,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: P.texto, fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    subtitulo,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: P.textoSuave, fontSize: 12.5),
-                  ),
-                ],
-              ),
-            ),
-            accion,
-          ],
-        ),
-      );
 
   Widget _filaAcceso(Acceso a) {
     final yo = a.usuarioId == Supabase.instance.client.auth.currentUser?.id;
     final ficha = _ficha(a.trabajadorId);
-    final nombre = a.nombre.isEmpty ? a.correo : a.nombre;
-    final rol = a.rol == 'admin' ? 'Administrador' : m('Trabajador${ficha == null ? '' : ', ${ficha.nombre}'}');
+    final nombre = ficha?.nombreCompleto ?? (a.nombre.isEmpty ? a.correo : a.nombre);
+    final admin = a.rol == 'admin';
     return _fila(
-      lider: Avatar(inicialesDe(nombre), a.rol == 'admin' ? P.morado : P.textoSuave, size: 32),
+      lider: _cara(ficha, nombre, admin ? P.morado : P.textoSuave),
       titulo: yo ? '$nombre (tú)' : nombre,
-      subtitulo: a.nombre.isEmpty ? rol : '$rol, ${a.correo}',
+      subtitulo: nombre == a.correo ? '' : a.correo,
+      etiqueta: Pill(admin ? 'Administrador' : m('Trabajador'), admin ? P.morado : P.gris),
       accion: BotonMenu<String>(
         tooltip: '¿Qué puede hacer?',
-        seleccionado: a.rol == 'admin' ? 'admin' : 'tb:${ficha?.id}',
+        seleccionado: admin ? 'admin' : 'tb:${ficha?.id}',
         onSelected: (v) => switch (v) {
           'admin' => _hacer(() => _nube.cambiarRol(a.usuarioId, 'admin', trabajadorId: ficha?.id)),
           'quitar' => _quitar(a, nombre),
@@ -213,7 +265,7 @@ class _AccesosState extends State<Accesos> {
           ('admin', const Text('Administrador: ve y gestiona todo')),
           // Para pasar a trabajador hay que ligarlo a una ficha libre (o a la suya).
           for (final w in [?ficha, ..._sinCuenta.where((w) => w != ficha)])
-            ('tb:${w.id}', Text(m('Trabajador: ${w.nombre}'))),
+            ('tb:${w.id}', Text(m('Trabajador: ${w.nombreCompleto}'))),
           ('quitar', Text('Quitar acceso', style: TextStyle(color: P.rojo))),
         ],
         child: Padding(
@@ -232,10 +284,12 @@ class _AccesosState extends State<Accesos> {
   Widget _filaInvitacion(InvitacionPendiente i) {
     final ficha = _ficha(i.trabajadorId);
     final dias = i.caduca.difference(DateTime.now()).inDays;
+    final nombre = i.rol == 'admin' ? 'Socio' : ficha?.nombreCompleto ?? m('Trabajador');
     return _fila(
-      lider: Avatar('?', P.borde, size: 32),
-      titulo: i.rol == 'admin' ? 'Socio (administrador)' : m('Trabajador: ${ficha?.nombre ?? ''}'),
-      subtitulo: dias < 1 ? 'Caduca hoy' : 'Caduca en $dias ${dias == 1 ? 'día' : 'días'}',
+      lider: _cara(ficha, nombre, P.textoSuave),
+      titulo: nombre,
+      subtitulo: dias < 1 ? 'El enlace caduca hoy' : 'El enlace caduca en $dias ${dias == 1 ? 'día' : 'días'}',
+      etiqueta: const Pill('Invitado', P.ambar, punto: true),
       accion: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -245,12 +299,12 @@ class _AccesosState extends State<Accesos> {
               await Clipboard.setData(ClipboardData(text: Nube.enlace(i.codigo)));
               _avisar('Enlace copiado.');
             },
-            icon: Icon(Icons.copy_rounded, size: 18, color: P.textoSuave),
+            icon: Icon(Icons.link_rounded, size: 18, color: P.textoSuave),
           ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: P.rojo),
+          IconButton(
+            tooltip: 'Anular la invitación',
             onPressed: () => _hacer(() => _nube.anularInvitacion(i.id)),
-            child: const Text('Anular'),
+            icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
           ),
         ],
       ),
@@ -258,15 +312,18 @@ class _AccesosState extends State<Accesos> {
   }
 
   Widget _filaSinCuenta(Trabajador w) => _fila(
-    lider: Avatar(inicialesDe(w.nombre), Color(w.color), size: 32),
-    titulo: w.nombre,
-    subtitulo: 'Falta invitarlo',
-    accion: TextButton(
-      onPressed: () async {
-        await invitarTrabajador(context, w);
-        await _cargar();
-      },
-      child: const Text('Invitar'),
+    lider: _cara(w, w.nombreCompleto, P.textoSuave),
+    titulo: w.nombreCompleto,
+    subtitulo: w.email.isEmpty ? 'Aún no entra en ${Marca.nombre}' : w.email,
+    accion: Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Enlace(
+        'Invitar',
+        onTap: () async {
+          await invitarTrabajador(context, w);
+          await _cargar();
+        },
+      ),
     ),
   );
 }
