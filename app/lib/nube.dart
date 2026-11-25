@@ -1492,7 +1492,7 @@ class Nube {
         'salida_lat': w.salidaLat,
         'salida_lng': w.salidaLng,
         'color': w.color,
-        if (industrial) 'grupo_id': grupos.contains(w.grupoId) ? _u(w.grupoId!) : null,
+        if (industrial) 'grupo_ids': [for (final g in w.grupoIds) if (grupos.contains(g)) _u(g)],
       };
     }
     for (final x in s.etiquetas) {
@@ -1718,7 +1718,8 @@ Trabajador _trabajador(Map x) => Trabajador(
   salidaLat: (x['salida_lat'] as num?)?.toDouble(),
   salidaLng: (x['salida_lng'] as num?)?.toDouble(),
   color: (x['color'] as num).toInt(),
-  grupoId: x['grupo_id'] as String?,
+  // Antes, un solo grupo (`grupo_id`).
+  grupoIds: List<String>.from(x['grupo_ids'] as List? ?? [?x['grupo_id'] as String?]),
   // Solo se lee: lo guarda el técnico con `guardarActivosElegidos` (la sincronización no lo pisa).
   activosElegidos: List<String>.from(x['activos_elegidos'] as List? ?? []),
 );

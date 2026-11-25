@@ -879,7 +879,10 @@ class Store extends ChangeNotifier {
   GrupoTecnicos? grupo(String? id) => id == null ? null : grupos.where((g) => g.id == id).firstOrNull;
 
   List<Trabajador> tecnicosDe(String grupoId) =>
-      trabajadores.where((w) => w.activo && w.grupoId == grupoId).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
+      trabajadores.where((w) => w.activo && w.enGrupo(grupoId)).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
+
+  /// El técnico no está en ningún grupo (que exista).
+  bool sinGrupo(Trabajador w) => !w.grupoIds.any((g) => grupo(g) != null);
 
   /// ¿Ya hay otro grupo con ese nombre? (no se repiten, sin distinguir mayúsculas).
   bool nombreGrupoUsado(String nombre, {String? salvo}) =>
@@ -892,8 +895,8 @@ class Store extends ChangeNotifier {
 
   void borrarGrupo(String id) {
     grupos.removeWhere((g) => g.id == id);
-    for (final w in trabajadores.where((w) => w.grupoId == id)) {
-      w.grupoId = null;
+    for (final w in trabajadores) {
+      w.grupoIds.remove(id);
     }
     for (final t in [...tareas, ...subtareas].where((t) => t.grupoId == id)) {
       t.grupoId = null;

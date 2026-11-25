@@ -288,8 +288,10 @@ class Festivo {
 class Trabajador {
   String id, nombre, apellidos, telefono, email, info, titulos;
 
-  /// Pultec: grupo al que pertenece (null = ninguno).
-  String? grupoId;
+  /// Pultec: grupos en los que está (puede ser más de uno; vacío = ninguno).
+  List<String> grupoIds;
+
+  bool enGrupo(String? id) => id != null && grupoIds.contains(id);
 
   /// Pultec: activos (máquinas) que eligió al entrar la última vez; van con su cuenta.
   List<String> activosElegidos;
@@ -321,9 +323,10 @@ class Trabajador {
     this.salida = '',
     this.salidaLat,
     this.salidaLng,
-    this.grupoId,
+    List<String>? grupoIds,
     List<String>? activosElegidos,
   }) : competencias = competencias ?? [],
+       grupoIds = grupoIds ?? [],
        activosElegidos = activosElegidos ?? [];
 
   String get nombreCompleto => '$nombre $apellidos'.trim();
@@ -344,7 +347,7 @@ class Trabajador {
     'salida': salida,
     'salidaLat': salidaLat,
     'salidaLng': salidaLng,
-    'grupoId': grupoId,
+    if (grupoIds.isNotEmpty) 'grupoIds': grupoIds,
     if (activosElegidos.isNotEmpty) 'activosElegidos': activosElegidos,
   };
 
@@ -365,7 +368,8 @@ class Trabajador {
     salidaLat: (j['salidaLat'] as num?)?.toDouble(),
     salidaLng: (j['salidaLng'] as num?)?.toDouble(),
     activosElegidos: List<String>.from(j['activosElegidos'] as List? ?? []),
-    grupoId: j['grupoId'] as String?,
+    // Antes había un solo grupo (`grupoId`).
+    grupoIds: [...List<String>.from(j['grupoIds'] as List? ?? []), if (j['grupoId'] case final String g) g],
   );
 
   Trabajador copia() => Trabajador.fromJson(toJson());

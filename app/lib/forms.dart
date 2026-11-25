@@ -24,6 +24,7 @@ import 'store.dart';
 import 'theme.dart';
 import 'widgets.dart';
 import 'industrial/checklist.dart';
+import 'screens/grupos.dart' show SelectorGrupos;
 
 // ── Ventana de formulario ──
 // Por defecto sale en el centro desde abajo (como una hoja de iOS) y se puede
@@ -1497,47 +1498,10 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
             ),
           ),
           const SizedBox(height: 12),
-          // Pultec: grupo de técnicos (se crean en Técnicos → Grupos).
+          // Pultec: grupos del técnico (puede estar en varios).
           if (industrial) ...[
-            etiqueta('Grupo'),
-            conMargen(
-              BotonMenu<String>(
-                relleno: EdgeInsets.zero,
-                tooltip: store.grupos.isEmpty ? 'Crea grupos en Técnicos → Grupos' : 'Grupo de técnicos',
-                seleccionado: w.grupoId ?? '',
-                opciones: [
-                  ('', const Text('Sin grupo')),
-                  for (final g in [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre)))
-                    (g.id, textoGrupo(g)),
-                  // Sin salir de la ficha: se crea y se elige.
-                  (
-                    _nuevoGrupo,
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add_rounded, size: 18, color: P.morado),
-                        const SizedBox(width: 6),
-                        Text('Nuevo grupo', style: TextStyle(color: P.morado, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ],
-                onSelected: (v) async {
-                  if (v == _nuevoGrupo) {
-                    final g = await crearGrupoRapido(context);
-                    if (g != null) setState(() => w.grupoId = g.id);
-                    return;
-                  }
-                  setState(() => w.grupoId = v.isEmpty ? null : v);
-                },
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    suffixIcon: Icon(Icons.unfold_more_rounded, size: 18, color: P.textoSuave),
-                  ),
-                  child: Text(store.grupo(w.grupoId)?.nombre ?? 'Sin grupo'),
-                ),
-              ),
-            ),
+            etiqueta('Grupos'),
+            SelectorGrupos(w.grupoIds, (ids) => setState(() => w.grupoIds = ids)),
           ],
           campo(
             industrial ? 'Habilitaciones y formación' : 'Títulos y carnés',
@@ -3031,7 +2995,7 @@ class SelectorTrabajadores extends StatelessWidget {
     onPressed: t.trabajadorIds.contains(w.id) || store.puedeRecibir(w, t)
         ? () {
             t.trabajadorIds.contains(w.id) ? t.trabajadorIds.remove(w.id) : t.trabajadorIds.add(w.id);
-            if (w.grupoId != t.grupoId) t.grupoId = null;
+            if (!w.enGrupo(t.grupoId)) t.grupoId = null;
             onCambio();
           }
         : null,
@@ -3081,27 +3045,25 @@ class SelectorTrabajadores extends StatelessWidget {
                   child: const Text('Repartir en el grupo'),
                 ),
                 const Divider(height: 8),
-                if (ws.every((w) => w.grupoId != g.id))
+                if (ws.every((w) => !w.enGrupo(g.id)))
                   MenuItemButton(onPressed: null, child: Text('Sin técnicos', style: TextStyle(color: P.textoSuave)))
                 else
-                  for (final w in ws.where((w) => w.grupoId == g.id)) _filaTecnico(w),
+                  for (final w in ws.where((w) => w.enGrupo(g.id))) _filaTecnico(w),
               ],
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minWidth: 180),
                 child: Row(
                   children: [
+                    Icon(Icons.groups_rounded, size: 18, color: P.textoSuave),
+                    const SizedBox(width: 8),
                     Text(g.nombre, style: TextStyle(fontWeight: t.grupoId == g.id ? FontWeight.w700 : FontWeight.w500)),
-                    if (g.area.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Text(g.area, style: TextStyle(color: P.textoSuave)),
-                    ],
                   ],
                 ),
               ),
             ),
-          if (ws.any((w) => store.grupo(w.grupoId) == null)) ...[
+          if (ws.any(store.sinGrupo)) ...[
             const Divider(height: 8),
-            for (final w in ws.where((w) => store.grupo(w.grupoId) == null)) _filaTecnico(w),
+            for (final w in ws.where(store.sinGrupo)) _filaTecnico(w),
           ],
         ] else
           for (final w in ws) _filaTecnico(w),
@@ -3672,16 +3634,7 @@ class _MenuEstadoHoy extends StatelessWidget {
   );
 }
 
-const _nuevoGrupo = '__nuevo_grupo__';
 
-/// Nombre del grupo y, en gris, su área (sin separadores).
-Widget textoGrupo(GrupoTecnicos g) => Row(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    Text(g.nombre),
-    if (g.area.isNotEmpty) ...[const SizedBox(width: 8), Text(g.area, style: TextStyle(color: P.textoSuave))],
-  ],
-);
 
 /// Crea un grupo sin salir de donde estás (ficha del técnico, mantenimiento): pide el nombre, que no se repita.
 Future<GrupoTecnicos?> crearGrupoRapido(BuildContext context) async {

@@ -1026,7 +1026,7 @@ class SelectorAsignacionPlan extends StatelessWidget {
   Widget build(BuildContext context) {
     final ws = store.trabajadores.where((w) => w.activo).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
     final grupos = [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre));
-    final sueltos = ws.where((w) => store.grupo(w.grupoId) == null).toList();
+    final sueltos = ws.where(store.sinGrupo).toList();
     final g = store.grupo(grupoId);
     final w = trabajadorId == null ? null : store.trabajador(trabajadorId!);
     return MenuAnchor(
@@ -1065,11 +1065,9 @@ class SelectorAsignacionPlan extends StatelessWidget {
               constraints: const BoxConstraints(minWidth: 180),
               child: Row(
                 children: [
+                  Icon(Icons.groups_rounded, size: 18, color: P.textoSuave),
+                  const SizedBox(width: 8),
                   Text(x.nombre, style: TextStyle(fontWeight: grupoId == x.id ? FontWeight.w700 : FontWeight.w500)),
-                  if (x.area.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Text(x.area, style: TextStyle(color: P.textoSuave)),
-                  ],
                 ],
               ),
             ),

@@ -11,7 +11,7 @@ import '../store.dart';
 import 'accesos.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'tipos_competencias.dart' show abrirGrupos;
+import 'grupos.dart';
 import '../marca.dart';
 import 'tareas.dart' show otsAtrasadas, verAtrasadasDe;
 
@@ -26,7 +26,11 @@ class Trabajadores extends StatefulWidget {
 class _TrabajadoresState extends State<Trabajadores> {
   String q = '';
   int estado = 0; // 0 todos; si no, EstadoHoy.values[estado - 1]
-  String? competencia;
+  /// Pultec: solo los técnicos de este grupo (null = todos).
+  String? grupo;
+
+  /// Grupos plegados en la vista por grupos (por id; «» = Sin grupo).
+  final plegados = <String>{};
   /// Por defecto, en bloques.
   bool lista = false;
 
@@ -54,8 +58,11 @@ class _TrabajadoresState extends State<Trabajadores> {
   Widget build(BuildContext context) {
     final lista = store.trabajadores.where((w) {
       if (estado > 0 && (w.estadoHoy != EstadoHoy.values[estado - 1] || !w.activo)) return false;
-      if (competencia != null && !w.competencias.contains(competencia)) return false;
-      return w.nombreCompleto.toLowerCase().contains(q.toLowerCase());
+      if (grupo != null && !w.enGrupo(grupo)) return false;
+      final t = q.toLowerCase();
+      // También por el nombre de sus grupos.
+      return w.nombreCompleto.toLowerCase().contains(t) ||
+          w.grupoIds.any((g) => store.grupo(g)?.nombre.toLowerCase().contains(t) ?? false);
     }).toList()..sort((a, b) => a.nombreCompleto.compareTo(b.nombreCompleto));
 
     return Stack(
@@ -83,12 +90,13 @@ class _TrabajadoresState extends State<Trabajadores> {
                           seleccion: estado,
                           onChanged: (i) => setState(() => estado = i),
                         ),
-                        if (store.trabajadores.isNotEmpty)
-                          _FiltroCompetencia(competencia, (v) => setState(() => competencia = v)),
                       ],
                       derecha: [
                         if (store.trabajadores.isNotEmpty) ...[
                           Buscador(hint: m('Buscar trabajador…'), onChanged: (v) => setState(() => q = v)),
+                          // Pultec: filtrar por grupo, junto al buscador.
+                          if (industrial && store.grupos.isNotEmpty)
+                            FiltroGrupo(grupo, (v) => setState(() => grupo = v)),
                           SelectorVista(
                             bloquesPrimero: true,
                             lista: this.lista,
@@ -104,13 +112,6 @@ class _TrabajadoresState extends State<Trabajadores> {
                             tooltip: 'Invitar técnicos con un enlace y quitar accesos',
                             onPressed: () => abrirAccesos(context),
                           ),
-                        if (industrial && store.trabajadores.isNotEmpty)
-                          BotonAccion(
-                            'Grupo',
-                            icono: Icons.add_rounded,
-                            tooltip: 'Crear grupos y meter técnicos',
-                            onPressed: () => abrirGrupos(context),
-                          ),
                       ],
                       principal: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -120,6 +121,14 @@ class _TrabajadoresState extends State<Trabajadores> {
                             BotonImportarExportar(
                               tooltip: 'Importar y exportar técnicos',
                               onPressed: () => abrirImportarExportar(context, que: QueImportar.trabajadores),
+                            ),
+                            const SizedBox(width: 8),
+                            // Crear un grupo y meter técnicos dentro.
+                            BotonPrimario(
+                              'Nuevo grupo',
+                              conIcono: true,
+                              icono: iconoGrupo,
+                              onPressed: () => abrirGrupoForm(context),
                             ),
                             const SizedBox(width: 8),
                           ],
@@ -159,7 +168,15 @@ class _TrabajadoresState extends State<Trabajadores> {
                     ? _tabla(lista)
                     // Pultec con grupos: los técnicos segmentados por grupo desde el principio.
                     : industrial && store.grupos.isNotEmpty
-                    ? _RejillaPorGrupos(lista, _tarjeta)
+                    ? _RejillaPorGrupos(
+                        lista,
+                        _tarjeta,
+                        plegados: plegados,
+                        // Con filtros, los grupos vacíos no salen; sin ellos, sí (para ver los recién creados).
+                        conVacios: q.isEmpty && estado == 0 && grupo == null,
+                        soloGrupo: grupo,
+                        onPlegar: (id) => setState(() => plegados.contains(id) ? plegados.remove(id) : plegados.add(id)),
+                      )
                     : ListaRejilla(anchoMin: 260, total: lista.length, item: (i) => _tarjeta(lista[i])),
               ),
             ],
@@ -357,49 +374,23 @@ class _TrabajadoresState extends State<Trabajadores> {
   }
 }
 
-/// Desplegable compacto de competencia, del alto de los demás filtros ("+ Filtro" de Holded).
-class _FiltroCompetencia extends StatelessWidget {
-  final String? valor;
-  final ValueChanged<String?> onChanged;
-  const _FiltroCompetencia(this.valor, this.onChanged);
-
-  @override
-  Widget build(BuildContext context) => PopupMenuButton<String>(
-    tooltip: 'Filtrar por competencia',
-    onSelected: (v) => onChanged(v.isEmpty ? null : v),
-    itemBuilder: (_) => [
-      const PopupMenuItem(value: '', child: Text('Todas las competencias')),
-      for (final c in competencias) PopupMenuItem(value: c, child: Text(c)),
-    ],
-    child: Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: valor == null ? Colors.transparent : P.morado.withValues(alpha: .4)),
-        color: valor == null ? Colors.transparent : P.moradoSuave,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(valor == null ? Icons.add_rounded : Icons.workspace_premium_outlined, size: 16, color: P.morado),
-          const SizedBox(width: 4),
-          Text(
-            valor ?? 'Filtro',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.morado),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-/// Pultec: tarjetas de técnicos por grupo (por nombre de grupo; al final, los que no tienen). Cada grupo con su
-/// título, cuántos son y su área en gris. Virtualizada como `ListaRejilla`.
+/// Pultec: técnicos por grupo, con los grupos arriba (por nombre) y al final los que no tienen. Cada grupo se
+/// pliega o despliega tocando su cabecera; un técnico en varios grupos sale en cada uno. Virtualizada.
 class _RejillaPorGrupos extends StatelessWidget {
   final List<Trabajador> ws;
   final Widget Function(Trabajador) tarjeta;
-  const _RejillaPorGrupos(this.ws, this.tarjeta);
+  final Set<String> plegados;
+  final bool conVacios;
+  final String? soloGrupo;
+  final ValueChanged<String> onPlegar;
+  const _RejillaPorGrupos(
+    this.ws,
+    this.tarjeta, {
+    required this.plegados,
+    required this.conVacios,
+    required this.soloGrupo,
+    required this.onPlegar,
+  });
 
   static const _anchoMin = 260.0, _hueco = 16.0;
   int _cols(BoxConstraints box) => max(1, ((box.maxWidth + _hueco) / (_anchoMin + _hueco)).floor());
@@ -409,14 +400,17 @@ class _RejillaPorGrupos extends StatelessWidget {
     clave: _cols,
     builder: (context, box) {
       final cols = _cols(box);
-      final grupos = [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre));
       final filas = <Object>[];
-      for (final (titulo, area, suyos) in [
-        for (final g in grupos) (g.nombre, g.area, ws.where((w) => w.grupoId == g.id).toList()),
-        ('Sin grupo', '', ws.where((w) => store.grupo(w.grupoId) == null).toList()),
+      for (final (g, suyos) in [
+        for (final g in gruposOrdenados())
+          if (soloGrupo == null || soloGrupo == g.id) (g, ws.where((w) => w.enGrupo(g.id)).toList()),
+        if (soloGrupo == null) (null, ws.where(store.sinGrupo).toList()),
       ]) {
-        if (suyos.isEmpty) continue;
-        filas.add((titulo, area, suyos.length));
+        if (suyos.isEmpty && (g == null || !conVacios)) continue;
+        final id = g?.id ?? '';
+        filas.add((g, suyos.length, plegados.contains(id)));
+        if (plegados.contains(id)) continue;
+        if (suyos.isEmpty) filas.add(g!);
         for (var i = 0; i < suyos.length; i += cols) {
           filas.add(suyos.sublist(i, min(i + cols, suyos.length)));
         }
@@ -425,19 +419,21 @@ class _RejillaPorGrupos extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 80),
         itemCount: filas.length,
         itemBuilder: (_, n) => switch (filas[n]) {
-          (final String titulo, final String area, final int total) => Padding(
-            padding: EdgeInsets.fromLTRB(4, n == 0 ? 4 : 12, 4, 10),
+          (final GrupoTecnicos? g, final int total, final bool plegado) => _CabeceraGrupo(
+            g,
+            total,
+            plegado: plegado,
+            primera: n == 0,
+            onTap: () => onPlegar(g?.id ?? ''),
+          ),
+          // Grupo sin técnicos: una línea para meterlos.
+          final GrupoTecnicos g => Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
             child: Row(
               children: [
-                Text(titulo, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                const SizedBox(width: 8),
-                Text('$total', style: TextStyle(fontSize: 14, color: P.textoSuave)),
-                if (area.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(area, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: P.textoSuave)),
-                  ),
-                ],
+                Text('Aún no hay técnicos en este grupo.', style: TextStyle(color: P.textoSuave)),
+                const SizedBox(width: 6),
+                Enlace('Añadir técnicos', onTap: () => abrirGrupoForm(context, g)),
               ],
             ),
           ),
@@ -457,6 +453,64 @@ class _RejillaPorGrupos extends StatelessWidget {
         },
       );
     },
+  );
+}
+
+/// Cabecera de un grupo: flecha que gira al plegar, icono de grupo (morado al pasar), nombre, cuántos y «Editar».
+class _CabeceraGrupo extends StatefulWidget {
+  final GrupoTecnicos? g;
+  final int total;
+  final bool plegado, primera;
+  final VoidCallback onTap;
+  const _CabeceraGrupo(this.g, this.total, {required this.plegado, required this.primera, required this.onTap});
+
+  @override
+  State<_CabeceraGrupo> createState() => _CabeceraGrupoState();
+}
+
+class _CabeceraGrupoState extends State<_CabeceraGrupo> {
+  bool _encima = false;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(0, widget.primera ? 0 : 8, 0, 8),
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _encima = true),
+      onExit: (_) => setState(() => _encima = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: SizedBox(
+          height: 34,
+          child: Row(
+            children: [
+              AnimatedRotation(
+                turns: widget.plegado ? -.25 : 0,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutBack,
+                child: Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
+              ),
+              const SizedBox(width: 4),
+              if (widget.g != null) ...[
+                Icon(iconoGrupo, size: 19, color: _encima ? P.morado : P.textoSuave),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                widget.g?.nombre ?? 'Sin grupo',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 8),
+              Text('${widget.total}', style: TextStyle(fontSize: 14, color: P.textoSuave)),
+              if (widget.g != null) ...[
+                const SizedBox(width: 6),
+                Enlace('Editar', onTap: () => abrirGrupoForm(context, widget.g)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
   );
 }
 
