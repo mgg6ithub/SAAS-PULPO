@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models.dart';
+import '../screens/importar_exportar.dart' show Exportable, abrirExportar;
 import '../store.dart';
 import '../theme.dart';
 import '../ajustes.dart' show ajustes;
@@ -38,6 +39,18 @@ Future<void> abrirUsoMaquinas(BuildContext context) => Navigator.of(context).pus
 List<Activo> activosPorTurnos() =>
     store.hijosDe(null).where((a) => a.activo && a.usoPlanificado).toList()
       ..sort((a, b) => a.titulo.compareTo(b.titulo));
+
+/// Uso de [activos] en [dias] en texto: una fila por activo con sus turnos de cada día (vacío = no trabaja) y el
+/// total de horas. Cabecera primero (el número de cada día). Para exportar o imprimir el mes.
+List<List<String>> usoEnTexto(List<Activo> activos, List<DateTime> dias) => [
+  ['Activo', for (final d in dias) '${d.day}', 'Horas'],
+  for (final a in activos)
+    [
+      a.titulo,
+      for (final d in dias) turnosDe(a, d) == 0 ? '' : '${turnosDe(a, d)}',
+      '${(dias.fold<int>(0, (t, d) => t + turnosDe(a, d)) * a.horasTurno).round()}',
+    ],
+];
 
 /// Cuántos turnos caben en un día con las horas por turno de la máquina (de 1 a 3).
 int maxTurnos(Activo a) => a.horasTurno <= 0 ? 3 : (24 / a.horasTurno).floor().clamp(1, 3);
@@ -769,6 +782,18 @@ class _UsoMaquinasState extends State<UsoMaquinas> {
         icon: const Icon(Icons.chevron_right_rounded),
       ),
       const SizedBox(width: 4),
+      // Exportar o imprimir el mes que se ve (los activos elegidos, o todos).
+      BotonImportarExportar(
+        soloExportar: true,
+        tooltip: 'Exportar o imprimir el uso de este mes',
+        onPressed: () => abrirExportar(
+          context,
+          Exportable(
+            'Uso de activos, $_nombreMes ${mes.year}',
+            () => usoEnTexto([for (final a in activosPorTurnos()) if (_visible(a)) a], _diasMes.toList()),
+          ),
+        ),
+      ),
     ],
   );
 

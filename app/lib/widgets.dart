@@ -756,7 +756,15 @@ class BotonAccion extends StatelessWidget {
 class BotonImportarExportar extends StatelessWidget {
   final VoidCallback onPressed;
   final String tooltip;
-  const BotonImportarExportar({super.key, required this.onPressed, this.tooltip = 'Importar y exportar'});
+
+  /// Solo exportar e imprimir (vistas donde no se importa): una sola flecha, la de subir.
+  final bool soloExportar;
+  const BotonImportarExportar({
+    super.key,
+    required this.onPressed,
+    this.tooltip = 'Importar y exportar',
+    this.soloExportar = false,
+  });
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -782,8 +790,10 @@ class BotonImportarExportar extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.download_rounded, size: 17, color: P.textoSuave),
-            const SizedBox(width: 3),
+            if (!soloExportar) ...[
+              Icon(Icons.download_rounded, size: 17, color: P.textoSuave),
+              const SizedBox(width: 3),
+            ],
             // La misma flecha, girada 180 grados.
             RotatedBox(quarterTurns: 2, child: Icon(Icons.download_rounded, size: 17, color: P.textoSuave)),
           ],

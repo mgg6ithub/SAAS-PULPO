@@ -127,7 +127,12 @@ void main() {
       tester.view.physicalSize = Size(ancho, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(key: ValueKey(ancho), home: const Scaffold(body: ImportarExportar())));
+      await tester.pumpWidget(
+        MaterialApp(
+          key: ValueKey(ancho),
+          home: const Scaffold(body: ImportarExportar()),
+        ),
+      );
       // En móvil las pestañas son un desplegable: se abre antes.
       if (find.text('Trabajos').evaluate().isEmpty) {
         await tester.tap(find.text('Clientes').first);
@@ -153,9 +158,11 @@ void main() {
     addTearDown(tester.view.reset);
     FilePicker.platform = _Falso('Nombre;CIF\nColegio Nuevo;B9\n');
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ImportarExportar())));
-    double opacidad() => tester.widget<AnimatedOpacity>(
-      find.ancestor(of: find.byType(LinearProgressIndicator), matching: find.byType(AnimatedOpacity)).first,
-    ).opacity;
+    double opacidad() => tester
+        .widget<AnimatedOpacity>(
+          find.ancestor(of: find.byType(LinearProgressIndicator), matching: find.byType(AnimatedOpacity)).first,
+        )
+        .opacity;
     expect(opacidad(), 0);
     await tester.tap(find.text('Elegir archivos'));
     await tester.pump(const Duration(milliseconds: 100));
@@ -168,6 +175,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(opacidad(), 0);
     expect(find.text('Importar 1'), findsOneWidget);
+  });
+
+  testWidgets('una lista para exportar: solo Exportar e Imprimir, con su tabla', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final lista = Exportable(
+      'Órdenes de trabajo',
+      () => [
+        ['Orden de trabajo', 'Estado'],
+        for (var i = 1; i <= 8; i++) ['OT $i', 'Pendiente'],
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ImportarExportar(lista: lista)),
+      ),
+    );
+    expect(find.text('Importar'), findsNothing);
+    expect(find.text('Exportar e imprimir órdenes de trabajo'), findsOneWidget);
+    expect(find.text('OT 1'), findsOneWidget);
+    expect(find.text('y 2 filas más'), findsOneWidget);
+    await tester.tap(find.text('Imprimir').first);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilledButton, 'Imprimir'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

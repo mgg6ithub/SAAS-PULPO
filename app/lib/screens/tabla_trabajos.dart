@@ -4,7 +4,7 @@ import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/iconos.dart';
 import '../industrial/gravedad.dart' show cancelarOts, origenOt, periodicidadOt, AnilloCiclo, cicloOt, descripcionOt;
 import '../forms.dart';
-import '../industrial/activos.dart' show arbolActivos;
+import '../industrial/activos.dart' show arbolActivos, enOrdenDelUsuario;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -104,8 +104,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   }
 
   /// Pultec: columnas opcionales de la lista de órdenes y las que se ven (se recuerdan mientras dure la sesión).
-  static const _opcionales = ['Activo', 'Origen', 'Gravedad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
-  static final _visibles = {'Origen', 'Activo', 'Gravedad', 'Asignado a', 'Periodicidad'};
+  static const _opcionales = columnasOpcionalesOts;
+  static final _visibles = columnasVisiblesOts;
   bool _ver(String c) => _visibles.contains(c);
 
   String _descripcion(Tarea t) => descripcionOt(t);
@@ -333,6 +333,8 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
+          // El orden que deje el usuario se recuerda (y Exportar lo sigue).
+          orden: industrial ? ordenColumnasOts : null,
           resaltar: widget.marcada == null ? null : (i) => ts[i].id == widget.marcada ? P.morado : null,
           focoInicial: widget.marcada == null ? null : ts.indexWhere((t) => t.id == widget.marcada),
           seleccionCabecera: BotonSeleccionLista(
@@ -603,3 +605,38 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
 //     shadows: [Shadow(color: P.amarillo.withValues(alpha: .55), blurRadius: 8)],
 //   );
 // }
+
+/// Columnas que se pueden elegir en la lista de órdenes de trabajo (Pultec), las elegidas y el orden en que el
+/// usuario las ha dejado; se recuerdan mientras dure la sesión y Exportar sale igual.
+const columnasOpcionalesOts = ['Activo', 'Origen', 'Gravedad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
+final columnasVisiblesOts = {'Origen', 'Activo', 'Gravedad', 'Asignado a', 'Periodicidad'};
+final ordenColumnasOts = <String>[];
+
+/// Órdenes de trabajo [ts] en texto, tal como se ven en la lista: sus columnas en su orden. Cabecera primero.
+List<List<String>> otsEnTexto(List<Tarea> ts) {
+  String asignado(Tarea t) {
+    final nombres = [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombreCompleto];
+    if (nombres.isNotEmpty) return nombres.join(', ');
+    return store.grupos.where((g) => g.id == t.grupoId).firstOrNull?.nombre ?? 'Sin asignar';
+  }
+
+  final valores = <String, String Function(Tarea)>{
+    'Orden de trabajo': (t) => t.nombre,
+    for (final c in columnasOpcionalesOts)
+      if (columnasVisiblesOts.contains(c))
+        c: switch (c) {
+          'Activo' => (t) => store.activo(t.activoId)?.titulo ?? 'Sin activo',
+          'Origen' => (t) => origenOt(t).$1,
+          'Gravedad' => (t) => t.tipoMantenimiento?.etiqueta ?? '—',
+          'Asignado a' => asignado,
+          'Fecha y hora' => (t) => t.proximo == null ? '' : [fecha(t.proximo), ?t.horario].join(' '),
+          _ => periodicidadOt,
+        },
+    'Estado': (t) => t.estado.etiqueta,
+  };
+  final cols = enOrdenDelUsuario(valores.keys.toList(), ordenColumnasOts);
+  return [
+    cols,
+    for (final t in ts) [for (final c in cols) valores[c]!(t)],
+  ];
+}

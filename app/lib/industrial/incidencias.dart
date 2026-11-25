@@ -4,9 +4,11 @@ import '../forms.dart';
 import '../informes.dart' show descargarInformeIncidencia;
 import '../screens/informes.dart' show BotonPdf;
 import '../models.dart';
+import '../screens/importar_exportar.dart' show Exportable, abrirExportar;
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'activos.dart' show enOrdenDelUsuario;
 import 'incidencia.dart';
 import 'mantenimientos.dart';
 import 'tipo_mantenimiento.dart';
@@ -101,12 +103,32 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
                 child: SelectorActivo(activoId, (id) => setState(() => activoId = id), filtro: true),
               ),
             ],
-            principal: BotonPrimario(
-              'Incidencia',
-              conIcono: true,
-              color: P.rojo,
-              tecla: 'N',
-              onPressed: () => abrirIncidenciaForm(context, activoId: activoId),
+            principal: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Exportar o imprimir las incidencias que se ven (con los filtros puestos), a la izquierda.
+                if (todas.isNotEmpty) ...[
+                  BotonImportarExportar(
+                    soloExportar: true,
+                    tooltip: 'Exportar o imprimir las incidencias que ves',
+                    onPressed: () => abrirExportar(
+                      context,
+                      Exportable(
+                        historico ? 'Histórico de incidencias' : 'Incidencias',
+                        () => incidenciasEnTexto(lista, historico: historico),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                BotonPrimario(
+                  'Incidencia',
+                  conIcono: true,
+                  color: P.rojo,
+                  tecla: 'N',
+                  onPressed: () => abrirIncidenciaForm(context, activoId: activoId),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: huecoVista),
@@ -128,6 +150,31 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
   }
 }
 
+/// Orden en que el usuario ha dejado las columnas de la lista de incidencias; Exportar sale igual.
+final ordenColumnasIncidencias = <String>[];
+
+/// Incidencias [lista] en texto, tal como se ven (con los filtros puestos). Cabecera primero.
+List<List<String>> incidenciasEnTexto(List<(Incidencia, EstadoIncidencia)> lista, {required bool historico}) {
+  final valores = <String, String Function(Incidencia, EstadoIncidencia)>{
+    'Incidencia': (x, _) => x.descripcion.isEmpty ? 'Sin descripción' : x.descripcion,
+    'Activo': (x, _) => dondeEs(x.activoId),
+    'Comunicada por': (x, _) => (x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombre ?? 'Oficina',
+    historico ? 'Cerrada' : 'Fecha': (x, _) => fecha(historico ? x.cerradaEl ?? x.creada : x.creada),
+    'Estado': (_, e) => e.etiqueta,
+  };
+  final cols = enOrdenDelUsuario(valores.keys.toList(), ordenColumnasIncidencias);
+  // La gravedad, que en la lista es el punto de color, va al lado de la incidencia.
+  final i = cols.indexOf('Incidencia');
+  final conGravedad = [...cols]..insert(i + 1, 'Gravedad');
+  return [
+    conGravedad,
+    for (final (x, e) in lista)
+      [
+        for (final c in conGravedad) c == 'Gravedad' ? x.gravedad.etiqueta : valores[c]!(x, e),
+      ],
+  ];
+}
+
 class _TablaIncidencias extends StatelessWidget {
   final List<(Incidencia, EstadoIncidencia)> lista;
   final bool historico;
@@ -144,6 +191,8 @@ class _TablaIncidencias extends StatelessWidget {
         plural: 'incidencias',
         borrar: store.borrarIncidencia,
         builder: (context, s) => Tabla(
+        // El orden que deje el usuario se recuerda (y Exportar lo sigue).
+        orden: ordenColumnasIncidencias,
         seleccionCabecera: s.cabecera,
         columnas: [
           ...s.columna,

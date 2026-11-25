@@ -2,6 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pultec/hoja_calculo.dart';
+import 'package:pultec/industrial/uso_maquinas.dart' show usoEnTexto;
+import 'package:pultec/screens/planificacion.dart' show planificacionEnTexto;
+import 'package:pultec/screens/tabla_trabajos.dart' show columnasVisiblesOts, ordenColumnasOts, otsEnTexto;
 import 'package:pultec/industrial/activos.dart' show columnasExtraActivos, listaActivosEnTexto, ordenColumnasActivos;
 import 'package:pultec/informes.dart' show guiaPdf, listadoPdf;
 import 'package:pultec/importar.dart';
@@ -39,7 +42,10 @@ void main() {
   });
 
   test('solo activos: sin mantenimientos ni OT; sin tag o sin nombre avisa', () {
-    final imp = preparar(QueImportar.activos, 'Tag;Nombre;Icono;Horas contador\nCAM-01;Camión;camion;1500\nCAM-02;Camión 2;Cohete;\n;Sin tag;;\nCAM-03;;;');
+    final imp = preparar(
+      QueImportar.activos,
+      'Tag;Nombre;Icono;Horas contador\nCAM-01;Camión;camion;1500\nCAM-02;Camión 2;Cohete;\n;Sin tag;;\nCAM-03;;;',
+    );
     expect(imp.activos.map((a) => a.tag), ['CAM-01', 'CAM-02']);
     expect(imp.activos.first.icono, 'camion');
     expect(imp.activos.first.horas, 1500);
@@ -273,5 +279,38 @@ void main() {
     expect(l.first.take(2), ['Tag', 'Activo']);
     expect(l.first, contains('Fabricante y modelo'));
     expect(l[1][l.first.indexOf('Fabricante y modelo')], 'Andritz D-4');
+  });
+
+  test('exportar órdenes de trabajo, planificación y uso de activos como se ven', () async {
+    preparar(QueImportar.activos, 'Tag;Nombre;Mantenimiento;Cada\nP;Planta;Rev;7').aplicar(store);
+    final ots = [
+      for (final t in store.tareas)
+        if (t.planId != null) t,
+    ];
+    expect(ots, hasLength(1));
+    // Órdenes: sus columnas visibles, en el orden del usuario.
+    addTearDown(ordenColumnasOts.clear);
+    // Como la tabla: guarda todas sus columnas; el usuario ha llevado «Estado» al principio.
+    ordenColumnasOts.addAll(['Estado', 'Orden de trabajo', 'Activo', 'Origen', 'Gravedad', 'Asignado a', 'Periodicidad']);
+    final o = otsEnTexto(ots);
+    expect(o.first.first, 'Estado');
+    expect(o.first, containsAll(['Orden de trabajo', 'Activo', 'Origen', 'Gravedad']));
+    expect(o.first.length, 2 + columnasVisiblesOts.length);
+    expect(o[1][o.first.indexOf('Orden de trabajo')], 'Rev');
+    expect(o[1][o.first.indexOf('Activo')], 'Planta - P');
+    // Planificación: la de la semana que viene la incluye; la de hoy no.
+    final p = planificacionEnTexto(hoy(), masDias(hoy(), 7));
+    expect(p, hasLength(2));
+    expect(p[1][2], 'Rev');
+    expect(planificacionEnTexto(hoy(), hoy()), hasLength(1));
+    // Uso: una fila por activo, un hueco por día y el total de horas.
+    final a = store.activos.single
+      ..horasTurno = 8
+      ..turnos = {'${hoy().year}-${'${hoy().month}'.padLeft(2, '0')}-${'${hoy().day}'.padLeft(2, '0')}': 2};
+    final u = usoEnTexto([a], [hoy(), masDias(hoy(), 1)]);
+    expect(u.first, ['Activo', '${hoy().day}', '${masDias(hoy(), 1).day}', 'Horas']);
+    expect(u[1].first, 'Planta - P');
+    expect(u[1].last, isNot('0'));
+    expect(ascii.decode((await listadoPdf('Uso', u)).sublist(0, 4)), '%PDF');
   });
 }

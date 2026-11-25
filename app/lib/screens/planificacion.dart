@@ -11,6 +11,7 @@ import '../widgets.dart';
 import '../forms.dart';
 import '../marca.dart';
 import 'agenda_herramientas.dart';
+import 'importar_exportar.dart' show Exportable, abrirExportar;
 import 'agenda_vistas.dart';
 import 'calendario_trabajos.dart';
 import 'rutas_mapa.dart';
@@ -310,6 +311,21 @@ class _PlanificacionState extends State<Planificacion> {
               final acciones = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Pultec: exportar o imprimir la planificación del periodo que se ve (día, semana o mes).
+                  if (industrial) ...[
+                    BotonImportarExportar(
+                      soloExportar: true,
+                      tooltip: 'Exportar o imprimir la planificación que ves',
+                      onPressed: () {
+                        final (desde, hasta, nombre) = periodo;
+                        abrirExportar(
+                          context,
+                          Exportable('Planificación, $nombre', () => planificacionEnTexto(desde, hasta)),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   // "Sin asignar" solo aparece cuando hay algo sin técnico (o con su panel abierto).
                   // Pultec: «Sin fecha» aparcado de momento (toda orden nace con su día).
                   if (vista == 1 && !industrial && (sinAsignar || PanelSinAsignar.pendientes().isNotEmpty)) ...[
@@ -851,4 +867,35 @@ class _SeparadorState extends State<_Separador> {
       ),
     );
   }
+}
+
+/// Pultec: las órdenes de trabajo de [desde] a [hasta] (ambos incluidos) en texto, por día y hora, como se planifican.
+/// Cabecera primero. Para exportar o imprimir la planificación (p. ej. colgarla en la planta).
+List<List<String>> planificacionEnTexto(DateTime desde, DateTime hasta) {
+  final ts = store.tareas.where((t) {
+    final d = t.proximo;
+    return !t.esPlantilla && t.activa && d != null && !d.isBefore(desde) && !DateUtils.dateOnly(d).isAfter(hasta);
+  }).toList()
+    ..sort((a, b) {
+      final c = DateUtils.dateOnly(a.proximo!).compareTo(DateUtils.dateOnly(b.proximo!));
+      return c != 0 ? c : (a.inicioMin ?? 24 * 60).compareTo(b.inicioMin ?? 24 * 60);
+    });
+  String asignado(Tarea t) {
+    final nombres = [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombreCompleto];
+    return nombres.isEmpty ? 'Sin asignar' : nombres.join(', ');
+  }
+
+  return [
+    ['Día', 'Hora', 'Orden de trabajo', 'Activo', 'Gravedad', 'Asignado a', 'Estado'],
+    for (final t in ts)
+      [
+        '${diasSemana[t.proximo!.weekday - 1]} ${fecha(t.proximo)}',
+        t.horario ?? '',
+        t.nombre,
+        store.activo(t.activoId)?.titulo ?? '',
+        t.tipoMantenimiento?.etiqueta ?? '',
+        asignado(t),
+        t.estado.etiqueta,
+      ],
+  ];
 }

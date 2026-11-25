@@ -4,6 +4,7 @@ import '../ajustes.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
+import 'importar_exportar.dart' show Exportable, abrirExportar;
 import '../theme.dart';
 import '../widgets.dart';
 import 'tabla_trabajos.dart';
@@ -234,11 +235,31 @@ class _TareasPaginaState extends State<TareasPagina> {
                   ),
                   if (!industrial && hayTrabajos) SelectorVista(lista: lista, onChanged: (v) => setState(() => lista = v)),
                 ],
-                principal: BotonPrimario(
-                  pestana == 1 ? 'Nueva plantilla' : m('Nuevo trabajo'),
-                  conIcono: industrial,
-                  tecla: 'N',
-                  onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
+                principal: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Pultec: exportar o imprimir las órdenes que se ven (con los filtros puestos), a la izquierda.
+                    if (industrial && hayTrabajos) ...[
+                      BotonImportarExportar(
+                        soloExportar: true,
+                        tooltip: 'Exportar o imprimir las órdenes de trabajo que ves',
+                        onPressed: () => abrirExportar(
+                          context,
+                          Exportable(
+                            historicoTrabajos.value ? 'Histórico de órdenes de trabajo' : 'Órdenes de trabajo',
+                            () => otsEnTexto([for (final t in filtradas) if (!t.esPlantilla) t]),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    BotonPrimario(
+                      pestana == 1 ? 'Nueva plantilla' : m('Nuevo trabajo'),
+                      conIcono: industrial,
+                      tecla: 'N',
+                      onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
+                    ),
+                  ],
                 ),
               ),
               // Pultec: Pendientes / Histórico a la izquierda y la criticidad a la derecha del todo.

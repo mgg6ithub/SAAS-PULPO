@@ -1191,6 +1191,13 @@ Future<Uint8List> listadoPdf(String titulo, List<List<String>> conCabecera) asyn
         pw.Text('No hay nada que listar.', style: pw.TextStyle(fontSize: 10, color: _suavePdf))
       else
         pw.Table(
+          // Cada columna, ancha según lo que lleva (un día del mes, estrecho; un nombre, ancho).
+          columnWidths: {
+            for (var i = 0; i < conCabecera.first.length; i++)
+              i: pw.FlexColumnWidth(
+                conCabecera.map((f) => i < f.length ? f[i].length : 0).fold(0, max).clamp(2, 30).toDouble(),
+              ),
+          },
           border: pw.TableBorder(horizontalInside: pw.BorderSide(color: _bordePdf, width: .6)),
           children: [
             pw.TableRow(

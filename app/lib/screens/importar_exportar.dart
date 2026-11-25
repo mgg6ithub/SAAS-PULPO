@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:printing/printing.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 
@@ -23,9 +24,20 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../marca.dart';
 
+/// Una lista que se exporta o se imprime tal como se ve en su sección (Órdenes de trabajo, Incidencias,
+/// Planificación, Uso de activos): [filas] da la cabecera y las filas con los filtros de ese momento.
+class Exportable {
+  final String titulo;
+  final List<List<String>> Function() filas;
+  const Exportable(this.titulo, this.filas);
+}
+
+/// Solo exportar e imprimir [lista] (sin importar), con el mismo aspecto que la ventana de Activos.
+Future<void> abrirExportar(BuildContext context, Exportable lista) => abrirImportarExportar(context, lista: lista);
+
 /// Importar clientes, trabajadores y trabajos (Pultec: activos y técnicos) desde CSV con vista previa, y exportarlo
-/// todo a CSV. [que] abre directamente esa pestaña (desde Activos o Técnicos).
-Future<void> abrirImportarExportar(BuildContext context, {QueImportar? que}) => showDialog(
+/// todo a CSV. [que] abre directamente esa pestaña (desde Activos o Técnicos); con [lista], solo exportar e imprimir.
+Future<void> abrirImportarExportar(BuildContext context, {QueImportar? que, Exportable? lista}) => showDialog(
   context: context,
   builder: (_) => Dialog(
     backgroundColor: P.fondo,
@@ -33,14 +45,17 @@ Future<void> abrirImportarExportar(BuildContext context, {QueImportar? que}) => 
     clipBehavior: Clip.antiAlias,
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 1040, maxHeight: 820),
-      child: ImportarExportar(que: que),
+      child: ImportarExportar(que: que, lista: lista),
     ),
   ),
 );
 
 class ImportarExportar extends StatefulWidget {
   final QueImportar? que;
-  const ImportarExportar({super.key, this.que});
+
+  /// Lista para solo exportar e imprimir (sin la pestaña Importar).
+  final Exportable? lista;
+  const ImportarExportar({super.key, this.que, this.lista});
 
   /// Arrastrar archivos del sistema (las pruebas lo apagan: no tienen el complemento nativo).
   static bool conArrastrar = true;
@@ -54,7 +69,14 @@ class _ImportarExportarState extends State<ImportarExportar> {
   Importacion? vista;
   String? archivo;
   FormatoExportar formato = FormatoExportar.pdf;
-  bool verExportar = false;
+
+  /// 0 Importar, 1 Exportar, 2 Imprimir.
+  late int cara = widget.lista == null ? 0 : 1;
+  bool get verExportar => cara == 1;
+  bool get verImprimir => cara == 2;
+
+  /// Pestañas de arriba: con una lista, solo Exportar e Imprimir.
+  List<int> get _caras => widget.lista == null ? const [0, 1, 2] : const [1, 2];
 
   /// La tabla desplegada con todas sus filas («y N filas más»).
   bool verTodas = false;
@@ -69,7 +91,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
   /// Nombres de los archivos leídos (para ordenar sus avisos) y si hay uno encima de la zona de arrastrar.
   List<String> archivos = [];
   bool encima = false;
-  bool get solo => widget.que != null;
+  bool get solo => widget.que != null || widget.lista != null;
 
   Future<void> elegir() async {
     final r = await FilePicker.platform.pickFiles(
@@ -186,17 +208,23 @@ class _ImportarExportarState extends State<ImportarExportar> {
         children: [
           Expanded(
             child: Text(
-              solo ? 'Importar y exportar ${que.etiqueta.toLowerCase()}' : 'Importar y exportar',
+              widget.lista != null
+                  ? 'Exportar e imprimir ${widget.lista!.titulo.toLowerCase()}'
+                  : solo
+                  ? 'Importar y exportar ${que.etiqueta.toLowerCase()}'
+                  : 'Importar y exportar',
               style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -.5),
             ),
           ),
           // Importar o exportar: una cosa cada vez, junto a la X.
           Pestanas(
             compactas: true,
-            opciones: const ['Importar', 'Exportar'],
-            seleccion: verExportar ? 1 : 0,
+            opciones: [
+              for (final c in _caras) const ['Importar', 'Exportar', 'Imprimir'][c],
+            ],
+            seleccion: _caras.indexOf(cara),
             onChanged: (i) => setState(() {
-              verExportar = i == 1;
+              cara = _caras[i];
               verTodas = false;
             }),
           ),
@@ -213,7 +241,13 @@ class _ImportarExportarState extends State<ImportarExportar> {
       SizedBox(
         height: 38,
         child: Text(
-          verExportar
+          verImprimir
+              ? 'Así saldrá en papel: ${widget.lista == null ? 'como en tu lista, con las mismas columnas y en el orden en que las tengas' : 'tal como lo ves, con los filtros que tengas puestos'}. '
+                    'Se abre la ventana de imprimir del navegador; desde ella también puedes guardarlo en PDF.'
+              : widget.lista != null
+              ? 'Así saldrá «${widget.lista!.titulo}», tal como lo ves: con los filtros que tengas puestos. Elige el '
+                    'formato abajo: PDF para leer, Excel o CSV para hojas de cálculo, o JSON para otro programa.'
+              : verExportar
               // Dos líneas, como la de Importar, para que las dos caras queden iguales.
               ? 'Así saldrán tus ${que.etiqueta.toLowerCase()}. En PDF, como en tu lista: las mismas columnas, en el '
                     'orden en que las tengas. En Excel, CSV o JSON, con todos sus datos, para abrirlos en otro programa o '
@@ -267,9 +301,23 @@ class _ImportarExportarState extends State<ImportarExportar> {
         const SizedBox(height: 14),
       ],
       // Las dos caras con el mismo esqueleto (título, tabla, controles) y el mismo alto: solo cambia el contenido.
-      if (verExportar)
+      if (verImprimir)
         _cara(
-          exportar: true,
+          cara: 2,
+          cabecera: const [],
+          contenido: _tablaExportar(imprimir: true),
+          sobran: _filasImprimir().length - 1 - _maxFilas,
+          controles: [
+            FilledButton.icon(
+              onPressed: progreso != null ? null : _imprimir,
+              icon: const Icon(Icons.print_outlined, size: 18),
+              label: const Text('Imprimir'),
+            ),
+          ],
+        )
+      else if (verExportar)
+        _cara(
+          cara: 1,
           // Sin pastilla de filas: cuántas hay ya se ve abajo («y N filas más»).
           cabecera: const [],
           contenido: _tablaExportar(),
@@ -283,7 +331,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
               onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
             ),
             FilledButton(
-              onPressed: progreso != null ? null : () => _exportar(que.etiqueta, _filasExportadas()),
+              onPressed: progreso != null
+                  ? null
+                  : () => _exportar(widget.lista?.titulo ?? que.etiqueta, _filasExportadas()),
               child: Text('Descargar ${formato.etiqueta}'),
             ),
           ],
@@ -292,7 +342,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         _vistaPrevia(vista!)
       else
         _cara(
-          exportar: false,
+          cara: 0,
           // Arriba a la derecha, como siempre: la plantilla y la guía.
           cabecera: [
             // La plantilla en el formato que se prefiera; la de Excel trae la guía en otra hoja.
@@ -376,7 +426,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
   /// de alto fijo; abajo, a la izquierda cuántas filas más hay y, a la derecha del todo, [nota] y los [controles]
   /// (el principal, el último).
   Widget _cara({
-    required bool exportar,
+    required int cara,
     required List<Widget> cabecera,
     required Widget contenido,
     required List<Widget> controles,
@@ -389,7 +439,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         height: 40,
         child: Row(
           children: [
-            _titulo(exportar ? 'Exportar' : 'Importar', exportar: exportar),
+            _titulo(const ['Importar', 'Exportar', 'Imprimir'][cara], cara: cara),
             const SizedBox(width: 16),
             // Si no cabe, se desliza.
             Expanded(
@@ -475,10 +525,21 @@ class _ImportarExportarState extends State<ImportarExportar> {
     'Próximo mantenimiento': 185.0,
     'Componentes': 115.0,
     'Fabricante y modelo': 180.0,
+    'Orden de trabajo': 220.0,
+    'Origen': 130.0,
+    'Gravedad': 130.0,
+    'Asignado a': 160.0,
+    'Fecha y hora': 150.0,
+    'Periodicidad': 120.0,
+    'Estado': 120.0,
+    'Incidencia': 260.0,
+    'Comunicada por': 150.0,
+    'Día': 160.0,
+    'Hora': 120.0,
   };
 
   /// Ancho de una columna según su título.
-  double _ancho(String c) => (c.length * 8.5 + 48).clamp(110, 260).toDouble();
+  double _ancho(String c) => c.length <= 2 ? 52 : (c.length * 8.5 + 48).clamp(110, 260).toDouble();
 
   /// [DropTarget] alrededor de [child] (en pruebas, sin él: allí no hay arrastre del sistema).
   Widget _arrastrable({
@@ -552,32 +613,48 @@ class _ImportarExportarState extends State<ImportarExportar> {
   /// Lo que sale al exportar, con su cabecera: en PDF, como la lista del usuario (o, si no hay, las columnas que
   /// caben); en Excel, CSV o JSON, todos los datos, para poder volver a importarlo.
   List<List<String>> _filasExportadas() {
+    if (widget.lista != null) return widget.lista!.filas();
     final todo = [que.columnas, ...filasExportar(que, store)];
     if (formato != FormatoExportar.pdf) return todo;
     return _listaComoSeVe() ?? soloColumnas(todo, columnasPdf(que));
   }
 
-  Widget _tablaExportar() {
-    final filas = _filasExportadas();
+  /// Lo que se imprime: como el PDF (la lista tal como se ve).
+  List<List<String>> _filasImprimir() =>
+      widget.lista?.filas() ??
+      _listaComoSeVe() ??
+      soloColumnas([que.columnas, ...filasExportar(que, store)], columnasPdf(que));
+
+  /// Abre la ventana de imprimir del navegador con la lista en PDF (con la barra de progreso mientras se prepara).
+  Future<void> _imprimir() {
+    final titulo = widget.lista?.titulo ?? que.etiqueta;
+    return _conProgreso('Preparando para imprimir…', () async {
+      final bytes = await listadoPdf(titulo, _filasImprimir());
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: titulo);
+    });
+  }
+
+  Widget _tablaExportar({bool imprimir = false}) {
+    final filas = imprimir ? _filasImprimir() : _filasExportadas();
     final columnas = filas.first;
     final derecha = {'Horas totales', 'Mantenimientos', 'Componentes', m('Trabajos')};
     if (filas.length == 1) {
       return Padding(
         padding: const EdgeInsets.only(top: 8, left: 4),
         child: Text(
-          'Aún no hay ${que.etiqueta.toLowerCase()} que exportar.',
+          'Aún no hay ${(widget.lista?.titulo ?? que.etiqueta).toLowerCase()} que exportar.',
           style: TextStyle(fontSize: 13, color: P.textoSuave),
         ),
       );
     }
-    final comoLista = formato == FormatoExportar.pdf && _listaComoSeVe() != null;
+    final comoLista = widget.lista == null && (imprimir || formato == FormatoExportar.pdf) && _listaComoSeVe() != null;
     final raices = que == QueImportar.activos ? store.hijosDe(null) : const <Activo>[];
     return _tablaCorta(
       [
         for (final c in columnas)
           Col(
             c,
-            ancho: comoLista ? (_anchosLista[c] ?? _ancho(c)) : _ancho(c),
+            ancho: comoLista || widget.lista != null ? (_anchosLista[c] ?? _ancho(c)) : _ancho(c),
             derecha: comoLista && derecha.contains(c),
           ),
       ],
@@ -621,8 +698,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
 
   /// Título de sección con su flecha (la de descargar para importar; girada 180 grados para exportar), como el
   /// botón que abre esta ventana.
-  Widget _titulo(String t, {required bool exportar}) {
+  Widget _titulo(String t, {required int cara}) {
     const icono = Icon(Icons.download_rounded, size: 17);
+    final exportar = cara == 1;
     return Padding(
       padding: EdgeInsets.zero,
       child: Row(
@@ -630,7 +708,11 @@ class _ImportarExportarState extends State<ImportarExportar> {
         children: [
           IconTheme(
             data: IconThemeData(color: P.textoSuave),
-            child: exportar ? const RotatedBox(quarterTurns: 2, child: icono) : icono,
+            child: cara == 2
+                ? const Icon(Icons.print_outlined, size: 17)
+                : exportar
+                ? const RotatedBox(quarterTurns: 2, child: icono)
+                : icono,
           ),
           const SizedBox(width: 8),
           Text(
@@ -856,7 +938,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
     };
     final avisos = _enOrden(imp.avisos);
     return _cara(
-      exportar: false,
+      cara: 0,
       // Arriba a la derecha, el archivo leído con su marca de hecho (sale al terminar de leerlo).
       cabecera: [
         AnimatedOpacity(
