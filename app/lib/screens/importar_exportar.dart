@@ -1,3 +1,4 @@
+import 'dart:math' show max;
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -107,106 +108,204 @@ class _ImportarExportarState extends State<ImportarExportar> {
           ),
         ],
       ),
-      Text(switch (widget.que) {
-        _ when verExportar =>
-          'Descarga ${solo ? 'tus ${que.etiqueta.toLowerCase()}' : 'tus datos'} en PDF para leer o imprimir, en CSV para Excel o en JSON para otros programas.',
-        QueImportar.activos =>
-          'Crea de una vez tus activos, con sus componentes y mantenimientos, desde un Excel guardado como CSV. '
-              'Cada mantenimiento sale con su orden de trabajo. Lo que ya está en Pultec no se duplica.',
-        QueImportar.trabajadores => m(
-          'Crea de una vez a tus trabajadores desde un Excel guardado como CSV. Lo que ya está en Pultec no se duplica.',
+      // Qué se hace aquí; mismo alto en Importar y en Exportar, para que la ventana no salte al cambiar.
+      SizedBox(
+        height: 38,
+        child: Text(
+          verExportar
+              ? 'Así saldrán tus ${que.etiqueta.toLowerCase()}. Elige el formato: PDF para leer o imprimir (con las '
+                    'columnas que caben), CSV para Excel o JSON para otros programas.'
+              : que == QueImportar.trabajos
+              ? m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.')
+              : 'Rellena tu Excel con estas columnas y guárdalo como CSV. Pasa el ratón por cada columna para ver qué '
+                    'lleva; las de * son obligatorias y el orden da igual. Lo que ya está en Pultec no se duplica.',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 13, color: P.textoSuave),
         ),
-        _ when industrial => 'Trae tus activos (con componentes y mantenimientos) y técnicos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.',
-        _ => m(
-          'Trae tus datos desde un Excel guardado como CSV, o llévatelos. Lo que ya está en Pultec no se duplica.',
-        ),
-      }, style: TextStyle(fontSize: 13, color: P.textoSuave)),
-      const SizedBox(height: 18),
-      if (!verExportar) ...[
-        _titulo('Importar', exportar: false),
-        // Desde Activos o Técnicos, solo lo suyo; con todo (Ajustes), una pestaña por tipo, a su ancho.
-        if (!solo) ...[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Pestanas(
-              opciones: [for (final q in importables) q.etiqueta],
-              seleccion: importables.indexOf(que),
-              onChanged: (i) => setState(() {
-                que = importables[i];
-                vista = null;
-                archivo = null;
-              }),
-            ),
+      ),
+      const SizedBox(height: 14),
+      // Desde Ajustes (con todo), el tipo, igual en las dos caras; desde Activos o Técnicos, solo lo suyo.
+      if (!solo) ...[
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Pestanas(
+            opciones: [for (final q in importables) q.etiqueta],
+            seleccion: importables.indexOf(que),
+            onChanged: (i) => setState(() {
+              que = importables[i];
+              vista = null;
+              archivo = null;
+            }),
           ),
-          const SizedBox(height: 12),
-        ],
-        if (que == QueImportar.trabajos)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text(
-              m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.'),
-              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-            ),
-          ),
-        // Sin archivo, la plantilla a la vista; con archivo, lo que se va a crear.
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          switchInCurve: Curves.easeOutCubic,
-          child: vista == null ? _plantilla() : _vistaPrevia(vista!),
         ),
-      ] else ...[
-        // Título y, a su derecha, el formato de la descarga (PDF por defecto).
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: _titulo('Exportar', exportar: true)),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Pestanas(
-                compactas: true,
-                opciones: [for (final f in FormatoExportar.values) f.etiqueta],
-                seleccion: formato.index,
-                onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
+        const SizedBox(height: 14),
+      ],
+      // Las dos caras con el mismo esqueleto (título, tabla, botón) y el mismo alto: solo cambia el contenido.
+      if (verExportar)
+        _cara(
+          exportar: true,
+          derecha: Pestanas(
+            compactas: true,
+            opciones: [for (final f in FormatoExportar.values) f.etiqueta],
+            seleccion: formato.index,
+            onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
+          ),
+          contenido: _tablaExportar(),
+          pie: [
+            FilledButton(
+              onPressed: () =>
+                  _exportar(que.etiqueta, [que.columnas, ...filasExportar(que, store)], columnasPdf: columnasPdf(que)),
+              child: Text('Descargar ${formato.etiqueta}'),
+            ),
+            const SizedBox(width: 14),
+            Text(() {
+              final n = filasExportar(que, store).length;
+              return '$n ${n == 1 ? 'fila' : 'filas'} en total';
+            }(), style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+            if (!industrial) ...[
+              const SizedBox(width: 14),
+              Flexible(
+                child: Enlace('Descargar el histórico', onTap: () => _exportar('Histórico', filasHistorial(store))),
+              ),
+            ],
+          ],
+        )
+      else if (vista != null)
+        _vistaPrevia(vista!)
+      else
+        _cara(
+          exportar: false,
+          derecha: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 16,
+            runSpacing: 6,
+            children: [
+              Enlace(
+                'Descargar plantilla',
+                onTap: () => _descargarCsv('plantilla_${que.etiqueta.toLowerCase()}.csv', plantillaCsv(que)),
+              ),
+              Enlace(
+                'Descargar guía',
+                onTap: () =>
+                    descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
+              ),
+            ],
+          ),
+          contenido: _tablaPlantilla(),
+          pie: [
+            FilledButton(onPressed: elegir, child: const Text('Elegir archivo CSV')),
+            const SizedBox(width: 14),
+            Flexible(
+              child: Text(
+                'En Excel: Archivo, Guardar como, CSV.',
+                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
               ),
             ),
           ],
         ),
-        Tarjeta(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (final q in solo ? [que] : importables)
-                FilaLista(
-                  titulo: q.etiqueta,
-                  subtitulo: switch (q) {
-                    QueImportar.clientes => m('${store.clientes.length} clientes'),
-                    QueImportar.trabajadores => m('${store.trabajadores.length} trabajadores'),
-                    QueImportar.trabajos => m('${store.tareas.where((t) => !t.esPlantilla).length} trabajos'),
-                    QueImportar.activos =>
-                      '${store.activos.length} ${store.activos.length == 1 ? 'activo o componente' : 'activos y componentes'}, '
-                          '${store.planes.length} ${store.planes.length == 1 ? 'mantenimiento' : 'mantenimientos'}',
-                  },
-                  derecha: Enlace(
-                    'Descargar ${formato.etiqueta}',
-                    onTap: () =>
-                        _exportar(q.etiqueta, [q.columnas, ...filasExportar(q, store)], columnasPdf: columnasPdf(q)),
-                  ),
-                ),
-              if (!industrial)
-                FilaLista(
-                  titulo: 'Histórico',
-                  subtitulo: 'Cada mantenimiento hecho, con su fecha',
-                  derecha: Enlace(
-                    'Descargar ${formato.etiqueta}',
-                    onTap: () => _exportar('Histórico', filasHistorial(store)),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
     ],
   );
+
+  /// Como mucho se ven estas filas de cada tabla; debajo, cuántas más hay.
+  static const _maxFilas = 6;
+
+  /// Alto de la tabla para las dos caras: el de la más alta (hasta [_maxFilas] filas, con la línea de «más»).
+  double get _altoTabla {
+    final datos = filasExportar(que, store).length;
+    final filas = [que.ejemplos.length, datos, 1].reduce(max).clamp(1, _maxFilas);
+    final mas = datos > _maxFilas || que.ejemplos.length > _maxFilas;
+    return 46 + 57.0 * filas + 2 + (mas ? 30 : 0);
+  }
+
+  /// Esqueleto común de Importar y Exportar: título con su flecha (y el tipo, desde Ajustes) y [derecha] en una
+  /// fila de 40; la tabla en un hueco de alto fijo; abajo, el botón y su nota.
+  Widget _cara({
+    required bool exportar,
+    required Widget derecha,
+    required Widget contenido,
+    required List<Widget> pie,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(
+        height: 40,
+        child: Row(
+          children: [
+            _titulo(exportar ? 'Exportar' : 'Importar', exportar: exportar),
+            const SizedBox(width: 16),
+            // Si no cabe, se desliza.
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
+                child: Row(children: [derecha]),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 10),
+      SizedBox(
+        height: _altoTabla,
+        child: Align(alignment: Alignment.topLeft, child: contenido),
+      ),
+      const SizedBox(height: 14),
+      SizedBox(height: 40, child: Row(children: pie)),
+    ],
+  );
+
+  /// Tabla con como mucho [_maxFilas] filas y, debajo a la izquierda, cuántas más hay.
+  Widget _tablaCorta(List<Col> columnas, List<List<Widget>> filas) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _tabla(columnas, filas.take(_maxFilas).toList(), maxFilas: _maxFilas),
+      if (filas.length > _maxFilas)
+        Padding(
+          padding: const EdgeInsets.only(top: 10, left: 4),
+          child: Text(
+            'y ${filas.length - _maxFilas} ${filas.length - _maxFilas == 1 ? 'fila' : 'filas'} más',
+            style: TextStyle(fontSize: 13, color: P.textoSuave),
+          ),
+        ),
+    ],
+  );
+
+  /// Ancho de una columna según su título.
+  double _ancho(String c) => (c.length * 8.5 + 48).clamp(110, 260).toDouble();
+
+  /// La plantilla: sus columnas (con lo que lleva cada una al pasar el ratón) y las filas de ejemplo.
+  Widget _tablaPlantilla() => _tablaCorta(
+    [
+      for (final (c, texto) in que.guia)
+        Col(texto.startsWith('Obligatoria') ? '$c *' : c, ancho: _ancho(c), ayuda: texto.isEmpty ? c : texto),
+    ],
+    [
+      for (final f in que.ejemplos) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
+    ],
+  );
+
+  /// Lo que se va a exportar, con las columnas del formato elegido (en PDF, las que caben).
+  Widget _tablaExportar() {
+    final columnas = formato == FormatoExportar.pdf ? columnasPdf(que) : que.columnas;
+    final filas = soloColumnas([que.columnas, ...filasExportar(que, store)], columnas);
+    if (filas.length == 1) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8, left: 4),
+        child: Text(
+          'Aún no hay ${que.etiqueta.toLowerCase()} que exportar.',
+          style: TextStyle(fontSize: 13, color: P.textoSuave),
+        ),
+      );
+    }
+    return _tablaCorta(
+      [for (final c in columnas) Col(c, ancho: _ancho(c))],
+      [
+        for (final f in filas.skip(1)) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
+      ],
+    );
+  }
 
   /// Descarga [conCabecera] en el formato elegido. El PDF lleva solo [columnasPdf] (las que caben).
   Future<void> _exportar(String titulo, List<List<String>> conCabecera, {List<String>? columnasPdf}) async {
@@ -227,8 +326,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
   Widget _titulo(String t, {required bool exportar}) {
     const icono = Icon(Icons.file_download_outlined, size: 18);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.zero,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           IconTheme(
             data: IconThemeData(color: P.textoSuave),
@@ -290,75 +390,6 @@ class _ImportarExportarState extends State<ImportarExportar> {
       );
     },
   );
-
-  /// La plantilla a la vista: sus columnas (con lo que lleva cada una al pasar el ratón) y las filas de ejemplo.
-  Widget _plantilla() {
-    final guia = que.guia;
-    return Column(
-      key: ValueKey('plantilla_${que.name}'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text('Plantilla', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            const SizedBox(width: 16),
-            // En ventana estrecha, los enlaces bajan de línea en vez de salirse.
-            Expanded(
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 16,
-                runSpacing: 6,
-                children: [
-                  Enlace(
-                    'Descargar plantilla',
-                    onTap: () => _descargarCsv('plantilla_${que.etiqueta.toLowerCase()}.csv', plantillaCsv(que)),
-                  ),
-                  Enlace(
-                    'Descargar guía',
-                    onTap: () =>
-                        descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        const Consejo(
-          'Rellena tu Excel con estas columnas y guárdalo como CSV. Pasa el ratón por cada columna para ver qué '
-          'lleva; las de * son obligatorias y el orden da igual.',
-          clave: 'importar_plantilla',
-        ),
-        const SizedBox(height: 10),
-        _tabla(
-          [
-            for (final (c, texto) in guia)
-              Col(
-                texto.startsWith('Obligatoria') ? '$c *' : c,
-                ancho: (c.length * 8.5 + 48).clamp(110, 260).toDouble(),
-                ayuda: texto.isEmpty ? c : texto,
-              ),
-          ],
-          [
-            for (final f in que.ejemplos) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            FilledButton(onPressed: elegir, child: const Text('Elegir archivo CSV')),
-            const SizedBox(width: 14),
-            Flexible(
-              child: Text(
-                'En Excel: Archivo, Guardar como, CSV.',
-                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 
   /// Lo que se va a crear, en tabla, con el resumen en colores y los avisos por fila.
   Widget _vistaPrevia(Importacion imp) {
@@ -461,7 +492,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
               Pill('${imp.avisos.length} ${imp.avisos.length == 1 ? 'aviso' : 'avisos'}', P.ambar, punto: true),
           ],
         ),
-        if (filas.isNotEmpty) ...[const SizedBox(height: 12), _tabla(columnas, filas)],
+        if (filas.isNotEmpty) ...[const SizedBox(height: 12), _tablaCorta(columnas, filas)],
         if (imp.avisos.isNotEmpty) ...[
           const SizedBox(height: 12),
           Tarjeta(

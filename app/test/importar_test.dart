@@ -137,7 +137,7 @@ void main() {
       }
       await tester.tap(find.text('Exportar').last);
       await tester.pumpAndSettle();
-      expect(find.text('Histórico'), findsOneWidget);
+      expect(find.text('Descargar el histórico'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
   });
