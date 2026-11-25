@@ -676,6 +676,168 @@ Widget dos(Widget a, Widget b) => Row(
 
 Widget conMargen(Widget w) => Padding(padding: const EdgeInsets.only(bottom: 16), child: w);
 
+/// Opción de sí/no dentro de un [Bloque]: recuadro de borde fino y neutro, título, nota opcional y un interruptor
+/// pequeño en tinta. Toda la fila lo cambia; sin resaltado al pasar el ratón.
+class FilaInterruptor extends StatelessWidget {
+  final String titulo;
+  final String? texto;
+  final bool valor;
+  final ValueChanged<bool> onChanged;
+  const FilaInterruptor({super.key, required this.titulo, this.texto, required this.valor, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onChanged(!valor),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(P.radioControl),
+            border: Border.all(color: P.borde),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                    if (texto != null) ...[
+                      const SizedBox(height: 2),
+                      Text(texto!, style: TextStyle(fontSize: 13, color: P.textoSuave, height: 1.4)),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 22,
+                child: FittedBox(
+                  child: Switch(
+                    value: valor,
+                    onChanged: onChanged,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: P.texto,
+                    inactiveThumbColor: P.textoSuave,
+                    inactiveTrackColor: P.hover,
+                    trackOutlineColor: WidgetStateProperty.resolveWith(
+                      (e) => e.contains(WidgetState.selected) ? Colors.transparent : P.borde,
+                    ),
+                    overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+                    mouseCursor: SystemMouseCursors.click,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// «Más opciones» de un formulario: lo que pocas veces hace falta, plegado. Cabecera como la de un [Bloque] (título
+/// y qué hay dentro) con «Mostrar»/«Ocultar» a la derecha; al abrir, sus bloques se despliegan con suavidad.
+class MasOpciones extends StatefulWidget {
+  final bool abierto;
+  final String texto;
+  final VoidCallback onTap;
+  final List<Widget> children;
+  const MasOpciones({
+    super.key,
+    required this.abierto,
+    required this.texto,
+    required this.onTap,
+    required this.children,
+  });
+
+  @override
+  State<MasOpciones> createState() => _MasOpcionesState();
+}
+
+class _MasOpcionesState extends State<MasOpciones> {
+  bool _encima = false;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _encima = true),
+          onExit: (_) => setState(() => _encima = false),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            child: Container(
+              padding: const EdgeInsets.only(top: 16, bottom: 14),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: P.borde))),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Más opciones',
+                          style: TextStyle(fontFamily: P.titulos, fontSize: 16.5, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(widget.texto, style: TextStyle(fontSize: 14, color: P.textoSuave, height: 1.4)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: 34,
+                    padding: const EdgeInsets.only(left: 12, right: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(P.radioControl),
+                      border: Border.all(color: _encima ? P.textoSuave.withValues(alpha: .5) : P.borde),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.abierto ? 'Ocultar' : 'Mostrar',
+                          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(width: 4),
+                        AnimatedRotation(
+                          turns: widget.abierto ? .5 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutCubic,
+                          child: Icon(Icons.expand_more_rounded, size: 20, color: P.textoSuave),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: widget.abierto
+            ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: widget.children)
+            : const SizedBox(width: double.infinity),
+      ),
+    ],
+  );
+}
+
 class CampoFecha extends StatelessWidget {
   final String label;
   final DateTime? valor;

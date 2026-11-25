@@ -930,11 +930,25 @@ class _PlanFormState extends State<PlanForm> {
             ),
           ),
         ]),
+        // Al crearlo, encendido: lo que hace un mantenimiento (crear sus órdenes solo). Apagado, se guarda pausado y
+        // sin orden hasta reanudarlo (▶).
+        if (!existe)
+          Bloque('Órdenes de trabajo', [
+            FilaInterruptor(
+              titulo: 'Crear las órdenes automáticamente',
+              texto: p.activa ? 'Pultec la crea sola cada vez que toca.' : 'Se guarda pausado, sin órdenes.',
+              valor: p.activa,
+              onChanged: (v) => setState(() => p.activa = v),
+            ),
+          ]),
         Bloque('Checklist', descripcion: 'Pasos que marca el técnico en la orden.', [
           EditorChecklist(p.checklist, (pasos) => setState(() => p.checklist = pasos), propio: p.id),
         ]),
-        _MasOpciones(abierto: _mas, onTap: () => setState(() => _mas = !_mas)),
-        if (_mas) ...[
+        MasOpciones(
+          abierto: _mas,
+          texto: 'Repuestos, procedimiento, medición y preparación.',
+          onTap: () => setState(() => _mas = !_mas),
+          children: [
           Bloque('Repuestos', [
             campo('Repuestos', repuestos, hint: 'Filtro de aceite, 12 l de aceite 15W40…', lineas: 3),
           ]),
@@ -967,73 +981,19 @@ class _PlanFormState extends State<PlanForm> {
                 campo('A quién avisar', avisoCorreos, hint: 'Vacío = administradores'),
               ),
               campo('Qué preparar', preparar, hint: 'Grúa de 20 t, kit de válvula, técnico de alta tensión…', lineas: 2),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: p.subcontratado,
+              FilaInterruptor(
+                titulo: 'Lo hace una empresa externa',
+                valor: p.subcontratado,
                 onChanged: (v) => setState(() => p.subcontratado = v),
-                title: const Text('Lo hace una empresa externa'),
               ),
               if (p.subcontratado) campo('Empresa externa y contacto', empresaExterna, hint: 'Grúas Norte · 600 000 000'),
             ],
           ),
-        ],
-        // Al crearlo, al final y encendido: lo que hace un mantenimiento (crear sus órdenes solo). Apagado, se guarda
-        // pausado y sin orden hasta reanudarlo (▶).
-        if (!existe)
-          Bloque(
-            'Órdenes de trabajo',
-            [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Crear las órdenes automáticamente', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(
-                  p.activa ? 'Pultec la crea sola cada vez que toca.' : 'Se guarda pausado, sin órdenes.',
-                  style: TextStyle(fontSize: 13, color: P.textoSuave, height: 1.4),
-                ),
-                value: p.activa,
-                onChanged: (v) => setState(() => p.activa = v),
-              ),
-            ],
-          ),
+          ],
+        ),
       ],
     );
   }
-}
-
-/// «Más opciones» del formulario de mantenimiento: lo que pocas veces hace falta, plegado.
-class _MasOpciones extends StatelessWidget {
-  final bool abierto;
-  final VoidCallback onTap;
-  const _MasOpciones({required this.abierto, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    decoration: BoxDecoration(border: Border(top: BorderSide(color: P.borde))),
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            Text(
-              'Más opciones',
-              style: TextStyle(fontFamily: P.titulos, fontSize: 16.5, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Repuestos, procedimiento, medición, preparación',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13.5, color: P.textoSuave),
-              ),
-            ),
-            Icon(abierto ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: P.textoSuave),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 /// «Asignar a» del mantenimiento, con la misma forma que el desplegable de técnicos: primero los grupos (cada uno
