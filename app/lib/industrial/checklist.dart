@@ -339,48 +339,53 @@ class ChecklistOt extends StatelessWidget {
         ),
       ),
       for (final (i, p) in pasos.indexed)
-        InkWell(
-          onTap: puedeMarcar ? () => _marcar(context, i) : null,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(sinTarjeta ? 0 : 14, 8, 6, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: Icon(
-                    p.hecho ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                    size: 22,
-                    color: p.hecho ? P.verde : P.textoSuave,
+        // Al pasar por encima, el fondo con las cuatro esquinas redondeadas (y un poco de aire alrededor).
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: sinTarjeta ? 0 : 6, vertical: 1),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(P.radioControl),
+            onTap: puedeMarcar ? () => _marcar(context, i) : null,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(8, 8, 6, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(
+                      p.hecho ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      size: 22,
+                      color: p.hecho ? P.verde : P.textoSuave,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(p.paso, style: TextStyle(fontSize: 14, color: p.hecho ? P.textoSuave : null)),
-                      if (p.hecho && p.cuando != null)
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(p.paso, style: TextStyle(fontSize: 14, color: p.hecho ? P.textoSuave : null)),
+                        // La línea de la hora siempre ocupa su sitio: al marcar, la fila no crece.
                         Text(
-                          '${_hora(p.cuando!)}, ${quienMarco(p.por)}',
+                          p.hecho && p.cuando != null ? '${_hora(p.cuando!)}, ${quienMarco(p.por)}' : ' ',
                           style: TextStyle(fontSize: 12, color: P.textoSuave),
                         ),
-                      if (p.nota.isNotEmpty)
-                        Text(
-                          p.nota,
-                          style: TextStyle(fontSize: 12.5, color: P.texto, fontStyle: FontStyle.italic),
-                        ),
-                    ],
+                        if (p.nota.isNotEmpty)
+                          Text(
+                            p.nota,
+                            style: TextStyle(fontSize: 12.5, color: P.texto, fontStyle: FontStyle.italic),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                if (puedeMarcar)
-                  IconButton(
-                    tooltip: p.nota.isEmpty ? 'Añadir nota' : 'Cambiar la nota',
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(Icons.edit_note_rounded, size: 20, color: p.nota.isEmpty ? P.textoSuave : P.morado),
-                    onPressed: () => _nota(context, i),
-                  ),
-              ],
+                  if (puedeMarcar)
+                    IconButton(
+                      tooltip: p.nota.isEmpty ? 'Añadir nota' : 'Cambiar la nota',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.edit_note_rounded, size: 20, color: p.nota.isEmpty ? P.textoSuave : P.morado),
+                      onPressed: () => _nota(context, i),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
