@@ -845,7 +845,7 @@ pw.MultiPage _paginaPdf({
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(Marca.nombre, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: marca)),
+                pw.Text(Marca.nombre, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: _tintaPdf)),
                 if (empresa.isNotEmpty) pw.Text(empresa, style: pw.TextStyle(fontSize: 9.5, color: _suavePdf)),
               ],
             ),
