@@ -32,7 +32,7 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: Scaffold(body: EstadisticasPultec())));
       await tester.pumpAndSettle();
       expect(find.text('Hechas en el periodo'), findsOneWidget);
-      for (final apartado in ['Verificaciones', 'Técnicos', 'Incidencias', 'Activo']) {
+      for (final apartado in ['Indicadores', 'Verificaciones', 'Técnicos', 'Incidencias', 'Activo']) {
         // En el móvil las pestañas se abrevian o van en menú: ahí basta con que se dibuje.
         if (find.text(apartado).evaluate().isEmpty) continue;
         await tester.tap(find.text(apartado).first);
@@ -44,7 +44,7 @@ void main() {
       if (find.text('Datos de prueba').evaluate().isNotEmpty) {
         await tester.tap(find.text('Datos de prueba'));
         await tester.pumpAndSettle();
-        for (final apartado in ['Verificaciones', 'Técnicos', 'Incidencias', 'Activo']) {
+        for (final apartado in ['Indicadores', 'Verificaciones', 'Técnicos', 'Incidencias', 'Activo']) {
           if (find.text(apartado).evaluate().isEmpty) continue;
           await tester.tap(find.text(apartado).first);
           await tester.pumpAndSettle();

@@ -459,11 +459,15 @@ class _PintorAnillo extends CustomPainter {
 /// barra crece un poco después que la de encima.
 class BarrasRanking extends StatelessWidget {
   final List<({String nombre, double valor, Widget? lider})> filas;
-  const BarrasRanking(this.filas, {super.key});
+
+  /// Fondo de escala (null = el mayor de las filas) y lo que va tras cada valor (« %»).
+  final double? maximo;
+  final String sufijo;
+  const BarrasRanking(this.filas, {super.key, this.maximo, this.sufijo = ''});
 
   @override
   Widget build(BuildContext context) {
-    final maximo = filas.isEmpty ? 1.0 : max(1.0, filas.map((f) => f.valor).reduce(max));
+    final maximo = this.maximo ?? (filas.isEmpty ? 1.0 : max(1.0, filas.map((f) => f.valor).reduce(max)));
     return EntradaGrafica(
       ms: 1000,
       builder: (v) => Column(
@@ -482,8 +486,8 @@ class BarrasRanking extends StatelessWidget {
                 Expanded(child: BarraValor(f.valor / maximo * Curves.easeOutCubic.transform(((v - i * .08) / .7).clamp(0.0, 1.0)))),
                 const SizedBox(width: 10),
                 SizedBox(
-                  width: 34,
-                  child: Text(numCorto(f.valor), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                  width: sufijo.isEmpty ? 34 : 48,
+                  child: Text('${numCorto(f.valor)}$sufijo', textAlign: TextAlign.right, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
                 ),
               ],
             ),

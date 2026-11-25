@@ -15,6 +15,7 @@ import 'activos.dart' show contadorTexto;
 import 'estadisticas_prueba.dart';
 import 'graficas.dart';
 import 'gravedad.dart';
+import 'indicadores.dart';
 import 'historicos.dart';
 import 'incidencia.dart';
 import 'mantenimientos.dart' show abrirIncidenciaForm, raizDe;
@@ -60,7 +61,7 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
             izquierda: [
               const TituloVista('Estadísticas'),
               Pestanas(
-                opciones: const ['Activo', 'Verificaciones', 'Técnicos', 'Incidencias'],
+                opciones: const ['Activo', 'Indicadores', 'Verificaciones', 'Técnicos', 'Incidencias'],
                 seleccion: apartado,
                 onChanged: (i) => setState(() => apartado = i),
               ),
@@ -101,8 +102,9 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
                 dias: dias,
                 onActivo: (id) => setState(() => activoId = raizDe(id)?.id ?? id),
               ),
-              1 => _Verificaciones(desde: desde),
-              2 => _PorTecnico(desde: desde, dias: dias),
+              1 => IndicadoresPultec(desde: desde, dias: dias),
+              2 => _Verificaciones(desde: desde),
+              3 => _PorTecnico(desde: desde, dias: dias),
               _ => _PorEquipo(desde: desde, dias: dias),
             },
           ),

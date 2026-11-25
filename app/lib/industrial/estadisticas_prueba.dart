@@ -132,6 +132,23 @@ class EstadisticasPrueba {
         }
       }
     }
+    // Correctivos hechos (reparaciones), para el reparto preventivo frente a correctivo.
+    for (var k = 0; k < 18; k++) {
+      final a = activos[r.nextInt(activos.length)];
+      final d = masDias(hoy_, -r.nextInt(365));
+      tareas.add(Tarea(
+        id: 'prueba-c$k',
+        plantilla: false,
+        activoId: a.id,
+        nombre: 'Reparación',
+        tipoMantenimiento: r.nextBool() ? TipoMantenimiento.correctivoNoCritico : TipoMantenimiento.correctivoCritico,
+        trabajadorIds: [ws[r.nextInt(ws.length)].id],
+        historial: [d],
+        ultimo: d,
+        estado: EstadoTrabajo.realizado,
+        activa: false,
+      ));
+    }
     const textos = ['Ruido extraño al arrancar', 'Fuga de aceite', 'Temperatura alta', 'No arranca', 'Vibración excesiva', 'Correa desgastada'];
     for (var k = 0; k < 46; k++) {
       final a = activos[r.nextInt(activos.length)];
@@ -147,6 +164,8 @@ class EstadisticasPrueba {
             ? EstadoIncidencia.values[r.nextInt(2)]
             : (r.nextDouble() < .8 ? EstadoIncidencia.completada : EstadoIncidencia.desestimada),
         creada: creada,
+        // Resueltas en unas horas o pocos días, para el MTTR y la disponibilidad.
+        cerradaEl: reciente && r.nextBool() ? null : creada.add(Duration(hours: 2 + r.nextInt(70))),
       ));
     }
     store
