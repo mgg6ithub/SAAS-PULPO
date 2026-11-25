@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../geo.dart';
 import '../importar.dart';
+import '../informes.dart' show listadoPdf;
 import '../models.dart';
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
 import '../store.dart';
@@ -40,6 +41,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
   late QueImportar que = widget.que ?? importables.first;
   Importacion? vista;
   String? archivo;
+  FormatoExportar formato = FormatoExportar.pdf;
   bool get solo => widget.que != null;
 
   Future<void> elegir() async {
@@ -141,7 +143,22 @@ class _ImportarExportarState extends State<ImportarExportar> {
         child: vista == null ? _plantilla() : _vistaPrevia(vista!),
       ),
       const SizedBox(height: 26),
-      _titulo('Exportar'),
+      // Título y, a su derecha, el formato de la descarga (PDF por defecto).
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(child: _titulo('Exportar')),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Pestanas(
+              compactas: true,
+              opciones: [for (final f in FormatoExportar.values) f.etiqueta],
+              seleccion: formato.index,
+              onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
+            ),
+          ),
+        ],
+      ),
       Tarjeta(
         padding: EdgeInsets.zero,
         child: Column(
@@ -159,8 +176,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
                         '${store.planes.length} ${store.planes.length == 1 ? 'mantenimiento' : 'mantenimientos'}',
                 },
                 derecha: Enlace(
-                  'Descargar',
-                  onTap: () => _descargarCsv('${q.etiqueta.toLowerCase()}.csv', exportarCsv(q, store)),
+                  'Descargar ${formato.etiqueta}',
+                  onTap: () =>
+                      _exportar(q.etiqueta, [q.columnas, ...filasExportar(q, store)], columnasPdf: columnasPdf(q)),
                 ),
               ),
             if (!industrial)
@@ -168,13 +186,30 @@ class _ImportarExportarState extends State<ImportarExportar> {
                 lider: const SizedBox(width: 4),
                 titulo: 'Histórico',
                 subtitulo: 'Cada mantenimiento hecho, con su fecha',
-                derecha: Enlace('Descargar', onTap: () => _descargarCsv('historico.csv', exportarHistorialCsv(store))),
+                derecha: Enlace(
+                  'Descargar ${formato.etiqueta}',
+                  onTap: () => _exportar('Histórico', filasHistorial(store)),
+                ),
               ),
           ],
         ),
       ),
     ],
   );
+
+  /// Descarga [conCabecera] en el formato elegido. El PDF lleva solo [columnasPdf] (las que caben).
+  Future<void> _exportar(String titulo, List<List<String>> conCabecera, {List<String>? columnasPdf}) async {
+    final nombre = normalizar(titulo).replaceAll(' ', '_');
+    final bytes = switch (formato) {
+      FormatoExportar.pdf => await listadoPdf(
+        titulo,
+        columnasPdf == null ? conCabecera : soloColumnas(conCabecera, columnasPdf),
+      ),
+      FormatoExportar.csv => utf8.encode(escribirCsv(conCabecera)),
+      FormatoExportar.json => utf8.encode(filasJson(conCabecera)),
+    };
+    await descargar(bytes, '$nombre.${formato.name}', formato.tipo);
+  }
 
   Widget _titulo(String t) => Padding(
     padding: const EdgeInsets.only(bottom: 8),

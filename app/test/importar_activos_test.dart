@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pultec/informes.dart' show listadoPdf;
 import 'package:pultec/importar.dart';
 import 'package:pultec/industrial/activo.dart';
 import 'package:pultec/industrial/plan.dart';
@@ -156,5 +159,22 @@ void main() {
     imp.aplicar(store);
     expect(store.trabajadores, hasLength(2));
     expect(preparar(QueImportar.trabajadores, plantillaCsv(QueImportar.trabajadores)).avisos, isEmpty);
+  });
+
+  test('exportar en PDF, CSV y JSON', () async {
+    preparar(
+      QueImportar.activos,
+      'Tag;Nombre;Padre;Mantenimiento;Cada\nP;Planta;;Rev;6 meses\nC;Comp;P;;',
+    ).aplicar(store);
+    final filas = [QueImportar.activos.columnas, ...filasExportar(QueImportar.activos, store)];
+    final json = jsonDecode(filasJson(filas)) as List;
+    expect(json, hasLength(2));
+    expect(json.first, containsPair('Mantenimiento', 'Rev'));
+    expect((json.last as Map).containsKey('Mantenimiento'), isFalse);
+    final pdf = soloColumnas(filas, columnasPdf(QueImportar.activos));
+    expect(pdf.first, columnasPdf(QueImportar.activos));
+    expect(pdf[1].first, 'P');
+    final bytes = await listadoPdf('Activos', pdf);
+    expect(ascii.decode(bytes.sublist(0, 4)), '%PDF');
   });
 }

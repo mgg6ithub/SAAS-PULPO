@@ -830,10 +830,11 @@ pw.MultiPage _paginaPdf({
   required String numero,
   required String cuando,
   required List<pw.Widget> Function(pw.Context) build,
+  PdfPageFormat formato = PdfPageFormat.a4,
 }) {
   final marca = PdfColor.fromInt(P.morado.toARGB32());
   return pw.MultiPage(
-    pageFormat: PdfPageFormat.a4,
+    pageFormat: formato,
     margin: const pw.EdgeInsets.fromLTRB(40, 36, 40, 36),
     header: (context) => pw.Column(
       children: [
@@ -1064,6 +1065,50 @@ Future<Uint8List> incidenciaPdf(Incidencia x, {EdicionPdf? e}) async {
       ],
     ),
   );
+  return doc.save();
+}
+
+/// Listado en PDF (exportar activos, técnicos…): A4 en horizontal con la cabecera de la empresa y una tabla.
+Future<Uint8List> listadoPdf(String titulo, List<List<String>> conCabecera) async {
+  final empresa = store.nube?.nombre ?? '';
+  final doc = pw.Document(title: titulo, author: empresa.isEmpty ? Marca.nombre : empresa);
+  final logo = await _logoPdf();
+  pw.Widget celda(String t, {bool cab = false}) => pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+    child: pw.Text(
+      t,
+      style: pw.TextStyle(
+        fontSize: cab ? 8 : 8.5,
+        color: cab ? _suavePdf : _tintaPdf,
+        fontWeight: cab ? pw.FontWeight.bold : pw.FontWeight.normal,
+      ),
+    ),
+  );
+  final filas = conCabecera.length - 1;
+  doc.addPage(_paginaPdf(
+    formato: PdfPageFormat.a4.landscape,
+    logo: logo,
+    empresa: empresa,
+    titulo: titulo,
+    numero: '$filas ${filas == 1 ? 'fila' : 'filas'}',
+    cuando: fecha(DateTime.now()),
+    build: (_) => [
+      if (filas == 0)
+        pw.Text('No hay nada que listar.', style: pw.TextStyle(fontSize: 10, color: _suavePdf))
+      else
+        pw.Table(
+          border: pw.TableBorder(horizontalInside: pw.BorderSide(color: _bordePdf, width: .6)),
+          children: [
+            pw.TableRow(
+              repeat: true,
+              decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: _tintaPdf, width: .8))),
+              children: [for (final c in conCabecera.first) celda(c, cab: true)],
+            ),
+            for (final f in conCabecera.skip(1)) pw.TableRow(children: [for (final c in f) celda(c)]),
+          ],
+        ),
+    ],
+  ));
   return doc.save();
 }
 

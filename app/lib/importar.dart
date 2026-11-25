@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'industrial/activo.dart';
 import 'industrial/iconos.dart';
 import 'industrial/plan.dart';
@@ -793,8 +795,10 @@ List<List<String>> _filasActivos(Store s) {
   return filas;
 }
 
-String exportarCsv(QueImportar que, Store s) => escribirCsv([
-  que.columnas,
+String exportarCsv(QueImportar que, Store s) => escribirCsv([que.columnas, ...filasExportar(que, s)]);
+
+/// Las filas que se exportan de [que] (sin la cabecera, que es [QueImportarX.columnas]).
+List<List<String>> filasExportar(QueImportar que, Store s) => [
   ...switch (que) {
     QueImportar.activos => _filasActivos(s),
     QueImportar.clientes => [
@@ -834,16 +838,65 @@ String exportarCsv(QueImportar que, Store s) => escribirCsv([
         ],
     ],
   },
-]);
+];
 
 /// Todo lo hecho, una fila por visita (el histórico de cada trabajo).
-String exportarHistorialCsv(Store s) {
+String exportarHistorialCsv(Store s) => escribirCsv(filasHistorial(s));
+
+/// El histórico con su cabecera: una fila por visita, de la más reciente a la más antigua.
+List<List<String>> filasHistorial(Store s) {
   final visitas = [
     for (final t in s.tareas.where((t) => !t.esPlantilla))
       for (final d in {...t.historial, ?t.ultimo}) (d, t),
   ]..sort((a, b) => b.$1.compareTo(a.$1));
-  return escribirCsv([
+  return [
     ['Fecha', 'Cliente', 'Trabajo', 'Tipo'],
     for (final (d, t) in visitas) [fecha(d), s.cliente(t.clienteId)?.nombre ?? '', t.nombre, t.tipo],
-  ]);
+  ];
+}
+
+/// Formatos de exportación. PDF para leer o imprimir; CSV para Excel (y volver a importar); JSON para otros programas.
+enum FormatoExportar { pdf, csv, json }
+
+extension FormatoExportarX on FormatoExportar {
+  String get etiqueta => const ['PDF', 'CSV', 'JSON'][index];
+  String get tipo => const ['application/pdf', 'text/csv', 'application/json'][index];
+}
+
+/// Columnas que caben en el PDF (en horizontal); el resto va en CSV y JSON.
+List<String> columnasPdf(QueImportar que) => switch (que) {
+  QueImportar.activos => const [
+    'Tag',
+    'Nombre',
+    'Padre',
+    'Fabricante',
+    'Modelo',
+    'Horas contador',
+    'Mantenimiento',
+    'Prioridad',
+    'Cada',
+    'Cada horas',
+    'Última vez',
+    'Técnico',
+  ],
+  QueImportar.clientes => const ['Nombre', 'CIF', 'Ciudad', 'Teléfono', 'Email', 'Contacto'],
+  QueImportar.trabajos => const ['Cliente', 'Nombre', 'Tipo', 'Periodicidad', 'Próximo', 'Último'],
+  QueImportar.trabajadores => que.columnas,
+};
+
+/// Lista en JSON: un objeto por fila con el nombre de cada columna (sin las vacías).
+String filasJson(List<List<String>> conCabecera) => const JsonEncoder.withIndent('  ').convert([
+  for (final f in conCabecera.skip(1))
+    {
+      for (final (i, c) in conCabecera.first.indexed)
+        if (i < f.length && f[i].isNotEmpty) c: f[i],
+    },
+]);
+
+/// Solo las [columnas] de [conCabecera], en ese orden.
+List<List<String>> soloColumnas(List<List<String>> conCabecera, List<String> columnas) {
+  final idx = [for (final c in columnas) conCabecera.first.indexOf(c)];
+  return [
+    for (final f in conCabecera) [for (final i in idx) i < 0 || i >= f.length ? '' : f[i]],
+  ];
 }
