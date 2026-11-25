@@ -1509,7 +1509,10 @@ class Tabla extends StatefulWidget {
   State<Tabla> createState() => _TablaState();
 }
 
-class _TablaState extends State<Tabla> {
+class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
+  /// Al aparecer, las primeras filas entran escalonadas (opacidad y un poco desde abajo).
+  late final _entrada = AnimationController(vsync: this, duration: const Duration(milliseconds: 520))..forward();
+
   /// Entra con [Tabla.focoInicial] marcada y la acerca a la vista.
   void _marcarInicial() {
     final i = widget.focoInicial;
@@ -1559,6 +1562,7 @@ class _TablaState extends State<Tabla> {
     _abiertas.remove(this);
     HardwareKeyboard.instance.removeHandler(_tecla);
     _scroll.dispose();
+    _entrada.dispose();
     super.dispose();
   }
 
@@ -1877,7 +1881,19 @@ class _TablaState extends State<Tabla> {
                       ),
                     );
                     final contenido = borde == null ? fila : Padding(padding: const EdgeInsets.all(3), child: fila);
-                    return widget.envolverFila?.call(i, contenido) ?? contenido;
+                    final envuelta = widget.envolverFila?.call(i, contenido) ?? contenido;
+                    if (i >= 12 || _entrada.isCompleted) return envuelta;
+                    final paso = CurvedAnimation(
+                      parent: _entrada,
+                      curve: Interval(i * .045, (i * .045 + .5).clamp(0, 1), curve: Curves.easeOutCubic),
+                    );
+                    return FadeTransition(
+                      opacity: paso,
+                      child: SlideTransition(
+                        position: Tween(begin: const Offset(0, .12), end: Offset.zero).animate(paso),
+                        child: envuelta,
+                      ),
+                    );
                   },
                 ),
               ),
@@ -3300,4 +3316,30 @@ class _Cuadricula extends CustomPainter {
 
   @override
   bool shouldRepaint(_Cuadricula o) => o.color != color;
+}
+
+/// Cambio de vista suave: al cambiar [clave], la nueva entra con opacidad y un poco desde abajo y la anterior se
+/// desvanece (p. ej. al entrar en un activo o volver a la lista).
+class TransicionVista extends StatelessWidget {
+  final Object? clave;
+  final Widget child;
+  const TransicionVista({super.key, required this.clave, required this.child});
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: const Duration(milliseconds: 280),
+    reverseDuration: const Duration(milliseconds: 160),
+    switchInCurve: Curves.easeOutCubic,
+    switchOutCurve: Curves.easeIn,
+    layoutBuilder: (actual, anteriores) =>
+        Stack(fit: StackFit.expand, alignment: Alignment.topLeft, children: [...anteriores, ?actual]),
+    transitionBuilder: (hijo, a) => FadeTransition(
+      opacity: a,
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0, .015), end: Offset.zero).animate(a),
+        child: hijo,
+      ),
+    ),
+    child: KeyedSubtree(key: ValueKey(clave), child: child),
+  );
 }

@@ -124,7 +124,11 @@ class _ActivosState extends State<Activos> {
   void _cambio() => setState(() => abierto = null);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => widget.onAbrir != null
+      ? _contenido(context)
+      : TransicionVista(clave: abierto, child: _contenido(context));
+
+  Widget _contenido(BuildContext context) {
     if (abierto != null && widget.onAbrir == null)
       return ActivoDetalle(
         activoId: abierto!,
@@ -561,7 +565,10 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
       _rutaVisible = a.id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _rutaScroll.hasClients) {
-          _rutaScroll.jumpTo(_rutaScroll.position.maxScrollExtent);
+          // Durante el fundido puede haber dos rutas a la vez (la que sale y la que entra).
+          for (final p in _rutaScroll.positions) {
+            p.jumpTo(p.maxScrollExtent);
+          }
         }
       });
     }
@@ -571,7 +578,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
         : principal.descripcion.trim().isNotEmpty
         ? principal.descripcion.trim()
         : [principal.fabricante, principal.modelo]
-            .where((x) => x.trim().isNotEmpty).join(' · ');
+            .where((x) => x.trim().isNotEmpty).join('     ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -593,7 +600,8 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                         _posicion = 0;
                       }),
                       style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32),
-                        foregroundColor: P.textoSuave, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        foregroundColor: P.textoSuave, tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        overlayColor: Colors.transparent),
                       child: _raizActivos(),
                     ),
                     Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text('/', style: TextStyle(color: P.textoSuave))),
@@ -628,6 +636,7 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                                 padding: EdgeInsets.zero,
                                 minimumSize: const Size(0, 32),
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                overlayColor: Colors.transparent,
                                 foregroundColor: P.textoSuave,
                                 disabledForegroundColor: Theme.of(context)
                                     .colorScheme
@@ -802,7 +811,12 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  // Al entrar o salir de un activo (o de una orden), la vista cambia con un fundido suave, no de golpe.
+  @override
+  Widget build(BuildContext context) =>
+      TransicionVista(clave: '${_historial[_posicion]}|$tareaId', child: _contenido(context));
+
+  Widget _contenido(BuildContext context) {
     final a = store.activo(elegido) ?? store.activo(widget.activoId);
     nuevoEnActivo = a == null
         ? null

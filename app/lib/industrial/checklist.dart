@@ -127,11 +127,19 @@ class _EditorChecklistState extends State<EditorChecklist> {
     ),
   );
 
-  void _usar(List<String> pasos) {
-    setState(() {
-      for (final c in _campos) {
+  /// Los campos quitados se liberan después del fotograma: hasta entonces su fila aún puede estar en pantalla.
+  void _soltar(Iterable<TextEditingController> cs) {
+    final lista = cs.toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final c in lista) {
         c.dispose();
       }
+    });
+  }
+
+  void _usar(List<String> pasos) {
+    setState(() {
+      _soltar(_campos);
       _campos
         ..clear()
         ..addAll([for (final p in pasos) TextEditingController(text: p)]);
@@ -192,7 +200,7 @@ class _EditorChecklistState extends State<EditorChecklist> {
                           tooltip: 'Quitar paso',
                           icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
                           onPressed: () {
-                            setState(() => _campos.removeAt(i).dispose());
+                            setState(() => _soltar([_campos.removeAt(i)]));
                             _avisar();
                           },
                         ),
@@ -236,10 +244,9 @@ class _EditorChecklistState extends State<EditorChecklist> {
                   onPressed: () {
                     FocusScope.of(context).unfocus();
                     setState(() {
-                      for (final c in _campos.where((c) => c.text.trim().isEmpty).toList()) {
-                        _campos.remove(c);
-                        c.dispose();
-                      }
+                      final vacios = _campos.where((c) => c.text.trim().isEmpty).toList();
+                      _campos.removeWhere(vacios.contains);
+                      _soltar(vacios);
                       _editando = false;
                     });
                     _avisar();
