@@ -367,6 +367,15 @@ const conTema = (url) => {
   // como en el agua: cada punto gira sobre la base tanto más cuanto más cerca de la punta, con una onda
   // que recorre el tentáculo de la base a la punta; se cierran hacia el cuerpo y se calman hasta su forma.
   const orden = [0, 3, 1, 4, 2, 5];
+  // Cada tentáculo con su ritmo, fuerza y desfase, para que no hagan el mismo gesto a la vez.
+  const gestos = [
+    { f: 7.4, fase: 0.0, amp: 1.0, k: 4.2, cie: 1.0 },
+    { f: 9.0, fase: 2.3, amp: 0.65, k: 3.4, cie: 0.6 },
+    { f: 6.3, fase: 4.1, amp: 1.15, k: 5.0, cie: 0.85 },
+    { f: 8.2, fase: 1.2, amp: 0.8, k: 3.8, cie: 1.15 },
+    { f: 6.9, fase: 3.4, amp: 1.05, k: 4.6, cie: 0.7 },
+    { f: 8.7, fase: 5.2, amp: 0.7, k: 3.6, cie: 1.05 },
+  ];
   const inicio = performance.now();
   const ondas = orden.map((i, n) => {
     const t = tentaculos[i];
@@ -379,23 +388,23 @@ const conTema = (url) => {
     const w = acum.map((x) => x / largo); // 0 en la base, 1 en la punta
     const retraso = 450 + n * 90;
     a(t, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 650, delay: retraso, easing: "cubic-bezier(.2,.8,.2,1)" });
-    return { t, d0, pts, w, retraso, lado: i < 3 ? -1 : 1, fase: n * 0.8 };
+    return { t, d0, pts, w, retraso, lado: i < 3 ? -1 : 1, ...gestos[n] };
   });
   const suave = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
   const mover = (ahora) => {
     if (fin) return;
     let vivo = false;
-    ondas.forEach(({ t, d0, pts, w, retraso, lado, fase }) => {
+    ondas.forEach(({ t, d0, pts, w, retraso, lado, f, fase, amp: fuerza, k: kOnda, cie }) => {
       const ms = ahora - inicio - retraso;
       const dur = 2000;
       if (ms >= dur) { t.setAttribute("d", d0); return; }
       vivo = true;
       const s = Math.max(0, ms) / 1000;
-      const cierre = lado * -0.45 * (1 - suave(ms / 1100)); // abiertos al salir, se cierran hacia el cuerpo
-      const amp = 0.32 * suave(ms / 250) * (1 - suave((ms - 300) / (dur - 300))); // la onda sube rápido y se apaga
+      const cierre = lado * -0.22 * cie * (1 - suave(ms / 1100)); // abiertos al salir, se cierran hacia el cuerpo
+      const amp = 0.12 * fuerza * suave(ms / 250) * (1 - suave((ms - 300) / (dur - 300))); // la onda sube rápido y se apaga
       const [bx, by] = pts[0];
       const q = pts.map(([x, y], k) => {
-        const ang = w[k] * (cierre + amp * Math.sin(s * 9 - w[k] * 4.5 + fase));
+        const ang = w[k] * (cierre + amp * Math.sin(s * f - w[k] * kOnda + fase));
         const c = Math.cos(ang), sn = Math.sin(ang);
         const dx = x - bx, dy = y - by;
         return [(bx + dx * c - dy * sn).toFixed(1), (by + dx * sn + dy * c).toFixed(1)];
