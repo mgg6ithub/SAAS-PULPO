@@ -111,7 +111,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ),
       }, style: TextStyle(fontSize: 13, color: P.textoSuave)),
       const SizedBox(height: 18),
-      _titulo('Importar'),
+      _titulo('Importar', exportar: false),
       // Desde Activos o Técnicos, solo lo suyo; con todo (Ajustes), una pestaña por tipo, a su ancho.
       if (!solo) ...[
         Align(
@@ -147,7 +147,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
       Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Expanded(child: _titulo('Exportar')),
+          Expanded(child: _titulo('Exportar', exportar: true)),
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Pestanas(
@@ -209,13 +209,27 @@ class _ImportarExportarState extends State<ImportarExportar> {
     await descargar(bytes, '$nombre.${formato.name}', formato.tipo);
   }
 
-  Widget _titulo(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      t.toUpperCase(),
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.textoSuave),
-    ),
-  );
+  /// Título de sección con su flecha (la de descargar para importar; girada 180 grados para exportar), como el
+  /// botón que abre esta ventana.
+  Widget _titulo(String t, {required bool exportar}) {
+    const icono = Icon(Icons.file_download_outlined, size: 18);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          IconTheme(
+            data: IconThemeData(color: P.textoSuave),
+            child: exportar ? const RotatedBox(quarterTurns: 2, child: icono) : icono,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            t.toUpperCase(),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: .8, color: P.textoSuave),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Avisos por número de fila (los que no son de una fila, al final).
   List<String> _enOrden(List<String> avisos) {
