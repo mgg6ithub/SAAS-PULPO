@@ -778,13 +778,14 @@ class BotonImportarExportar extends StatelessWidget {
           mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.click),
         ),
         onPressed: onPressed,
-        child: const Row(
+        // Flecha redondeada, algo más pequeña y en gris suave, para que no pese junto al principal.
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.file_download_outlined, size: 19),
-            SizedBox(width: 2),
+            Icon(Icons.download_rounded, size: 17, color: P.textoSuave),
+            const SizedBox(width: 3),
             // La misma flecha, girada 180 grados.
-            RotatedBox(quarterTurns: 2, child: Icon(Icons.file_download_outlined, size: 19)),
+            RotatedBox(quarterTurns: 2, child: Icon(Icons.download_rounded, size: 17, color: P.textoSuave)),
           ],
         ),
       ),

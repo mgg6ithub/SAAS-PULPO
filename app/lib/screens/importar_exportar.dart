@@ -346,7 +346,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
   /// Título de sección con su flecha (la de descargar para importar; girada 180 grados para exportar), como el
   /// botón que abre esta ventana.
   Widget _titulo(String t, {required bool exportar}) {
-    const icono = Icon(Icons.file_download_outlined, size: 18);
+    const icono = Icon(Icons.download_rounded, size: 17);
     return Padding(
       padding: EdgeInsets.zero,
       child: Row(
