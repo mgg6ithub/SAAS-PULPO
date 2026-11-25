@@ -328,3 +328,77 @@ const conTema = (url) => {
     correo.focus();
   }));
 })();
+
+// Entrada: el pulpo cae grande en el centro, saca los tentáculos, guiña y vuela a su sitio en la barra.
+// Un clic, una tecla o la rueda la saltan. Sin movimiento reducido no se monta (html.intro lo pone el <head>).
+(() => {
+  const root = document.documentElement;
+  const capa = document.getElementById("intro-pulpo");
+  if (!capa || !root.classList.contains("intro")) return;
+  const svg = capa.querySelector("svg");
+  const cabeza = capa.querySelector(".intro-pulpo__cabeza");
+  const ojos = capa.querySelectorAll(".intro-pulpo__ojos circle");
+  const tentaculos = [...capa.querySelectorAll(".intro-t")];
+  const destino = document.querySelector(".nav .brand img");
+  const anims = [];
+  const a = (el, kf, op) => { const x = el.animate(kf, { fill: "both", ...op }); anims.push(x); return x; };
+  const rebote = "cubic-bezier(.34,1.56,.64,1)";
+  let fin = false;
+
+  const terminar = () => {
+    if (fin) return;
+    fin = true;
+    root.classList.remove("intro");
+    capa.remove();
+    ["click", "keydown", "wheel", "touchstart"].forEach((e) => removeEventListener(e, saltar));
+  };
+  const saltar = () => { anims.forEach((x) => x.finish()); terminar(); };
+  ["click", "keydown", "wheel", "touchstart"].forEach((e) => addEventListener(e, saltar, { passive: true }));
+
+  // 1. La cabeza cae y rebota (estira y aplasta).
+  a(cabeza, [
+    { opacity: 0, transform: "translateY(-120px) scale(.6, .9)" },
+    { opacity: 1, transform: "translateY(0) scale(1.12, .86)", offset: 0.55 },
+    { transform: "translateY(-14px) scale(.95, 1.06)", offset: 0.8 },
+    { opacity: 1, transform: "none" },
+  ], { duration: 700, easing: "ease-out" });
+
+  // 2. Los tentáculos salen uno a uno, de dentro hacia fuera, alternando lados, y se mecen.
+  const orden = [0, 3, 1, 4, 2, 5];
+  orden.forEach((i, n) => {
+    const t = tentaculos[i];
+    const lado = i < 3 ? -1 : 1;
+    a(t, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 650, delay: 450 + n * 90, easing: "cubic-bezier(.2,.8,.2,1)" });
+    a(t, [
+      { transform: `rotate(${lado * -18}deg)` },
+      { transform: `rotate(${lado * 8}deg)`, offset: 0.5 },
+      { transform: `rotate(${lado * -4}deg)`, offset: 0.75 },
+      { transform: "none" },
+    ], { duration: 1100, delay: 450 + n * 90, easing: "ease-in-out" });
+  });
+
+  // 3. Parpadeo.
+  ojos.forEach((o) => a(o, [
+    { transform: "scaleY(1)" }, { transform: "scaleY(.1)", offset: 0.5 }, { transform: "scaleY(1)" },
+  ], { duration: 220, delay: 1650, easing: "ease-in-out" }));
+
+  // 4. Vuela a la barra (de su tamaño y posición al del logo de arriba) y la capa se desvanece.
+  setTimeout(() => {
+    if (fin) return;
+    const de = svg.getBoundingClientRect();
+    const a2 = destino ? destino.getBoundingClientRect() : { left: 24, top: 20, width: 34, height: 34 };
+    // El PNG de la barra deja ~8 % de margen: se apunta a su zona útil.
+    const util = a2.width * 0.92;
+    const s = util / de.width;
+    const dx = a2.left + a2.width / 2 - (de.left + de.width / 2);
+    const dy = a2.top + a2.height / 2 - (de.top + de.height / 2);
+    a(svg, [
+      { transform: "none" },
+      { transform: `translate(${dx * 0.15}px, ${dy * 0.05 - 20}px) scale(1.05)`, offset: 0.2 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${s})` },
+    ], { duration: 750, easing: "cubic-bezier(.65,0,.25,1)" });
+    a(capa, [{ backgroundColor: getComputedStyle(capa).backgroundColor }, { backgroundColor: "transparent" }],
+      { duration: 500, delay: 250, easing: "ease-out" }).finished.then(() => {}, () => {});
+    setTimeout(terminar, 760);
+  }, 2050);
+})();

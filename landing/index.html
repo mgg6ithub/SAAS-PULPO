@@ -20,10 +20,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="assets/app/inicio.webp" media="(min-width: 900px)">
-  <script>/* Tema: el que traiga la app (?tema=oscuro|claro, se recuerda) o el guardado; claro por defecto. */ let t = null; const q = new URLSearchParams(location.search).get("tema"); if (q === "oscuro" || q === "claro") { t = q === "oscuro" ? "dark" : "light"; try { localStorage.setItem("pultec-tema", t); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("tema"); history.replaceState(null, "", u); } else { try { t = localStorage.getItem("pultec-tema"); } catch (e) {} } document.documentElement.dataset.theme = t || "light";</script>
-  <link rel="stylesheet" href="styles.css?v=10">
+  <script>/* Tema: el que traiga la app (?tema=oscuro|claro, se recuerda) o el guardado; claro por defecto. */ let t = null; const q = new URLSearchParams(location.search).get("tema"); if (q === "oscuro" || q === "claro") { t = q === "oscuro" ? "dark" : "light"; try { localStorage.setItem("pultec-tema", t); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("tema"); history.replaceState(null, "", u); } else { try { t = localStorage.getItem("pultec-tema"); } catch (e) {} } document.documentElement.dataset.theme = t || "light"; if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("intro");</script>
+  <link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
+  <!-- Entrada: el pulpo aparece grande en el centro, saca los tentáculos y se va a la barra (main.js) -->
+  <div class="intro-pulpo" id="intro-pulpo" aria-hidden="true">
+    <svg viewBox="126 136 772 758" width="260" height="255">
+      <defs><linearGradient id="intro-g" x1="0" y1="160" x2="0" y2="870" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9C6CFF"/><stop offset="1" stop-color="#4A10C8"/></linearGradient></defs>
+      <g class="intro-pulpo__cuerpo">
+        <g fill="none" stroke="url(#intro-g)" stroke-width="78" stroke-linecap="round">
+          <path class="intro-t intro-t--i" pathLength="1" d="M352 452C300 500 230 500 205 450C185 405 215 365 255 380"/>
+          <path class="intro-t intro-t--i" pathLength="1" d="M400 545C330 600 240 590 190 625C140 662 160 725 210 715"/>
+          <path class="intro-t intro-t--i" pathLength="1" d="M465 575C455 660 385 700 370 770C358 830 415 860 445 820"/>
+          <path class="intro-t intro-t--d" pathLength="1" d="M672 452C724 500 794 500 819 450C839 405 809 365 769 380"/>
+          <path class="intro-t intro-t--d" pathLength="1" d="M624 545C694 600 784 590 834 625C884 662 864 725 814 715"/>
+          <path class="intro-t intro-t--d" pathLength="1" d="M559 575C569 660 639 700 654 770C666 830 609 860 579 820"/>
+        </g>
+        <g class="intro-pulpo__cabeza">
+          <path d="M512 160C628 160 708 245 708 360C708 450 655 505 605 570H419C369 505 316 450 316 360 316 245 396 160 512 160Z" fill="url(#intro-g)"/>
+          <g class="intro-pulpo__ojos" fill="#fff"><circle cx="452" cy="410" r="32"/><circle cx="572" cy="410" r="32"/></g>
+        </g>
+      </g>
+    </svg>
+  </div>
   <a class="skip" href="#contenido">Saltar al contenido</a>
 
   <!-- ─────────── Barra ─────────── -->
@@ -477,6 +497,6 @@
     </form>
   </dialog>
 
-  <script src="main.js?v=12" defer></script>
+  <script src="main.js?v=13" defer></script>
 </body>
 </html>

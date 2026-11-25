@@ -376,3 +376,15 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .acceso__cambio { text-align: center; color: var(--color-muted); font-size: 14.5px; }
 .acceso__cambio button { color: var(--color-accent-ink); font-weight: 650; }
 @media (max-width: 640px) { .acceso__caja { padding: 26px 20px; } .acceso h2 { font-size: 24px; } }
+
+/* ─────────── Entrada del pulpo (solo con html.intro; main.js la anima y la quita) ─────────── */
+.intro-pulpo { display: none; }
+html.intro .intro-pulpo { display: grid; place-items: center; position: fixed; inset: 0; z-index: 1000; background: var(--color-paper); cursor: pointer; }
+html.intro .nav .brand img { visibility: hidden; }
+.intro-pulpo svg { width: min(260px, 52vw); height: auto; overflow: visible; will-change: transform; }
+.intro-pulpo svg * { transform-box: fill-box; }
+.intro-pulpo__cabeza { transform-origin: 50% 100%; opacity: 0; }
+.intro-pulpo__ojos circle { transform-origin: center; }
+.intro-t { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.intro-t--i { transform-origin: 100% 0%; }
+.intro-t--d { transform-origin: 0% 0%; }
