@@ -240,18 +240,26 @@ class _ImportarExportarState extends State<ImportarExportar> {
       children: [
         Row(
           children: [
-            const Expanded(
-              child: Text('Plantilla', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            ),
-            Enlace(
-              'Descargar plantilla',
-              onTap: () => _descargarCsv('plantilla_${que.etiqueta.toLowerCase()}.csv', plantillaCsv(que)),
-            ),
+            const Text('Plantilla', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(width: 16),
-            Enlace(
-              'Descargar guía',
-              onTap: () =>
-                  descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
+            // En ventana estrecha, los enlaces bajan de línea en vez de salirse.
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 16,
+                runSpacing: 6,
+                children: [
+                  Enlace(
+                    'Descargar plantilla',
+                    onTap: () => _descargarCsv('plantilla_${que.etiqueta.toLowerCase()}.csv', plantillaCsv(que)),
+                  ),
+                  Enlace(
+                    'Descargar guía',
+                    onTap: () =>
+                        descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

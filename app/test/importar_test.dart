@@ -122,10 +122,17 @@ void main() {
       tester.view.physicalSize = Size(ancho, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ImportarExportar())));
-      await tester.tap(find.text('Trabajos').first);
+      await tester.pumpWidget(MaterialApp(key: ValueKey(ancho), home: const Scaffold(body: ImportarExportar())));
+      // En móvil las pestañas son un desplegable: se abre antes.
+      if (find.text('Trabajos').evaluate().isEmpty) {
+        await tester.tap(find.text('Clientes').first);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Trabajos').last);
       await tester.pumpAndSettle();
       expect(find.text('Elegir archivo CSV'), findsOneWidget);
+      await tester.drag(find.text('Importar y exportar'), const Offset(0, -3000));
+      await tester.pumpAndSettle();
       expect(find.text('Histórico'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
