@@ -715,7 +715,17 @@ class BotonAccion extends StatelessWidget {
 
   /// Relleno (tinta, morado…); null = blanco con borde.
   final Color? color;
-  const BotonAccion(this.texto, {super.key, required this.onPressed, this.icono, this.tooltip, this.color});
+  /// Solo el icono (cuadrado de 40), con [texto] de tooltip, también en ordenador.
+  final bool soloIcono;
+  const BotonAccion(
+    this.texto, {
+    super.key,
+    required this.onPressed,
+    this.icono,
+    this.tooltip,
+    this.color,
+    this.soloIcono = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -732,7 +742,7 @@ class BotonAccion extends StatelessWidget {
           overlayColor: const WidgetStatePropertyAll(Colors.transparent),
           mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.click),
         );
-    final soloIcono = icono != null && esMovil(context);
+    final soloIcono = icono != null && (this.soloIcono || esMovil(context));
     final boton = SizedBox(
       height: 40,
       width: soloIcono ? 40 : null,

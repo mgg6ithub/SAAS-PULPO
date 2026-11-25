@@ -103,13 +103,6 @@ class _TrabajadoresState extends State<Trabajadores> {
                             tooltip: 'Invitar técnicos con un enlace y quitar accesos',
                             onPressed: () => abrirAccesos(context),
                           ),
-                        if (industrial)
-                          BotonAccion(
-                            'Importar CSV',
-                            icono: Icons.file_download_outlined,
-                            tooltip: 'Crear muchos técnicos de una vez desde Excel',
-                            onPressed: () => abrirImportarExportar(context, que: QueImportar.trabajadores),
-                          ),
                         if (industrial && store.trabajadores.isNotEmpty)
                           BotonAccion(
                             'Grupo',
@@ -118,11 +111,26 @@ class _TrabajadoresState extends State<Trabajadores> {
                             onPressed: () => abrirGrupos(context),
                           ),
                       ],
-                      principal: BotonPrimario(
-                        m('Nuevo trabajador'),
-                        conIcono: industrial,
-                        tecla: 'N',
-                        onPressed: () => abrirTrabajadorForm(context),
+                      principal: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          BotonPrimario(
+                            m('Nuevo trabajador'),
+                            conIcono: industrial,
+                            tecla: 'N',
+                            onPressed: () => abrirTrabajadorForm(context),
+                          ),
+                          // Pultec: justo después, importar y exportar técnicos (solo el icono).
+                          if (industrial) ...[
+                            const SizedBox(width: 8),
+                            BotonAccion(
+                              'Importar y exportar técnicos',
+                              icono: Icons.import_export_rounded,
+                              soloIcono: true,
+                              onPressed: () => abrirImportarExportar(context, que: QueImportar.trabajadores),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],

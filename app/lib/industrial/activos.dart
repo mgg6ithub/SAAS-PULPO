@@ -148,20 +148,26 @@ class _ActivosState extends State<Activos> {
                 const SizedBox(width: 8), const TituloVista('Activos'),
               ])),
             ],
-            derecha: [
-              BotonAccion(
-                'Importar CSV',
-                icono: Icons.file_download_outlined,
-                tooltip: 'Crear muchos activos, componentes y mantenimientos de una vez desde Excel',
-                onPressed: () => abrirImportarExportar(context, que: QueImportar.activos),
-              ),
-            ],
-            principal: BotonPrimario(
-              'Nuevo activo',
-              conIcono: true,
-              icono: Icons.add_rounded,
-              tecla: 'N',
-              onPressed: () => abrirActivoForm(context),
+            derecha: const [],
+            // El principal y, justo después, importar y exportar (solo el icono).
+            principal: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BotonPrimario(
+                  'Nuevo activo',
+                  conIcono: true,
+                  icono: Icons.add_rounded,
+                  tecla: 'N',
+                  onPressed: () => abrirActivoForm(context),
+                ),
+                const SizedBox(width: 8),
+                BotonAccion(
+                  'Importar y exportar activos',
+                  icono: Icons.import_export_rounded,
+                  soloIcono: true,
+                  onPressed: () => abrirImportarExportar(context, que: QueImportar.activos),
+                ),
+              ],
             ),
           ),
           // Sin ningún activo, ni buscador ni accesos: solo el vacío con su botón.
