@@ -751,7 +751,7 @@ class BotonAccion extends StatelessWidget {
   }
 }
 
-/// Importar y exportar (Activos, Técnicos): las flechas de bajar y subir archivo juntas, sin texto; al lado del
+/// Importar y exportar (Activos, Técnicos): la flecha de descargar y la misma girada, juntas, sin texto; al lado del
 /// botón principal, con el borde de [BotonAccion].
 class BotonImportarExportar extends StatelessWidget {
   final VoidCallback onPressed;
@@ -783,7 +783,8 @@ class BotonImportarExportar extends StatelessWidget {
           children: [
             Icon(Icons.file_download_outlined, size: 19),
             SizedBox(width: 2),
-            Icon(Icons.file_upload_outlined, size: 19),
+            // La misma flecha, girada 180 grados.
+            RotatedBox(quarterTurns: 2, child: Icon(Icons.file_download_outlined, size: 19)),
           ],
         ),
       ),
