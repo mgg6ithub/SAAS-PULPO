@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../forms.dart' show SelectorActivo;
@@ -11,6 +12,8 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'activos.dart' show contadorTexto;
+import 'estadisticas_prueba.dart';
+import 'graficas.dart';
 import 'gravedad.dart';
 import 'historicos.dart';
 import 'incidencia.dart';
@@ -38,6 +41,13 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
   String? activoId;
 
   @override
+  void dispose() {
+    // Los datos de prueba no se quedan fuera de Estadísticas.
+    EstadisticasPrueba.quitar();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dias = _periodos[periodo].$2;
     final desde = masDias(hoy(), -dias);
@@ -62,6 +72,17 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
                 compactas: true,
                 onChanged: (i) => setState(() => periodo = i),
               ),
+              // Solo al desarrollar: un año de datos inventados, en memoria, para ver las gráficas.
+              if (kDebugMode)
+                BotonAccion(
+                  EstadisticasPrueba.activa ? 'Quitar prueba' : 'Datos de prueba',
+                  icono: Icons.science_outlined,
+                  tooltip: 'Generar estadísticas de prueba (no se guardan)',
+                  onPressed: () => setState(() {
+                    EstadisticasPrueba.activa ? EstadisticasPrueba.quitar() : EstadisticasPrueba.poner();
+                    activoId = null;
+                  }),
+                ),
             ],
           ),
           const SizedBox(height: huecoVista),
@@ -81,7 +102,7 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
                 onActivo: (id) => setState(() => activoId = raizDe(id)?.id ?? id),
               ),
               1 => _Verificaciones(desde: desde),
-              2 => _PorTecnico(desde: desde),
+              2 => _PorTecnico(desde: desde, dias: dias),
               _ => _PorEquipo(desde: desde, dias: dias),
             },
           ),
@@ -90,56 +111,6 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
     );
   }
 }
-
-/// Cifra de las estadísticas: etiqueta pequeña, valor grande y, si hace falta, el punto de su color.
-class _Dato extends StatelessWidget {
-  final String etiqueta, valor;
-  final Color? punto;
-  const _Dato(this.etiqueta, this.valor, {this.punto});
-
-  @override
-  Widget build(BuildContext context) => Tarjeta(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            if (punto != null) ...[
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: punto, shape: BoxShape.circle)),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Text(etiqueta, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: P.textoSuave)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(valor, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontFamily: P.titulos, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -.5)),
-      ],
-    ),
-  );
-}
-
-/// Barrita horizontal proporcional (en vez de un número suelto): el color dice qué se cuenta.
-Widget _barra(int n, int maximo, Color color) => Row(
-  children: [
-    SizedBox(width: 28, child: Text('$n', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600))),
-    Expanded(
-      child: LayoutBuilder(
-        builder: (_, box) => Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            height: 8,
-            width: maximo == 0 ? 0 : max(n == 0 ? 0.0 : 4.0, box.maxWidth * n / maximo),
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-          ),
-        ),
-      ),
-    ),
-  ],
-);
 
 // ── 1. Por activo ───────────────────────────────────────────────────────────
 
@@ -157,6 +128,9 @@ class _PorActivo extends StatelessWidget {
       return const Vacio(icono: Icons.insights_outlined, titulo: 'Sin activos', texto: 'Crea un activo para ver su estado.');
     }
     final r = resumenActivo(a, desde);
+    final t = tramosDe(desde, dias);
+    final hechas = contarPorTramo(r.realizadas.map((x) => x.$1), t);
+    final incidencias = contarPorTramo(r.incidencias.map((x) => x.creada), t);
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
@@ -175,18 +149,37 @@ class _PorActivo extends StatelessWidget {
         ),
         const SizedBox(height: huecoVista),
         SegunTamano(
+          key: ValueKey('cifras-${a.id}-$dias'),
           clave: (box) => box.maxWidth > 900 ? 6 : box.maxWidth > 560 ? 3 : 2,
           builder: (context, box) => Rejilla(
             columnas: box.maxWidth > 900 ? 6 : box.maxWidth > 560 ? 3 : 2,
             hueco: huecoVista,
             children: [
-              _Dato('Hechas en el periodo', '${r.hechas}', punto: P.verde),
-              _Dato('Pendientes', '${r.pendientes}'),
-              _Dato('Atrasadas', '${r.atrasadas}', punto: r.atrasadas > 0 ? P.rojo : null),
-              _Dato('Incidencias', '${r.incidencias.length}', punto: r.incidencias.isEmpty ? null : P.ambar),
-              _Dato('Con problema en el parte', '${r.conProblema}', punto: r.conProblema > 0 ? P.ambar : null),
-              _Dato('Contador', contadorTexto(a).split(',').first),
+              CifraGrafica('Hechas en el periodo', valor: r.hechas, serie: hechas),
+              CifraGrafica('Pendientes', valor: r.pendientes),
+              CifraGrafica('Atrasadas', valor: r.atrasadas),
+              CifraGrafica('Incidencias', valor: r.incidencias.length, serie: incidencias),
+              CifraGrafica('Con problema en el parte', valor: r.conProblema),
+              CifraGrafica('Contador', texto: contadorTexto(a).split(',').first),
             ],
+          ),
+        ),
+        const SizedBox(height: huecoVista),
+        _ParGraficas(
+          key: ValueKey('graficas-${a.id}-$dias'),
+          TarjetaGrafica(
+            titulo: 'Órdenes hechas',
+            nota: t.nombre,
+            child: GraficaColumnas(hechas, t.etiquetas, unidad: 'órdenes'),
+          ),
+          TarjetaGrafica(
+            titulo: 'Estado de las órdenes',
+            nota: 'Hechas en el periodo y pendientes ahora',
+            child: Anillo(
+              [('Hechas', r.hechas.toDouble()), ('Pendientes al día', (r.pendientes - r.atrasadas).toDouble()), ('Atrasadas', r.atrasadas.toDouble())],
+              centro: r.hechas + r.pendientes == 0 ? '—' : '${(100 * r.hechas / (r.hechas + r.pendientes)).round()} %',
+              nota: 'hechas',
+            ),
           ),
         ),
         const SizedBox(height: huecoVista),
@@ -213,10 +206,9 @@ class _PorActivo extends StatelessWidget {
             else
               for (final x in r.incidencias.take(10))
                 FilaLista(
-                  lider: Container(width: 10, height: 10, decoration: BoxDecoration(color: x.gravedad.color, shape: BoxShape.circle)),
                   titulo: x.descripcion,
                   subtitulo: fecha(x.creada),
-                  derecha: Pill(store.estadoIncidencia(x).etiqueta, store.estadoIncidencia(x).color, punto: true),
+                  derecha: Pill(store.estadoIncidencia(x).etiqueta, store.estadoIncidencia(x).color),
                   onTap: () => abrirIncidenciaForm(context, original: x),
                 ),
           ],
@@ -224,6 +216,30 @@ class _PorActivo extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Dos gráficas: la principal más ancha y la otra al lado; en ventana estrecha, una bajo otra.
+class _ParGraficas extends StatelessWidget {
+  final Widget principal, lado;
+  const _ParGraficas(this.principal, this.lado, {super.key});
+
+  @override
+  Widget build(BuildContext context) => SegunTamano(
+    clave: (box) => box.maxWidth > 900,
+    builder: (context, box) => box.maxWidth > 900
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 3, child: principal),
+              const SizedBox(width: huecoVista),
+              Expanded(flex: 2, child: lado),
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [principal, const SizedBox(height: huecoVista), lado],
+          ),
+  );
 }
 
 /// Fila de la tabla de mantenimientos del activo: nombre, cada cuánto, último, próximo y hechos en el periodo.
@@ -307,7 +323,9 @@ class _VerificacionesState extends State<_Verificaciones> {
   String? planId;
   final _datos = <String, Future<List<(DateTime, double)>>>{};
 
-  Future<List<(DateTime, double)>> _de(String id) => _datos[id] ??= informes.mediciones(id);
+  Future<List<(DateTime, double)>> _de(String id) => EstadisticasPrueba.activa
+      ? Future.value(EstadisticasPrueba.mediciones[id] ?? const [])
+      : _datos[id] ??= informes.mediciones(id);
 
   @override
   Widget build(BuildContext context) {
@@ -352,32 +370,32 @@ class _VerificacionesState extends State<_Verificaciones> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Rejilla(
+              key: ValueKey('cifras-${p.id}-${widget.desde}'),
               columnas: 4,
               hueco: huecoVista,
               children: [
-                _Dato('Medidas', '${datos.length}'),
-                _Dato('Última', datos.isEmpty ? '—' : '${numTexto(datos.last.$2)}$u'),
-                _Dato('Media', datos.isEmpty ? '—' : '${numTexto(datos.map((d) => d.$2).reduce((a, b) => a + b) / datos.length)}$u'),
-                _Dato('Fuera de límites', '$fuera', punto: fuera > 0 ? P.rojo : null),
+                CifraGrafica('Medidas', valor: datos.length),
+                CifraGrafica('Última', texto: datos.isEmpty ? '—' : '${numTexto(datos.last.$2)}$u', serie: [for (final d in datos.reversed.take(12).toList().reversed) d.$2]),
+                CifraGrafica('Media', texto: datos.isEmpty ? '—' : '${numTexto(datos.map((d) => d.$2).reduce((a, b) => a + b) / datos.length)}$u'),
+                CifraGrafica('Fuera de límites', valor: fuera),
               ],
             ),
             const SizedBox(height: huecoVista),
-            SeccionTarjeta(
+            TarjetaGrafica(
               titulo: '${p.medicionNombre}${u.isEmpty ? '' : ' ($u)'.replaceAll('( ', '(')}',
-              subtitulo: [
-                if (p.medicionMin != null || p.medicionMax != null)
-                  'Admitido de ${p.medicionMin == null ? '…' : numTexto(p.medicionMin!)} a ${p.medicionMax == null ? '…' : numTexto(p.medicionMax!)}',
-              ].join(),
-              sinFilas: true,
-              children: [
-                if (datos.isEmpty)
-                  Padding(padding: const EdgeInsets.all(18), child: Text('Sin medidas en este periodo', style: TextStyle(color: P.textoSuave)))
-                else
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 18, 12),
-                    child: SizedBox(height: 260, child: GraficaMedidas(datos, minimo: p.medicionMin, maximo: p.medicionMax, unidad: u)),
-                  ),
-              ],
+              nota: p.medicionMin != null || p.medicionMax != null
+                  ? 'Admitido de ${p.medicionMin == null ? '…' : numTexto(p.medicionMin!)} a ${p.medicionMax == null ? '…' : numTexto(p.medicionMax!)}'
+                  : null,
+              alto: 280,
+              child: datos.isEmpty
+                  ? Center(child: Text('Sin medidas en este periodo', style: TextStyle(color: P.textoSuave)))
+                  : GraficaMedidas(
+                      key: ValueKey('medidas-${p.id}-${widget.desde}'),
+                      datos,
+                      minimo: p.medicionMin,
+                      maximo: p.medicionMax,
+                      unidad: u,
+                    ),
             ),
             const SizedBox(height: huecoVista),
             SeccionTarjeta(
@@ -385,16 +403,11 @@ class _VerificacionesState extends State<_Verificaciones> {
               children: [
                 for (final (d, v) in datos.reversed.take(30))
                   FilaLista(
-                    lider: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: (p.medicionMin != null && v < p.medicionMin!) || (p.medicionMax != null && v > p.medicionMax!) ? P.rojo : P.morado,
-                      ),
-                    ),
                     titulo: '${numTexto(v)}$u',
                     subtitulo: '${fecha(d)} ${hhmm(d.hour * 60 + d.minute)}',
+                    derecha: (p.medicionMin != null && v < p.medicionMin!) || (p.medicionMax != null && v > p.medicionMax!)
+                        ? const Pill('Fuera de límites', P.rojo)
+                        : null,
                   ),
               ],
             ),
@@ -418,8 +431,9 @@ class _VerificacionesState extends State<_Verificaciones> {
   }
 }
 
-/// Línea de las medidas en el tiempo (una sola serie, en morado), con los límites como rayas discontinuas
-/// grises y los puntos fuera de límites en rojo. Al pasar el ratón, el valor y la fecha del punto más cercano.
+/// Medidas en el tiempo: curva suave en morado con su área en degradado, la franja admitida sombreada entre los
+/// límites (rayas discontinuas) y los puntos fuera de límites en rojo. Se dibuja de izquierda a derecha al entrar;
+/// al pasar el ratón, el punto más cercano con su valor y fecha.
 class GraficaMedidas extends StatefulWidget {
   final List<(DateTime, double)> datos;
   final double? minimo, maximo;
@@ -435,41 +449,31 @@ class _GraficaMedidasState extends State<GraficaMedidas> {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) {
-      final pintor = _PintorMedidas(widget.datos, widget.minimo, widget.maximo, cerca, P.morado, P.rojo, P.borde, P.textoSuave);
-      return MouseRegion(
-        onHover: (e) => setState(() => cerca = pintor.cercano(e.localPosition, box.biggest)),
-        onExit: (_) => setState(() => cerca = null),
-        child: Stack(
-          children: [
-            CustomPaint(size: box.biggest, painter: pintor),
-            if (cerca != null)
-              Positioned(
-                left: (pintor.punto(cerca!, box.biggest).dx - 70).clamp(0, max(0, box.maxWidth - 140)),
-                top: 0,
-                child: Container(
-                  width: 140,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: P.superficie,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: P.borde),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('${numTexto(widget.datos[cerca!].$2)}${widget.unidad}',
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
-                      Text(fecha(widget.datos[cerca!].$1), style: TextStyle(fontSize: 12, color: P.textoSuave)),
-                    ],
-                  ),
+    builder: (context, box) => EntradaGrafica(
+      ms: 1100,
+      builder: (v) {
+        final pintor = _PintorMedidas(widget.datos, widget.minimo, widget.maximo, cerca, v, P.morado, P.rojo, P.borde, P.textoSuave, P.superficie);
+        return MouseRegion(
+          onHover: (e) {
+            final i = pintor.cercano(e.localPosition, box.biggest);
+            if (i != cerca) setState(() => cerca = i);
+          },
+          onExit: (_) => setState(() => cerca = null),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CustomPaint(size: box.biggest, painter: pintor),
+              if (cerca != null)
+                Positioned(
+                  left: (pintor.punto(cerca!, box.biggest).dx - 60).clamp(0, max(0, box.maxWidth - 120)),
+                  top: max(0, pintor.punto(cerca!, box.biggest).dy - 58),
+                  child: Globo('${numTexto(widget.datos[cerca!].$2)}${widget.unidad}', fecha(widget.datos[cerca!].$1)),
                 ),
-              ),
-          ],
-        ),
-      );
-    },
+            ],
+          ),
+        );
+      },
+    ),
   );
 }
 
@@ -477,10 +481,11 @@ class _PintorMedidas extends CustomPainter {
   final List<(DateTime, double)> datos;
   final double? minimo, maximo;
   final int? cerca;
-  final Color linea, alerta, rejilla, texto;
-  _PintorMedidas(this.datos, this.minimo, this.maximo, this.cerca, this.linea, this.alerta, this.rejilla, this.texto);
+  final double v;
+  final Color linea, alerta, rejilla, texto, fondo;
+  _PintorMedidas(this.datos, this.minimo, this.maximo, this.cerca, this.v, this.linea, this.alerta, this.rejilla, this.texto, this.fondo);
 
-  static const _izq = 44.0, _abajo = 22.0, _arriba = 46.0;
+  static const _izq = 44.0, _abajo = 24.0, _arriba = 12.0;
 
   (double, double) get _rango {
     final valores = [for (final d in datos) d.$2, ?minimo, ?maximo];
@@ -489,7 +494,7 @@ class _PintorMedidas extends CustomPainter {
       lo -= 1;
       hi += 1;
     }
-    final margen = (hi - lo) * .1;
+    final margen = (hi - lo) * .12;
     return (lo - margen, hi + margen);
   }
 
@@ -499,8 +504,8 @@ class _PintorMedidas extends CustomPainter {
   }
 
   Offset punto(int i, Size s) {
-    final ancho = s.width - _izq;
-    final x = datos.length == 1 ? _izq + ancho / 2 : _izq + ancho * i / (datos.length - 1);
+    final ancho = s.width - _izq - 8;
+    final x = datos.length == 1 ? _izq + ancho / 2 : _izq + 4 + ancho * i / (datos.length - 1);
     return Offset(x, _y(datos[i].$2, s));
   }
 
@@ -515,77 +520,106 @@ class _PintorMedidas extends CustomPainter {
 
   bool _fuera(double v) => (minimo != null && v < minimo!) || (maximo != null && v > maximo!);
 
-  void _texto(Canvas c, String t, Offset o, {bool derecha = false}) {
+  void _texto(Canvas c, String t, Offset o, {double alinear = 0, double vertical = 0}) {
     final tp = TextPainter(
       text: TextSpan(text: t, style: TextStyle(fontSize: 11, color: texto)),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(c, derecha ? o.translate(-tp.width, -tp.height / 2) : o);
+    tp.paint(c, o.translate(-tp.width * alinear, -tp.height * vertical));
   }
 
   @override
   void paint(Canvas canvas, Size s) {
     if (datos.isEmpty) return;
     final (lo, hi) = _rango;
-    // Rejilla recesiva: tres líneas horizontales con su valor.
+    final abajo = s.height - _abajo;
+    // Rejilla recesiva: cuatro rayas con su valor.
     final fino = Paint()
       ..color = rejilla
       ..strokeWidth = 1;
-    for (final v in [lo, (lo + hi) / 2, hi]) {
-      final y = _y(v, s);
+    for (var k = 0; k <= 3; k++) {
+      final val = lo + (hi - lo) * k / 3;
+      final y = _y(val, s);
       canvas.drawLine(Offset(_izq, y), Offset(s.width, y), fino);
-      _texto(canvas, numTexto(v), Offset(_izq - 6, y), derecha: true);
+      _texto(canvas, numTexto(double.parse(val.toStringAsFixed(1))), Offset(_izq - 8, y), alinear: 1, vertical: .5);
     }
-    // Límites: discontinuos.
-    final limite = Paint()
-      ..color = texto
-      ..strokeWidth = 1.2;
-    for (final v in [?minimo, ?maximo]) {
-      final y = _y(v, s);
-      for (var x = _izq; x < s.width; x += 8) {
-        canvas.drawLine(Offset(x, y), Offset(min(x + 4, s.width), y), limite);
+    // Franja admitida, sombreada, y sus límites discontinuos.
+    if (minimo != null || maximo != null) {
+      final y1 = _y(maximo ?? hi, s), y2 = _y(minimo ?? lo, s);
+      canvas.drawRect(Rect.fromLTRB(_izq, y1, s.width, y2), Paint()..color = linea.withValues(alpha: .05));
+      final limite = Paint()
+        ..color = texto.withValues(alpha: .6)
+        ..strokeWidth = 1;
+      for (final val in [?minimo, ?maximo]) {
+        final y = _y(val, s);
+        for (var x = _izq; x < s.width; x += 8) {
+          canvas.drawLine(Offset(x, y), Offset(min(x + 4, s.width), y), limite);
+        }
       }
     }
-    // La línea (2 px) y sus puntos.
-    final camino = Path()..moveTo(punto(0, s).dx, punto(0, s).dy);
-    for (var i = 1; i < datos.length; i++) {
-      camino.lineTo(punto(i, s).dx, punto(i, s).dy);
+    final pts = [for (var i = 0; i < datos.length; i++) punto(i, s)];
+    canvas.save();
+    // Entrada: se descubre de izquierda a derecha.
+    canvas.clipRect(Rect.fromLTRB(0, 0, _izq + (s.width - _izq) * v, s.height));
+    if (pts.length > 1) {
+      final curva = curvaSuave(pts);
+      final area = Path.from(curva)
+        ..lineTo(pts.last.dx, abajo)
+        ..lineTo(pts.first.dx, abajo)
+        ..close();
+      canvas.drawPath(
+        area,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [linea.withValues(alpha: .20), linea.withValues(alpha: 0)],
+          ).createShader(Rect.fromLTRB(0, _arriba, s.width, abajo)),
+      );
+      canvas.drawPath(
+        curva,
+        Paint()
+          ..color = linea
+          ..strokeWidth = 2.5
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
     }
-    canvas.drawPath(
-      camino,
-      Paint()
-        ..color = linea
-        ..strokeWidth = 2
-        ..style = PaintingStyle.stroke,
-    );
+    // Solo se marcan los puntos que importan: fuera de límites (rojo), el de bajo el ratón y el último.
     for (var i = 0; i < datos.length; i++) {
-      final p = punto(i, s);
-      final r = i == cerca ? 6.0 : 4.0;
-      canvas.drawCircle(p, r + 2, Paint()..color = Colors.white);
-      canvas.drawCircle(p, r, Paint()..color = _fuera(datos[i].$2) ? alerta : linea);
+      final fuera = _fuera(datos[i].$2);
+      if (!fuera && i != cerca && i != datos.length - 1) continue;
+      final r = i == cerca ? 6.0 : 4.5;
+      canvas.drawCircle(pts[i], r + 2.5, Paint()..color = fondo);
+      canvas.drawCircle(pts[i], r, Paint()..color = fuera ? alerta : linea);
     }
+    canvas.restore();
     if (cerca != null) {
-      final p = punto(cerca!, s);
-      canvas.drawLine(Offset(p.dx, _arriba), Offset(p.dx, s.height - _abajo), fino);
+      final p = pts[cerca!];
+      final guia = Paint()
+        ..color = texto.withValues(alpha: .35)
+        ..strokeWidth = 1;
+      for (var y = _arriba; y < abajo; y += 6) {
+        canvas.drawLine(Offset(p.dx, y), Offset(p.dx, min(y + 3, abajo)), guia);
+      }
     }
     // Fechas: la primera y la última.
-    _texto(canvas, fecha(datos.first.$1), Offset(_izq, s.height - _abajo + 6));
-    if (datos.length > 1) {
-      final tp = TextPainter(text: TextSpan(text: fecha(datos.last.$1), style: TextStyle(fontSize: 11, color: texto)),
-        textDirection: TextDirection.ltr)..layout();
-      tp.paint(canvas, Offset(s.width - tp.width, s.height - _abajo + 6));
-    }
+    _texto(canvas, fecha(datos.first.$1), Offset(_izq, abajo + 7));
+    if (datos.length > 1) _texto(canvas, fecha(datos.last.$1), Offset(s.width, abajo + 7), alinear: 1);
   }
 
   @override
-  bool shouldRepaint(_PintorMedidas o) => o.datos != datos || o.cerca != cerca || o.minimo != minimo || o.maximo != maximo;
+  bool shouldRepaint(_PintorMedidas o) =>
+      o.datos != datos || o.cerca != cerca || o.v != v || o.minimo != minimo || o.maximo != maximo || o.linea != linea;
 }
 
 // ── 3. Por técnico ──────────────────────────────────────────────────────────
 
 class _PorTecnico extends StatelessWidget {
   final DateTime desde;
-  const _PorTecnico({required this.desde});
+  final int dias;
+  const _PorTecnico({required this.desde, required this.dias});
 
   @override
   Widget build(BuildContext context) {
@@ -609,7 +643,26 @@ class _PorTecnico extends StatelessWidget {
       return const Vacio(icono: Icons.engineering_outlined, titulo: 'Sin técnicos', texto: 'Añade técnicos para ver lo que hace cada uno.');
     }
     final maxHechas = filas.map((f) => f.hechas).reduce(max), maxInc = filas.map((f) => f.incidencias).reduce(max);
-    return SegunTamano(
+    final t = tramosDe(desde, dias);
+    final graficas = _ParGraficas(
+      key: ValueKey('tecnicos-$dias'),
+      TarjetaGrafica(
+        titulo: 'Órdenes hechas por el equipo',
+        nota: t.nombre,
+        alto: 190,
+        child: GraficaColumnas(contarPorTramo(realizadas.map((x) => x.$1), t), t.etiquetas, unidad: 'órdenes'),
+      ),
+      TarjetaGrafica(
+        titulo: 'Quién hace más',
+        nota: 'Órdenes hechas en el periodo',
+        alto: 190,
+        child: BarrasRanking([
+          for (final f in filas.take(5))
+            (nombre: f.w.nombreCompleto, valor: f.hechas.toDouble(), lider: Avatar(inicialesDe(f.w.nombreCompleto), colorPaleta(f.w.color), size: 24)),
+        ]),
+      ),
+    );
+    final tabla = SegunTamano(
       clave: (box) => box.maxWidth > 760,
       builder: (context, box) {
         final ancho = box.maxWidth > 760;
@@ -630,18 +683,22 @@ class _PorTecnico extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(child: celdaTexto(f.w.nombreCompleto, negrita: true)),
               ]),
-              Padding(padding: const EdgeInsets.only(right: 16), child: _barra(f.hechas, maxHechas, P.morado)),
-              Padding(padding: const EdgeInsets.only(right: 16), child: _barra(f.incidencias, maxInc, P.rojo)),
+              Padding(padding: const EdgeInsets.only(right: 16), child: CeldaBarra(f.hechas, maxHechas)),
+              Padding(padding: const EdgeInsets.only(right: 16), child: CeldaBarra(f.incidencias, maxInc, color: tonoMorado(2, 4))),
               if (ancho) celdaTexto('${f.conProblema}', suave: f.conProblema == 0),
               Align(
                 alignment: Alignment.centerLeft,
-                child: f.atrasadas == 0 ? celdaTexto('0', suave: true) : Pill('${f.atrasadas}', P.rojo, punto: true),
+                child: f.atrasadas == 0 ? celdaTexto('0', suave: true) : Pill('${f.atrasadas}', P.rojo),
               ),
             ];
           },
           pie: pieTabla(filas.length, filas.length == 1 ? 'técnico' : 'técnicos'),
         );
       },
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [graficas, const SizedBox(height: huecoVista), Expanded(child: tabla)],
     );
   }
 }
@@ -665,7 +722,33 @@ class _PorEquipo extends StatelessWidget {
       return const Vacio(icono: Icons.report_outlined, color: P.rojo, titulo: 'Sin incidencias', texto: 'Ninguna máquina ha tenido incidencias en este periodo.');
     }
     final maximo = filas.first.value.length;
-    return SegunTamano(
+    final todas = [for (final f in filas) ...f.value];
+    final estados = [for (final x in todas) store.estadoIncidencia(x)];
+    final t = tramosDe(desde, dias);
+    final graficas = _ParGraficas(
+      key: ValueKey('equipos-$dias'),
+      TarjetaGrafica(
+        titulo: 'Incidencias en el tiempo',
+        nota: t.nombre,
+        alto: 190,
+        child: GraficaColumnas(contarPorTramo(todas.map((x) => x.creada), t), t.etiquetas, unidad: 'incidencias'),
+      ),
+      TarjetaGrafica(
+        titulo: 'Cómo acabaron',
+        nota: 'Incidencias del periodo',
+        alto: 190,
+        child: Anillo(
+          [
+            ('Abiertas', estados.where((e) => e.pendiente).length.toDouble()),
+            ('Resueltas', estados.where((e) => e == EstadoIncidencia.completada).length.toDouble()),
+            ('Desestimadas', estados.where((e) => e == EstadoIncidencia.desestimada).length.toDouble()),
+          ],
+          centro: '${todas.length}',
+          nota: 'incidencias',
+        ),
+      ),
+    );
+    final tabla = SegunTamano(
       clave: (box) => box.maxWidth > 900,
       builder: (context, box) {
         final ancho = box.maxWidth > 900;
@@ -687,7 +770,7 @@ class _PorEquipo extends StatelessWidget {
             final ultima = l.map((x) => x.creada).reduce((x, y) => x.isAfter(y) ? x : y);
             return [
               celdaTexto(a.titulo, negrita: true),
-              Padding(padding: const EdgeInsets.only(right: 16), child: _barra(l.length, maximo, P.rojo)),
+              Padding(padding: const EdgeInsets.only(right: 16), child: CeldaBarra(l.length, maximo)),
               if (ancho) celdaTexto('${estados.where((e) => e.pendiente).length}'),
               if (ancho) celdaTexto('${estados.where((e) => e == EstadoIncidencia.completada).length}'),
               if (ancho) celdaTexto('${estados.where((e) => e == EstadoIncidencia.desestimada).length}', suave: true),
@@ -698,6 +781,10 @@ class _PorEquipo extends StatelessWidget {
           pie: pieTabla(filas.length, filas.length == 1 ? 'activo con incidencias' : 'activos con incidencias'),
         );
       },
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [graficas, const SizedBox(height: huecoVista), Expanded(child: tabla)],
     );
   }
 }

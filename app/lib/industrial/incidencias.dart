@@ -224,7 +224,12 @@ class _TablaIncidencias extends StatelessWidget {
             if (medio)
               Row(
                 children: [
-                  Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
+                  // Flexible: en columnas estrechas la píldora se recorta en lugar de desbordar con «Ver».
+                  Flexible(
+                    child: ClipRect(
+                      child: Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
+                    ),
+                  ),
                   // Con su OT por hacer: a la derecha, en gris, «Ver» lleva a ella en Órdenes de trabajo.
                   if (ot != null && est == EstadoIncidencia.conOt) ...[const SizedBox(width: 6), EnlaceVerOt(ot.id)],
                 ],

@@ -40,6 +40,19 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: apartado);
       }
+      // Con los datos de prueba (botón solo de desarrollo), cada apartado también se dibuja sin errores.
+      if (find.text('Datos de prueba').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Datos de prueba'));
+        await tester.pumpAndSettle();
+        for (final apartado in ['Verificaciones', 'Técnicos', 'Incidencias', 'Activo']) {
+          if (find.text(apartado).evaluate().isEmpty) continue;
+          await tester.tap(find.text(apartado).first);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull, reason: 'prueba: $apartado');
+        }
+        await tester.tap(find.text('Quitar prueba'));
+        await tester.pumpAndSettle();
+      }
       await tester.pumpWidget(const MaterialApp(home: Scaffold(body: IncidenciasPagina())));
       await tester.pumpAndSettle();
       if (find.textContaining('Histórico').evaluate().isNotEmpty) {
