@@ -250,18 +250,63 @@ class _TablaActivos extends StatefulWidget {
   State<_TablaActivos> createState() => _TablaActivosState();
 }
 
-class _TablaActivosState extends State<_TablaActivos> {
-  /// Columnas que el usuario puede añadir (de serie no salen); se recuerdan mientras dure la sesión.
-  static const _opcionales = ['Fabricante y modelo', 'Número de serie', 'División'];
-  static final _visibles = <String>{};
+/// Columnas que el usuario puede añadir a la lista de Activos (de serie no salen); las que ha añadido y el orden
+/// en que ha dejado las columnas (arrastrando sus títulos) se recuerdan mientras dure la sesión. Exportar sale igual.
+const columnasOpcionalesActivos = ['Fabricante y modelo', 'Número de serie', 'División'];
+final columnasExtraActivos = <String>{};
+final ordenColumnasActivos = <String>[];
 
-  /// Cómo trabaja: horas al día o a la semana, o por turnos (el ritmo es siempre el del activo principal).
-  String _uso(Activo a) {
-    final r = contadorDe(a);
-    if (r.usoPlanificado) return 'Por turnos';
-    if (r.horasUso <= 0) return '—';
-    return r.usoSemanal ? '${horas(r.horasUso)} / semana' : '${horas(r.horasUso)} / día';
+/// Cómo trabaja: horas al día o a la semana, o por turnos (el ritmo es siempre el del activo principal).
+String usoTexto(Activo a) {
+  final r = contadorDe(a);
+  if (r.usoPlanificado) return 'Por turnos';
+  if (r.horasUso <= 0) return '—';
+  return r.usoSemanal ? '${horas(r.horasUso)} / semana' : '${horas(r.horasUso)} / día';
+}
+
+/// Columnas en el orden en que las ve el usuario: las de [titulos] que aún no ha movido quedan donde estaban, como
+/// hace la tabla.
+List<String> enOrdenDelUsuario(List<String> titulos, List<String> orden) {
+  final o = [for (final t in orden) if (titulos.contains(t)) t];
+  for (final (i, t) in titulos.indexed) {
+    if (o.contains(t)) continue;
+    final siguiente = titulos.skip(i + 1).where(o.contains).firstOrNull;
+    siguiente == null ? o.add(t) : o.insert(o.indexOf(siguiente), t);
   }
+  return o;
+}
+
+/// La lista de Activos en texto, tal como la ve el usuario: sus columnas (con las que haya añadido) en su orden y
+/// una fila por activo principal. La cabecera, la primera fila. Para exportar en PDF y su vista previa.
+List<List<String>> listaActivosEnTexto() {
+  String opcional(Activo a, String c) => switch (c) {
+    'Fabricante y modelo' => [a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '),
+    'Número de serie' => a.numeroSerie,
+    _ => a.division,
+  };
+  final valores = <String, String Function(Activo)>{
+    'Activo': (a) => a.nombre.isNotEmpty ? a.nombre : a.titulo,
+    'Tag': (a) => a.tag,
+    'Uso': usoTexto,
+    'Horas totales': (a) => horas(horasHoy(a)),
+    'Mantenimientos': (a) => '${planesRama(a.id).length}',
+    'Próximo mantenimiento': proximaFecha,
+    for (final c in columnasOpcionalesActivos)
+      if (columnasExtraActivos.contains(c)) c: (a) => opcional(a, c),
+    'Componentes': (a) => '${store.ramaDe(a.id).length - 1}',
+  };
+  final cols = enOrdenDelUsuario(valores.keys.toList(), ordenColumnasActivos);
+  return [
+    cols,
+    for (final a in store.hijosDe(null)) [for (final c in cols) valores[c]!(a)],
+  ];
+}
+
+class _TablaActivosState extends State<_TablaActivos> {
+  static const _opcionales = columnasOpcionalesActivos;
+  static final _visibles = columnasExtraActivos;
+
+  String _uso(Activo a) => usoTexto(a);
 
   String _opcional(Activo a, String c) => switch (c) {
     'Fabricante y modelo' => [a.fabricante, a.modelo].where((x) => x.isNotEmpty).join(' '),
@@ -319,6 +364,8 @@ class _TablaActivosState extends State<_TablaActivos> {
         builder: (context, s) => Align(
           alignment: Alignment.topCenter,
           child: Tabla(
+            // El orden que deje el usuario se recuerda (y Exportar lo sigue); los componentes llevan el suyo.
+            orden: componentes ? null : ordenColumnasActivos,
             seleccionCabecera: s.cabecera,
             // Lo que importa: activo, tag, cómo trabaja, horas, mantenimientos y el próximo; luego lo que el
             // usuario añada, los componentes y el menú de columnas.

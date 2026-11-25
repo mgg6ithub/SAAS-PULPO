@@ -1467,6 +1467,10 @@ class Tabla extends StatefulWidget {
   final List<Col> columnas;
   final int filas;
   final Widget Function(int i, Widget fila)? envolverFila;
+
+  /// Orden de las columnas (por título) que guarda quien la usa, para recordarlo y para que otros lo lean (p. ej.
+  /// Exportar sale con las columnas en el orden en que el usuario las dejó). Sin él, la tabla lleva el suyo.
+  final List<String>? orden;
   final List<Widget> Function(int i) celdas;
   final void Function(int i)? onTap;
   final Widget? pie;
@@ -1488,6 +1492,7 @@ class Tabla extends StatefulWidget {
     this.seleccionCabecera,
     this.resaltar,
     this.envolverFila,
+    this.orden,
   });
 
   @override
@@ -1517,7 +1522,7 @@ class _TablaState extends State<Tabla> {
   final _claves = <String, GlobalKey>{};
   final _lienzo = GlobalKey(), _pie = GlobalKey();
   int? _columnaArrastrando;
-  final _orden = <String>[];
+  late final List<String> _orden = widget.orden ?? <String>[];
 
   /// Teclado: ↓/↑ recorren las filas de la tabla de la vista (la última abierta), Intro abre la marcada y
   /// Esc quita la marca. No actúa al escribir en un campo ni con una ventana encima.

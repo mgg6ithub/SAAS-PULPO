@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pultec/hoja_calculo.dart';
+import 'package:pultec/industrial/activos.dart' show columnasExtraActivos, listaActivosEnTexto, ordenColumnasActivos;
 import 'package:pultec/informes.dart' show guiaPdf, listadoPdf;
 import 'package:pultec/importar.dart';
 import 'package:pultec/industrial/activo.dart';
@@ -250,5 +251,27 @@ void main() {
     expect(imp.planes.single.cadaDias, 30);
     expect(imp.avisos, contains(startsWith('a.csv, fila 3:')));
     expect(imp.avisos.where((x) => x.startsWith('b.csv, fila 3:')), hasLength(3)); // padre, «cada» y sin periodicidad
+  });
+
+  test('exportar en PDF sale como la lista de Activos: sus columnas, las añadidas y el orden del usuario', () {
+    preparar(
+      QueImportar.activos,
+      'Tag;Nombre;Padre;Fabricante;Modelo;Mantenimiento;Cada\nP;Planta;;Andritz;D-4;Rev;30\nC;Comp;P;;;Engrase;7',
+    ).aplicar(store);
+    addTearDown(() {
+      columnasExtraActivos.clear();
+      ordenColumnasActivos.clear();
+    });
+    expect(listaActivosEnTexto(), [
+      ['Activo', 'Tag', 'Uso', 'Horas totales', 'Mantenimientos', 'Próximo mantenimiento', 'Componentes'],
+      ['Planta', 'P', '—', '—', '2', fecha(masDias(hoy(), 7)), '1'],
+    ]);
+    // El usuario añade «Fabricante y modelo» y pone «Tag» delante de «Activo».
+    columnasExtraActivos.add('Fabricante y modelo');
+    ordenColumnasActivos.addAll(['Tag', 'Activo']);
+    final l = listaActivosEnTexto();
+    expect(l.first.take(2), ['Tag', 'Activo']);
+    expect(l.first, contains('Fabricante y modelo'));
+    expect(l[1][l.first.indexOf('Fabricante y modelo')], 'Andritz D-4');
   });
 }

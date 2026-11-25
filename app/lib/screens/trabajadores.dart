@@ -6,6 +6,7 @@ import '../forms.dart';
 import '../models.dart';
 import '../importar.dart' show QueImportar;
 import 'importar_exportar.dart' show abrirImportarExportar;
+import '../industrial/activos.dart' show enOrdenDelUsuario;
 import '../store.dart';
 import 'accesos.dart';
 import '../theme.dart';
@@ -212,6 +213,8 @@ class _TrabajadoresState extends State<Trabajadores> {
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
+          // El orden que deje el usuario se recuerda (y Exportar lo sigue).
+          orden: ordenColumnasTecnicos,
           seleccionCabecera: BotonSeleccionLista(
             activo: seleccionando,
             onTap: () => seleccionando ? salirSeleccion() : setState(() => seleccionando = true),
@@ -484,4 +487,25 @@ class _InsigniaAtrasadas extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Orden en que el usuario ha dejado las columnas de la lista (arrastrando sus títulos); Exportar sale igual.
+final ordenColumnasTecnicos = <String>[];
+
+/// La lista de Técnicos en texto, tal como la ve el usuario (sus columnas en su orden), para exportar en PDF y su
+/// vista previa. La cabecera, la primera fila.
+List<List<String>> listaTecnicosEnTexto() {
+  final valores = <String, String Function(Trabajador)>{
+    'Nombre': (w) => w.nombreCompleto,
+    'Competencias': (w) => w.competencias.join(', '),
+    'Teléfono': (w) => w.telefono,
+    m('Trabajos'): (w) => '${store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(w.id)).length}',
+    'Hoy': (w) => w.activo ? w.estadoHoy.etiqueta : 'Inactivo',
+  };
+  final cols = enOrdenDelUsuario(valores.keys.toList(), ordenColumnasTecnicos);
+  final ws = [...store.trabajadores]..sort((a, b) => a.nombreCompleto.compareTo(b.nombreCompleto));
+  return [
+    cols,
+    for (final w in ws) [for (final c in cols) valores[c]!(w)],
+  ];
 }

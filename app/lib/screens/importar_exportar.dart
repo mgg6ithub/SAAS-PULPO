@@ -10,7 +10,8 @@ import '../geo.dart';
 import '../importar.dart';
 import '../hoja_calculo.dart';
 import '../industrial/activo.dart';
-import '../industrial/activos.dart' show horas;
+import '../industrial/activos.dart' show horas, listaActivosEnTexto;
+import 'trabajadores.dart' show listaTecnicosEnTexto;
 import '../industrial/iconos.dart' show IconoActivo;
 import '../industrial/plan.dart';
 import '../industrial/planes.dart' show proximoPlan;
@@ -214,9 +215,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
         child: Text(
           verExportar
               // Dos líneas, como la de Importar, para que las dos caras queden iguales.
-              ? 'Así saldrán tus ${que.etiqueta.toLowerCase()}, con todo lo que tienen. Elige el formato abajo: PDF para '
-                    'leer o imprimir (con las columnas que caben), Excel o CSV para hojas de cálculo, o JSON para otro '
-                    'programa. Lo exportado en Excel, CSV o JSON se puede volver a importar tal cual.'
+              ? 'Así saldrán tus ${que.etiqueta.toLowerCase()}. En PDF, como en tu lista: las mismas columnas, en el '
+                    'orden en que las tengas. En Excel, CSV o JSON, con todos sus datos, para abrirlos en otro programa o '
+                    'volver a importarlos tal cual.'
               : que == QueImportar.trabajos
               ? m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.')
               : 'Descarga la plantilla (con su guía), rellénala y súbela tal cual en Excel, CSV o JSON; puedes subir '
@@ -272,7 +273,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
           // Sin pastilla de filas: cuántas hay ya se ve abajo («y N filas más»).
           cabecera: const [],
           contenido: _tablaExportar(),
-          sobran: filasExportar(que, store).length - _maxFilas,
+          sobran: _filasExportadas().length - 1 - _maxFilas,
           controles: [
             if (!industrial) _neutro('Descargar el histórico', () => _exportar('Histórico', filasHistorial(store))),
             Pestanas(
@@ -282,8 +283,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
               onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
             ),
             FilledButton(
-              onPressed: () =>
-                  _exportar(que.etiqueta, [que.columnas, ...filasExportar(que, store)], columnasPdf: columnasPdf(que)),
+              onPressed: progreso != null ? null : () => _exportar(que.etiqueta, _filasExportadas()),
               child: Text('Descargar ${formato.etiqueta}'),
             ),
           ],
@@ -464,6 +464,19 @@ class _ImportarExportarState extends State<ImportarExportar> {
     ),
   );
 
+  /// Anchos de las columnas de las listas (Activos, Técnicos) en la vista previa de Exportar.
+  static const _anchosLista = {
+    'Activo': 210.0,
+    'Nombre': 220.0,
+    'Competencias': 260.0,
+    'Uso': 100.0,
+    'Horas totales': 125.0,
+    'Mantenimientos': 140.0,
+    'Próximo mantenimiento': 185.0,
+    'Componentes': 115.0,
+    'Fabricante y modelo': 180.0,
+  };
+
   /// Ancho de una columna según su título.
   double _ancho(String c) => (c.length * 8.5 + 48).clamp(110, 260).toDouble();
 
@@ -527,9 +540,27 @@ class _ImportarExportarState extends State<ImportarExportar> {
   );
 
   /// Lo que se va a exportar, con las columnas del formato elegido (en PDF, las que caben).
+  /// La lista tal como la ve el usuario en su sección (sus columnas en su orden), para el PDF; null si no hay.
+  List<List<String>>? _listaComoSeVe() => !industrial
+      ? null
+      : switch (que) {
+          QueImportar.activos => listaActivosEnTexto(),
+          QueImportar.trabajadores => listaTecnicosEnTexto(),
+          _ => null,
+        };
+
+  /// Lo que sale al exportar, con su cabecera: en PDF, como la lista del usuario (o, si no hay, las columnas que
+  /// caben); en Excel, CSV o JSON, todos los datos, para poder volver a importarlo.
+  List<List<String>> _filasExportadas() {
+    final todo = [que.columnas, ...filasExportar(que, store)];
+    if (formato != FormatoExportar.pdf) return todo;
+    return _listaComoSeVe() ?? soloColumnas(todo, columnasPdf(que));
+  }
+
   Widget _tablaExportar() {
-    final columnas = formato == FormatoExportar.pdf ? columnasPdf(que) : que.columnas;
-    final filas = soloColumnas([que.columnas, ...filasExportar(que, store)], columnas);
+    final filas = _filasExportadas();
+    final columnas = filas.first;
+    final derecha = {'Horas totales', 'Mantenimientos', 'Componentes', m('Trabajos')};
     if (filas.length == 1) {
       return Padding(
         padding: const EdgeInsets.only(top: 8, left: 4),
@@ -539,28 +570,54 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ),
       );
     }
+    final comoLista = formato == FormatoExportar.pdf && _listaComoSeVe() != null;
+    final raices = que == QueImportar.activos ? store.hijosDe(null) : const <Activo>[];
     return _tablaCorta(
-      [for (final c in columnas) Col(c, ancho: _ancho(c))],
       [
-        for (final f in filas.skip(1)) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
+        for (final c in columnas)
+          Col(
+            c,
+            ancho: comoLista ? (_anchosLista[c] ?? _ancho(c)) : _ancho(c),
+            derecha: comoLista && derecha.contains(c),
+          ),
+      ],
+      [
+        for (final (n, f) in filas.skip(1).indexed)
+          [
+            for (final (i, x) in f.indexed)
+              // Como en la lista: el activo con su icono delante.
+              comoLista && columnas[i] == 'Activo' && n < raices.length
+                  ? Row(
+                      children: [
+                        IconoActivo(raices[n].icono, color: P.textoSuave, size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(child: celdaTexto(x, negrita: true)),
+                      ],
+                    )
+                  : comoLista && derecha.contains(columnas[i])
+                  ? Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(x, suave: true))
+                  // Como en la lista: el nombre en negrita y el resto en gris, vaya donde vaya cada columna.
+                  : comoLista
+                  ? celdaTexto(x, negrita: columnas[i] == 'Nombre', suave: columnas[i] != 'Nombre')
+                  : celdaTexto(x, negrita: i == 0),
+          ],
       ],
     );
   }
 
-  /// Descarga [conCabecera] en el formato elegido. El PDF lleva solo [columnasPdf] (las que caben).
-  Future<void> _exportar(String titulo, List<List<String>> conCabecera, {List<String>? columnasPdf}) async {
-    final nombre = normalizar(titulo).replaceAll(' ', '_');
-    final bytes = switch (formato) {
-      FormatoExportar.pdf => await listadoPdf(
-        titulo,
-        columnasPdf == null ? conCabecera : soloColumnas(conCabecera, columnasPdf),
-      ),
-      FormatoExportar.csv => utf8.encode(escribirCsv(conCabecera)),
-      FormatoExportar.json => utf8.encode(filasJson(conCabecera)),
-      FormatoExportar.excel => escribirXlsx([(titulo, conCabecera)]),
-    };
-    await descargar(bytes, '$nombre.${formato.extension}', formato.tipo);
-  }
+  /// Descarga [conCabecera] en el formato elegido, con la barra de progreso mientras se prepara (un PDF largo
+  /// tarda un poco).
+  Future<void> _exportar(String titulo, List<List<String>> conCabecera) =>
+      _conProgreso('Preparando ${formato.etiqueta}…', () async {
+        final nombre = normalizar(titulo).replaceAll(' ', '_');
+        final bytes = switch (formato) {
+          FormatoExportar.pdf => await listadoPdf(titulo, conCabecera),
+          FormatoExportar.csv => utf8.encode(escribirCsv(conCabecera)),
+          FormatoExportar.json => utf8.encode(filasJson(conCabecera)),
+          FormatoExportar.excel => escribirXlsx([(titulo, conCabecera)]),
+        };
+        await descargar(bytes, '$nombre.${formato.extension}', formato.tipo);
+      });
 
   /// Título de sección con su flecha (la de descargar para importar; girada 180 grados para exportar), como el
   /// botón que abre esta ventana.
