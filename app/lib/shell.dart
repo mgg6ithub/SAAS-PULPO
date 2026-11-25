@@ -792,11 +792,10 @@ class _BarraState extends State<_Barra> {
                   const SizedBox(height: 8),
                   Divider(height: 1, color: P.bordeBarra),
                   const SizedBox(height: 8),
-                  // De momento sin «Vista de técnico».
-                  // Builder(
-                  //   builder: (context) =>
-                  //       _fila(Marca.iconoTrabajador, m('Vista de trabajador'), () => abrirVistaTrabajador(context)),
-                  // ),
+                  Builder(
+                    builder: (context) =>
+                        _fila(Marca.iconoTrabajador, m('Vista de trabajador'), () => abrirVistaTrabajador(context)),
+                  ),
                   BotonUsuario(compacto: iconos, escala: escala),
                 ],
               ),
@@ -1356,9 +1355,9 @@ class _BarraInferior extends StatelessWidget {
                     (Icons.unfold_more_rounded, 'Empresas'),
                     (Icons.person_outline_rounded, 'Tu cuenta y ajustes'),
                   ].indexed)
-                    // De momento solo la cuenta: Simulaciones, vista de técnico y empresas, quitadas.
+                    // De momento sin Simulaciones ni empresas: vista de técnico y la cuenta.
                     // if ((i != 2 || store.nube != null) && (i != 0 || entornoLocal))
-                    if (i == 3)
+                    if (i == 1 || i == 3)
                       (
                         i,
                         Row(
