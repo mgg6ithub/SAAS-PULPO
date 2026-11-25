@@ -222,48 +222,31 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ),
         const SizedBox(height: 14),
       ],
-      // Las dos caras con el mismo esqueleto (título, tabla, botón) y el mismo alto: solo cambia el contenido.
+      // Las dos caras con el mismo esqueleto (título, tabla, controles) y el mismo alto: solo cambia el contenido.
       if (verExportar)
         _cara(
           exportar: true,
-          derecha: Pestanas(
-            compactas: true,
-            opciones: [for (final f in FormatoExportar.values) f.etiqueta],
-            seleccion: formato.index,
-            onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
-          ),
-          pastillas: [
+          cabecera: [
             () {
               final n = filasExportar(que, store).length;
-              return Pill('$n ${n == 1 ? 'fila' : 'filas'} en ${formato.etiqueta}', P.morado, punto: true);
+              return _pastilla('$n ${n == 1 ? 'fila' : 'filas'}', _iconoTipo(que));
             }(),
           ],
           contenido: _tablaExportar(),
           sobran: filasExportar(que, store).length - _maxFilas,
-          pie: [
+          controles: [
+            if (!industrial) _neutro('Descargar el histórico', () => _exportar('Histórico', filasHistorial(store))),
+            Pestanas(
+              compactas: true,
+              opciones: [for (final f in FormatoExportar.values) f.etiqueta],
+              seleccion: formato.index,
+              onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
+            ),
             FilledButton(
               onPressed: () =>
                   _exportar(que.etiqueta, [que.columnas, ...filasExportar(que, store)], columnasPdf: columnasPdf(que)),
               child: Text('Descargar ${formato.etiqueta}'),
             ),
-            const SizedBox(width: 14),
-            Flexible(
-              child: Text(
-                () {
-                  final n = filasExportar(que, store).length;
-                  return '$n ${n == 1 ? 'fila' : 'filas'} en total';
-                }(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-              ),
-            ),
-            if (!industrial) ...[
-              const SizedBox(width: 14),
-              Flexible(
-                child: Enlace('Descargar el histórico', onTap: () => _exportar('Histórico', filasHistorial(store))),
-              ),
-            ],
           ],
         )
       else if (vista != null)
@@ -271,90 +254,94 @@ class _ImportarExportarState extends State<ImportarExportar> {
       else
         _cara(
           exportar: false,
-          derecha: Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 16,
-            runSpacing: 6,
-            children: [
-              // La plantilla en el formato que se prefiera; la de Excel trae la guía en otra hoja.
-              _MenuEnlace(
-                'Descargar plantilla',
-                opciones: [
-                  for (final f in [FormatoExportar.excel, FormatoExportar.csv, FormatoExportar.json])
-                    (
-                      f == FormatoExportar.excel ? 'Excel, con la guía en otra hoja' : f.etiqueta,
-                      () => descargar(
-                        plantillaBytes(que, f),
-                        'plantilla_${que.etiqueta.toLowerCase()}.${f.extension}',
-                        f.tipo,
-                      ),
-                    ),
-                ],
-              ),
-              _MenuEnlace(
-                'Descargar guía',
-                opciones: [
-                  (
-                    'PDF',
-                    () async => descargar(
-                      await guiaPdf(
-                        que.etiqueta.toLowerCase(),
-                        guiaFilas(que),
-                        notas: [if (que == QueImportar.activos) _notaActivos],
-                      ),
-                      'guia_${que.etiqueta.toLowerCase()}.pdf',
-                      FormatoExportar.pdf.tipo,
-                    ),
-                  ),
-                  (
-                    'Excel',
-                    () => descargar(
-                      escribirXlsx([('Guía', guiaFilas(que))]),
-                      'guia_${que.etiqueta.toLowerCase()}.xlsx',
-                      FormatoExportar.excel.tipo,
-                    ),
-                  ),
-                  (
-                    'Texto',
-                    () =>
-                        descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          pastillas: [Pill('Plantilla con ${que.ejemplos.length} filas de ejemplo', P.morado, punto: true)],
+          cabecera: [_pastilla('Plantilla con ${que.ejemplos.length} filas de ejemplo', Icons.table_chart_outlined)],
           contenido: _tablaPlantilla(),
           sobran: que.ejemplos.length - _maxFilas,
-          pie: [
-            FilledButton(onPressed: elegir, child: const Text('Elegir archivo')),
-            const SizedBox(width: 14),
-            Flexible(
-              child: Text(
-                haciendo ?? 'Excel (.xlsx), CSV o JSON.',
-                style: TextStyle(fontSize: 12.5, color: haciendo == null ? P.textoSuave : P.morado),
-              ),
+          nota: haciendo ?? 'Excel (.xlsx), CSV o JSON',
+          controles: [
+            _MenuEnlace(
+              'Descargar guía',
+              opciones: [
+                (
+                  'PDF',
+                  () async => descargar(
+                    await guiaPdf(
+                      que.etiqueta.toLowerCase(),
+                      guiaFilas(que),
+                      notas: [if (que == QueImportar.activos) _notaActivos],
+                    ),
+                    'guia_${que.etiqueta.toLowerCase()}.pdf',
+                    FormatoExportar.pdf.tipo,
+                  ),
+                ),
+                (
+                  'Excel',
+                  () => descargar(
+                    escribirXlsx([('Guía', guiaFilas(que))]),
+                    'guia_${que.etiqueta.toLowerCase()}.xlsx',
+                    FormatoExportar.excel.tipo,
+                  ),
+                ),
+                (
+                  'Texto',
+                  () => descargar(utf8.encode(guiaTexto(que)), 'guia_${que.etiqueta.toLowerCase()}.txt', 'text/plain'),
+                ),
+              ],
             ),
+            // La plantilla en el formato que se prefiera; la de Excel trae la guía en otra hoja.
+            _MenuEnlace(
+              'Descargar plantilla',
+              opciones: [
+                for (final f in [FormatoExportar.excel, FormatoExportar.csv, FormatoExportar.json])
+                  (
+                    f == FormatoExportar.excel ? 'Excel, con la guía en otra hoja' : f.etiqueta,
+                    () => descargar(
+                      plantillaBytes(que, f),
+                      'plantilla_${que.etiqueta.toLowerCase()}.${f.extension}',
+                      f.tipo,
+                    ),
+                  ),
+              ],
+            ),
+            FilledButton(onPressed: progreso == null ? elegir : null, child: const Text('Elegir archivo')),
           ],
         ),
     ],
   );
 
-  /// Como mucho se ven estas filas de cada tabla; abajo a la derecha, cuántas más hay.
+  /// Como mucho se ven estas filas de cada tabla; abajo a la izquierda, cuántas más hay.
   static const _maxFilas = 6;
 
-  /// Alto fijo de la zona de la tabla (pastillas y [_maxFilas] filas), igual en Importar, en la vista previa y en
-  /// Exportar: la ventana no cambia de alto al pasar de una a otra ni al elegir o importar un archivo.
-  static const _altoTabla = 28 + 10 + 46 + 57.0 * _maxFilas + 2;
+  /// Alto fijo de la tabla ([_maxFilas] filas), igual en Importar, en la vista previa y en Exportar: la ventana no
+  /// cambia de alto al pasar de una a otra ni al elegir o importar un archivo.
+  static const _altoTabla = 46 + 57.0 * _maxFilas + 2;
 
-  /// Esqueleto común: título con su flecha y [derecha] en una fila de 40; en un hueco de alto fijo, las
-  /// [pastillas] y la tabla; abajo, el botón (con su nota) a la izquierda y cuántas filas más hay a la derecha.
+  /// Pastilla neutra con su icono (activos, componentes, mantenimientos, filas…).
+  Widget _pastilla(String texto, IconData icono) => Pill(texto, P.textoSuave, icono: icono);
+
+  /// Icono de lo que se importa o exporta, el de su sección.
+  IconData _iconoTipo(QueImportar q) => switch (q) {
+    QueImportar.activos || QueImportar.clientes => Marca.iconoCliente,
+    QueImportar.trabajadores => Marca.iconoTrabajador,
+    QueImportar.trabajos => Icons.content_paste_rounded,
+  };
+
+  /// Botón secundario neutro (Cancelar, Elegir otro archivo…).
+  Widget _neutro(String texto, VoidCallback? accion) => TextButton(
+    style: TextButton.styleFrom(foregroundColor: P.textoSuave),
+    onPressed: accion,
+    child: Text(texto),
+  );
+
+  /// Esqueleto común: título con su flecha y, a la derecha, [cabecera] (pastillas, archivo); la tabla en un hueco
+  /// de alto fijo; abajo, a la izquierda cuántas filas más hay y, a la derecha del todo, [nota] y los [controles]
+  /// (el principal, el último).
   Widget _cara({
     required bool exportar,
-    required Widget derecha,
-    required List<Widget> pastillas,
+    required List<Widget> cabecera,
     required Widget contenido,
-    required List<Widget> pie,
+    required List<Widget> controles,
+    String? nota,
     int sobran = 0,
   }) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,7 +357,11 @@ class _ImportarExportarState extends State<ImportarExportar> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 reverse: true,
-                child: Row(children: [derecha]),
+                child: Row(
+                  children: [
+                    for (final (i, w) in cabecera.indexed) ...[if (i > 0) const SizedBox(width: 8), w],
+                  ],
+                ),
               ),
             ),
           ],
@@ -379,35 +370,37 @@ class _ImportarExportarState extends State<ImportarExportar> {
       const SizedBox(height: 10),
       SizedBox(
         height: _altoTabla,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 28,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final (i, p) in pastillas.indexed) ...[if (i > 0) const SizedBox(width: 8), p],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: Align(alignment: Alignment.topLeft, child: contenido),
-            ),
-          ],
-        ),
+        child: Align(alignment: Alignment.topLeft, child: contenido),
       ),
       const SizedBox(height: 14),
-      // Abajo: el botón a la izquierda y, a la derecha del todo, cuántas filas más hay.
       SizedBox(
         height: 40,
         child: Row(
           children: [
-            Expanded(child: Row(children: pie)),
-            if (sobran > 0) ...[const SizedBox(width: 16), _mas(sobran)],
+            if (sobran > 0) _mas(sobran),
+            const SizedBox(width: 16),
+            // A la derecha del todo; si no cabe (ventana estrecha), se desliza.
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
+                child: Row(
+                  children: [
+                    if (nota != null)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 320),
+                        child: Text(
+                          nota,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12.5, color: haciendo != null ? P.morado : P.textoSuave),
+                        ),
+                      ),
+                    for (final w in controles) ...[const SizedBox(width: 12), w],
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -511,20 +504,20 @@ class _ImportarExportarState extends State<ImportarExportar> {
     return [...avisos]..sort((a, b) => fila(a).compareTo(fila(b)));
   }
 
-  /// «3 activos», «2 componentes», «5 mantenimientos» (lo que haya).
-  List<String> _partes(Importacion imp) {
+  /// «3 activos», «2 componentes», «5 mantenimientos» (lo que haya), cada uno con el icono de su sección.
+  List<(String, IconData)> _partes(Importacion imp) {
     String n(int x, String uno, String varios) => '$x ${x == 1 ? uno : varios}';
     final comp = imp.activos.where((a) => a.padreId != null).length;
     return [
-      if (imp.activos.length > comp) n(imp.activos.length - comp, 'activo', 'activos'),
-      if (comp > 0) n(comp, 'componente', 'componentes'),
-      if (imp.planes.isNotEmpty) n(imp.planes.length, 'mantenimiento', 'mantenimientos'),
+      if (imp.activos.length > comp) (n(imp.activos.length - comp, 'activo', 'activos'), Marca.iconoCliente),
+      if (comp > 0) (n(comp, 'componente', 'componentes'), Icons.account_tree_outlined),
+      if (imp.planes.isNotEmpty) (n(imp.planes.length, 'mantenimiento', 'mantenimientos'), Icons.content_paste_rounded),
     ];
   }
 
   /// «3 activos, 2 componentes y 5 mantenimientos».
   String _resumen(Importacion imp) {
-    final partes = _partes(imp);
+    final partes = [for (final (t, _) in _partes(imp)) t];
     return partes.length == 1 ? partes.first : '${partes.take(partes.length - 1).join(', ')} y ${partes.last}';
   }
 
@@ -537,6 +530,8 @@ class _ImportarExportarState extends State<ImportarExportar> {
       return Tarjeta(
         padding: EdgeInsets.zero,
         child: SingleChildScrollView(
+          // Otra tabla (otras columnas) empieza desde la izquierda, sin heredar el desplazamiento de la anterior.
+          key: ValueKey([for (final x in columnas) x.titulo].join('|')),
           scrollDirection: Axis.horizontal,
           child: SizedBox(
             width: suma * k + 36,
@@ -708,28 +703,13 @@ class _ImportarExportarState extends State<ImportarExportar> {
     final avisos = _enOrden(imp.avisos);
     return _cara(
       exportar: false,
-      derecha: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 260),
-            child: Text(
-              archivo ?? '',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: P.textoSuave),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Enlace('Elegir otro archivo', onTap: elegir),
-        ],
-      ),
-      pastillas: [
+      cabecera: [
+        // Qué se va a crear, en neutro con el icono de cada cosa.
         if (que == QueImportar.activos && imp.total > 0)
-          for (final x in _partes(imp)) Pill(x, P.verde, punto: true)
+          for (final (t, ic) in _partes(imp)) _pastilla(t, ic)
         else
-          Pill('${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}', P.verde, punto: true),
-        if (imp.duplicados > 0) Pill('${imp.duplicados} ya estaban', P.textoSuave, punto: true),
+          _pastilla('${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}', _iconoTipo(que)),
+        if (imp.duplicados > 0) _pastilla('${imp.duplicados} ya estaban', Icons.done_all_rounded),
         // Pulsando los avisos, se ven en lugar de la tabla (y otra vez, la tabla).
         if (avisos.isNotEmpty)
           MouseRegion(
@@ -739,10 +719,28 @@ class _ImportarExportarState extends State<ImportarExportar> {
               child: Pill(
                 verAvisos ? 'Ver la tabla' : '${avisos.length} ${avisos.length == 1 ? 'aviso' : 'avisos'}',
                 P.ambar,
-                punto: true,
+                icono: Icons.warning_amber_rounded,
               ),
             ),
           ),
+        const SizedBox(width: 8),
+        // El archivo leído, con su marca de hecho.
+        // Mientras se lee o se guarda, sin marca: sale al terminar.
+        AnimatedOpacity(
+          opacity: progreso == null ? 1 : 0,
+          duration: const Duration(milliseconds: 200),
+          child: const Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
+        ),
+        const SizedBox(width: 2),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 240),
+          child: Text(
+            archivo ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
       contenido: verAvisos || filas.isEmpty
           ? Tarjeta(
@@ -769,32 +767,24 @@ class _ImportarExportarState extends State<ImportarExportar> {
             )
           : _tablaCorta(columnas, filas),
       sobran: verAvisos ? 0 : filas.length - _maxFilas,
-      pie: [
+      nota: haciendo,
+      controles: [
+        _neutro('Elegir otro archivo', progreso == null ? elegir : null),
+        _neutro(
+          'Cancelar',
+          progreso != null
+              ? null
+              : () => setState(() {
+                  vista = null;
+                  archivo = null;
+                  verTodas = false;
+                  verAvisos = false;
+                }),
+        ),
         FilledButton(
           onPressed: imp.total == 0 || progreso != null ? null : importar,
           child: Text('Importar ${imp.total}'),
         ),
-        const SizedBox(width: 16),
-        Enlace(
-          'Cancelar',
-          onTap: () => setState(() {
-            vista = null;
-            archivo = null;
-            verTodas = false;
-            verAvisos = false;
-          }),
-        ),
-        if (haciendo != null) ...[
-          const SizedBox(width: 16),
-          Flexible(
-            child: Text(
-              haciendo!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12.5, color: P.morado),
-            ),
-          ),
-        ],
       ],
     );
   }
