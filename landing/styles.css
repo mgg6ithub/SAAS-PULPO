@@ -383,8 +383,8 @@ html.intro .intro-pulpo { display: grid; place-items: center; position: fixed; i
 html.intro .nav .brand img { visibility: hidden; }
 .intro-pulpo svg { width: min(260px, 52vw); height: auto; overflow: visible; will-change: transform; }
 .intro-pulpo svg * { transform-box: fill-box; }
-.intro-pulpo__cabeza { transform-origin: 50% 100%; opacity: 0; }
+.intro-pulpo__cuerpo { transform-origin: 50% 100%; opacity: 0; }
 .intro-pulpo__ojos circle { transform-origin: center; }
-.intro-t { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.intro-t { stroke-dasharray: 1 1; stroke-dashoffset: .8; }
 .intro-t--i { transform-origin: 100% 0%; }
 .intro-t--d { transform-origin: 0% 0%; }
