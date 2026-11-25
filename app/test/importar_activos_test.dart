@@ -228,4 +228,13 @@ void main() {
     final pdf = await guiaPdf('activos', guia);
     expect(ascii.decode(pdf.sublist(0, 4)), '%PDF');
   });
+
+  test('un archivo de activos en Técnicos (o al revés) avisa y no importa nada', () {
+    final a = preparar(QueImportar.trabajadores, 'Tag;Nombre;Padre;Mantenimiento\nP;Planta;;Rev');
+    expect(a.total, 0);
+    expect(a.avisos.single, contains('parece de activos'));
+    final t = preparar(QueImportar.activos, 'Nombre;Apellidos;Correo\nAna;Ruiz;a@x.es');
+    expect(t.total, 0);
+    expect(t.avisos.single, contains('parece de'));
+  });
 }

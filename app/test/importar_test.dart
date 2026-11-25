@@ -1,9 +1,13 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pultec/importar.dart';
 import 'package:pultec/models.dart';
 import 'package:pultec/screens/importar_exportar.dart';
 import 'package:pultec/store.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Importar desde CSV (con avisos y sin duplicados) y exportar con las mismas columnas.
@@ -141,4 +145,45 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets('al elegir archivo sale la barra de progreso y luego la vista previa', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    FilePicker.platform = _Falso('Nombre;CIF\nColegio Nuevo;B9\n');
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ImportarExportar())));
+    double opacidad() => tester.widget<AnimatedOpacity>(
+      find.ancestor(of: find.byType(LinearProgressIndicator), matching: find.byType(AnimatedOpacity)),
+    ).opacity;
+    expect(opacidad(), 0);
+    await tester.tap(find.text('Elegir archivo'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(opacidad(), 1);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(opacidad(), 0);
+    expect(find.text('Importar 1'), findsOneWidget);
+  });
+}
+
+class _Falso extends FilePicker with MockPlatformInterfaceMixin {
+  final String csv;
+  _Falso(this.csv);
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    bool allowCompression = true,
+    int compressionQuality = 30,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+  }) async {
+    final b = utf8.encode(csv);
+    return FilePickerResult([PlatformFile(name: 'clientes.csv', size: b.length, bytes: b)]);
+  }
 }

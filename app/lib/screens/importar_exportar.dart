@@ -22,6 +22,8 @@ Future<void> abrirImportarExportar(BuildContext context, {QueImportar? que}) => 
   context: context,
   builder: (_) => Dialog(
     backgroundColor: P.fondo,
+    // La barra de progreso de arriba sigue el borde redondeado.
+    clipBehavior: Clip.antiAlias,
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 960, maxHeight: 820),
       child: ImportarExportar(que: que),
@@ -43,6 +45,12 @@ class _ImportarExportarState extends State<ImportarExportar> {
   String? archivo;
   FormatoExportar formato = FormatoExportar.pdf;
   bool verExportar = false;
+
+  /// La tabla desplegada con todas sus filas («y N filas más»).
+  bool verTodas = false;
+
+  /// Barra de progreso de arriba (0 a 1); null = oculta.
+  double? progreso;
   bool get solo => widget.que != null;
 
   Future<void> elegir() async {
@@ -53,22 +61,43 @@ class _ImportarExportarState extends State<ImportarExportar> {
     );
     final f = r?.files.firstOrNull;
     if (f?.bytes == null) return;
-    final List<List<String>> filas;
-    try {
-      filas = leerArchivo(f!.name, f.bytes!);
-    } on FormatException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${f!.name}: ${e.message}')));
-      return;
-    }
-    setState(() {
-      archivo = f.name;
-      vista = prepararImportacion(que, filas, store);
+    await _conProgreso(() async {
+      final List<List<String>> filas;
+      try {
+        filas = leerArchivo(f!.name, f.bytes!);
+      } on FormatException catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${f!.name}: ${e.message}')));
+        return;
+      }
+      final imp = prepararImportacion(que, filas, store);
+      if (!mounted) return;
+      setState(() {
+        archivo = f.name;
+        vista = imp;
+        verTodas = false;
+      });
     });
   }
 
-  void importar() {
+  /// Barra morada arriba mientras se lee o se guarda: avanza sola hasta casi el final, se llena al terminar y se
+  /// desvanece. Dura al menos un instante, para que se vea aunque sea rápido.
+  Future<void> _conProgreso(Future<void> Function() trabajo) async {
+    setState(() => progreso = .9);
+    await Future.wait([trabajo(), Future<void>.delayed(const Duration(milliseconds: 450))]);
+    if (!mounted) return;
+    setState(() => progreso = 1);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (mounted) setState(() => progreso = null);
+  }
+
+  Future<void> importar() async {
     final imp = vista!;
-    imp.aplicar(store);
+    // Hasta que la base lo tiene todo guardado (sin nube, al momento).
+    await _conProgreso(() async {
+      imp.aplicar(store);
+      await store.nube?.guardado;
+    });
+    if (!mounted) return;
     _ubicar([...imp.clientes]);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -82,11 +111,35 @@ class _ImportarExportarState extends State<ImportarExportar> {
     setState(() {
       vista = null;
       archivo = null;
+      verTodas = false;
     });
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) => Stack(
+    children: [
+      _contenido(context),
+      // Progreso arriba del todo, de borde a borde.
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: AnimatedOpacity(
+          opacity: progreso == null ? 0 : 1,
+          duration: const Duration(milliseconds: 200),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(end: progreso ?? 0),
+            duration: Duration(milliseconds: (progreso ?? 0) >= 1 ? 250 : 900),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, _) =>
+                LinearProgressIndicator(value: v, minHeight: 3, color: P.morado, backgroundColor: P.moradoSuave),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Widget _contenido(BuildContext context) => ListView(
     shrinkWrap: true,
     padding: const EdgeInsets.fromLTRB(24, 20, 16, 22),
     children: [
@@ -103,7 +156,10 @@ class _ImportarExportarState extends State<ImportarExportar> {
             compactas: true,
             opciones: const ['Importar', 'Exportar'],
             seleccion: verExportar ? 1 : 0,
-            onChanged: (i) => setState(() => verExportar = i == 1),
+            onChanged: (i) => setState(() {
+              verExportar = i == 1;
+              verTodas = false;
+            }),
           ),
           const SizedBox(width: 8),
           IconButton(
@@ -261,7 +317,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
   /// Alto de la tabla para las dos caras: el de la más alta (hasta [_maxFilas] filas, con la línea de «más»).
   double get _altoTabla {
     final datos = filasExportar(que, store).length;
-    final filas = [que.ejemplos.length, datos, 1].reduce(max).clamp(1, _maxFilas);
+    // Desplegada en Exportar, crece con sus filas (como la tabla de [_tablaCorta]).
+    final tope = verTodas && verExportar ? (datos > 15 ? 10 : 15) : _maxFilas;
+    final filas = [verTodas && verExportar ? 0 : que.ejemplos.length, datos, 1].reduce(max).clamp(1, tope);
     return 46 + 57.0 * filas + 2;
   }
 
@@ -317,16 +375,26 @@ class _ImportarExportarState extends State<ImportarExportar> {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.end,
     children: [
-      _tabla(columnas, filas.take(_maxFilas).toList(), maxFilas: _maxFilas),
+      // Desplegada: todas las filas (hasta 15 a la vista; con más, la tabla se desplaza por dentro).
+      verTodas
+          ? _tabla(columnas, filas, maxFilas: filas.length > 15 ? 10 : 15)
+          : _tabla(columnas, filas.take(_maxFilas).toList(), maxFilas: _maxFilas),
       if (conMas && filas.length > _maxFilas)
         Padding(padding: const EdgeInsets.only(top: 10, right: 4), child: _mas(filas.length - _maxFilas)),
     ],
   );
 
   /// «y 6 filas más», en morado: lo que no cabe en la tabla.
-  Widget _mas(int n) => Text(
-    'y $n ${n == 1 ? 'fila' : 'filas'} más',
-    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.morado),
+  /// Al pulsarlo, despliega todas las filas; desplegado, «Ver menos» las recoge.
+  Widget _mas(int n) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: () => setState(() => verTodas = !verTodas),
+      child: Text(
+        verTodas ? 'Ver menos' : 'y $n ${n == 1 ? 'fila' : 'filas'} más',
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.morado),
+      ),
+    ),
   );
 
   /// Ancho de una columna según su título.
@@ -597,7 +665,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
               child: const Text('Cancelar'),
             ),
             const SizedBox(width: 8),
-            FilledButton(onPressed: imp.total == 0 ? null : importar, child: Text('Importar ${imp.total}')),
+            FilledButton(onPressed: imp.total == 0 || progreso != null ? null : importar, child: Text('Importar ${imp.total}')),
           ],
         ),
       ],

@@ -434,6 +434,17 @@ Importacion prepararImportacion(QueImportar que, List<List<String>> filas, Store
     return -1;
   }
 
+  // Archivo de otro tipo (activos en Técnicos o al revés): se dice claro en vez de importar algo raro.
+  final pareceActivos = col('Tag') >= 0 && (col('Padre') >= 0 || col('Mantenimiento') >= 0 || col('Horas contador') >= 0);
+  final pareceTecnicos = col('Apellidos') >= 0 && col('Tag') < 0;
+  if (que != QueImportar.activos && pareceActivos) {
+    imp.avisos.add('Este archivo parece de activos (tiene «Tag»): impórtalo desde Activos.');
+    return imp;
+  }
+  if (que == QueImportar.activos && pareceTecnicos) {
+    imp.avisos.add('Este archivo parece de ${m('trabajadores')} (tiene «Apellidos»): impórtalo desde ${m('Trabajadores')}.');
+    return imp;
+  }
   final obligatorias = switch (que) {
     QueImportar.trabajos => ['Cliente', 'Nombre'],
     // Nombre solo hace falta en los activos nuevos (para añadir mantenimientos a los que ya hay, basta el tag).
