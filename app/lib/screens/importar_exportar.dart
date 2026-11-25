@@ -165,7 +165,6 @@ class _ImportarExportarState extends State<ImportarExportar> {
           children: [
             for (final q in solo ? [que] : importables)
               FilaLista(
-                lider: const SizedBox(width: 4),
                 titulo: q.etiqueta,
                 subtitulo: switch (q) {
                   QueImportar.clientes => m('${store.clientes.length} clientes'),
@@ -183,7 +182,6 @@ class _ImportarExportarState extends State<ImportarExportar> {
               ),
             if (!industrial)
               FilaLista(
-                lider: const SizedBox(width: 4),
                 titulo: 'Histórico',
                 subtitulo: 'Cada mantenimiento hecho, con su fecha',
                 derecha: Enlace(

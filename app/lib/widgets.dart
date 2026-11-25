@@ -379,12 +379,13 @@ class Enlace extends StatelessWidget {
 
 /// Fila de lista: icono en cuadro tintado, título, subtítulo, algo a la derecha y "›".
 class FilaLista extends StatelessWidget {
-  final Widget lider;
+  /// Lo de delante (icono, avatar…); null = la fila empieza en el texto, alineada con el resto de la tarjeta.
+  final Widget? lider;
   final String titulo;
   final String? subtitulo;
   final Widget? derecha;
   final VoidCallback? onTap;
-  const FilaLista({super.key, required this.lider, required this.titulo, this.subtitulo, this.derecha, this.onTap});
+  const FilaLista({super.key, this.lider, required this.titulo, this.subtitulo, this.derecha, this.onTap});
 
   @override
   Widget build(BuildContext context) => Material(
@@ -398,8 +399,7 @@ class FilaLista extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         child: Row(
           children: [
-            lider,
-            const SizedBox(width: 12),
+            if (lider != null) ...[lider!, const SizedBox(width: 12)],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
