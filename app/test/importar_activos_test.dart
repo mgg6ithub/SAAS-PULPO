@@ -237,4 +237,18 @@ void main() {
     expect(t.total, 0);
     expect(t.avisos.single, contains('parece de'));
   });
+
+  test('varios archivos a la vez: se juntan y cada aviso dice de qué archivo y fila es', () {
+    final a = leerCsv('Tag;Nombre\nP1;Planta 1\n;Sin tag');
+    final b = leerCsv('Nombre;Tag;Padre;Mantenimiento;Cada\nMotor;P1-M;P1;Engrase;1 mes\nX;X-1;NO;Revisión;cada poco');
+    final j = combinarArchivos([('a.csv', a), ('b.csv', b)]);
+    expect(j.filas.first, ['Tag', 'Nombre', 'Padre', 'Mantenimiento', 'Cada']);
+    expect(j.origen, ['a.csv, fila 2', 'a.csv, fila 3', 'b.csv, fila 2', 'b.csv, fila 3']);
+    final imp = prepararImportacion(QueImportar.activos, j.filas, store, origen: j.origen);
+    expect([for (final x in imp.activos) x.tag], ['P1', 'P1-M', 'X-1']);
+    expect(imp.activos[1].padreId, imp.activos[0].id);
+    expect(imp.planes.single.cadaDias, 30);
+    expect(imp.avisos, contains(startsWith('a.csv, fila 3:')));
+    expect(imp.avisos.where((x) => x.startsWith('b.csv, fila 3:')), hasLength(3)); // padre, «cada» y sin periodicidad
+  });
 }

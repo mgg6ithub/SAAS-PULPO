@@ -343,6 +343,38 @@ List<List<String>> leerArchivo(String nombre, List<int> bytes) {
   return leerCsv(texto);
 }
 
+/// Junta varios archivos en uno: la cabecera, todas sus columnas (sin repetir, sin tildes ni mayúsculas para
+/// compararlas); cada fila, en su sitio. [origen] dice de qué archivo y fila sale cada una, para los avisos.
+({List<List<String>> filas, List<String> origen}) combinarArchivos(List<(String, List<List<String>>)> archivos) {
+  final cab = <String>[];
+  final claves = <String>[];
+  for (final (_, f) in archivos) {
+    if (f.isEmpty) continue;
+    for (final c in f.first) {
+      final k = normalizar(c);
+      if (k.isNotEmpty && !claves.contains(k)) {
+        claves.add(k);
+        cab.add(c.trim());
+      }
+    }
+  }
+  final filas = <List<String>>[cab];
+  final origen = <String>[];
+  for (final (nombre, f) in archivos) {
+    if (f.isEmpty) continue;
+    final idx = [for (final c in f.first) claves.indexOf(normalizar(c))];
+    for (var n = 1; n < f.length; n++) {
+      final fila = List.filled(cab.length, '');
+      for (final (i, j) in idx.indexed) {
+        if (j >= 0 && i < f[n].length) fila[j] = f[n][i];
+      }
+      filas.add(fila);
+      origen.add(archivos.length == 1 ? 'Fila ${n + 1}' : '$nombre, fila ${n + 1}');
+    }
+  }
+  return (filas: filas, origen: origen);
+}
+
 /// Extensiones que se pueden importar.
 const extensionesImportar = ['xlsx', 'csv', 'txt', 'json'];
 
@@ -419,7 +451,10 @@ const _alias = {
 };
 
 /// Prepara la importación de [filas] (la primera, la cabecera) sin tocar nada todavía.
-Importacion prepararImportacion(QueImportar que, List<List<String>> filas, Store s) {
+/// [origen]: de dónde sale cada fila de datos («activos.xlsx, fila 4»), cuando se juntan varios archivos con
+/// [combinarArchivos]; sin él, «Fila 4».
+Importacion prepararImportacion(QueImportar que, List<List<String>> filas, Store s, {List<String>? origen}) {
+  String donde(int n) => origen != null && n - 1 < origen.length ? origen[n - 1] : 'Fila ${n + 1}';
   final imp = Importacion(que);
   if (filas.isEmpty) {
     imp.avisos.add('El archivo está vacío.');
@@ -456,7 +491,7 @@ Importacion prepararImportacion(QueImportar que, List<List<String>> filas, Store
   }
   if (imp.avisos.isNotEmpty) return imp;
   if (que == QueImportar.activos) {
-    _prepararActivos(imp, filas, col, s);
+    _prepararActivos(imp, filas, col, s, donde);
     return imp;
   }
 
@@ -467,7 +502,7 @@ Importacion prepararImportacion(QueImportar que, List<List<String>> filas, Store
       return i < 0 || i >= f.length ? '' : f[i];
     }
 
-    void aviso(String texto) => imp.avisos.add('Fila ${n + 1}: $texto');
+    void aviso(String texto) => imp.avisos.add('${donde(n)}: $texto');
     final nombre = v('Nombre');
     if (nombre.isEmpty) {
       aviso('sin nombre, no se importa.');
@@ -628,7 +663,13 @@ int? leerCadaDias(String x) {
 double? _numero(String x) => double.tryParse(x.trim().replaceAll(' ', '').replaceAll(',', '.'));
 
 /// Pultec: activos, componentes y sus mantenimientos de un solo CSV (ver [_guiaActivos]).
-void _prepararActivos(Importacion imp, List<List<String>> filas, int Function(String) col, Store s) {
+void _prepararActivos(
+  Importacion imp,
+  List<List<String>> filas,
+  int Function(String) col,
+  Store s,
+  String Function(int) donde,
+) {
   String v(List<String> f, String nombre) {
     final i = col(nombre);
     return i < 0 || i >= f.length ? '' : f[i].trim();
@@ -640,7 +681,7 @@ void _prepararActivos(Importacion imp, List<List<String>> filas, int Function(St
   final filasValidas = <(int, List<String>, Activo)>[];
   for (var n = 1; n < filas.length; n++) {
     final f = filas[n];
-    void aviso(String texto) => imp.avisos.add('Fila ${n + 1}: $texto');
+    void aviso(String texto) => imp.avisos.add('${donde(n)}: $texto');
     final tag = v(f, 'Tag'), clave = normalizar(tag);
     if (tag.isEmpty) {
       aviso('sin tag, no se importa.');
@@ -686,9 +727,9 @@ void _prepararActivos(Importacion imp, List<List<String>> filas, int Function(St
     if (padre.isEmpty) continue;
     final p = porTag[normalizar(padre)];
     if (p == null) {
-      imp.avisos.add('Fila ${n + 1}: no hay ningún activo con tag «$padre»; ${a.tag} queda como activo principal.');
+      imp.avisos.add('${donde(n)}: no hay ningún activo con tag «$padre»; ${a.tag} queda como activo principal.');
     } else if (p == a) {
-      imp.avisos.add('Fila ${n + 1}: ${a.tag} no puede ser su propio padre.');
+      imp.avisos.add('${donde(n)}: ${a.tag} no puede ser su propio padre.');
     } else {
       a.padreId = p.id;
     }
@@ -718,7 +759,7 @@ void _prepararActivos(Importacion imp, List<List<String>> filas, int Function(St
   for (final (n, f, a) in filasValidas) {
     final nombre = v(f, 'Mantenimiento');
     if (nombre.isEmpty) continue;
-    void aviso(String texto) => imp.avisos.add('Fila ${n + 1}: $texto');
+    void aviso(String texto) => imp.avisos.add('${donde(n)}: $texto');
     final ya = [
       ...s.planes,
       ...imp.planes,

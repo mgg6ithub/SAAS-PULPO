@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Importar desde CSV (con avisos y sin duplicados) y exportar con las mismas columnas.
 void main() {
   setUp(() async {
+    ImportarExportar.conArrastrar = false;
     SharedPreferences.setMockInitialValues({});
     await store.cargar();
   });
@@ -134,7 +135,7 @@ void main() {
       }
       await tester.tap(find.text('Trabajos').last);
       await tester.pumpAndSettle();
-      expect(find.text('Elegir archivo'), findsOneWidget);
+      expect(find.text('Elegir archivos'), findsOneWidget);
       if (find.text('Exportar').evaluate().isEmpty) {
         await tester.tap(find.text('Importar').first);
         await tester.pumpAndSettle();
@@ -156,7 +157,7 @@ void main() {
       find.ancestor(of: find.byType(LinearProgressIndicator), matching: find.byType(AnimatedOpacity)).first,
     ).opacity;
     expect(opacidad(), 0);
-    await tester.tap(find.text('Elegir archivo'));
+    await tester.tap(find.text('Elegir archivos'));
     await tester.pump(const Duration(milliseconds: 100));
     expect(opacidad(), 1);
     expect(find.textContaining('Leyendo'), findsOneWidget);

@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'dart:convert';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
@@ -39,6 +41,9 @@ class ImportarExportar extends StatefulWidget {
   final QueImportar? que;
   const ImportarExportar({super.key, this.que});
 
+  /// Arrastrar archivos del sistema (las pruebas lo apagan: no tienen el complemento nativo).
+  static bool conArrastrar = true;
+
   @override
   State<ImportarExportar> createState() => _ImportarExportarState();
 }
@@ -59,28 +64,63 @@ class _ImportarExportarState extends State<ImportarExportar> {
 
   /// Vista previa: los avisos en lugar de la tabla.
   bool verAvisos = false;
+
+  /// Nombres de los archivos leídos (para ordenar sus avisos) y si hay uno encima de la zona de arrastrar.
+  List<String> archivos = [];
+  bool encima = false;
   bool get solo => widget.que != null;
 
   Future<void> elegir() async {
     final r = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: extensionesImportar,
+      allowMultiple: true,
       withData: true,
     );
-    final f = r?.files.firstOrNull;
-    if (f?.bytes == null) return;
-    await _conProgreso('Leyendo ${f!.name}…', () async {
-      final List<List<String>> filas;
-      try {
-        filas = leerArchivo(f.name, f.bytes!);
-      } on FormatException catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${f.name}: ${e.message}')));
-        return;
+    final fs = [
+      for (final f in r?.files ?? <PlatformFile>[])
+        if (f.bytes != null) (f.name, f.bytes!),
+    ];
+    if (fs.isNotEmpty) await _leer(fs);
+  }
+
+  /// Archivos soltados en la zona de arrastrar (se leen dentro del evento: luego el navegador los suelta).
+  Future<void> _soltar(DropDetails d) async {
+    setState(() => encima = false);
+    final fs = <(String, Uint8List)>[];
+    for (final it in d.items.whereType<DropFileItem>()) {
+      fs.add((it.name, await it.file.readAsBytes()));
+    }
+    if (fs.isNotEmpty) await _leer(fs);
+  }
+
+  /// Lee uno o varios archivos (Excel, CSV o JSON), los junta y prepara la vista previa. Un archivo que no se
+  /// puede leer, o de una extensión que no vale, sale como aviso con su nombre; el resto se importa igual.
+  Future<void> _leer(List<(String, Uint8List)> fs) async {
+    final texto = fs.length == 1 ? 'Leyendo ${fs.first.$1}…' : 'Leyendo ${fs.length} archivos…';
+    await _conProgreso(texto, () async {
+      final leidos = <(String, List<List<String>>)>[];
+      final errores = <String>[];
+      for (final (nombre, bytes) in fs) {
+        if (!extensionesImportar.contains(nombre.toLowerCase().split('.').last)) {
+          errores.add('$nombre: no es un Excel, CSV ni JSON; no se importa.');
+          continue;
+        }
+        try {
+          leidos.add((nombre, leerArchivo(nombre, bytes)));
+        } on FormatException catch (e) {
+          errores.add('$nombre: ${e.message}');
+        }
       }
-      final imp = prepararImportacion(que, filas, store);
+      final junto = combinarArchivos(leidos);
+      final imp = leidos.isEmpty
+          ? Importacion(que)
+          : prepararImportacion(que, junto.filas, store, origen: junto.origen);
+      imp.avisos.insertAll(0, errores);
       if (!mounted) return;
       setState(() {
-        archivo = f.name;
+        archivos = [for (final (n, _) in fs) n];
+        archivo = fs.length == 1 ? fs.first.$1 : '${fs.length} archivos';
         vista = imp;
         verTodas = false;
         verAvisos = imp.total == 0 && imp.avisos.isNotEmpty;
@@ -173,12 +213,15 @@ class _ImportarExportarState extends State<ImportarExportar> {
         height: 38,
         child: Text(
           verExportar
-              ? 'Así saldrán tus ${que.etiqueta.toLowerCase()}. Elige el formato: PDF para leer o imprimir (con las '
-                    'columnas que caben), Excel o CSV para hojas de cálculo, o JSON para otros programas.'
+              // Dos líneas, como la de Importar, para que las dos caras queden iguales.
+              ? 'Así saldrán tus ${que.etiqueta.toLowerCase()}, con todo lo que tienen. Elige el formato abajo: PDF para '
+                    'leer o imprimir (con las columnas que caben), Excel o CSV para hojas de cálculo, o JSON para otro '
+                    'programa. Lo exportado en Excel, CSV o JSON se puede volver a importar tal cual.'
               : que == QueImportar.trabajos
               ? m('Cada trabajo va a un cliente que ya exista en Pultec (por nombre o CIF): importa antes los clientes.')
-              : 'Rellena la plantilla con estas columnas y súbela tal cual (Excel, CSV o JSON). Pasa el ratón por cada '
-                    'columna para ver qué lleva; las de * son obligatorias. Lo que ya está en Pultec no se duplica.',
+              : 'Descarga la plantilla (con su guía), rellénala y súbela tal cual en Excel, CSV o JSON; puedes subir '
+                    'varios archivos a la vez. Antes de guardar se revisa cada fila, y lo que ya está en Pultec no se '
+                    'duplica.',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 13, color: P.textoSuave),
@@ -298,10 +341,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
               ],
             ),
           ],
-          contenido: _tablaPlantilla(),
-          sobran: que.ejemplos.length - _maxFilas,
-          nota: haciendo ?? 'Excel (.xlsx), CSV o JSON',
-          controles: [FilledButton(onPressed: progreso == null ? elegir : null, child: const Text('Elegir archivo'))],
+          contenido: _zonaArrastrar(),
+          nota: haciendo ?? 'Excel (.xlsx), CSV o JSON; varios a la vez',
+          controles: [FilledButton(onPressed: progreso == null ? elegir : null, child: const Text('Elegir archivos'))],
         ),
     ],
   );
@@ -425,15 +467,63 @@ class _ImportarExportarState extends State<ImportarExportar> {
   /// Ancho de una columna según su título.
   double _ancho(String c) => (c.length * 8.5 + 48).clamp(110, 260).toDouble();
 
-  /// La plantilla: sus columnas (con lo que lleva cada una al pasar el ratón) y las filas de ejemplo.
-  Widget _tablaPlantilla() => _tablaCorta(
-    [
-      for (final (c, texto) in que.guia)
-        Col(texto.startsWith('Obligatoria') ? '$c *' : c, ancho: _ancho(c), ayuda: texto.isEmpty ? c : texto),
-    ],
-    [
-      for (final f in que.ejemplos) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
-    ],
+  /// [DropTarget] alrededor de [child] (en pruebas, sin él: allí no hay arrastre del sistema).
+  Widget _arrastrable({
+    required void Function(DragDetails) onEnter,
+    required VoidCallback onLeave,
+    required Future<void> Function(DropDetails) onDrop,
+    required Widget child,
+  }) => ImportarExportar.conArrastrar
+      ? DropTarget(onEnter: onEnter, onLeave: onLeave, onDrop: onDrop, child: child)
+      : child;
+
+  /// Zona de borde discontinuo donde soltar los archivos (uno o varios); pulsarla también abre el selector. Ocupa
+  /// el mismo hueco que la tabla de las otras caras.
+  Widget _zonaArrastrar() => _arrastrable(
+    onEnter: (_) => setState(() => encima = true),
+    onLeave: () => setState(() => encima = false),
+    onDrop: _soltar,
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: progreso == null ? elegir : null,
+        child: CustomPaint(
+          painter: BordeDiscontinuo(
+            encima ? P.morado : P.textoSuave.withValues(alpha: .5),
+            BorderRadius.circular(P.radio),
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              color: encima ? P.moradoSuave : Colors.transparent,
+              borderRadius: BorderRadius.circular(P.radio),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.download_rounded, size: 34, color: encima ? P.morado : P.textoSuave),
+                  const SizedBox(height: 12),
+                  Text(
+                    encima ? 'Suéltalos para leerlos' : 'Arrastra aquí tus archivos',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: encima ? P.morado : P.texto),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Excel, CSV o JSON, uno o varios a la vez. Antes de guardar verás qué se crea y cada fila con '
+                    'problemas.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: P.textoSuave),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
   /// Lo que se va a exportar, con las columnas del formato elegido (en PDF, las que caben).
@@ -497,8 +587,18 @@ class _ImportarExportarState extends State<ImportarExportar> {
 
   /// Avisos por número de fila (los que no son de una fila, al final).
   List<String> _enOrden(List<String> avisos) {
-    int fila(String a) => int.tryParse(RegExp(r'^Fila (\d+)').firstMatch(a)?[1] ?? '') ?? 1 << 30;
-    return [...avisos]..sort((a, b) => fila(a).compareTo(fila(b)));
+    // Por archivo (en el orden en que se eligieron) y, dentro, por fila; lo que no es de una fila, primero.
+    (int, int) clave(String a) {
+      final f = RegExp(r'[Ff]ila (\d+)').firstMatch(a);
+      if (f == null) return (-1, 0);
+      final i = archivos.indexWhere((n) => a.startsWith('$n,'));
+      return (i < 0 ? 0 : i, int.parse(f[1]!));
+    }
+
+    return [...avisos]..sort((a, b) {
+      final (x, y) = (clave(a), clave(b));
+      return x.$1 != y.$1 ? x.$1.compareTo(y.$1) : x.$2.compareTo(y.$2);
+    });
   }
 
   /// «3 activos», «2 componentes», «5 mantenimientos» (lo que haya), cada uno con el icono de su sección.
@@ -787,7 +887,6 @@ class _ImportarExportarState extends State<ImportarExportar> {
       sobran: verAvisos ? 0 : filas.length - (_maxFilas - 1),
       nota: haciendo,
       controles: [
-        _neutro('Elegir otro archivo', progreso == null ? elegir : null),
         _neutro(
           'Cancelar',
           progreso != null
