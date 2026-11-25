@@ -233,7 +233,8 @@ class Resumen extends StatelessWidget {
                                 children: [ordenes, const SizedBox(height: 16), ...lado],
                               );
                       }(),
-                      const SizedBox(height: 32),
+                      // Mismo hueco entre todos los bloques de la vista mejorada.
+                      const SizedBox(height: 16),
                     ] else if (industrial && store.activos.isNotEmpty) ...[
                       AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
@@ -316,12 +317,12 @@ class _SinMaquinas extends StatelessWidget {
       child: primera == null
           ? Vacio(
               desplazable: false,
-              icono: Icons.layers_outlined,
-              titulo: 'Sin máquinas',
+              icono: Marca.iconoCliente,
+              titulo: 'Sin activos',
               texto:
                   'Da de alta un activo y sus mantenimientos: Pultec creará las órdenes de trabajo y avisará de lo que toca.',
               accion: BotonPrimario(
-                'Activo',
+                'Crear un nuevo activo',
                 conIcono: true,
                 icono: Icons.add_rounded,
                 onPressed: () => abrirActivoForm(context),
@@ -959,8 +960,9 @@ class _Pendientes extends StatelessWidget {
       accion: filas.isEmpty ? null : Pill('${filas.length}', P.rojo),
       children: filas.isEmpty
           ? [
-              SizedBox(
-                height: P.mejorada ? 170 : 140,
+              // Alto mínimo, no fijo (como «Carga del equipo»): con el título del vacío no cabía en 170 y desbordaba.
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 140),
                 child: P.mejorada
                     ? const Vacio(
                         icono: Icons.check_rounded,
@@ -1235,7 +1237,7 @@ class _HeroState extends State<_Hero> {
 
   /// Primera vez: bienvenida; con la guía a medias: lo que falta; después, el día (y por la noche, mañana).
   String get frase {
-    if (industrial && store.activos.isEmpty) return 'Aún no hay máquinas. Da de alta la primera para empezar.';
+    if (industrial && store.activos.isEmpty) return 'Aún no hay activos. Da de alta el primero para empezar.';
     if (industrial && !store.tareas.any((t) => !t.esPlantilla)) {
       return store.planes.isEmpty
           ? 'Aún no hay mantenimientos ni órdenes de trabajo.'
@@ -1724,6 +1726,7 @@ class _Kpis extends StatelessWidget {
     if (P.mejorada) {
       return Rejilla(
         columnas: columnas,
+        hueco: 16,
         children: [
           for (final (i, (icono, etiqueta, valor, color, nota)) in items.indexed)
             _KpiMejorada(

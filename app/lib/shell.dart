@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'ajustes.dart';
 import 'finanzas.dart';
 import 'forms.dart';
+import 'intro_pulpo.dart';
 import 'marca.dart';
 import 'models.dart';
 import 'notificaciones.dart';
@@ -58,9 +59,13 @@ class _ShellState extends State<Shell> {
   /// Secciones ya abiertas: se quedan montadas (ocultas) para que volver a ellas sea instantáneo.
   final _visitadas = <Seccion>{};
 
+  /// Entrada del pulpo, cada vez que se entra en la app (no en la vista de trabajador).
+  bool _intro = rolTrabajador.value == null;
+
   @override
   void initState() {
     super.initState();
+    introPulpoActiva.value = _intro;
     HardwareKeyboard.instance.addHandler(_tecla);
     pedirOrdenes.addListener(_irAOrdenes);
     pedirUsoActivos.addListener(_irAUso);
@@ -271,6 +276,7 @@ class _ShellState extends State<Shell> {
               ),
               child: avisos,
             ),
+            if (_intro) Positioned.fill(child: IntroPulpo(onFin: () => setState(() => _intro = false))),
           ],
         ),
       ),
@@ -711,7 +717,7 @@ class _BarraState extends State<_Barra> {
                 children: [
                   // Logo y nombre, como en la landing; a la derecha, contraer/expandir.
                   if (iconos) ...[
-                    const Center(child: LogoPultec(size: 32)),
+                    const Center(child: LogoBarra(size: 32)),
                     const SizedBox(height: 4),
                     _Icono(
                       ajustes.barraDerecha
@@ -724,7 +730,7 @@ class _BarraState extends State<_Barra> {
                     Row(
                       children: [
                         const SizedBox(width: 2),
-                        const LogoPultec(size: 32),
+                        const LogoBarra(size: 32),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(

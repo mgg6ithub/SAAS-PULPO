@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ajustes.dart';
+import '../intro_pulpo.dart';
 import '../nube.dart' show Nube;
 import '../theme.dart';
 
@@ -67,7 +68,19 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
     if (!widget.activa || usuario == null || ajustes.introInicioVista(usuario.id)) return;
     // Se marca al empezar: aunque se cambie de vista a medias, no vuelve a salir.
     ajustes.marcarIntroInicio(usuario.id);
-    _empezar();
+    // Con la entrada del pulpo delante, todo oculto hasta que acabe y entonces empieza.
+    if (introPulpoActiva.value) {
+      IntroInicio.t.value = 0;
+      introPulpoActiva.addListener(_trasPulpo);
+    } else {
+      _empezar();
+    }
+  }
+
+  void _trasPulpo() {
+    if (introPulpoActiva.value) return;
+    introPulpoActiva.removeListener(_trasPulpo);
+    if (mounted) _empezar();
   }
 
   /// Arranca (o vuelve a arrancar) la presentación desde el principio.
@@ -104,6 +117,7 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
 
   @override
   void dispose() {
+    introPulpoActiva.removeListener(_trasPulpo);
     _ticker?.dispose();
     if (IntroInicio.t.value != null) IntroInicio.t.value = null;
     _nombre.dispose();
