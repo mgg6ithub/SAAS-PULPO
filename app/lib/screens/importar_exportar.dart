@@ -159,10 +159,17 @@ class _ImportarExportarState extends State<ImportarExportar> {
               child: Text('Descargar ${formato.etiqueta}'),
             ),
             const SizedBox(width: 14),
-            Text(() {
-              final n = filasExportar(que, store).length;
-              return '$n ${n == 1 ? 'fila' : 'filas'} en total';
-            }(), style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+            Flexible(
+              child: Text(
+                () {
+                  final n = filasExportar(que, store).length;
+                  return '$n ${n == 1 ? 'fila' : 'filas'} en total';
+                }(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+              ),
+            ),
             if (!industrial) ...[
               const SizedBox(width: 14),
               Flexible(
