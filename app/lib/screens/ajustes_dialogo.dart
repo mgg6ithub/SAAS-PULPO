@@ -118,6 +118,7 @@ class _AjustesState extends State<_Ajustes> {
           subtitulo: '${tipos.length} tipos, con su icono, color y competencia',
           child: Enlace('Editar', onTap: () => abrirTipos(context)),
         ),
+        if (!industrial)
         _Fila(
           titulo: 'Competencias',
           subtitulo: m('${competencias.length} competencias para trabajadores y trabajos'),

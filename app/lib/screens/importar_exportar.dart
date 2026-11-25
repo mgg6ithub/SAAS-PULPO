@@ -519,6 +519,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
     'Activo': 210.0,
     'Nombre': 220.0,
     'Competencias': 260.0,
+    'Grupos': 260.0,
     'Uso': 100.0,
     'Horas totales': 125.0,
     'Mantenimientos': 140.0,
@@ -871,7 +872,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
       QueImportar.trabajadores => (
         [
           const Col('Nombre', ancho: 260),
-          const Col('Competencias', ancho: 300),
+          Col(industrial ? 'Grupos' : 'Competencias', ancho: 300),
           const Col('Teléfono', ancho: 140),
           Col(m('Trabajos'), ancho: 110, derecha: true),
           const Col('Hoy', ancho: 120),
@@ -905,7 +906,14 @@ class _ImportarExportarState extends State<ImportarExportar> {
               Wrap(
                 spacing: 4,
                 runSpacing: 4,
-                children: [
+                // Pultec: sus grupos (los nuevos del archivo, también), no especialidades.
+                children: industrial
+                    ? [
+                        for (final id in w.grupoIds)
+                          if ([...store.grupos, ...imp.grupos].where((g) => g.id == id).firstOrNull case final g?)
+                            Etiqueta(g.nombre, P.morado),
+                      ]
+                    : [
                   for (final c in w.competencias.take(3)) Etiqueta(c, P.morado),
                   if (w.competencias.length > 3)
                     Text('+${w.competencias.length - 3}', style: TextStyle(fontSize: 12, color: P.textoSuave)),

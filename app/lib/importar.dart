@@ -50,7 +50,7 @@ const _guiaActivos = <(String, String)>[
   ('Próxima fecha', 'Fecha fija (dd/mm/aaaa) si no se repite por tiempo ni por horas.'),
   ('Última vez', 'Fecha en que se hizo por última vez (dd/mm/aaaa). Vacío = cuenta desde hoy.'),
   ('Horas última vez', 'Horas del contador cuando se hizo. Vacío = las de hoy.'),
-  ('Especialidad', 'Especialidad del técnico que puede hacerlo (como en Ajustes).'),
+  ('Grupo', 'Grupo de técnicos que lo hace: se reparte al más libre. Si no existe, se crea.'),
   ('Técnico', 'Técnico fijo: nombre y apellidos o correo de uno que ya esté en Pultec.'),
   ('Duración (min)', 'Minutos que lleva. Vacío = 60.'),
 ];
@@ -66,7 +66,10 @@ extension QueImportarX on QueImportar {
       ('Apellidos', ''),
       ('Teléfono', ''),
       ('Email', 'Correo con el que entrará en Pultec.'),
-      (_competencias, '${industrial ? 'Especialidades' : 'Competencias'} separadas por comas, como en Ajustes.'),
+      (
+        _competencias,
+        industrial ? 'Grupos separados por comas; los que no existan se crean.' : 'Competencias separadas por comas, como en Ajustes.',
+      ),
     ],
     _ => [for (final c in columnas) (c, '')],
   };
@@ -183,14 +186,14 @@ extension QueImportarX on QueImportar {
         'García',
         '600111222',
         'luis@empresa.es',
-        industrial ? competencias.take(2).join(', ') : 'Ascensores, Electricidad',
+        industrial ? 'Mecánica, Hidráulica' : 'Ascensores, Electricidad',
       ],
     ],
     _ => [_ejemplos[index]],
   };
 }
 
-String get _competencias => industrial ? 'Especialidades' : 'Competencias';
+String get _competencias => industrial ? 'Grupos' : 'Competencias';
 
 const _columnas = [
   [
@@ -415,6 +418,18 @@ class Importacion {
   final activos = <Activo>[];
   final planes = <PlanMantenimiento>[];
 
+  /// Pultec: grupos de técnicos nuevos que salen del archivo (se crean al importar).
+  final grupos = <GrupoTecnicos>[];
+
+  /// Id del grupo con ese nombre: el que ya hay o uno nuevo (una sola vez por nombre).
+  String grupoLlamado(Store s, String nombre) {
+    final g = [...s.grupos, ...grupos].where((g) => normalizar(g.nombre) == normalizar(nombre)).firstOrNull;
+    if (g != null) return g.id;
+    final nuevo = GrupoTecnicos(id: s.nuevoId(), nombre: nombre.trim());
+    grupos.add(nuevo);
+    return nuevo.id;
+  }
+
   /// «Fila 4: …», en el orden del archivo.
   final avisos = <String>[];
 
@@ -427,16 +442,19 @@ class Importacion {
   /// Lo guarda todo de una vez. Pultec: cada mantenimiento nuevo sale con su OT. Con la nube la crea la base al
   /// recibirlo (como al crearlo a mano); sin ella (demo, local), se crea aquí.
   void aplicar(Store s) {
+    for (final g in grupos) {
+      s.guardarGrupo(g);
+    }
     s.importar(clientes: clientes, trabajadores: trabajadores, tareas: tareas, activos: activos, planes: planes);
     if (s.nube != null) return;
     for (final p in planes.where((p) => p.activa)) {
       final d = proximoPlan(p);
       if (d == null) continue;
-      s.guardarTarea(
-        p.ot(s.nuevoId())
-          ..proximo = d
-          ..trabajadorIds = [?p.trabajadorId],
-      );
+      final ot = p.ot(s.nuevoId())
+        ..proximo = d
+        ..trabajadorIds = [?p.trabajadorId];
+      if (p.trabajadorId == null && p.grupoId != null) s.asignarAGrupo(ot, p.grupoId!);
+      s.guardarTarea(ot);
     }
   }
 }
@@ -446,6 +464,9 @@ const _alias = {
   'Email': ['Correo', 'Correo electrónico'],
   'Competencias': ['Especialidades'],
   'Especialidades': ['Competencias'],
+  // Pultec: los grupos sustituyen a las especialidades (los Excel antiguos siguen valiendo).
+  'Grupos': ['Grupo', 'Especialidades', 'Competencias'],
+  'Grupo': ['Especialidad', 'Categoría', 'Grupos'],
   'Tag': ['Código'],
   'Padre': ['Activo padre', 'Padre tag'],
 };
@@ -548,8 +569,13 @@ Importacion prepararImportacion(QueImportar que, List<List<String>> filas, Store
           imp.duplicados++;
           continue;
         }
-        final suyas = <String>[];
+        final suyas = <String>[], susGrupos = <String>[];
         for (final c in v(_competencias).split(RegExp('[,|]')).map((x) => x.trim()).where((x) => x.isNotEmpty)) {
+          // Pultec: grupos (se crean si no existen), no especialidades.
+          if (industrial) {
+            susGrupos.add(imp.grupoLlamado(s, c));
+            continue;
+          }
           final conocida = competencias.where((x) => normalizar(x) == normalizar(c)).firstOrNull;
           conocida == null ? aviso('la competencia «$c» no existe; añádela en Ajustes.') : suyas.add(conocida);
         }
@@ -561,6 +587,7 @@ Importacion prepararImportacion(QueImportar que, List<List<String>> filas, Store
             telefono: v('Teléfono'),
             email: email,
             competencias: suyas,
+            grupoIds: susGrupos,
             color: (s.trabajadores.length + imp.trabajadores.length) % paleta.length,
           ),
         );
@@ -792,9 +819,7 @@ void _prepararActivos(
         : PrioridadMantenimiento.values.where((p) => normalizar(p.etiqueta) == normalizar(prioridad)).firstOrNull ??
               (normalizar(prioridad) == 'critica' ? PrioridadMantenimiento.critica : null);
     if (pr == null) aviso('prioridad «$prioridad» desconocida; va como Normal.');
-    final esp = v(f, 'Especialidad');
-    final categoria = competencias.where((c) => normalizar(c) == normalizar(esp)).firstOrNull;
-    if (esp.isNotEmpty && categoria == null) aviso('la especialidad «$esp» no existe; añádela en Ajustes.');
+    final grupo = v(f, 'Grupo');
     final tec = normalizar(v(f, 'Técnico'));
     final w = tec.isEmpty
         ? null
@@ -821,7 +846,7 @@ void _prepararActivos(
         ultimo: ultima,
         // Por horas sin dato: cuenta desde las horas de hoy (si no, tocaría ya), como en el formulario.
         ultimoHoras: _numero(hUltima) ?? (conHoras ? raiz(a).horas : null),
-        categoria: categoria ?? '',
+        grupoId: grupo.isEmpty || w != null ? null : imp.grupoLlamado(s, grupo),
         trabajadorId: w?.id,
         duracionMin: duracion == null || duracion <= 0 ? 60 : duracion,
       ),
@@ -880,7 +905,7 @@ List<List<String>> _filasActivos(Store s) {
         p.cadaDias == null && p.cadaHoras == null ? _fecha(p.proximo) : '',
         _fecha(p.ultimo),
         p.ultimoHoras == null ? '' : _horas(p.ultimoHoras!),
-        p.categoria,
+        s.grupo(p.grupoId)?.nombre ?? '',
         p.trabajadorId == null ? '' : s.trabajador(p.trabajadorId!)?.nombreCompleto ?? '',
         '${p.duracionMin}',
       ]);

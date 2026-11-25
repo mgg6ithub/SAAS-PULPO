@@ -69,7 +69,8 @@ void main() {
     // Desde el 08/11 el mantenimiento es siempre preventivo; su urgencia va en la prioridad.
     expect(ot.tipoMantenimiento, TipoMantenimiento.preventivo);
     expect(p.prioridad, PrioridadMantenimiento.values[TipoMantenimiento.correctivoNoCritico.index]);
-    expect(ot.competencias, ['Electricidad']);
+    // Sin especialidades: la OT no pide ninguna (manda el grupo).
+    expect(ot.competencias, isEmpty);
     expect(ot.periodicidad, Periodicidad.mensual);
     expect(ot.duracionMin, 90);
     expect(ot.repuestos, 'Filtro');
@@ -79,24 +80,23 @@ void main() {
     expect(store.planes, isEmpty);
   });
 
-  testWidgets('IPT-008: la OT solo se le puede dar a un técnico de su categoría', (tester) async {
-    final apto = Trabajador(id: 'wA', nombre: 'Ane', competencias: ['Electricidad']);
-    final otro = Trabajador(id: 'wB', nombre: 'Beñat', competencias: ['Jardinería']);
-    store.trabajadores = [apto, otro];
+  testWidgets('sin especialidades: la OT se le puede dar a cualquier técnico', (tester) async {
+    final ane = Trabajador(id: 'wA', nombre: 'Ane', competencias: ['Electricidad']);
+    final benat = Trabajador(id: 'wB', nombre: 'Beñat');
+    store.trabajadores = [ane, benat];
     final ot = Tarea(id: 'ot5', nombre: 'Motor', activoId: 'a2', competencias: ['Electricidad']);
-    expect(store.puedeRecibir(apto, ot), isTrue);
-    expect(store.puedeRecibir(otro, ot), isFalse);
+    expect(store.puedeRecibir(ane, ot), isTrue);
+    expect(store.puedeRecibir(benat, ot), isTrue);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SelectorTrabajadores(ot, () {}))));
     await tester.tap(find.byType(SelectorTrabajadores));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Beñat'));
-    await tester.tap(find.text('Ane'));
     await tester.pump();
-    expect(ot.trabajadorIds, ['wA']);
-    // El alta muestra especialidades industriales, sin el catálogo residencial.
+    expect(ot.trabajadorIds, ['wB']);
+    // El alta ya no pide especialidades.
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: TrabajadorForm())));
     await tester.pumpAndSettle();
-    expect(find.text('Especialidades industriales'), findsOneWidget);
+    expect(find.text('Especialidades industriales'), findsNothing);
   }, skip: !industrial);
 
   for (final ancho in [1440.0, 700.0, 420.0]) {

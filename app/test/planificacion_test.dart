@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pultec/marca.dart' show industrial;
 import 'package:pultec/models.dart';
 import 'package:pultec/screens/agenda_vistas.dart';
 import 'package:pultec/screens/planificacion.dart';
@@ -57,7 +58,7 @@ void main() {
     expect(store.tareas.firstWhere((t) => t.id == 'a').trabajadorIds, ['w1']);
     expect(store.tareas.firstWhere((t) => t.id == 'c').trabajadorIds, isEmpty);
     expect(store.automatizar(actual), 0); // lo que queda no lo puede hacer nadie
-  });
+  }, skip: industrial); // Pultec ya no asigna por competencias (mandan los grupos).
 
   // El itinerario tiene dos vistas: Plan (columnas) y Calendario (mes, semana o día).
   for (final nombre in ['Plan', 'Mes', 'Semana', 'Día']) {

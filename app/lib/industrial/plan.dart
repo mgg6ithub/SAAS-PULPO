@@ -104,7 +104,8 @@ class PlanMantenimiento {
     periodicidad: periodicidad,
     criticidad: Criticidad.rutinaria,
     duracionMin: duracionMin,
-    competencias: [if (categoria.isNotEmpty) categoria],
+    // Sin especialidades: cualquiera (o el grupo) puede hacerla.
+    competencias: const [],
     // Como la base (`asegurar_ot`): repuestos y procedimiento en sus campos; en notas, solo lo de preparar.
     repuestos: repuestos,
     procedimiento: procedimiento,

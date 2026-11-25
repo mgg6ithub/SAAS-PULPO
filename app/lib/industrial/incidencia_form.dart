@@ -211,33 +211,6 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
     return r == null || store.ramaDe(r.id).contains(t.activoId);
   }
 
-  Widget _categoria(String c) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(
-        switch (c) {
-          'Mecánica' => Icons.settings_outlined,
-          'Hidráulica' => Icons.water_drop_outlined,
-          'Neumática' => Icons.air_rounded,
-          'Automatización' => Icons.precision_manufacturing_outlined,
-          'Soldadura' => Icons.local_fire_department_outlined,
-          'Eléctrica' => Icons.bolt_outlined,
-          'Bombas y bombeo' => Icons.water_outlined,
-          'Calderas y quemadores' => Icons.whatshot_outlined,
-          'Vehículos pesados' => Icons.local_shipping_outlined,
-          'Instrumentación' => Icons.speed_outlined,
-          'Lubricación' => Icons.oil_barrel_outlined,
-          'Calderería' => Icons.construction_outlined,
-          _ => Icons.category_outlined,
-        },
-        size: 20,
-        color: P.textoSuave,
-      ),
-      const SizedBox(width: 8),
-      Flexible(child: Text(c.isEmpty ? 'Cualquier categoría' : c, overflow: TextOverflow.ellipsis)),
-    ],
-  );
-
   /// Foto con una X arriba a la derecha para quitarla.
   Widget _conQuitar(Widget foto, String ayuda, VoidCallback quitar) => SizedBox(
     width: 84,
@@ -356,19 +329,6 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
             ],
             onSelected: (g) => setState(() => gravedad = g),
             child: _cajaMenu(_gravedad(gravedad)),
-          ),
-        ),
-        if (widget.original == null) const SizedBox(height: 10),
-        if (widget.original == null) _campoMenu(
-          'Categoría',
-          BotonMenu<String>(
-            tooltip: '¿Qué categoría debe tener el técnico?',
-            resaltarHover: false,
-            relleno: EdgeInsets.zero,
-            seleccionado: categoria,
-            opciones: [('', _categoria('')), for (final c in competencias) (c, _categoria(c))],
-            onSelected: (c) => setState(() => categoria = c),
-            child: _cajaMenu(_categoria(categoria)),
           ),
         ),
       ]),

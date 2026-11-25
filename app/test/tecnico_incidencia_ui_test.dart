@@ -44,33 +44,22 @@ void main() {
   testWidgets(
     // Solo Pultec: en Pulcón esta vista es otra.
     skip: !industrial,
-    'gravedad y categoría son compactas, alineadas y sin aura', (tester) async {
+    'gravedad es compacta, alineada y sin aura; ya no se pide categoría', (tester) async {
     tester.view.physicalSize = const Size(1400, 1200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: AvisoIncidenciaForm())));
     final gravedad = find.byType(BotonMenu<Gravedad>);
-    final categoria = find.byType(BotonMenu<String>).last;
     final descripcion = find.byType(TextField);
     expect(tester.getSize(gravedad).width, lessThan(tester.getSize(descripcion).width));
     expect(tester.getTopLeft(gravedad).dx, tester.getTopLeft(descripcion).dx);
-    expect(tester.getTopLeft(categoria).dx, tester.getTopLeft(descripcion).dx);
     expect(tester.widget<BotonMenu<Gravedad>>(gravedad).resaltarHover, isFalse);
-    expect(tester.widget<BotonMenu<String>>(categoria).resaltarHover, isFalse);
-    expect(find.byIcon(Icons.unfold_more_rounded), findsNWidgets(4));
+    expect(find.text('Categoría'), findsNothing);
     await tester.tap(gravedad);
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(find.text('Correctivo crítico')).style!.color, Gravedad.grave.color);
     await tester.tap(find.text('Correctivo crítico'));
     await tester.pumpAndSettle();
-    await tester.tap(categoria);
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.water_drop_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.air_rounded), findsOneWidget);
-    await tester.tap(find.text('Mecánica'));
-    await tester.pumpAndSettle();
-    expect(find.text('Mecánica'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

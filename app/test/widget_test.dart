@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pultec/marca.dart' show industrial;
 import 'package:pultec/models.dart';
 import 'package:pultec/store.dart';
 
@@ -12,7 +13,7 @@ void main() {
     expect(s.esApto(si, t), isTrue);
     expect(s.faltan(no, t), ['Electricidad']);
     expect(s.mejorPara(t)?.id, 'a');
-  });
+  }, skip: industrial); // Pultec ya no asigna por competencias (mandan los grupos).
 
   test('marcar como hecha calcula el siguiente mantenimiento', () {
     final s = Store();

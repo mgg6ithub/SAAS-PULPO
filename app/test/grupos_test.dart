@@ -64,10 +64,12 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Trabajadores(onAbrir: (_) {}))));
     await tester.pumpAndSettle();
-    expect(find.text('Hidráulica'), findsOneWidget);
+    // La cabecera del grupo y, en las tarjetas, sus técnicos con el grupo.
+    expect(find.text('Hidráulica'), findsWidgets);
     expect(find.text('Sin grupo'), findsOneWidget);
     expect(find.text('Iker'), findsNWidgets(2));
-    await tester.tap(find.text('Neumática'));
+    // La cabecera (no la píldora de la tarjeta).
+    await tester.tap(find.byWidgetPredicate((w) => w is Text && w.data == 'Neumática' && w.style?.fontSize == 15));
     await tester.pumpAndSettle();
     expect(find.text('Iker'), findsOneWidget);
     expect(find.text('Área del grupo'), findsNothing);

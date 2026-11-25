@@ -11,6 +11,7 @@ import '../marca.dart';
 import '../industrial/gravedad.dart';
 import '../industrial/historicos.dart';
 import 'tabla_trabajos.dart';
+import 'grupos.dart' show gruposDe;
 
 /// Vista de un trabajador: en el centro, su trabajo (tareas asignadas); a la derecha, su ficha.
 class TrabajadorDetalle extends StatelessWidget {
@@ -85,8 +86,10 @@ class TrabajadorDetalle extends StatelessWidget {
                   ],
                 ),
                 titulo: w.nombreCompleto,
-                subtitulo: w.competencias.isEmpty
-                    ? (industrial ? 'Sin especialidades indicadas' : 'Sin competencias')
+                subtitulo: industrial
+                    ? (store.sinGrupo(w) ? 'Sin grupo' : gruposDe(w))
+                    : w.competencias.isEmpty
+                    ? 'Sin competencias'
                     : w.competencias.join(' · '),
                 acciones: [
                   // Disponible, ocupado o ausente hoy: se cambia arriba a la derecha de su ficha.
@@ -154,7 +157,7 @@ class _FichaTecnico extends StatelessWidget {
       const SizedBox(height: 16),
       for (final dato in [
         ('Nombre', w.nombreCompleto), ('Teléfono', w.telefono), ('Email', w.email),
-        ('Especialidades', w.competencias.join(' · ')), ('Títulos', w.titulos),
+        industrial ? ('Grupos', gruposDe(w)) : ('Competencias', w.competencias.join(', ')), ('Títulos', w.titulos),
         ('Información', w.info), ('Salida', w.salida),
       ]) Padding(padding: const EdgeInsets.only(bottom: 14), child: Column(
         crossAxisAlignment: CrossAxisAlignment.start, children: [

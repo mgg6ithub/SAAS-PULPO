@@ -1465,6 +1465,8 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
         ),
         dos(campo('Teléfono', telefono), campo('Email', email)),
       ], pie: selectorColor(w.color, (i) => setState(() => w.color = i), size: 20)),
+      // Pultec: sin especialidades (mandan los grupos).
+      if (!industrial)
       Bloque(
         industrial ? 'Especialidades' : 'Competencias',
         descripcion: industrial

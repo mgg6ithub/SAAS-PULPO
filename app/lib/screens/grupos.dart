@@ -12,6 +12,10 @@ import '../widgets.dart';
 /// Icono de grupo: tres personas, una delante y dos detrás.
 const iconoGrupo = Icons.groups_rounded;
 
+/// «Hidráulica, Neumática»: los grupos de un técnico, por nombre.
+String gruposDe(Trabajador w) =>
+    [for (final g in gruposOrdenados()) if (w.enGrupo(g.id)) g.nombre].join(', ');
+
 List<GrupoTecnicos> gruposOrdenados() => [...store.grupos]..sort((a, b) => a.nombre.compareTo(b.nombre));
 
 Future<void> abrirGrupoForm(BuildContext context, [GrupoTecnicos? g]) => abrirPanel(context, GrupoForm(original: g));

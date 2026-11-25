@@ -12,7 +12,6 @@ import 'package:pultec/industrial/activo.dart';
 import 'package:pultec/industrial/plan.dart';
 import 'package:pultec/models.dart';
 import 'package:pultec/store.dart';
-import 'package:pultec/theme.dart' show competencias;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Pultec (DEV-050): volcado de activos, componentes, mantenimientos y técnicos desde CSV, con sus OT.
@@ -79,12 +78,12 @@ void main() {
 
   test('activos, componentes y mantenimientos del tirón: cada mantenimiento con su OT', () {
     store.guardarTrabajador(Trabajador(id: 'w1', nombre: 'Luis', apellidos: 'García', email: 'luis@x.es'));
-    final esp = competencias.first;
+    const esp = 'Mecánica A';
     final hace10 = masDias(hoy(), -10);
     final f = '${hace10.day}/${hace10.month}/${hace10.year}';
     final imp = preparar(
       QueImportar.activos,
-      'Tag;Nombre;Padre;Horas contador;Horas al día;Mantenimiento;Prioridad;Cada;Cada horas;Próxima fecha;Última vez;Especialidad;Técnico\n'
+      'Tag;Nombre;Padre;Horas contador;Horas al día;Mantenimiento;Prioridad;Cada;Cada horas;Próxima fecha;Última vez;Grupo;Técnico\n'
       'PST-01;Planta;;1000;10;Revisión;Alta;30 días;;;$f;$esp;luis@x.es\n'
       'PST-01;;;;;Aceite;;;200;;;;\n'
       'PST-01-M;Motor;PST-01;;;Engrase;Muy alta;1 mes;;;;;Luis García\n'
@@ -99,7 +98,9 @@ void main() {
     final rev = imp.planes[0], aceite = imp.planes[1], eng = imp.planes[2], cal = imp.planes[3];
     expect(rev.prioridad, PrioridadMantenimiento.alta);
     expect(rev.cadaDias, 30);
-    expect(rev.categoria, esp);
+    // Con técnico fijo, el grupo no hace falta (no se crea).
+    expect(rev.grupoId, isNull);
+    expect(imp.grupos, isEmpty);
     expect(rev.trabajadorId, 'w1');
     expect(aceite.cadaHoras, 200);
     expect(aceite.ultimoHoras, 1000); // sin dato: desde las horas de hoy
@@ -153,17 +154,18 @@ void main() {
     expect(guiaTexto(QueImportar.activos), contains('Padre'));
   });
 
-  test('técnicos en bloque: especialidades, correo y sin duplicar', () {
-    final esp = competencias.take(2).join(', ');
+  test('técnicos en bloque: grupos (se crean), correo y sin duplicar', () {
+    const esp = 'Hidráulica, Neumática';
     final imp = preparar(
       QueImportar.trabajadores,
-      'Nombre;Apellidos;Teléfono;Correo;Especialidades\nAna;Ruiz;600;ana@x.es;$esp\nPedro;Gil;;p@x.es;Magia\nana;ruiz;;;\n;Sin;;;',
+      'Nombre;Apellidos;Teléfono;Correo;Grupos\nAna;Ruiz;600;ana@x.es;$esp\nPedro;Gil;;p@x.es;Hidráulica\nana;ruiz;;;\n;Sin;;;',
     );
     expect(imp.trabajadores.map((w) => w.nombre), ['Ana', 'Pedro']);
     expect(imp.trabajadores.first.email, 'ana@x.es');
-    expect(imp.trabajadores.first.competencias, competencias.take(2).toList());
+    expect(imp.grupos.map((g) => g.nombre), ['Hidráulica', 'Neumática']);
+    expect(imp.trabajadores.last.grupoIds, [imp.grupos.first.id]);
     expect(imp.duplicados, 1);
-    expect(imp.avisos, hasLength(2));
+    expect(imp.avisos, hasLength(1));
     imp.aplicar(store);
     expect(store.trabajadores, hasLength(2));
     expect(preparar(QueImportar.trabajadores, plantillaCsv(QueImportar.trabajadores)).avisos, isEmpty);

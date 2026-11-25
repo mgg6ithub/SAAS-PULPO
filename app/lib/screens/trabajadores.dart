@@ -183,7 +183,9 @@ class _TrabajadoresState extends State<Trabajadores> {
                         titulo: store.trabajadores.isEmpty ? m('Aún no hay trabajadores') : null,
                         texto: store.trabajadores.isEmpty
                             ? m(
-                                'Añade a tu equipo con sus competencias para que Pultec sepa a quién asignar cada trabajo.',
+                                industrial
+                                    ? 'Añade a tu equipo y, si quieres, organízalo en grupos.'
+                                    : 'Añade a tu equipo con sus competencias para que Pultec sepa a quién asignar cada trabajo.',
                               )
                             : m('No hay trabajadores con estos filtros'),
                         accion: store.trabajadores.isEmpty
@@ -270,7 +272,8 @@ class _TrabajadoresState extends State<Trabajadores> {
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
             const Col('Nombre', flex: 3),
-            if (medio) const Col('Competencias', flex: 4),
+            // Pultec: sus grupos (sin especialidades).
+            if (medio) Col(industrial ? 'Grupos' : 'Competencias', flex: 4),
             if (ancho) const Col('Teléfono', flex: 2),
             if (medio) Col(m('Trabajos'), flex: 1),
             const Col('Hoy', ancho: 90, derecha: true),
@@ -308,7 +311,13 @@ class _TrabajadoresState extends State<Trabajadores> {
                 Wrap(
                   spacing: 4,
                   runSpacing: 4,
-                  children: [
+                  children: industrial
+                      ? [
+                          for (final g in gruposOrdenados())
+                            if (w.enGrupo(g.id)) Pill(g.nombre, P.gris, icono: iconoGrupo),
+                          if (store.sinGrupo(w)) celdaTexto('Sin grupo', suave: true),
+                        ]
+                      : [
                     for (final c in w.competencias.take(3)) Etiqueta(c, P.morado),
                     if (w.competencias.length > 3)
                       Text('+${w.competencias.length - 3}', style: TextStyle(fontSize: 12, color: P.textoSuave)),
@@ -390,7 +399,13 @@ class _TrabajadoresState extends State<Trabajadores> {
                 alignment: WrapAlignment.center,
                 spacing: 6,
                 runSpacing: 6,
-                children: [for (final c in w.competencias) Etiqueta(c, P.morado)],
+                // Pultec: sus grupos en la tarjeta, no especialidades.
+                children: industrial
+                    ? [
+                        for (final g in gruposOrdenados())
+                          if (w.enGrupo(g.id)) Pill(g.nombre, P.gris, icono: iconoGrupo),
+                      ]
+                    : [for (final c in w.competencias) Etiqueta(c, P.morado)],
               ),
             ],
           ),
@@ -582,7 +597,7 @@ final ordenColumnasTecnicos = <String>[];
 List<List<String>> listaTecnicosEnTexto() {
   final valores = <String, String Function(Trabajador)>{
     'Nombre': (w) => w.nombreCompleto,
-    'Competencias': (w) => w.competencias.join(', '),
+    if (industrial) 'Grupos': (w) => gruposDe(w) else 'Competencias': (w) => w.competencias.join(', '),
     'Teléfono': (w) => w.telefono,
     m('Trabajos'): (w) => '${store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(w.id)).length}',
     'Hoy': (w) => w.activo ? w.estadoHoy.etiqueta : 'Inactivo',

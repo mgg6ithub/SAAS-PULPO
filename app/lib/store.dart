@@ -1217,7 +1217,8 @@ class Store extends ChangeNotifier {
   }
 
   /// Competencias de la tarea que le faltan al trabajador.
-  List<String> faltan(Trabajador w, Tarea t) => t.competencias.where((c) => !w.competencias.contains(c)).toList();
+  // Pultec: sin especialidades, a nadie le falta nada (mandan los grupos).
+  List<String> faltan(Trabajador w, Tarea t) => industrial ? const [] : t.competencias.where((c) => !w.competencias.contains(c)).toList();
 
   bool esApto(Trabajador w, Tarea t) => w.activo && faltan(w, t).isEmpty;
 
