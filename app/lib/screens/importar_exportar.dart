@@ -342,7 +342,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
             ),
           ],
           contenido: _zonaArrastrar(),
-          nota: haciendo ?? 'Excel (.xlsx), CSV o JSON; varios a la vez',
+          nota: haciendo, // el formato ya lo dice la zona de arrastrar
           controles: [FilledButton(onPressed: progreso == null ? elegir : null, child: const Text('Elegir archivos'))],
         ),
     ],
