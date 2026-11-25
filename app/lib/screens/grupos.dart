@@ -103,23 +103,13 @@ class _GrupoFormState extends State<GrupoForm> {
                       shape: const StadiumBorder(),
                     ),
                   if (ws.any((w) => !miembros.contains(w.id)))
-                    BotonMenu<String>(
-                      tooltip: 'Meter un técnico en el grupo',
-                      opciones: [
-                        for (final w in ws.where((w) => !miembros.contains(w.id)))
-                          (
-                            w.id,
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22),
-                                const SizedBox(width: 8),
-                                Text(w.nombreCompleto),
-                              ],
-                            ),
-                          ),
-                      ],
-                      onSelected: (id) => setState(() => miembros.add(id)),
+                    // Ventana en el centro con los demás en cuadrícula (tres columnas), no un desplegable largo.
+                    InkWell(
+                      borderRadius: BorderRadius.circular(P.radioControl),
+                      onTap: () async {
+                        final nuevos = await elegirTecnicos(context, ws.where((w) => !miembros.contains(w.id)).toList());
+                        if (nuevos.isNotEmpty) setState(() => miembros.addAll(nuevos));
+                      },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                         child: Row(
@@ -208,3 +198,124 @@ class FiltroGrupo extends StatelessWidget {
     ),
   );
 }
+
+/// Ventana centrada para elegir técnicos: buscador y cuadrícula de tres columnas; se marcan varios y «Añadir».
+Future<Set<String>> elegirTecnicos(BuildContext context, List<Trabajador> ws) async =>
+    await showDialog<Set<String>>(context: context, builder: (_) => _ElegirTecnicos(ws)) ?? {};
+
+class _ElegirTecnicos extends StatefulWidget {
+  final List<Trabajador> ws;
+  const _ElegirTecnicos(this.ws);
+
+  @override
+  State<_ElegirTecnicos> createState() => _ElegirTecnicosState();
+}
+
+class _ElegirTecnicosState extends State<_ElegirTecnicos> {
+  final elegidos = <String>{};
+  String q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final lista = widget.ws.where((w) => w.nombreCompleto.toLowerCase().contains(q.toLowerCase())).toList();
+    final ancho = MediaQuery.sizeOf(context).width;
+    final cols = ancho < 560 ? 1 : ancho < 760 ? 2 : 3;
+    return Dialog(
+      backgroundColor: P.superficie,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radio)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 560),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Añadir técnicos',
+                      style: TextStyle(fontFamily: P.titulos, fontSize: 19, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Cerrar',
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close_rounded, size: 20, color: P.textoSuave),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Buscador(hint: 'Buscar técnico…', width: double.infinity, onChanged: (v) => setState(() => q = v)),
+              const SizedBox(height: 14),
+              Flexible(
+                child: lista.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text('Nadie con ese nombre.', textAlign: TextAlign.center, style: TextStyle(color: P.textoSuave)),
+                      )
+                    : GridView.builder(
+                        shrinkWrap: true,
+                        itemCount: lista.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: cols,
+                          mainAxisExtent: 48,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemBuilder: (_, i) {
+                          final w = lista[i];
+                          final si = elegidos.contains(w.id);
+                          return Material(
+                            color: si ? P.moradoSuave : P.superficie,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(P.radioControl),
+                              side: BorderSide(color: si ? P.morado.withValues(alpha: .45) : P.borde),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(P.radioControl),
+                              onTap: () => setState(() => si ? elegidos.remove(w.id) : elegidos.add(w.id)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(
+                                  children: [
+                                    Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 26),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        w.nombreCompleto,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(fontWeight: si ? FontWeight.w600 : FontWeight.w400),
+                                      ),
+                                    ),
+                                    if (si) Icon(Icons.check_rounded, size: 18, color: P.morado),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: elegidos.isEmpty ? null : () => Navigator.pop(context, elegidos),
+                    child: Text(elegidos.isEmpty ? 'Añadir' : 'Añadir ${elegidos.length}'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

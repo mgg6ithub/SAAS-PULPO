@@ -47,6 +47,8 @@ void main() {
     await tester.tap(find.text('Técnico'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Irene').last);
+    await tester.pump();
+    await tester.tap(find.text('Añadir 1'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Sacar del grupo').first);
     await tester.pumpAndSettle();
