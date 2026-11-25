@@ -153,13 +153,18 @@ void main() {
     FilePicker.platform = _Falso('Nombre;CIF\nColegio Nuevo;B9\n');
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ImportarExportar())));
     double opacidad() => tester.widget<AnimatedOpacity>(
-      find.ancestor(of: find.byType(LinearProgressIndicator), matching: find.byType(AnimatedOpacity)),
+      find.ancestor(of: find.byType(LinearProgressIndicator), matching: find.byType(AnimatedOpacity)).first,
     ).opacity;
     expect(opacidad(), 0);
     await tester.tap(find.text('Elegir archivo'));
     await tester.pump(const Duration(milliseconds: 100));
     expect(opacidad(), 1);
-    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.textContaining('Leyendo'), findsOneWidget);
+    // La barra dura al menos 0,9 s, se llena y se va.
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pumpAndSettle();
     expect(opacidad(), 0);
     expect(find.text('Importar 1'), findsOneWidget);
   });

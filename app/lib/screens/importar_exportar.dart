@@ -1,4 +1,3 @@
-import 'dart:math' show max;
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -8,6 +7,11 @@ import 'package:flutter/material.dart';
 import '../geo.dart';
 import '../importar.dart';
 import '../hoja_calculo.dart';
+import '../industrial/activo.dart';
+import '../industrial/activos.dart' show horas;
+import '../industrial/iconos.dart' show IconoActivo;
+import '../industrial/plan.dart';
+import '../industrial/planes.dart' show proximoPlan;
 import '../informes.dart' show guiaPdf, listadoPdf;
 import '../models.dart';
 import '../plataforma_io.dart' if (dart.library.js_interop) '../plataforma_web.dart';
@@ -25,7 +29,7 @@ Future<void> abrirImportarExportar(BuildContext context, {QueImportar? que}) => 
     // La barra de progreso de arriba sigue el borde redondeado.
     clipBehavior: Clip.antiAlias,
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 960, maxHeight: 820),
+      constraints: const BoxConstraints(maxWidth: 1040, maxHeight: 820),
       child: ImportarExportar(que: que),
     ),
   ),
@@ -49,8 +53,12 @@ class _ImportarExportarState extends State<ImportarExportar> {
   /// La tabla desplegada con todas sus filas («y N filas más»).
   bool verTodas = false;
 
-  /// Barra de progreso de arriba (0 a 1); null = oculta.
+  /// Barra de progreso (0 a 1); null = oculta. [haciendo]: qué se está haciendo, junto al botón.
   double? progreso;
+  String? haciendo;
+
+  /// Vista previa: los avisos en lugar de la tabla.
+  bool verAvisos = false;
   bool get solo => widget.que != null;
 
   Future<void> elegir() async {
@@ -61,12 +69,12 @@ class _ImportarExportarState extends State<ImportarExportar> {
     );
     final f = r?.files.firstOrNull;
     if (f?.bytes == null) return;
-    await _conProgreso(() async {
+    await _conProgreso('Leyendo ${f!.name}…', () async {
       final List<List<String>> filas;
       try {
-        filas = leerArchivo(f!.name, f.bytes!);
+        filas = leerArchivo(f.name, f.bytes!);
       } on FormatException catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${f!.name}: ${e.message}')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${f.name}: ${e.message}')));
         return;
       }
       final imp = prepararImportacion(que, filas, store);
@@ -75,25 +83,35 @@ class _ImportarExportarState extends State<ImportarExportar> {
         archivo = f.name;
         vista = imp;
         verTodas = false;
+        verAvisos = imp.total == 0 && imp.avisos.isNotEmpty;
       });
     });
   }
 
   /// Barra morada arriba mientras se lee o se guarda: avanza sola hasta casi el final, se llena al terminar y se
   /// desvanece. Dura al menos un instante, para que se vea aunque sea rápido.
-  Future<void> _conProgreso(Future<void> Function() trabajo) async {
-    setState(() => progreso = .9);
-    await Future.wait([trabajo(), Future<void>.delayed(const Duration(milliseconds: 450))]);
+  Future<void> _conProgreso(String texto, Future<void> Function() trabajo) async {
+    setState(() {
+      progreso = .9;
+      haciendo = texto;
+    });
+    // Se deja ver aunque el trabajo sea instantáneo.
+    await Future.wait([trabajo(), Future<void>.delayed(const Duration(milliseconds: 900))]);
     if (!mounted) return;
     setState(() => progreso = 1);
-    await Future<void>.delayed(const Duration(milliseconds: 350));
-    if (mounted) setState(() => progreso = null);
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (mounted) {
+      setState(() {
+        progreso = null;
+        haciendo = null;
+      });
+    }
   }
 
   Future<void> importar() async {
     final imp = vista!;
     // Hasta que la base lo tiene todo guardado (sin nube, al momento).
-    await _conProgreso(() async {
+    await _conProgreso('Importando ${imp.total}…', () async {
       imp.aplicar(store);
       await store.nube?.guardado;
     });
@@ -112,32 +130,12 @@ class _ImportarExportarState extends State<ImportarExportar> {
       vista = null;
       archivo = null;
       verTodas = false;
+      verAvisos = false;
     });
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      _contenido(context),
-      // Progreso arriba del todo, de borde a borde.
-      Positioned(
-        top: 0,
-        left: 0,
-        right: 0,
-        child: AnimatedOpacity(
-          opacity: progreso == null ? 0 : 1,
-          duration: const Duration(milliseconds: 200),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(end: progreso ?? 0),
-            duration: Duration(milliseconds: (progreso ?? 0) >= 1 ? 250 : 900),
-            curve: Curves.easeOutCubic,
-            builder: (_, v, _) =>
-                LinearProgressIndicator(value: v, minHeight: 3, color: P.morado, backgroundColor: P.moradoSuave),
-          ),
-        ),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) => _contenido(context);
 
   Widget _contenido(BuildContext context) => ListView(
     shrinkWrap: true,
@@ -186,7 +184,28 @@ class _ImportarExportarState extends State<ImportarExportar> {
           style: TextStyle(fontSize: 13, color: P.textoSuave),
         ),
       ),
-      const SizedBox(height: 14),
+      // Barra de progreso morada al leer y al importar; su hueco está siempre, para que nada salte.
+      const SizedBox(height: 6),
+      SizedBox(
+        height: 4,
+        child: AnimatedOpacity(
+          opacity: progreso == null ? 0 : 1,
+          duration: const Duration(milliseconds: 200),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(end: progreso ?? 0),
+            duration: Duration(milliseconds: (progreso ?? 0) >= 1 ? 250 : 1100),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, _) => LinearProgressIndicator(
+              value: v,
+              minHeight: 4,
+              borderRadius: BorderRadius.circular(2),
+              color: P.morado,
+              backgroundColor: P.moradoSuave,
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
       // Desde Ajustes (con todo), el tipo, igual en las dos caras; desde Activos o Técnicos, solo lo suyo.
       if (!solo) ...[
         Align(
@@ -213,6 +232,12 @@ class _ImportarExportarState extends State<ImportarExportar> {
             seleccion: formato.index,
             onChanged: (i) => setState(() => formato = FormatoExportar.values[i]),
           ),
+          pastillas: [
+            () {
+              final n = filasExportar(que, store).length;
+              return Pill('$n ${n == 1 ? 'fila' : 'filas'} en ${formato.etiqueta}', P.morado, punto: true);
+            }(),
+          ],
           contenido: _tablaExportar(),
           sobran: filasExportar(que, store).length - _maxFilas,
           pie: [
@@ -298,36 +323,36 @@ class _ImportarExportarState extends State<ImportarExportar> {
               ),
             ],
           ),
+          pastillas: [Pill('Plantilla con ${que.ejemplos.length} filas de ejemplo', P.morado, punto: true)],
           contenido: _tablaPlantilla(),
           sobran: que.ejemplos.length - _maxFilas,
           pie: [
             FilledButton(onPressed: elegir, child: const Text('Elegir archivo')),
             const SizedBox(width: 14),
             Flexible(
-              child: Text('Excel (.xlsx), CSV o JSON.', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+              child: Text(
+                haciendo ?? 'Excel (.xlsx), CSV o JSON.',
+                style: TextStyle(fontSize: 12.5, color: haciendo == null ? P.textoSuave : P.morado),
+              ),
             ),
           ],
         ),
     ],
   );
 
-  /// Como mucho se ven estas filas de cada tabla; debajo, cuántas más hay.
+  /// Como mucho se ven estas filas de cada tabla; abajo a la derecha, cuántas más hay.
   static const _maxFilas = 6;
 
-  /// Alto de la tabla para las dos caras: el de la más alta (hasta [_maxFilas] filas, con la línea de «más»).
-  double get _altoTabla {
-    final datos = filasExportar(que, store).length;
-    // Desplegada en Exportar, crece con sus filas (como la tabla de [_tablaCorta]).
-    final tope = verTodas && verExportar ? (datos > 15 ? 10 : 15) : _maxFilas;
-    final filas = [verTodas && verExportar ? 0 : que.ejemplos.length, datos, 1].reduce(max).clamp(1, tope);
-    return 46 + 57.0 * filas + 2;
-  }
+  /// Alto fijo de la zona de la tabla (pastillas y [_maxFilas] filas), igual en Importar, en la vista previa y en
+  /// Exportar: la ventana no cambia de alto al pasar de una a otra ni al elegir o importar un archivo.
+  static const _altoTabla = 28 + 10 + 46 + 57.0 * _maxFilas + 2;
 
-  /// Esqueleto común de Importar y Exportar: título con su flecha (y el tipo, desde Ajustes) y [derecha] en una
-  /// fila de 40; la tabla en un hueco de alto fijo; abajo, el botón y su nota.
+  /// Esqueleto común: título con su flecha y [derecha] en una fila de 40; en un hueco de alto fijo, las
+  /// [pastillas] y la tabla; abajo, el botón (con su nota) a la izquierda y cuántas filas más hay a la derecha.
   Widget _cara({
     required bool exportar,
     required Widget derecha,
+    required List<Widget> pastillas,
     required Widget contenido,
     required List<Widget> pie,
     int sobran = 0,
@@ -354,7 +379,26 @@ class _ImportarExportarState extends State<ImportarExportar> {
       const SizedBox(height: 10),
       SizedBox(
         height: _altoTabla,
-        child: Align(alignment: Alignment.topLeft, child: contenido),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 28,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final (i, p) in pastillas.indexed) ...[if (i > 0) const SizedBox(width: 8), p],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: Align(alignment: Alignment.topLeft, child: contenido),
+            ),
+          ],
+        ),
       ),
       const SizedBox(height: 14),
       // Abajo: el botón a la izquierda y, a la derecha del todo, cuántas filas más hay.
@@ -370,19 +414,10 @@ class _ImportarExportarState extends State<ImportarExportar> {
     ],
   );
 
-  /// Tabla con como mucho [_maxFilas] filas y, debajo a la derecha, cuántas más hay.
-  Widget _tablaCorta(List<Col> columnas, List<List<Widget>> filas, {bool conMas = true}) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
-      // Desplegada: todas las filas (hasta 15 a la vista; con más, la tabla se desplaza por dentro).
-      verTodas
-          ? _tabla(columnas, filas, maxFilas: filas.length > 15 ? 10 : 15)
-          : _tabla(columnas, filas.take(_maxFilas).toList(), maxFilas: _maxFilas),
-      if (conMas && filas.length > _maxFilas)
-        Padding(padding: const EdgeInsets.only(top: 10, right: 4), child: _mas(filas.length - _maxFilas)),
-    ],
-  );
+  /// Las primeras [_maxFilas] filas; desplegada («y N filas más»), todas, desplazándose dentro del mismo hueco.
+  Widget _tablaCorta(List<Col> columnas, List<List<Widget>> filas) => verTodas
+      ? SingleChildScrollView(child: _tabla(columnas, filas, maxFilas: filas.length))
+      : _tabla(columnas, filas.take(_maxFilas).toList(), maxFilas: _maxFilas);
 
   /// «y 6 filas más», en morado: lo que no cabe en la tabla.
   /// Al pulsarlo, despliega todas las filas; desplegado, «Ver menos» las recoge.
@@ -409,8 +444,6 @@ class _ImportarExportarState extends State<ImportarExportar> {
     [
       for (final f in que.ejemplos) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
     ],
-    // Las filas de más van abajo a la derecha, junto al botón.
-    conMas: false,
   );
 
   /// Lo que se va a exportar, con las columnas del formato elegido (en PDF, las que caben).
@@ -431,7 +464,6 @@ class _ImportarExportarState extends State<ImportarExportar> {
       [
         for (final f in filas.skip(1)) [for (final (i, x) in f.indexed) celdaTexto(x, negrita: i == 0)],
       ],
-      conMas: false,
     );
   }
 
@@ -510,7 +542,9 @@ class _ImportarExportarState extends State<ImportarExportar> {
             width: suma * k + 36,
             height: 46 + 57.0 * filas.length.clamp(1, maxFilas),
             child: Tabla(
-              columnas: [for (final x in columnas) Col(x.titulo, ancho: x.ancho! * k, ayuda: x.ayuda)],
+              columnas: [
+                for (final x in columnas) Col(x.titulo, ancho: x.ancho! * k, ayuda: x.ayuda, derecha: x.derecha),
+              ],
               filas: filas.length,
               celdas: (i) => filas[i],
             ),
@@ -520,54 +554,135 @@ class _ImportarExportarState extends State<ImportarExportar> {
     },
   );
 
-  /// Lo que se va a crear, en tabla, con el resumen en colores y los avisos por fila.
+  /// Fecha estimada de un mantenimiento aún sin guardar, con la misma cuenta que la base: fecha fija; por días,
+  /// desde la última vez (o hoy); por horas, el día en que el contador llega con su uso diario.
+  DateTime? _proximoNuevo(PlanMantenimiento p, Activo raiz) {
+    if (p.proximo != null) return p.proximo;
+    if (p.cadaDias != null) return masDias(p.ultimo ?? hoy(), p.cadaDias!);
+    if (p.cadaHoras == null || raiz.usoDiario <= 0) return null;
+    final quedan = p.cadaHoras! - (raiz.horas - (p.ultimoHoras ?? raiz.horas));
+    return quedan <= 0 ? hoy() : masDias(hoy(), (quedan / raiz.usoDiario).ceil());
+  }
+
+  /// Lo que se va a crear, con las mismas columnas que su lista (Activos o Técnicos): así se ve igual antes y
+  /// después de importar. Mismo esqueleto y alto que la plantilla; los avisos, en su pastilla.
   Widget _vistaPrevia(Importacion imp) {
-    final todos = [...store.activos, ...imp.activos];
-    String tag(String? id) => todos.where((a) => a.id == id).firstOrNull?.tag ?? '';
-    String mants(String id) => [for (final p in imp.planes.where((p) => p.activoId == id)) p.nombre].join(', ');
+    // Lo del archivo una sola vez, también mientras se guarda (entonces ya está además en el store).
+    final idsNuevos = {for (final a in imp.activos) a.id, for (final p in imp.planes) p.id};
+    final todos = [...store.activos.where((a) => !idsNuevos.contains(a.id)), ...imp.activos];
+    final planes = [...store.planes.where((p) => !idsNuevos.contains(p.id)), ...imp.planes];
+    Activo? activo(String? id) => todos.where((a) => a.id == id).firstOrNull;
+    Activo raizDe(Activo a) {
+      var r = a;
+      for (var i = 0; i < 50 && activo(r.padreId) != null; i++) {
+        r = activo(r.padreId)!;
+      }
+      return r;
+    }
+
+    final nuevos = {for (final p in imp.planes) p.id};
     final (columnas, filas) = switch (que) {
-      QueImportar.activos => (
-        const [
-          Col('Tag', ancho: 130),
-          Col('Nombre', ancho: 220),
-          Col('Tipo', ancho: 130),
-          Col('Padre', ancho: 120),
-          Col('Mantenimientos nuevos', ancho: 300),
-        ],
-        [
-          for (final a in imp.activos)
-            [
-              celdaTexto(a.tag, negrita: true),
-              celdaTexto(a.nombre),
-              celdaTexto(a.padreId == null ? 'Activo' : 'Componente', suave: true),
-              celdaTexto(tag(a.padreId), suave: true),
-              celdaTexto(mants(a.id)),
-            ],
-          // Activos que ya estaban y reciben mantenimientos nuevos.
-          for (final a in store.activos.where((a) => imp.planes.any((p) => p.activoId == a.id)))
-            [
-              celdaTexto(a.tag, negrita: true),
-              celdaTexto(a.nombre),
-              celdaTexto('Ya en Pultec', suave: true),
-              celdaTexto(tag(a.padreId), suave: true),
-              celdaTexto(mants(a.id)),
-            ],
-        ],
-      ),
+      QueImportar.activos => () {
+        // Como la lista de Activos: los activos principales, nuevos o que reciben algo nuevo.
+        final raices = <Activo>[
+          for (final a in todos)
+            if (a.padreId == null &&
+                (imp.activos.contains(a) ||
+                    imp.activos.any((x) => raizDe(x) == a) ||
+                    imp.planes.any((p) => activo(p.activoId) != null && raizDe(activo(p.activoId)!) == a)))
+              a,
+        ]..sort((a, b) => a.titulo.compareTo(b.titulo)); // el mismo orden que la lista de Activos
+        return (
+          const [
+            Col('Activo', ancho: 200),
+            Col('Tag', ancho: 100),
+            Col('Uso', ancho: 100),
+            Col('Horas totales', ancho: 125, derecha: true),
+            Col('Mantenimientos', ancho: 140, derecha: true),
+            Col('Próximo mantenimiento', ancho: 185),
+            Col('Componentes', ancho: 115, derecha: true),
+          ],
+          [
+            for (final r in raices)
+              () {
+                final rama = [
+                  for (final a in todos)
+                    if (raizDe(a) == r) a.id,
+                ];
+                final suyos = [
+                  for (final p in planes)
+                    if (rama.contains(p.activoId)) p,
+                ];
+                final fechas = [for (final p in suyos) ?(nuevos.contains(p.id) ? _proximoNuevo(p, r) : proximoPlan(p))]
+                  ..sort();
+                Widget derecha(String t) =>
+                    Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto(t, suave: true));
+                return [
+                  Row(
+                    children: [
+                      IconoActivo(r.icono, color: P.textoSuave, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(child: celdaTexto(r.nombre.isNotEmpty ? r.nombre : r.titulo, negrita: true)),
+                    ],
+                  ),
+                  celdaTexto(r.tag.isEmpty ? '—' : r.tag, suave: true),
+                  celdaTexto(r.horasUso <= 0 ? '—' : '${horas(r.horasUso)} / día', suave: true),
+                  derecha(horas(r.horas)),
+                  derecha('${suyos.length}'),
+                  celdaTexto(fechas.isEmpty ? '—' : fecha(fechas.first), suave: true),
+                  derecha('${rama.length - 1}'),
+                ];
+              }(),
+          ],
+        );
+      }(),
+      // Como la lista de Técnicos.
       QueImportar.trabajadores => (
         [
-          const Col('Nombre', ancho: 200),
-          const Col('Correo', ancho: 220),
-          const Col('Teléfono', ancho: 130),
-          Col(industrial ? 'Especialidades' : 'Competencias', ancho: 260),
+          const Col('Nombre', ancho: 260),
+          const Col('Competencias', ancho: 300),
+          const Col('Teléfono', ancho: 140),
+          Col(m('Trabajos'), ancho: 110, derecha: true),
+          const Col('Hoy', ancho: 120),
         ],
         [
-          for (final w in imp.trabajadores)
+          // El mismo orden que la lista de Técnicos.
+          for (final w in [...imp.trabajadores]..sort((a, b) => a.nombreCompleto.compareTo(b.nombreCompleto)))
             [
-              celdaTexto(w.nombreCompleto, negrita: true),
-              celdaTexto(w.email),
-              celdaTexto(w.telefono),
-              celdaTexto(w.competencias.join(', ')),
+              Row(
+                children: [
+                  Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 28),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        celdaTexto(w.nombreCompleto, negrita: true),
+                        if (w.email.isNotEmpty)
+                          Text(
+                            w.email,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11.5, color: P.textoSuave),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  for (final c in w.competencias.take(3)) Etiqueta(c, P.morado),
+                  if (w.competencias.length > 3)
+                    Text('+${w.competencias.length - 3}', style: TextStyle(fontSize: 12, color: P.textoSuave)),
+                ],
+              ),
+              celdaTexto(w.telefono, suave: true),
+              Padding(padding: const EdgeInsets.only(right: 16), child: celdaTexto('0')),
+              Align(alignment: Alignment.centerLeft, child: Pill(w.estadoHoy.etiqueta, w.estadoHoy.color, punto: true)),
             ],
         ],
       ),
@@ -590,84 +705,96 @@ class _ImportarExportarState extends State<ImportarExportar> {
         ],
       ),
     };
-    return Column(
-      key: ValueKey('vista_$archivo'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                archivo ?? '',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    final avisos = _enOrden(imp.avisos);
+    return _cara(
+      exportar: false,
+      derecha: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 260),
+            child: Text(
+              archivo ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: P.textoSuave),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Enlace('Elegir otro archivo', onTap: elegir),
+        ],
+      ),
+      pastillas: [
+        if (que == QueImportar.activos && imp.total > 0)
+          for (final x in _partes(imp)) Pill(x, P.verde, punto: true)
+        else
+          Pill('${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}', P.verde, punto: true),
+        if (imp.duplicados > 0) Pill('${imp.duplicados} ya estaban', P.textoSuave, punto: true),
+        // Pulsando los avisos, se ven en lugar de la tabla (y otra vez, la tabla).
+        if (avisos.isNotEmpty)
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => setState(() => verAvisos = !verAvisos),
+              child: Pill(
+                verAvisos ? 'Ver la tabla' : '${avisos.length} ${avisos.length == 1 ? 'aviso' : 'avisos'}',
+                P.ambar,
+                punto: true,
               ),
             ),
-            Enlace('Elegir otro archivo', onTap: elegir),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            if (que == QueImportar.activos && imp.total > 0)
-              for (final x in _partes(imp)) Pill(x, P.verde, punto: true)
-            else
-              Pill('${imp.total} ${imp.total == 1 ? 'nuevo' : 'nuevos'}', P.verde, punto: true),
-            if (imp.duplicados > 0) Pill('${imp.duplicados} ya estaban', P.textoSuave, punto: true),
-            if (imp.avisos.isNotEmpty)
-              Pill('${imp.avisos.length} ${imp.avisos.length == 1 ? 'aviso' : 'avisos'}', P.ambar, punto: true),
-          ],
-        ),
-        if (filas.isNotEmpty) ...[const SizedBox(height: 12), _tablaCorta(columnas, filas)],
-        if (imp.avisos.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Tarjeta(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final a in _enOrden(imp.avisos).take(8))
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+      ],
+      contenido: verAvisos || filas.isEmpty
+          ? Tarjeta(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: avisos.isEmpty
+                  ? Text('No hay nada nuevo que importar.', style: TextStyle(fontSize: 13, color: P.textoSuave))
+                  : ListView(
+                      shrinkWrap: true,
                       children: [
-                        const Icon(Icons.warning_amber_rounded, size: 16, color: P.ambar),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(a, style: const TextStyle(fontSize: 13))),
+                        for (final a in avisos)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, size: 16, color: P.ambar),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(a, style: const TextStyle(fontSize: 13))),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                if (imp.avisos.length > 8)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 24, top: 3),
-                    child: Text(
-                      'y ${imp.avisos.length - 8} avisos más',
-                      style: TextStyle(fontSize: 13, color: P.textoSuave),
-                    ),
-                  ),
-              ],
+            )
+          : _tablaCorta(columnas, filas),
+      sobran: verAvisos ? 0 : filas.length - _maxFilas,
+      pie: [
+        FilledButton(
+          onPressed: imp.total == 0 || progreso != null ? null : importar,
+          child: Text('Importar ${imp.total}'),
+        ),
+        const SizedBox(width: 16),
+        Enlace(
+          'Cancelar',
+          onTap: () => setState(() {
+            vista = null;
+            archivo = null;
+            verTodas = false;
+            verAvisos = false;
+          }),
+        ),
+        if (haciendo != null) ...[
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              haciendo!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12.5, color: P.morado),
             ),
           ),
         ],
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () => setState(() {
-                vista = null;
-                archivo = null;
-              }),
-              child: const Text('Cancelar'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(onPressed: imp.total == 0 || progreso != null ? null : importar, child: Text('Importar ${imp.total}')),
-          ],
-        ),
       ],
     );
   }
