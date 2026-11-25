@@ -12,6 +12,9 @@ class Activo {
   String? padreId;
   String tag, nombre, descripcion, fabricante, modelo, numeroSerie, division, repuestos, notas;
 
+  /// Pasos de su checklist: la usan sus OT cuando su mantenimiento no trae una propia.
+  List<String> checklist;
+
   /// Horas de uso del contador (la última lectura).
   double horas;
   bool activo;
@@ -76,7 +79,9 @@ class Activo {
     DateTime? fechaLectura,
     this.desvio,
     this.tipo = TipoMantenimiento.preventivo,
+    List<String>? checklist,
   }) : turnos = turnos ?? {},
+       checklist = checklist ?? [],
        patron = patron ?? [],
        fechaLectura = fechaLectura ?? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
@@ -144,6 +149,7 @@ class Activo {
     'fechaLectura': fechaLectura.toIso8601String(),
     if (desvio != null) 'desvio': desvio,
     'tipo': tipo.index,
+    if (checklist.isNotEmpty) 'checklist': checklist,
   };
 
   factory Activo.fromJson(Map<String, dynamic> j) => Activo(
@@ -177,6 +183,7 @@ class Activo {
     fechaLectura: DateTime.tryParse(j['fechaLectura'] as String? ?? ''),
     desvio: (j['desvio'] as num?)?.toDouble(),
     tipo: TipoMantenimiento.values[j['tipo'] as int? ?? 0],
+    checklist: List<String>.from(j['checklist'] as List? ?? []),
   );
 
   Activo copia() => Activo.fromJson(toJson());

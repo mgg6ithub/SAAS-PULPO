@@ -372,6 +372,30 @@ class Trabajador {
 }
 
 /// Tarea de mantenimiento sobre una máquina. Sin cliente = plantilla.
+/// Un paso de la checklist de una OT: hecho o no, cuándo, quién (id del técnico o «admin») y una nota.
+class PasoChecklist {
+  String paso, nota;
+  bool hecho;
+  DateTime? cuando;
+  String? por;
+  PasoChecklist(this.paso, {this.hecho = false, this.cuando, this.por, this.nota = ''});
+
+  Map<String, dynamic> toJson() => {
+    'paso': paso,
+    'hecho': hecho,
+    if (cuando != null) 'cuando': cuando!.toUtc().toIso8601String(),
+    if (por != null) 'por': por,
+    if (nota.isNotEmpty) 'nota': nota,
+  };
+  factory PasoChecklist.fromJson(Map j) => PasoChecklist(
+    j['paso'] as String? ?? '',
+    hecho: j['hecho'] as bool? ?? false,
+    cuando: DateTime.tryParse(j['cuando'] as String? ?? '')?.toLocal(),
+    por: j['por'] as String?,
+    nota: j['nota'] as String? ?? '',
+  );
+}
+
 class Tarea {
   String id, nombre, tipo, marca, modelo, numeroSerie, ubicacion, notas;
   String? clienteId, plantillaId;
@@ -436,6 +460,9 @@ class Tarea {
   /// Reglas que mandan emails cuando pasa algo de este trabajo.
   List<Automatizacion> automatizaciones;
 
+  /// Checklist de esta OT con lo hecho (vacía = aún no empezada: se usa la de su mantenimiento o su activo).
+  List<PasoChecklist> checklist;
+
   /// Lo que se cobra cada vez que se hace, sin IVA (0 = sin precio), y su % de IVA. Solo lo ve el administrador.
   double precio, iva;
 
@@ -482,9 +509,11 @@ class Tarea {
     this.padreId,
     List<DateTime>? historial,
     List<Automatizacion>? automatizaciones,
+    List<PasoChecklist>? checklist,
     this.precio = 0,
     this.iva = 21,
   }) : plantilla = plantilla ?? clienteId == null,
+       checklist = checklist ?? [],
        competencias = competencias ?? [],
        trabajadorIds = trabajadorIds ?? [],
        historial = historial ?? [],
@@ -559,6 +588,7 @@ class Tarea {
     'padreId': padreId,
     'historial': [for (final d in historial) _f(d)],
     'automatizaciones': [for (final a in automatizaciones) a.toJson()],
+    if (checklist.isNotEmpty) 'checklist': [for (final x in checklist) x.toJson()],
     'precio': precio,
     'iva': iva,
   };
@@ -606,6 +636,7 @@ class Tarea {
     padreId: j['padreId'] as String?,
     historial: [for (final x in j['historial'] as List? ?? []) DateTime.parse(x as String)],
     automatizaciones: [for (final x in j['automatizaciones'] as List? ?? []) Automatizacion.fromJson(x)],
+    checklist: [for (final x in j['checklist'] as List? ?? []) PasoChecklist.fromJson(x as Map)],
     precio: (j['precio'] as num? ?? 0).toDouble(),
     iva: (j['iva'] as num? ?? 21).toDouble(),
   );

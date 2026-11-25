@@ -14,6 +14,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
+import 'checklist.dart';
 import 'filtro_flujo.dart';
 import 'iconos.dart';
 import 'uso_maquinas.dart';
@@ -1818,6 +1819,12 @@ class _ActivoFormState extends State<ActivoForm> {
           campo('Repuestos', repuestos, lineas: 3),
         ]),
         Bloque('Notas', [campo('Notas internas', notas, lineas: 3)]),
+        Bloque('Checklist', descripcion: 'Pasos que marca el técnico en sus órdenes, si el mantenimiento no trae otros.', [
+          EditorChecklist(a.checklist, (pasos) {
+            setState(() => a.checklist = pasos);
+            _programarGuardado();
+          }, propio: a.id),
+        ]),
       ],
     );
   }

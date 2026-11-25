@@ -1053,6 +1053,14 @@ class Store extends ChangeNotifier {
     _cambio();
   }
 
+  /// Guarda la checklist de una OT al marcar un paso: con sesión, por su función de la base (el técnico no
+  /// puede editar la OT entera); sin sesión, en el dispositivo.
+  Future<void> marcarChecklist(Tarea t, List<PasoChecklist> pasos) async {
+    t.checklist = pasos;
+    _cambio();
+    await nube?.marcarChecklist(t.id, pasos);
+  }
+
   void guardarTarea(Tarea t) {
     if (t.padreId != null) {
       // El subtrabajo comparte el cliente de su padre.

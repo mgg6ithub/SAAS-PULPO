@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'gravedad.dart';
 import 'activo.dart';
+import 'checklist.dart';
 import 'plan.dart';
 import '../rellenar.dart';
 
@@ -647,6 +648,13 @@ class _PlanFormState extends State<PlanForm> {
   late final empresaExterna = TextEditingController(text: p.empresaExterna);
   bool intentoGuardar = false;
 
+  /// «Más opciones» (repuestos, procedimiento, medición, preparación, empresa externa): plegado salvo que ya
+  /// tenga algo de eso.
+  late bool _mas = [p.repuestos, p.procedimiento, p.medicionNombre, p.preparar, p.empresaExterna]
+          .any((x) => x.trim().isNotEmpty) ||
+      p.avisoDias != null ||
+      p.subcontratado;
+
   /// Cómo se programa: 0 = cada N días, 1 = cada N horas de uso, 2 = una fecha concreta.
   late int modo = p.cadaHoras != null
       ? 1
@@ -786,13 +794,13 @@ class _PlanFormState extends State<PlanForm> {
               nav.pop();
             },
       campos: [
-        Bloque('Mantenimiento', primero: true, descripcion: 'Qué hay que hacer en este componente.', [
+        Bloque('Mantenimiento', primero: true, [
           campo('Nombre', nombre, hint: 'Cambio de aceite', error: errorNombre, obligatorio: true),
           campo('Breve descripción', descripcion, hint: 'Vaciar, cambiar filtro y rellenar'),
         ]),
         Bloque(
           'Cada cuánto',
-          descripcion: 'Por días, por horas de uso o en una fecha. Por horas, sin próximo, se estima con el contador.',
+          descripcion: 'Por días, horas de uso o una fecha.',
           [
             dos(
               conMargen(
@@ -882,9 +890,8 @@ class _PlanFormState extends State<PlanForm> {
           ],
         ),
         Bloque(
-          'Quién y cuánto',
-          descripcion: 'Con un técnico o un grupo, todas las órdenes que cree este mantenimiento se le asignan '
-              'siempre por defecto. Si ese día está ausente u ocupado, Pultec te avisa. Y cuánto dura.',
+          'Quién',
+          descripcion: 'Sus órdenes se asignan aquí.',
           [
           // Asignar a y duración en una fila (sin categoría: el grupo ya dice quién lo hace).
           dos(
@@ -923,67 +930,64 @@ class _PlanFormState extends State<PlanForm> {
             ),
           ),
         ]),
-        Bloque('Repuestos', descripcion: 'Piezas y consumibles que hacen falta.', [
-          campo('Repuestos', repuestos, hint: 'Filtro de aceite, 12 l de aceite 15W40…', lineas: 3),
+        Bloque('Checklist', descripcion: 'Pasos que marca el técnico en la orden.', [
+          EditorChecklist(p.checklist, (pasos) => setState(() => p.checklist = pasos), propio: p.id),
         ]),
-        Bloque('Procedimiento', descripcion: 'Los pasos, para que cualquier técnico lo haga igual.', [
-          campo('Procedimiento', procedimiento, lineas: 5),
-        ]),
-        // Verificación con dato: el técnico apunta el valor en su parte y sale en Estadísticas.
-        Bloque(
-          'Medición',
-          descripcion: 'Si hay que apuntar un dato (vibración, temperatura…). Fuera de límites abre una incidencia.',
-          [
-            dos(
-              campo('Qué se mide', medicion, hint: 'Vibración'),
-              campo('Unidad', unidad, hint: 'mm/s'),
-            ),
-            dos(
-              campo('Mínimo admitido', minimo, hint: 'Sin mínimo',
-                teclado: const TextInputType.numberWithOptions(decimal: true, signed: true)),
-              campo('Máximo admitido', maximo, hint: 'Sin máximo',
-                teclado: const TextInputType.numberWithOptions(decimal: true, signed: true)),
-            ),
-          ],
-        ),
-        Bloque(
-          'Preparación',
-          descripcion: 'Aviso previo para tener a tiempo grúas, repuestos complejos o personal cualificado o externo.',
-          [
-            dos(
-              campo('Avisar con antelación (días)', avisoDias, hint: 'Sin aviso', teclado: TextInputType.number),
-              campo('A quién avisar', avisoCorreos, hint: 'Correos separados por comas · vacío = administradores'),
-            ),
-            campo('Qué preparar', preparar, hint: 'Grúa de 20 t, kit de válvula, técnico de alta tensión…', lineas: 2),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: p.subcontratado,
-              onChanged: (v) => setState(() => p.subcontratado = v),
-              title: const Text('Lo hace una empresa externa'),
-              subtitle: Text(
-                'Su OT no se asigna a los técnicos de la casa.',
-                style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+        _MasOpciones(abierto: _mas, onTap: () => setState(() => _mas = !_mas)),
+        if (_mas) ...[
+          Bloque('Repuestos', [
+            campo('Repuestos', repuestos, hint: 'Filtro de aceite, 12 l de aceite 15W40…', lineas: 3),
+          ]),
+          Bloque('Procedimiento', [
+            campo('Procedimiento', procedimiento, lineas: 5),
+          ]),
+          // Verificación con dato: el técnico apunta el valor en su parte y sale en Estadísticas.
+          Bloque(
+            'Medición',
+            descripcion: 'Fuera de límites abre una incidencia.',
+            [
+              dos(
+                campo('Qué se mide', medicion, hint: 'Vibración'),
+                campo('Unidad', unidad, hint: 'mm/s'),
               ),
-            ),
-            if (p.subcontratado) campo('Empresa externa y contacto', empresaExterna, hint: 'Grúas Norte · 600 000 000'),
-          ],
-        ),
+              dos(
+                campo('Mínimo admitido', minimo, hint: 'Sin mínimo',
+                  teclado: const TextInputType.numberWithOptions(decimal: true, signed: true)),
+                campo('Máximo admitido', maximo, hint: 'Sin máximo',
+                  teclado: const TextInputType.numberWithOptions(decimal: true, signed: true)),
+              ),
+            ],
+          ),
+          Bloque(
+            'Preparación',
+            descripcion: 'Aviso previo para tenerlo todo a tiempo.',
+            [
+              dos(
+                campo('Avisar con antelación (días)', avisoDias, hint: 'Sin aviso', teclado: TextInputType.number),
+                campo('A quién avisar', avisoCorreos, hint: 'Vacío = administradores'),
+              ),
+              campo('Qué preparar', preparar, hint: 'Grúa de 20 t, kit de válvula, técnico de alta tensión…', lineas: 2),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: p.subcontratado,
+                onChanged: (v) => setState(() => p.subcontratado = v),
+                title: const Text('Lo hace una empresa externa'),
+              ),
+              if (p.subcontratado) campo('Empresa externa y contacto', empresaExterna, hint: 'Grúas Norte · 600 000 000'),
+            ],
+          ),
+        ],
         // Al crearlo, al final y encendido: lo que hace un mantenimiento (crear sus órdenes solo). Apagado, se guarda
         // pausado y sin orden hasta reanudarlo (▶).
         if (!existe)
           Bloque(
             'Órdenes de trabajo',
-            descripcion: 'Un mantenimiento crea sus órdenes de trabajo solo.',
             [
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Crear las órdenes de trabajo automáticamente', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text('Crear las órdenes automáticamente', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(
-                  p.activa
-                      ? 'Cada vez que toque este mantenimiento, Pultec creará su orden de trabajo para este activo, sin '
-                            'que tengas que hacerlo tú. La primera se crea ya, para la fecha que toque.'
-                      : 'Se guarda pausado: no se crea ninguna orden de trabajo hasta que lo reanudes (▶) en la lista '
-                            'de mantenimientos.',
+                  p.activa ? 'Pultec la crea sola cada vez que toca.' : 'Se guarda pausado, sin órdenes.',
                   style: TextStyle(fontSize: 13, color: P.textoSuave, height: 1.4),
                 ),
                 value: p.activa,
@@ -994,6 +998,42 @@ class _PlanFormState extends State<PlanForm> {
       ],
     );
   }
+}
+
+/// «Más opciones» del formulario de mantenimiento: lo que pocas veces hace falta, plegado.
+class _MasOpciones extends StatelessWidget {
+  final bool abierto;
+  final VoidCallback onTap;
+  const _MasOpciones({required this.abierto, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(border: Border(top: BorderSide(color: P.borde))),
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            Text(
+              'Más opciones',
+              style: TextStyle(fontFamily: P.titulos, fontSize: 16.5, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Repuestos, procedimiento, medición, preparación',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13.5, color: P.textoSuave),
+              ),
+            ),
+            Icon(abierto ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: P.textoSuave),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// «Asignar a» del mantenimiento, con la misma forma que el desplegable de técnicos: primero los grupos (cada uno

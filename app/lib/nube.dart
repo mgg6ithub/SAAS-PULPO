@@ -310,6 +310,12 @@ class Nube {
     await _db.rpc('guardar_activos_elegidos', params: {'p_trabajador': _u(trabajadorId), 'p_activos': activos});
   }
 
+  /// Guarda la checklist de una OT al marcar un paso (el técnico asignado o la oficina).
+  Future<void> marcarChecklist(String trabajoId, List<PasoChecklist> pasos) => _db.rpc(
+    'marcar_checklist',
+    params: {'p_trabajo': _u(trabajoId), 'p_checklist': [for (final p in pasos) p.toJson()]},
+  );
+
   /// Asigna la OT libre al técnico y la inicia bajo bloqueo en el servidor.
   Future<void> empezarOt(String trabajoId) async {
     await _cola;
@@ -1403,6 +1409,7 @@ class Nube {
           'mantenimiento_tipo': a.tipo.index,
           'icono': a.icono,
           'activo': a.activo,
+          'checklist': a.checklist,
         };
       }
       for (final p in s.planes.where((p) => activos.contains(p.activoId))) {
@@ -1436,6 +1443,7 @@ class Nube {
           'medicion_unidad': p.medicionUnidad,
           'medicion_min': p.medicionMin,
           'medicion_max': p.medicionMax,
+          'checklist': p.checklist,
         };
       }
     }
@@ -1742,6 +1750,7 @@ Activo _activo(Map x) => Activo(
   fechaLectura: DateTime.tryParse(x['lectura_fecha'] as String? ?? ''),
   desvio: (x['desvio'] as num?)?.toDouble(),
   tipo: TipoMantenimiento.values[(x['mantenimiento_tipo'] as num?)?.toInt() ?? 0],
+  checklist: List<String>.from(x['checklist'] as List? ?? []),
 );
 
 PlanMantenimiento _plan(Map x) => PlanMantenimiento(
@@ -1751,6 +1760,7 @@ PlanMantenimiento _plan(Map x) => PlanMantenimiento(
   medicionUnidad: x['medicion_unidad'] as String? ?? '',
   medicionMin: (x['medicion_min'] as num?)?.toDouble(),
   medicionMax: (x['medicion_max'] as num?)?.toDouble(),
+  checklist: List<String>.from(x['checklist'] as List? ?? []),
   color: (x['color'] as num?)?.toInt(),
   id: x['id'],
   activoId: x['activo_id'],
@@ -1851,4 +1861,5 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       padreId: x['padre_id'],
       historial: historial,
       automatizaciones: automatizaciones,
+      checklist: [for (final p in (x['checklist'] as List?) ?? []) PasoChecklist.fromJson(p as Map)],
     );

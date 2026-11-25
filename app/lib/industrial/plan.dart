@@ -43,6 +43,9 @@ class PlanMantenimiento {
   double? medicionMin, medicionMax;
   bool get conMedicion => medicionNombre.trim().isNotEmpty;
 
+  /// Pasos de su checklist (vacía = usa la del activo, si la tiene).
+  List<String> checklist;
+
   PlanMantenimiento({
     required this.id,
     required this.activoId,
@@ -72,7 +75,9 @@ class PlanMantenimiento {
     this.medicionUnidad = '',
     this.medicionMin,
     this.medicionMax,
-  }) : prioridad = prioridad ?? PrioridadMantenimiento.values[tipo.index];
+    List<String>? checklist,
+  }) : checklist = checklist ?? [],
+       prioridad = prioridad ?? PrioridadMantenimiento.values[tipo.index];
 
   /// "Cada 90 días · cada 500 h", o lo que haya.
   String get cada => [
@@ -138,6 +143,7 @@ class PlanMantenimiento {
     'medicionUnidad': medicionUnidad,
     'medicionMin': medicionMin,
     'medicionMax': medicionMax,
+    if (checklist.isNotEmpty) 'checklist': checklist,
   };
 
   factory PlanMantenimiento.fromJson(Map<String, dynamic> j) => PlanMantenimiento(
@@ -168,6 +174,7 @@ class PlanMantenimiento {
     medicionUnidad: j['medicionUnidad'] as String? ?? '',
     medicionMin: (j['medicionMin'] as num?)?.toDouble(),
     medicionMax: (j['medicionMax'] as num?)?.toDouble(),
+    checklist: List<String>.from(j['checklist'] as List? ?? []),
   );
 
   PlanMantenimiento copia() => PlanMantenimiento.fromJson(toJson());

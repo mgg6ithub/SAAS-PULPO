@@ -9,6 +9,7 @@ import 'gravedad.dart';
 import 'iconos.dart';
 import 'planes.dart' show raizActivo;
 import 'tipo_mantenimiento.dart';
+import 'checklist.dart';
 
 /// Una OT realizada: el día en que se hizo y la OT.
 typedef Realizada = (DateTime, Tarea);
@@ -189,6 +190,8 @@ class _TablaRealizadas extends StatelessWidget {
       // Una fila es una OT en un día: así se identifica para seleccionarla y borrarla.
       String clave(Realizada r) => '${r.$2.id}|${r.$1.toIso8601String()}';
       final porClave = {for (final r in lista) clave(r): r};
+      // Checklist hecha en la orden (solo si alguna la tiene): «7 de 8», en verde si se hizo entera.
+      final conChecklist = medio && lista.any((r) => r.$2.checklist.isNotEmpty);
       return SeleccionMultiple(
         ids: [for (final r in lista) clave(r)],
         singular: 'orden del histórico',
@@ -206,6 +209,7 @@ class _TablaRealizadas extends StatelessWidget {
           if (medio) const Col('Activo', flex: 5),
           if (medio) const Col('Ejecutado por', flex: 2),
           if (medio) const Col('Gravedad', ancho: 190),
+          if (conChecklist) const Col('Checklist', ancho: 110),
           const Col('Resultado', ancho: 170),
           // El PDF con un clic solo si cabe; si no, está en la ventana de la orden.
           if (ancho) const Col('', ancho: 48, cabecera: SizedBox()),
@@ -248,6 +252,17 @@ class _TablaRealizadas extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
               ),
+            if (conChecklist)
+              t.checklist.isEmpty
+                  ? celdaTexto('—', suave: true)
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: Pill(
+                        progresoChecklist(t)!,
+                        t.checklist.every((p) => p.hecho) ? P.verde : P.ambar,
+                        punto: true,
+                      ),
+                    ),
             // Verde si fue bien; ámbar con incidencia; rojo si no se pudo hacer.
             Align(
               alignment: Alignment.centerLeft,

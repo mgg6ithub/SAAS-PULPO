@@ -23,6 +23,7 @@ import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'industrial/checklist.dart';
 
 // ── Ventana de formulario ──
 // Por defecto sale en el centro desde abajo (como una hoja de iOS) y se puede
@@ -1810,9 +1811,14 @@ class _TareaFormState extends State<TareaForm> {
             child: Padding(padding: const EdgeInsets.only(top: 12), child: _menuGravedad()!),
           ),
         Bloque(
-          t.esPlantilla ? 'Plantilla' : m('Trabajo'),
+          // Pultec: sin repetir «Orden de trabajo» del título de la ventana.
+          t.esPlantilla ? 'Plantilla' : (industrial ? 'Qué hay que hacer' : m('Trabajo')),
           primero: true,
-          descripcion: t.esPlantilla ? 'Cómo se llama y de qué tipo es.' : 'Qué hay que hacer y de qué tipo es.',
+          descripcion: industrial
+              ? null
+              : t.esPlantilla
+              ? 'Cómo se llama y de qué tipo es.'
+              : 'Qué hay que hacer y de qué tipo es.',
           [
             KeyedSubtree(
               key: _claveNombre,
@@ -1866,9 +1872,7 @@ class _TareaFormState extends State<TareaForm> {
         if (!t.esPlantilla)
           Bloque(
             industrial ? 'Activo y técnico' : m('Cliente y equipo'),
-            descripcion: industrial
-                ? 'Dónde se realiza la intervención y quién la hace.'
-                : 'Para quién es y quién la hace.',
+            descripcion: industrial ? null : 'Para quién es y quién la hace.',
             [
               dos(
                 conMargen(
@@ -1954,7 +1958,7 @@ class _TareaFormState extends State<TareaForm> {
           ),
         Bloque(
           'Cuándo',
-          descripcion: industrial ? 'Fecha y hora previstas para esta OT.' : 'Fecha, hora y cada cuánto se repite.',
+          descripcion: industrial ? null : 'Fecha, hora y cada cuánto se repite.',
           [
             SelectorCuando(
               t,
@@ -1967,9 +1971,7 @@ class _TareaFormState extends State<TareaForm> {
         ),
         Bloque(
           industrial ? 'Duración prevista' : 'Cuánto',
-          descripcion: industrial
-              ? 'Tiempo estimado de la intervención.'
-              : m('Cuánto tiempo lleva hacerlo. Pultec lo usa para cuadrar el día y las rutas.'),
+          descripcion: industrial ? null : m('Cuánto tiempo lleva hacerlo. Pultec lo usa para cuadrar el día y las rutas.'),
           [
             etiqueta('Duración'),
             conMargen(
@@ -1986,6 +1988,11 @@ class _TareaFormState extends State<TareaForm> {
             ),
           ],
         ),
+        // Pultec: la checklist de la orden, en vivo (lo que va marcando el técnico); la oficina también puede marcar.
+        if (industrial && !t.esPlantilla && checklistDe(store.tarea(t.id) ?? t).isNotEmpty)
+          Bloque('Checklist', descripcion: 'Lo que marca el técnico, en vivo.', [
+            ChecklistOt(store.tarea(t.id) ?? t, puedeMarcar: t.estado.abierta && !widget.soloLectura, sinTarjeta: true),
+          ]),
         if (!industrial)
           Bloque('Precio', descripcion: 'Lo que se cobra cada vez que se hace, sin IVA. Solo lo ves tú.', [
             dos(
@@ -2015,9 +2022,7 @@ class _TareaFormState extends State<TareaForm> {
           ]),
         Bloque(
           industrial ? 'Intervención' : 'Equipo y notas',
-          descripcion: industrial
-              ? 'Instrucciones, mediciones y repuestos necesarios.'
-              : 'La máquina, dónde está y lo que haya que saber.',
+          descripcion: industrial ? null : 'La máquina, dónde está y lo que haya que saber.',
           [
             if (!industrial && !t.esPlantilla)
               dos(

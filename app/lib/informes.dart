@@ -18,6 +18,7 @@ import 'store.dart';
 import 'theme.dart';
 import 'marca.dart';
 import 'industrial/activo.dart';
+import 'industrial/checklist.dart';
 import 'industrial/activos.dart' show contadorTexto;
 import 'industrial/estadisticas.dart' show numTexto, resumenActivo;
 import 'industrial/gravedad.dart' show resultadoOt;
@@ -628,6 +629,13 @@ Future<Uint8List> informePdf(Informe i, Tarea t, {EdicionPdf? e}) async {
           for (final (cuando, texto) in cronologiaOt(t, i)) _pasoPdf(cuando, texto),
         ],
         seccion('Trabajo realizado', notas.isEmpty ? 'Sin observaciones.' : notas),
+        // Pultec: la checklist de la orden, paso a paso: hecho o sin hacer, a qué hora y quién.
+        if (industrial && checklistDe(t).isNotEmpty) ...[
+          pw.SizedBox(height: 14),
+          etiqueta('Checklist (${progresoChecklist(t)})'),
+          pw.SizedBox(height: 8),
+          for (final p in checklistDe(t)) _pasoChecklistPdf(p),
+        ],
         if (i.valor != null)
           seccion(
             plan != null && plan.conMedicion ? plan.medicionNombre : 'Medición',
@@ -690,6 +698,44 @@ List<(String, String)> cronologiaOt(Tarea t, Informe i) {
           '${i.resultado == 0 ? '' : ' (${resultadosInforme[i.resultado].toLowerCase()})'}.',
     ),
   ];
+}
+
+/// Un paso de la checklist en el parte: check verde o «Sin hacer» en rojo, el paso, la hora y quién, y su nota.
+pw.Widget _pasoChecklistPdf(PasoChecklist p) {
+  final color = PdfColor.fromInt((p.hecho ? P.verde : P.rojo).toARGB32());
+  final detalle = [
+    if (p.hecho && p.cuando != null) '${hhmm(p.cuando!.hour * 60 + p.cuando!.minute)}, ${quienMarco(p.por)}',
+    if (!p.hecho) 'Sin hacer',
+    if (p.nota.isNotEmpty) p.nota,
+  ].join('. ');
+  return pw.Padding(
+    padding: const pw.EdgeInsets.only(bottom: 6),
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Container(
+          width: 9,
+          height: 9,
+          margin: const pw.EdgeInsets.only(top: 1.5, right: 8),
+          decoration: pw.BoxDecoration(
+            color: p.hecho ? color : null,
+            border: pw.Border.all(color: color, width: 1),
+            borderRadius: pw.BorderRadius.circular(2),
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(p.paso, style: pw.TextStyle(fontSize: 10, color: _tintaPdf)),
+              if (detalle.isNotEmpty)
+                pw.Text(detalle, style: pw.TextStyle(fontSize: 8.5, color: p.hecho ? _suavePdf : color)),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Un paso de la cronología: punto morado, fecha (si la hay) y texto.

@@ -24,6 +24,7 @@ import '../nube.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../industrial/checklist.dart';
 import 'informes.dart';
 
 /// Trabajador con el que se ve la app (null = vista de administrador). '' = el primero activo.
@@ -2118,6 +2119,11 @@ class _DetalleTrabajo extends StatelessWidget {
             ],
           ),
         ],
+        // Pultec: la checklist de la orden, que el técnico marca en el momento.
+        if (industrial && checklistDe(t).isNotEmpty) ...[
+          const SizedBox(height: huecoVista),
+          ChecklistOt(t, puedeMarcar: !hecha && t.estado.abierta, por: w.id),
+        ],
         // Sale de una incidencia: lo que se comunicó, quién, cuándo y sus fotos.
         if (incidencia != null) ...[
           const SizedBox(height: huecoVista),
@@ -2298,6 +2304,14 @@ class _FormularioInformeState extends State<FormularioInforme> {
     // Pultec: el resultado queda en la OT (con incidencia o sin hacer, sale como aviso) y la lectura del
     // contador, en su activo principal.
     if (industrial) {
+      // La checklist sin tocar también queda en la OT (todos los pasos «sin hacer»), para el parte y el histórico.
+      if (widget.t.checklist.isEmpty && checklistDe(widget.t).isNotEmpty) {
+        try {
+          await store.marcarChecklist(widget.t, checklistDe(widget.t));
+        } catch (e) {
+          debugPrint('Pultec: no se pudo guardar la checklist: $e');
+        }
+      }
       widget.t
         ..resultado = resultado
         ..resultadoResuelto = false;

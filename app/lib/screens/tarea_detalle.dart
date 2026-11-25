@@ -18,6 +18,7 @@ import '../marca.dart';
 import '../industrial/gravedad.dart' show periodicidadOt;
 import '../industrial/iconos.dart';
 import '../industrial/tipo_mantenimiento.dart';
+import '../industrial/checklist.dart';
 
 /// Ficha de un trabajo con pestañas, como la de un cliente: Resumen (cifras, subtrabajos e histórico)
 /// y Datos (el formulario del trabajo, editable directamente).
@@ -206,7 +207,11 @@ class _Resumen extends StatelessWidget {
 
   /// Los subtrabajos, en la misma lista que los trabajos; se entra en cada uno para añadirle más.
   Widget _subtrabajos({bool fija = false}) {
-    if (industrial) return const SizedBox.shrink();
+    // Pultec: en lugar de subtrabajos, la checklist de la orden (se ve en vivo lo que marca el técnico).
+    if (industrial) {
+      if (checklistDe(t).isEmpty) return const SizedBox.shrink();
+      return SingleChildScrollView(child: ChecklistOt(t, puedeMarcar: t.estado.abierta));
+    }
     final hijas = store.hijas(t.id)
       ..sort((a, b) => (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100)));
     if (hijas.isEmpty) {
