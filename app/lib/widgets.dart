@@ -715,17 +715,7 @@ class BotonAccion extends StatelessWidget {
 
   /// Relleno (tinta, morado…); null = blanco con borde.
   final Color? color;
-  /// Solo el icono (cuadrado de 40), con [texto] de tooltip, también en ordenador.
-  final bool soloIcono;
-  const BotonAccion(
-    this.texto, {
-    super.key,
-    required this.onPressed,
-    this.icono,
-    this.tooltip,
-    this.color,
-    this.soloIcono = false,
-  });
+  const BotonAccion(this.texto, {super.key, required this.onPressed, this.icono, this.tooltip, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -742,7 +732,7 @@ class BotonAccion extends StatelessWidget {
           overlayColor: const WidgetStatePropertyAll(Colors.transparent),
           mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.click),
         );
-    final soloIcono = icono != null && (this.soloIcono || esMovil(context));
+    final soloIcono = icono != null && esMovil(context);
     final boton = SizedBox(
       height: 40,
       width: soloIcono ? 40 : null,
@@ -759,6 +749,46 @@ class BotonAccion extends StatelessWidget {
     final mensaje = tooltip ?? (soloIcono ? texto : null);
     return mensaje == null ? boton : Tooltip(message: mensaje, child: boton);
   }
+}
+
+/// Importar y exportar (Activos, Técnicos): las flechas de bajar y subir archivo juntas, sin texto; al lado del
+/// botón principal, con el borde de [BotonAccion].
+class BotonImportarExportar extends StatelessWidget {
+  final VoidCallback onPressed;
+  final String tooltip;
+  const BotonImportarExportar({super.key, required this.onPressed, this.tooltip = 'Importar y exportar'});
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: SizedBox(
+      height: 40,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: P.texto,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          minimumSize: const Size(40, 40),
+          side: BorderSide(color: P.borde),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+        ).copyWith(
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (e) => e.contains(WidgetState.hovered) ? P.hover : P.superficie,
+          ),
+          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+          mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.click),
+        ),
+        onPressed: onPressed,
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.file_download_outlined, size: 19),
+            SizedBox(width: 2),
+            Icon(Icons.file_upload_outlined, size: 19),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class Buscador extends StatelessWidget {

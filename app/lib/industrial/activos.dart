@@ -149,23 +149,21 @@ class _ActivosState extends State<Activos> {
               ])),
             ],
             derecha: const [],
-            // El principal y, justo después, importar y exportar (solo el icono).
+            // Importar y exportar (solo iconos) justo a la izquierda del principal.
             principal: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                BotonImportarExportar(
+                  tooltip: 'Importar y exportar activos',
+                  onPressed: () => abrirImportarExportar(context, que: QueImportar.activos),
+                ),
+                const SizedBox(width: 8),
                 BotonPrimario(
                   'Nuevo activo',
                   conIcono: true,
                   icono: Icons.add_rounded,
                   tecla: 'N',
                   onPressed: () => abrirActivoForm(context),
-                ),
-                const SizedBox(width: 8),
-                BotonAccion(
-                  'Importar y exportar activos',
-                  icono: Icons.import_export_rounded,
-                  soloIcono: true,
-                  onPressed: () => abrirImportarExportar(context, que: QueImportar.activos),
                 ),
               ],
             ),

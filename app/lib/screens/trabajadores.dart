@@ -114,22 +114,20 @@ class _TrabajadoresState extends State<Trabajadores> {
                       principal: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Pultec: importar y exportar técnicos (solo iconos) justo a la izquierda del principal.
+                          if (industrial) ...[
+                            BotonImportarExportar(
+                              tooltip: 'Importar y exportar técnicos',
+                              onPressed: () => abrirImportarExportar(context, que: QueImportar.trabajadores),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           BotonPrimario(
                             m('Nuevo trabajador'),
                             conIcono: industrial,
                             tecla: 'N',
                             onPressed: () => abrirTrabajadorForm(context),
                           ),
-                          // Pultec: justo después, importar y exportar técnicos (solo el icono).
-                          if (industrial) ...[
-                            const SizedBox(width: 8),
-                            BotonAccion(
-                              'Importar y exportar técnicos',
-                              icono: Icons.import_export_rounded,
-                              soloIcono: true,
-                              onPressed: () => abrirImportarExportar(context, que: QueImportar.trabajadores),
-                            ),
-                          ],
                         ],
                       ),
                     ),
