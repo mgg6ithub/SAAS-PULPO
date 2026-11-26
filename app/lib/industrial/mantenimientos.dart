@@ -11,7 +11,6 @@ import 'activos.dart';
 import 'gravedad.dart';
 import 'incidencia.dart';
 import 'tipo_mantenimiento.dart';
-import 'incidencias.dart' show EnlaceVerOt;
 
 /// Activo raíz (la máquina) del activo o componente.
 Activo? raizDe(String? id) {
@@ -327,7 +326,6 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
     final planes = store.planes.where((p) => rama.contains(p.activoId)).toList()
       ..sort((a, b) => a.nombre.compareTo(b.nombre));
     return VentanaFormulario(
-      etiqueta: dondeEs(x.activoId).isEmpty ? 'Incidencias' : dondeEs(x.activoId),
       titulo: existe ? 'Incidencia' : 'Nueva incidencia',
       colorTitulo: P.rojo,
       // Quién la comunicó (con su avatar), el día y la hora.
@@ -355,11 +353,6 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       // Estado y gravedad, en la misma línea.
       bajoBotones: Row(mainAxisSize: MainAxisSize.min, children: [
         if (existe) ...[Pill(estado.etiqueta, estado.color, icono: estado.icono), const SizedBox(width: 12)],
-        // Con su OT por hacer: «Ver OT» lleva a ella en Órdenes de trabajo.
-        if (existe && estado == EstadoIncidencia.conOt && store.tarea(x.trabajoId) != null) ...[
-          EnlaceVerOt(x.trabajoId!),
-          const SizedBox(width: 12),
-        ],
         BotonMenu<Gravedad>(
         tooltip: 'Gravedad',
         seleccionado: x.gravedad,
@@ -399,7 +392,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
               Navigator.of(context).pop();
             },
       campos: [
-        Bloque('Incidencia', primero: true, descripcion: 'Qué máquina o pieza falla y qué le pasa.', [
+        Bloque('Incidencia', primero: true, [
           conMargen(
             DropdownButtonFormField<String>(
               isExpanded: true,
@@ -433,6 +426,26 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
             error: error,
             obligatorio: true,
           ),
+          // Al completarse la incidencia, este mantenimiento vuelve a contar desde cero.
+          conMargen(
+            DropdownButtonFormField<String?>(
+              isExpanded: true,
+              initialValue: planes.any((p) => p.id == x.planId) ? x.planId : null,
+              decoration: const InputDecoration(labelText: 'Mantenimiento vinculado'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Sin vincular')),
+                for (final p in planes)
+                  DropdownMenuItem(
+                    value: p.id,
+                    child: Text(
+                      p.activoId == raiz?.id ? p.nombre : '${p.nombre}, ${store.activo(p.activoId)?.nombre ?? ''}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (id) => setState(() => x.planId = id),
+            ),
+          ),
           if (origen != null)
             FilaLista(
               lider: puntoTipo(origen.tipoMantenimiento?.color ?? P.gris),
@@ -463,31 +476,6 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
             ),
           ]),
         Bloque(
-          'Mantenimiento vinculado',
-          descripcion: 'Al completarse la incidencia, este mantenimiento vuelve a contar desde cero.',
-          [
-            conMargen(
-              DropdownButtonFormField<String?>(
-                isExpanded: true,
-                initialValue: planes.any((p) => p.id == x.planId) ? x.planId : null,
-                decoration: const InputDecoration(labelText: 'Mantenimiento'),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Sin vincular')),
-                  for (final p in planes)
-                    DropdownMenuItem(
-                      value: p.id,
-                      child: Text(
-                        p.activoId == raiz?.id ? p.nombre : '${p.nombre}, ${store.activo(p.activoId)?.nombre ?? ''}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (id) => setState(() => x.planId = id),
-              ),
-            ),
-          ],
-        ),
-        Bloque(
           'Acciones',
           // El PDF, abajo a la izquierda (bajo el título).
           pie: existe
@@ -498,13 +486,9 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
                   onPressed: descargando ? () {} : _informe,
                 )
               : null,
-          descripcion: switch (estado) {
-            EstadoIncidencia.abierta => 'Crea una OT para resolverla o desestímala si no hace falta hacer nada.',
-            EstadoIncidencia.conOt => 'Se completa sola al cerrar su orden de trabajo.',
-            EstadoIncidencia.completada => 'Resuelta con su orden de trabajo.',
-            EstadoIncidencia.desestimada =>
-              'Desestimada${x.cerradaEl == null ? '' : ' el ${fecha(x.cerradaEl!)}'}: no hizo falta intervenir.',
-          },
+          descripcion: estado == EstadoIncidencia.desestimada
+              ? 'Desestimada${x.cerradaEl == null ? '' : ' el ${fecha(x.cerradaEl!)}'}.'
+              : null,
           [
             if (estado == EstadoIncidencia.abierta && !(ot?.estado.abierta ?? false))
               conMargen(

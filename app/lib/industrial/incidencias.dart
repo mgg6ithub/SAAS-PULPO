@@ -281,8 +281,9 @@ class _TablaIncidencias extends StatelessWidget {
                 ),
               ],
             ),
-            if (medio) celdaTexto(dondeEs(x.activoId), suave: true),
-            if (ancho) celdaTexto((x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombre ?? 'Oficina', suave: true),
+            // La máquina; el componente se ve al abrir la incidencia.
+            if (medio) celdaTexto(raizDe(x.activoId)?.titulo ?? '', suave: true),
+            if (ancho) _quien(x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!)),
             if (ancho) celdaTexto(relativo(DateUtils.dateOnly(historico ? x.cerradaEl ?? x.creada : x.creada)), suave: true),
             if (medio)
               Row(
@@ -322,6 +323,14 @@ class _TablaIncidencias extends StatelessWidget {
 }
 
 /// «👁 Ver» en tono neutro, el mismo en toda la app y siempre a la derecha de su fila.
+/// Quién la comunicó: su avatar y su nombre (sin técnico, la oficina).
+Widget _quien(Trabajador? w) => Row(
+  children: [
+    if (w != null) ...[Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 22), const SizedBox(width: 8)],
+    Expanded(child: celdaTexto(w?.nombre ?? 'Oficina', suave: true)),
+  ],
+);
+
 class EnlaceVer extends StatelessWidget {
   final String tooltip;
   final VoidCallback onTap;
