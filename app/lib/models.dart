@@ -43,13 +43,9 @@ extension EstadoTrabajoX on EstadoTrabajo {
             ? 'Cancelada'
             : 'Pendiente')
       : const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
-  // Pultec: completada en verde, cancelada en gris y pendiente en rojo.
+  // Pultec: completada en verde; pendiente y cancelada, neutras.
   Color get color => industrial
-      ? (this == EstadoTrabajo.realizado
-            ? P.verde
-            : this == EstadoTrabajo.noRealizado
-            ? P.gris
-            : P.rojo)
+      ? (this == EstadoTrabajo.realizado ? P.verde : P.gris)
       : const [P.ambar, P.azul, P.verde, P.rojo][index];
 
   /// Aún por hacer (ni completada ni cancelada).

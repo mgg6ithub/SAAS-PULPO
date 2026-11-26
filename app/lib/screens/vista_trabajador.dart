@@ -2818,7 +2818,11 @@ class _DetalleTrabajo extends StatelessWidget {
                   Wrap(
                     spacing: 6,
                     children: [
-                      Pill(hecha ? 'Hecho' : t.estado.etiqueta, hecha ? P.verde : t.estado.color, punto: true),
+                      // Pultec: pendiente, neutra con el círculo abierto (como en Órdenes de trabajo).
+                      if (industrial && !hecha && t.estado.abierta)
+                        Pill(t.estado.etiqueta, P.gris, icono: Icons.radio_button_unchecked_rounded)
+                      else
+                        Pill(hecha ? 'Hecho' : t.estado.etiqueta, hecha ? P.verde : t.estado.color, punto: true),
                       // Pultec: su tipo (preventivo, correctivo…); la criticidad «Rutinaria» no se usa.
                       if (!industrial)
                         Pill(t.criticidad.etiqueta, t.criticidad.color)
