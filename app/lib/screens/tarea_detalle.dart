@@ -596,7 +596,7 @@ class _Flecha extends StatelessWidget {
   const _Flecha();
 
   @override
-  Widget build(BuildContext context) => Icon(Icons.chevron_right_rounded, size: 26, color: P.morado.withValues(alpha: .6));
+  Widget build(BuildContext context) => Icon(Icons.chevron_right_rounded, size: 26, color: P.textoSuave);
 }
 
 
