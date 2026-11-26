@@ -330,23 +330,28 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       colorTitulo: P.rojo,
       // Quién la comunicó (con su avatar), el día y la hora.
       bajoTitulo: existe
-          ? Row(
-              children: [
-                Text('Comunicada por ', style: TextStyle(color: P.textoSuave, fontSize: 13)),
-                if (tecnico != null) ...[
-                  Avatar(inicialesDe(tecnico.nombreCompleto), colorPaleta(tecnico.color), size: 18),
-                  const SizedBox(width: 6),
-                ],
-                Flexible(
-                  child: Text(
-                    '${tecnico?.nombre ?? 'la oficina'} el ${fecha(x.creada)} a las '
-                    '${hhmm(x.creada.hour * 60 + x.creada.minute)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: P.textoSuave, fontSize: 13),
+          // Una sola línea que se recorta (en el móvil el título se queda estrecho junto a la gravedad).
+          ? Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: 'Comunicada por '),
+                  if (tecnico != null)
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Avatar(inicialesDe(tecnico.nombreCompleto), colorPaleta(tecnico.color), size: 18),
+                      ),
+                    ),
+                  TextSpan(
+                    text: '${tecnico?.nombre ?? 'la oficina'} el ${fecha(x.creada)} a las '
+                        '${hhmm(x.creada.hour * 60 + x.creada.minute)}',
                   ),
-                ),
-              ],
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: P.textoSuave, fontSize: 13),
             )
           : null,
       tituloDesplazado: descripcion.text,

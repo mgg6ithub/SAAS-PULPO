@@ -64,8 +64,7 @@ void main() {
 
     await tester.tap(find.text('Ruido raro'));
     await tester.pumpAndSettle();
-    expect(find.text('Comunicada por '), findsOneWidget);
-    expect(find.textContaining('Iker el'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'Comunicada por .*Iker el'), findRichText: true), findsOneWidget);
     await tester.tap(find.text('Crear OT'));
     await tester.pumpAndSettle();
 
