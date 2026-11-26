@@ -20,6 +20,9 @@ En desarrollo se trabaja SIEMPRE contra la Supabase local (`./entorno.sh arranca
 1. **Comprobar en local.** `./entorno.sh reset` debe aplicar todas las migraciones y el seed sin errores.
    Si hay tests SQL en `supabase/tests/`, `supabase test db` (con el mismo prefijo que usa `entorno.sh`).
    Con cambios en la app, `cd app && flutter analyze` y `flutter test`.
+   **Obligatorio siempre:** `./entorno.sh probar` (núcleo de Pultec contra la local: activo y componente →
+   mantenimientos → OT → técnico que la empieza y la cierra → siguiente OT; incidencias en la interfaz). Tiene que
+   acabar en «Núcleo de Pultec: TODO BIEN»; si falla, no se sube nada hasta arreglarlo.
 2. **Git limpio.** Las migraciones y funciones a subir tienen que estar en commit (lo que llega a producción
    debe estar en el repo). Si no, parar y decírselo al usuario.
 3. **Enlazar el proyecto** (solo la primera vez en cada equipo): pedir al usuario que ejecute
