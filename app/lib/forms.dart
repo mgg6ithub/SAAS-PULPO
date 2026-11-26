@@ -2993,7 +2993,15 @@ class SelectorEstado extends StatelessWidget {
                     const Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
                     const SizedBox(width: 6),
                   ],
-                  Text(t.estado.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  // En columnas estrechas, «Completada» se recorta en lugar de desbordar.
+                  Flexible(
+                    child: Text(
+                      t.estado.etiqueta,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ],
               )
             : Pill(t.estado.etiqueta, t.estado.color, punto: true),

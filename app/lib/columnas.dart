@@ -26,6 +26,10 @@ class ColumnasTablas extends ChangeNotifier {
   /// Termina cuando se ha guardado lo último (antes de cerrar la sesión).
   Future<void> get guardado => _cola;
 
+  /// Pruebas: la cola nace en la zona de la prueba que la usa (en otra zona, ya muerta, no avanzaría nunca).
+  @visibleForTesting
+  void reiniciarCola() => _cola = Future.value();
+
   /// Títulos de las columnas de [tabla] en el orden del usuario (vacío = el de serie). La tabla escribe en ella.
   List<String> orden(String tabla) => _orden.putIfAbsent(tabla, () => []);
 

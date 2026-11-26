@@ -1242,7 +1242,11 @@ class _Pendientes extends StatelessWidget {
     );
   }
 
-  Widget _cat(String t) => Text(t, style: TextStyle(fontSize: 12, color: P.textoSuave));
+  // Con tope de ancho: en el móvil, una categoría larga se recorta en lugar de desbordar la fila.
+  Widget _cat(String t) => ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 120),
+    child: Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: P.textoSuave)),
+  );
 }
 
 /// Barra horizontal fina con su valor, para listas tipo "Cuentas de gasto" de Holded.

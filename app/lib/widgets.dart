@@ -2331,7 +2331,9 @@ class _TituloColumnaState extends State<_TituloColumna> {
     ),
   );
 
-  Widget _contenido(bool mostrarAsa) => SizedBox(
+  Widget _contenido(bool mostrarAsa) => LayoutBuilder(builder: (context, c) => _fila(mostrarAsa, c.maxWidth));
+
+  Widget _fila(bool mostrarAsa, double ancho) => SizedBox(
     height: 42,
     // Flex (no Row) para poder recortar: en una columna muy estrecha, lo que no cabe (el asa) se recorta en vez de
     // desbordar.
@@ -2353,11 +2355,14 @@ class _TituloColumnaState extends State<_TituloColumna> {
             ),
           ),
         ),
-        AnimatedOpacity(
-          opacity: mostrarAsa ? 1 : 0,
-          duration: const Duration(milliseconds: 150),
-          child: Icon(Icons.drag_indicator_rounded, size: 16, color: P.textoSuave),
-        ),
+        // El asa, solo si cabe (en una columna muy estrecha no hay sitio ni para ella).
+        if (ancho >= 32) ...[
+          AnimatedOpacity(
+            opacity: mostrarAsa ? 1 : 0,
+            duration: const Duration(milliseconds: 150),
+            child: Icon(Icons.drag_indicator_rounded, size: 16, color: P.textoSuave),
+          ),
+        ],
       ],
     ),
   );

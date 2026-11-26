@@ -21,13 +21,26 @@ bool _marcada(WidgetTester tester, String columna) => find
     .evaluate()
     .isNotEmpty;
 
+/// Espera [f] dejando correr el reloj falso de la prueba (todo lo de la cuenta va en él).
+Future<void> _esperar(WidgetTester tester, Future<void> f) async {
+  var listo = false;
+  f.then((_) => listo = true);
+  for (var i = 0; i < 200 && !listo; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(listo, isTrue, reason: 'termina');
+}
+
 Future<void> _abrirMenu(WidgetTester tester) async {
   await tester.tap(find.byTooltip('Elegir columnas'));
   await tester.pumpAndSettle();
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    columnasTablas.reiniciarCola();
+  });
   tearDown(columnasTablas.cerrar);
 
   testWidgets('el menú lista todas las columnas con marcadas las que se ven y permite quitar y añadir', (tester) async {
@@ -58,7 +71,9 @@ void main() {
       leer: () async => enLaCuenta,
       subir: (c) async => enLaCuenta = c,
     );
-    await tester.runAsync(entrar);
+    // Todo en el reloj falso de la prueba: la cola de guardado nace aquí.
+    columnasTablas.reiniciarCola();
+    await _esperar(tester, entrar());
     await tester.pumpWidget(_tabla());
     await _abrirMenu(tester);
     await tester.tap(find.widgetWithText(MenuItemButton, 'Uso'));
@@ -73,7 +88,7 @@ void main() {
     await gesto.up();
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(find.text('P-1')).dx, lessThan(tester.getTopLeft(find.text('Prensa')).dx));
-    await tester.runAsync(() => columnasTablas.guardado);
+    await _esperar(tester, columnasTablas.guardado);
 
     // Sale: la siguiente cuenta no hereda nada.
     await tester.pumpWidget(const SizedBox());
@@ -83,7 +98,7 @@ void main() {
 
     // Vuelve a entrar en otro equipo (navegador vacío).
     SharedPreferences.setMockInitialValues({});
-    await tester.runAsync(entrar);
+    await _esperar(tester, entrar());
     await tester.pumpWidget(_tabla());
     await tester.pumpAndSettle();
     expect(find.text('8 h'), findsNothing);
