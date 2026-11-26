@@ -92,10 +92,10 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
             // Cada apartado se ve siempre tal cual, aunque aún no haya datos (cifras a cero).
             child: switch (apartado) {
               0 => _PorActivo(
-                activoId: activoId ?? store.hijosDe(null).firstOrNull?.id,
+                activoId: activoId,
                 desde: desde,
                 dias: dias,
-                onActivo: (id) => setState(() => activoId = raizDe(id)?.id ?? id),
+                onActivo: (id) => setState(() => activoId = id),
               ),
               1 => IndicadoresPultec(desde: desde, dias: dias),
               2 => _Verificaciones(desde: desde),
@@ -121,10 +121,8 @@ class _PorActivo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final a = store.activo(activoId);
-    // Sin ningún activo, la misma vista a cero.
-    final ResumenActivo r = a == null
-        ? (hechas: 0, pendientes: 0, atrasadas: 0, conProblema: 0, incidencias: [], planes: [], realizadas: [])
-        : resumenActivo(a, desde);
+    // Sin activo elegido, la suma de todos.
+    final r = resumenActivo(a, desde);
     final t = tramosDe(desde, dias);
     final hechas = contarPorTramo(r.realizadas.map((x) => x.$1), t);
     final incidencias = contarPorTramo(r.incidencias.map((x) => x.creada), t);
@@ -197,7 +195,13 @@ class _PorActivo extends StatelessWidget {
             else
               // Pocas filas: tabla sencilla dentro de la lista (la `Tabla` necesita alto propio).
               _FilaPlan.cabecera(),
-            for (final (p, hechos) in r.planes) _FilaPlan(p, hechos),
+            // Con «Todos los activos» pueden ser cientos y la lista no es perezosa: se enseñan los primeros.
+            for (final (p, hechos) in r.planes.take(50)) _FilaPlan(p, hechos),
+            if (r.planes.length > 50)
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text('Y ${r.planes.length - 50} más: elige un activo para verlos', style: TextStyle(color: P.textoSuave)),
+              ),
           ],
         ),
         const SizedBox(height: huecoVista),
@@ -287,7 +291,7 @@ class _FilaPlan extends StatelessWidget {
   }
 }
 
-/// Lo que se cuenta de un activo (y sus componentes) en el periodo; también lo usa su PDF.
+/// Lo que se cuenta de un activo (y sus componentes) en el periodo, o de todos si [a] es null; también lo usa su PDF.
 typedef ResumenActivo = ({
   int hechas,
   int pendientes,
@@ -298,9 +302,9 @@ typedef ResumenActivo = ({
   List<Realizada> realizadas,
 });
 
-ResumenActivo resumenActivo(Activo a, DateTime desde) {
-  final rama = store.ramaDe(a.id);
-  final ots = [...store.tareas, ...store.subtareas].where((t) => rama.contains(t.activoId)).toList();
+ResumenActivo resumenActivo(Activo? a, DateTime desde) {
+  final rama = a == null ? {for (final x in store.activos) x.id} : store.ramaDe(a.id);
+  final ots = [...store.tareas, ...store.subtareas].where((t) => !t.esPlantilla && rama.contains(t.activoId)).toList();
   final realizadas = otsRealizadas().where((r) => rama.contains(r.$2.activoId) && !r.$1.isBefore(desde)).toList();
   final planes = store.planes.where((p) => rama.contains(p.activoId)).toList()..sort((x, y) => x.nombre.compareTo(y.nombre));
   return (
