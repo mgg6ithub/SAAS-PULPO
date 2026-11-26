@@ -1171,23 +1171,8 @@ class _AccionesOtState extends State<_AccionesOt> {
     final t = widget.t;
     if (t.estado == EstadoTrabajo.realizado || t.hechaEl(hoy())) return const SizedBox.shrink();
     final enCurso = t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.contains(widget.w.id);
-    // Con una incidencia suya de esta orden aún sin respuesta: congelada (ni empezar ni otra incidencia).
-    if (esperandoIncidencia(t)) {
-      return Tarjeta(
-        color: P.ambar.withValues(alpha: .08),
-        padding: const EdgeInsets.all(14),
-        child: Row(children: [
-          const Icon(Icons.hourglass_top_rounded, size: 20, color: P.ambar),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Esperando la respuesta de la oficina a tu incidencia sobre esta orden. Mientras tanto no se puede empezar.',
-              style: TextStyle(fontSize: 14, color: P.texto),
-            ),
-          ),
-        ]),
-      );
-    }
+    // Con una incidencia suya de esta orden aún sin respuesta: congelada (el aviso va abajo del todo).
+    if (esperandoIncidencia(t)) return const SizedBox.shrink();
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -1773,7 +1758,7 @@ Text('$etiqueta: ${t.nombre}')
           _FilaTrabajo(t, widget.abrir, mostrarDia: true, dentroDeTarjeta: true),
           Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: Wrap(spacing: 8, runSpacing: 6, children: [
             PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo),
-            if (esperandoIncidencia(t)) const Pill('Esperando respuesta a tu incidencia', P.ambar, icono: Icons.hourglass_top_rounded),
+            if (esperandoIncidencia(t)) Pill('Esperando respuesta a tu incidencia', P.morado, icono: Icons.schedule_rounded),
           ])),
         ])),
       ),
@@ -2942,6 +2927,23 @@ class _DetalleTrabajo extends StatelessWidget {
               for (final i in lista) FilaInforme(i, t),
           ],
         ),
+        // Abajo del todo: su incidencia ya está enviada y la orden, congelada hasta que responda la oficina.
+        if (industrial && esperandoIncidencia(t)) ...[
+          const SizedBox(height: _huecoOt),
+          Tarjeta(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              Icon(Icons.schedule_rounded, size: 20, color: P.morado),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Incidencia enviada. Esperando la respuesta de la oficina; mientras tanto no se puede empezar.',
+                  style: TextStyle(fontSize: 14, color: P.texto),
+                ),
+              ),
+            ]),
+          ),
+        ],
       ],
     );
   }
