@@ -464,13 +464,13 @@ class VistaDiaTecnicos extends StatelessWidget {
                           bottom: 10,
                           child: BloqueTarea(t, dia),
                         ),
-                    // Ahora: línea roja si es hoy.
+                    // Ahora: línea morada si es hoy.
                     if (diasHasta(dia) == 0 && minAhora > _desde * 60 && minAhora < _hasta * 60)
                       Positioned(
                         left: (minAhora - _desde * 60) / 60 * porHora,
                         top: 0,
                         bottom: 0,
-                        child: IgnorePointer(child: Container(width: 2, color: P.rojo)),
+                        child: IgnorePointer(child: Container(width: 2, color: P.morado)),
                       ),
                   ],
                 ),

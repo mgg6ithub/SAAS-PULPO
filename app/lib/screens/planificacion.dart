@@ -339,6 +339,33 @@ class _PlanificacionState extends State<Planificacion> {
                     ),
                     const SizedBox(width: 8),
                   ],
+                  // Pultec: ocultar las completadas para dejar sitio (en morado mientras están ocultas).
+                  if (industrial && vista == 1) ...[
+                    Tooltip(
+                      message: filtroAgenda.ocultarHechas ? 'Mostrar las completadas' : 'Ocultar las completadas',
+                      child: Material(
+                        color: filtroAgenda.ocultarHechas ? P.moradoSuave : P.superficie,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          side: BorderSide(color: filtroAgenda.ocultarHechas ? P.morado : P.borde),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(P.radioControl),
+                          onTap: filtroAgenda.alternarHechas,
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: Icon(
+                              Icons.task_alt_rounded,
+                              size: 20,
+                              color: filtroAgenda.ocultarHechas ? P.morado : P.texto,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   // Pultec: ir al próximo mantenimiento, pegado a la izquierda del «+».
                   if (industrial && vista == 1) ...[
                     Tooltip(

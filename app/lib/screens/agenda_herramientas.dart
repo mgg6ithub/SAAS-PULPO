@@ -23,6 +23,14 @@ class FiltroAgenda extends ChangeNotifier {
   /// Texto a buscar en la tarea, su tipo, su cliente o sus técnicos.
   String texto = '';
 
+  /// Planificación sin las órdenes ya completadas, para dejar sitio. Es un botón aparte: no cuenta como filtro.
+  bool ocultarHechas = false;
+
+  void alternarHechas() {
+    ocultarHechas = !ocultarHechas;
+    notifyListeners();
+  }
+
   bool get activo => tecnicos.isNotEmpty || tipo != null || estado != EstadoFiltro.todas || texto.isNotEmpty;
 
   bool pasa(Tarea t, DateTime dia) {
@@ -40,6 +48,7 @@ class FiltroAgenda extends ChangeNotifier {
     if (tipo != null && t.tipo != tipo) return false;
     if (tecnicos.isNotEmpty && !t.trabajadorIds.any(tecnicos.contains)) return false;
     final hecha = t.hechaEl(dia);
+    if (ocultarHechas && hecha) return false;
     final vencida = !hecha && t.proximo != null && diasHasta(t.proximo!) < 0;
     return switch (estado) {
       EstadoFiltro.todas => true,

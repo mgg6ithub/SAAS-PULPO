@@ -19,6 +19,7 @@ import '../marca.dart';
 import '../nube.dart' show Nube;
 import '../industrial/activos.dart' show abrirActivoForm;
 import '../industrial/planes.dart' show abrirPlanForm;
+import '../industrial/incidencia.dart' show EstadoIncidencia;
 // import '../industrial/foto_planta.dart'; // Foto de Inicio quitada de momento.
 import '../industrial/tipo_mantenimiento.dart' show puntoTipo;
 import '../industrial/vistazo.dart';
@@ -1720,6 +1721,25 @@ extension on _HeroState {
                       Text('$n', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: P.texto)),
                       const SizedBox(width: 6),
                       Text(etiqueta, style: TextStyle(fontSize: 14, color: P.textoSuave)),
+                    ],
+                  ),
+                ),
+              // Pultec: sin incidencias abiertas, una cifra más que lo dice (con ellas, salen debajo).
+              if (industrial && !store.incidencias.any((i) => store.estadoIncidencia(i) == EstadoIncidencia.abierta))
+                Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: P.superficie.withValues(alpha: .85),
+                    borderRadius: BorderRadius.circular(P.radioControl),
+                    border: Border.all(color: P.borde),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.report_outlined, size: 19, color: P.textoSuave),
+                      const SizedBox(width: 10),
+                      Text('Sin incidencias', style: TextStyle(fontSize: 14, color: P.textoSuave)),
                     ],
                   ),
                 ),

@@ -293,17 +293,20 @@ class _FilaOrden extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    if (activo != null)
-                      Container(
+                    // Sin activo, el hueco se guarda: todas las tarjetas, del mismo alto.
+                    Opacity(
+                      opacity: activo == null ? 0 : 1,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(color: P.hover, borderRadius: BorderRadius.circular(6)),
                         child: Text(
-                          activo.nombre,
+                          activo?.nombre ?? ' ',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 12.5, color: P.textoSuave, fontWeight: FontWeight.w500),
                         ),
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -314,11 +317,12 @@ class _FilaOrden extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, letterSpacing: -.2, color: P.texto),
                 ),
                 // Qué hay que hacer (la fecha y lo que queda, en el anillo de la derecha).
-                if (descripcion.isNotEmpty) ...[
+                // Una sola línea y siempre presente (vacía si no hay): todas las tarjetas, del mismo alto.
+                ...[
                   const SizedBox(height: 3),
                   Text(
-                    descripcion,
-                    maxLines: 2,
+                    descripcion.isEmpty ? ' ' : descripcion,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 13.5, color: P.textoSuave, height: 1.35),
                   ),
