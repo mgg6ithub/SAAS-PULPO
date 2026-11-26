@@ -145,6 +145,9 @@ class Resumen extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                     ],
+                    // Lo primero que hay que atender, encima de las cifras (solo se ve si hay alguna).
+                    if (industrial && store.activos.isNotEmpty && (hayTarea || !P.mejorada))
+                      IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}, abajo: 16),
                     ValueListenableBuilder(
                       valueListenable: periodoInicio,
                       builder: (context, elegida, _) => _Kpis(
@@ -182,8 +185,6 @@ class Resumen extends StatelessWidget {
                       if (hayTarea) ...[
                         AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                         const SizedBox(height: 16),
-                        // Debajo, el mismo hueco de 16 que entre todos los bloques de esta vista.
-                        IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}, abajo: 16),
                       ] else
                         const SizedBox(height: 16),
                       () {
@@ -238,8 +239,6 @@ class Resumen extends StatelessWidget {
                     ] else if (industrial && store.activos.isNotEmpty) ...[
                       AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                       const SizedBox(height: 32),
-                      // Lo primero que hay que atender: partes con incidencia o sin hacer.
-                      IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
                       VistazoActivos(
                         onAbrir: onTarea ?? (_) {},
                         onVerMas: (f) {
