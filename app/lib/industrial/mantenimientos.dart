@@ -255,6 +255,9 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       proximo: hoy(),
       periodicidad: Periodicidad.unica,
       criticidad: Criticidad.rutinaria,
+      // Por defecto, quien se encarga de la orden en la que se detectó; si no, quien la comunicó.
+      trabajadorIds: _tecnicosPorDefecto(),
+      grupoId: store.tarea(x.origenTrabajoId)?.grupoId,
     );
     // Se crea ya y se enlaza a la incidencia (pasa a «Con OT» al momento, también en la lista); luego se abre
     // para ajustarla. Así no se puede crear dos veces.
@@ -266,6 +269,12 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
     );
     nav.pop();
     await abrirTareaForm(nav.context, ot);
+  }
+
+  List<String> _tecnicosPorDefecto() {
+    final deOrigen = [...?store.tarea(x.origenTrabajoId)?.trabajadorIds];
+    if (deOrigen.isNotEmpty) return deOrigen;
+    return [if (x.tecnicoId != null && store.trabajador(x.tecnicoId!) != null) x.tecnicoId!];
   }
 
   /// Con OT: la cancela (queda en el histórico) y desestima la incidencia, sin ir a la orden.
@@ -320,7 +329,28 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
     return VentanaFormulario(
       etiqueta: dondeEs(x.activoId).isEmpty ? 'Incidencias' : dondeEs(x.activoId),
       titulo: existe ? 'Incidencia' : 'Nueva incidencia',
-      subtitulo: existe ? 'Comunicada por ${tecnico?.nombre ?? 'la oficina'} el ${fecha(x.creada)}' : null,
+      colorTitulo: P.rojo,
+      // Quién la comunicó (con su avatar), el día y la hora.
+      bajoTitulo: existe
+          ? Row(
+              children: [
+                Text('Comunicada por ', style: TextStyle(color: P.textoSuave, fontSize: 13)),
+                if (tecnico != null) ...[
+                  Avatar(inicialesDe(tecnico.nombreCompleto), colorPaleta(tecnico.color), size: 18),
+                  const SizedBox(width: 6),
+                ],
+                Flexible(
+                  child: Text(
+                    '${tecnico?.nombre ?? 'la oficina'} el ${fecha(x.creada)} a las '
+                    '${hhmm(x.creada.hour * 60 + x.creada.minute)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: P.textoSuave, fontSize: 13),
+                  ),
+                ),
+              ],
+            )
+          : null,
       tituloDesplazado: descripcion.text,
       // Estado y gravedad, en la misma línea.
       bajoBotones: Row(mainAxisSize: MainAxisSize.min, children: [

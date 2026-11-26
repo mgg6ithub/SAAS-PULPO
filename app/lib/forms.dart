@@ -65,6 +65,15 @@ class VentanaFormulario extends StatefulWidget {
   /// Texto pequeño en morado encima del título ("CLIENTE", "TAREA"), como "CONFIGURACIÓN" en Ajustes.
   final String? etiqueta;
 
+  /// De dónde sale, en rojo antes de la etiqueta con una flecha: «INCIDENCIA → ORDEN DE TRABAJO».
+  final String? etiquetaDesde;
+
+  /// Color del título (las incidencias, en rojo). Sin él, el de siempre.
+  final Color? colorTitulo;
+
+  /// En lugar del subtítulo de texto, un widget (quién comunicó la incidencia, con su avatar).
+  final Widget? bajoTitulo;
+
   /// A la izquierda del título (el avatar del cliente o del trabajador).
   final Widget? lider;
 
@@ -123,6 +132,9 @@ class VentanaFormulario extends StatefulWidget {
     required this.titulo,
     this.subtitulo,
     this.etiqueta,
+    this.etiquetaDesde,
+    this.colorTitulo,
+    this.bajoTitulo,
     this.lider,
     this.extra,
     this.bajoBotones,
@@ -141,6 +153,8 @@ class VentanaFormulario extends StatefulWidget {
   @override
   State<VentanaFormulario> createState() => _VentanaFormularioState();
 }
+
+TextStyle _estiloEtiqueta(Color c) => TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: c);
 
 class _VentanaFormularioState extends State<VentanaFormulario> {
   int lado = _lado;
@@ -328,14 +342,24 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (widget.etiqueta != null && !widget.incrustada)
-                            Text(
-                              widget.etiqueta!.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: .8,
-                                color: P.morado,
-                              ),
+                            Row(
+                              children: [
+                                if (widget.etiquetaDesde != null) ...[
+                                  Text(widget.etiquetaDesde!.toUpperCase(), style: _estiloEtiqueta(P.rojo)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                    child: Icon(Icons.arrow_forward_rounded, size: 12, color: P.textoSuave),
+                                  ),
+                                ],
+                                Flexible(
+                                  child: Text(
+                                    widget.etiqueta!.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: _estiloEtiqueta(P.morado),
+                                  ),
+                                ),
+                              ],
                             ),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
@@ -351,10 +375,13 @@ class _VentanaFormularioState extends State<VentanaFormulario> {
                                 fontSize: widget.incrustada ? 16 : 20,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -.5,
+                                color: widget.colorTitulo,
                               ),
                             ),
                           ),
-                          if (widget.subtitulo != null)
+                          if (widget.bajoTitulo != null)
+                            Padding(padding: const EdgeInsets.only(top: 2), child: widget.bajoTitulo!)
+                          else if (widget.subtitulo != null)
                             Text(
                               widget.subtitulo!,
                               maxLines: 1,
@@ -1911,6 +1938,7 @@ class _TareaFormState extends State<TareaForm> {
   Widget build(BuildContext context) {
     final aptos = store.trabajadores.where((w) => store.esApto(w, t)).length;
     final plantillas = store.plantillasPorUso.where((p) => p.id != t.id).toList();
+    final deIncidencia = industrial && store.incidenciaDeOt(t.id) != null;
 
     // Técnico, día, hora, criticidad… (lo que no es texto) llegan con setState: también se guardan solos.
     _programarGuardado();
@@ -1928,7 +1956,11 @@ class _TareaFormState extends State<TareaForm> {
               t.proximo = masDias(hoy(), 1 + azar.nextInt(30));
             })
           : null,
-      etiqueta: t.esPlantilla ? 'Plantillas' : (t.padreId != null ? 'Subtrabajos' : m('Trabajos')),
+      etiqueta: t.esPlantilla
+          ? 'Plantillas'
+          : (t.padreId != null ? 'Subtrabajos' : (deIncidencia ? 'Orden de trabajo' : m('Trabajos'))),
+      // Sale de una incidencia: «INCIDENCIA → ORDEN DE TRABAJO».
+      etiquetaDesde: deIncidencia ? 'Incidencia' : null,
       titulo: nueva
           ? (t.esPlantilla ? 'Nueva plantilla' : (t.padreId != null ? 'Nuevo subtrabajo' : m('Nuevo trabajo')))
           : nombre.text,

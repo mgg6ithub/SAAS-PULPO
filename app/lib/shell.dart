@@ -396,7 +396,8 @@ class _ShellState extends State<Shell> {
     Seccion.clientes => industrial ? Activos() : Clientes(onAbrir: (id) => setState(() => clienteId = id)),
     Seccion.trabajadores => Trabajadores(onAbrir: (id) => setState(() => trabajadorId = id)),
     Seccion.tareas => TareasPagina(onAbrir: (id) => setState(() => tareaId = id)),
-    Seccion.incidencias => const IncidenciasPagina(),
+    // ignore: prefer_const_constructors
+    Seccion.incidencias => IncidenciasPagina(),
     // ignore: prefer_const_constructors
     Seccion.usoActivos => UsoMaquinas(),
     // ignore: prefer_const_constructors
