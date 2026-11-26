@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'ajustes.dart';
+import 'columnas.dart';
 import 'marca.dart';
 import 'nube.dart';
 import 'plataforma_io.dart' if (dart.library.js_interop) 'plataforma_web.dart';
@@ -34,6 +35,7 @@ Future<void> main() async {
   final local = Uri.base.queryParameters['local'] == '1';
   if (local) {
     await store.cargar();
+    await columnasTablas.abrir('local');
     // La rama de revisión abre con veinte trabajos simultáneos; ?calendarioDemo=0 los desactiva.
     if (Uri.base.queryParameters['calendarioDemo'] != '0') {
       store.cargarSimulacion(

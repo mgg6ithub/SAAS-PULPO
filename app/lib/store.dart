@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'historial.dart';
 import 'industrial/activo.dart';
 import 'industrial/incidencia.dart';
 import 'industrial/plan.dart';
@@ -23,9 +24,41 @@ class Accion {
   final Map<String, Map<String, (String, String)>> cambiadas;
   bool deshecha = false;
   Accion(this.texto, this.cuando, this.quitadas, this.cambiadas);
+
+  Map<String, dynamic> toJson() => {
+    't': texto,
+    'w': cuando.toIso8601String(),
+    'q': quitadas,
+    'c': {
+      for (final e in cambiadas.entries) e.key: {for (final c in e.value.entries) c.key: [c.value.$1, c.value.$2]},
+    },
+    if (deshecha) 'd': true,
+  };
+
+  factory Accion.fromJson(Map<String, dynamic> j) => Accion(
+    j['t'] as String? ?? '',
+    DateTime.tryParse(j['w'] as String? ?? '') ?? DateTime.now(),
+    {for (final e in (j['q'] as Map? ?? {}).entries) e.key as String: List<String>.from(e.value as List)},
+    {
+      for (final e in (j['c'] as Map? ?? {}).entries)
+        e.key as String: {
+          for (final c in (e.value as Map).entries) c.key as String: ((c.value as List)[0] as String, (c.value as List)[1] as String),
+        },
+    },
+  )..deshecha = j['d'] == true;
 }
 
 class Store extends ChangeNotifier {
+  Store() {
+    // El historial guarda los borrados con su «Deshacer»; aquí se le dice cómo (no muy grandes: hasta ~200 KB).
+    Registro.accionAJson = (a) {
+      if (a is! Accion) return null;
+      final j = a.toJson();
+      return jsonEncode(j).length > 200000 ? null : j;
+    };
+    Registro.accionDeJson = Accion.fromJson;
+  }
+
   static const _clave = 'pulpo_v2';
   static const _respaldo = 'pulpo_v2_respaldo';
   static const _nombresSimulados = [
@@ -512,11 +545,123 @@ class Store extends ChangeNotifier {
     '_competencias': {'': jsonEncode(competencias)},
   };
 
+  // ── Historial ──
+
+  /// Mientras se hace algo que ya se apunta entero (un borrado con «Deshacer»), sus pasos no se apuntan sueltos.
+  bool _callado = false;
+
+  /// Cómo estaba cada fila (por id, en JSON) la última vez que se avisó de un cambio: el «antes» de lo que se
+  /// cambie ahora, aunque se haya tocado el objeto sin copiarlo. Para deshacer un cambio concreto del historial.
+  Map<String, String> _base = {};
+
+  @override
+  void notifyListeners() {
+    _base = {
+      for (final e in _foto().entries)
+        if (!e.key.startsWith('_')) ...e.value,
+    };
+    super.notifyListeners();
+  }
+
+  void _anotar(Hecho hecho, String que, String nombre, String id, {String? antes}) {
+    if (_callado) return;
+    historial
+      ..usar(nube?.empresaId ?? 'local')
+      ..apuntar(Registro(hecho, que, nombre.trim(), id: id, antes: antes));
+  }
+
+  /// Al guardar: creado si no estaba; cambiado si es otro contenido (o el mismo objeto, tocado sin copiar).
+  void _anotarGuardado(Object? antes, Object ahora, String que, String nombre, String id) {
+    if (antes == null) return _anotar(Hecho.creado, que, nombre, id);
+    if (identical(antes, ahora) ||
+        jsonEncode((antes as dynamic).toJson()) != jsonEncode((ahora as dynamic).toJson())) {
+      _anotar(Hecho.cambiado, que, nombre, id, antes: _base[id] ?? (identical(antes, ahora) ? null : jsonEncode((antes as dynamic).toJson())));
+    }
+  }
+
+  /// Dónde está la fila [id] (tabla y posición), o null si ya no existe.
+  (String, int)? _dondeEsta(String id) {
+    for (final e in _listas.entries) {
+      final i = e.value.indexWhere((x) => (x as dynamic).id == id);
+      if (i >= 0) return (e.key, i);
+    }
+    return null;
+  }
+
+  /// Si la línea [r] del historial se puede deshacer: un borrado (o un deshacer) sin deshacer, una creación de algo
+  /// que sigue ahí o un cambio de algo que sigue ahí y del que se sabe cómo estaba.
+  bool puedeDeshacer(Registro r) {
+    if (r.deshecho) return false;
+    final a = r.accion;
+    if (a is Accion) return !a.deshecha;
+    final id = r.id;
+    if (id == null || _dondeEsta(id) == null) return false;
+    return switch (r.hecho) {
+      Hecho.creado => _borrarSegun(r.que) != null,
+      Hecho.cambiado => r.antes != null,
+      _ => false,
+    };
+  }
+
+  void Function(String id)? _borrarSegun(String que) => switch (que) {
+    'activo' || 'componente' => borrarActivo,
+    'mantenimiento' => borrarPlan,
+    'tecnico' => borrarTrabajador,
+    'orden' => borrarTarea,
+    'incidencia' => borrarIncidencia,
+    'grupo' => borrarGrupo,
+    _ => null,
+  };
+
+  /// Deshace la línea [r] del historial: un borrado vuelve, una creación se borra y un cambio vuelve a como estaba.
+  /// Lo que se deshace queda a su vez en el historial con su «Deshacer» (para rehacerlo).
+  void deshacerRegistro(Registro r) {
+    if (!puedeDeshacer(r)) return;
+    final a = r.accion;
+    if (a is Accion) return deshacer(a);
+    final id = r.id!;
+    final titulo = r.titulo;
+    final texto = 'Deshecho: ${titulo.isEmpty ? '' : titulo[0].toLowerCase() + titulo.substring(1)}';
+    if (r.hecho == Hecho.creado) {
+      final borrar = _borrarSegun(r.que)!;
+      deshacible(texto, () => borrar(id));
+    } else {
+      final (tabla, _) = _dondeEsta(id)!;
+      final antes = _desdeJson[tabla]!(Map<String, dynamic>.from(jsonDecode(r.antes!) as Map));
+      deshacible(texto, () {
+        final l = _listas[tabla]!;
+        final i = l.indexWhere((x) => (x as dynamic).id == id);
+        if (i >= 0) l[i] = antes;
+        _cambio();
+      });
+    }
+    historial.marcarDeshecho(r);
+  }
+
+  static String _corto(String t) => t.length > 60 ? '${t.substring(0, 59)}…' : t;
+
+  /// Qué es lo que hay en cada lista, para el historial.
+  static const _queEs = {
+    'activos': 'activo',
+    'planes': 'mantenimiento',
+    'trabajadores': 'tecnico',
+    'tareas': 'orden',
+    'subtareas': 'orden',
+    'incidencias': 'incidencia',
+    'grupos': 'grupo',
+  };
+
   /// Hace [cambio] (un borrado) y apunta cómo estaba todo lo que ha tocado, para poder deshacerlo.
   /// Sin [aviso], queda en el historial pero no sale el aviso de «Deshacer».
   void deshacible(String texto, void Function() cambio, {bool aviso = true}) {
     final antes = _foto();
-    cambio();
+    final callado = _callado;
+    _callado = true;
+    try {
+      cambio();
+    } finally {
+      _callado = callado;
+    }
     final despues = _foto();
     final quitadas = <String, List<String>>{};
     final cambiadas = <String, Map<String, (String, String)>>{};
@@ -533,6 +678,16 @@ class Store extends ChangeNotifier {
     if (quitadas.isEmpty && cambiadas.isEmpty) return;
     final a = Accion(texto, DateTime.now(), quitadas, cambiadas);
     acciones.insert(0, a);
+    final tabla = quitadas.keys.firstOrNull ?? cambiadas.keys.first;
+    historial
+      ..usar(nube?.empresaId ?? 'local')
+      ..apuntar(Registro(
+        quitadas.isEmpty ? Hecho.cambiado : Hecho.borrado,
+        _queEs[tabla] ?? tabla,
+        '',
+        texto: texto,
+        accion: a,
+      ));
     if (aviso) ultimaAccion.value = a;
   }
 
@@ -540,6 +695,7 @@ class Store extends ChangeNotifier {
   void deshacer(Accion a) {
     if (a.deshecha) return;
     a.deshecha = true;
+    historial.deshecha(a);
     if (ultimaAccion.value == a) ultimaAccion.value = null;
     final listas = _listas;
     for (final e in a.cambiadas.entries) {
@@ -806,12 +962,14 @@ class Store extends ChangeNotifier {
   int get activosNuevos => nuevosEntre([...activos.map((a) => a.id), ...planes.map((p) => p.id)]);
 
   void guardarActivo(Activo a) {
+    _anotarGuardado(activo(a.id), a, a.padreId == null ? 'activo' : 'componente', a.titulo, a.id);
     _poner(activos, a, (x) => x.id == a.id);
     _cambio();
   }
 
   /// Quita el activo con todos sus componentes; sus OT se quedan, sin activo.
   void borrarActivo(String id) {
+    if (activo(id) case final a?) _anotar(Hecho.borrado, a.padreId == null ? 'activo' : 'componente', a.titulo, id);
     final rama = ramaDe(id);
     activos.removeWhere((a) => rama.contains(a.id));
     planes.removeWhere((p) => rama.contains(p.activoId));
@@ -826,11 +984,13 @@ class Store extends ChangeNotifier {
       planes.where((p) => p.activoId == activoId).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
 
   void guardarPlan(PlanMantenimiento p) {
+    _anotarGuardado(planes.where((x) => x.id == p.id).firstOrNull, p, 'mantenimiento', p.nombre, p.id);
     _poner(planes, p, (x) => x.id == p.id);
     _cambio();
   }
 
   void borrarPlan(String id) {
+    if (planes.where((p) => p.id == id).firstOrNull case final p?) _anotar(Hecho.borrado, 'mantenimiento', p.nombre, id);
     planes.removeWhere((p) => p.id == id);
     incidencias.removeWhere((x) => x.planId == id);
     // Todas sus OT se van con él (no quedan sueltas como «Manual»).
@@ -839,6 +999,7 @@ class Store extends ChangeNotifier {
   }
 
   void guardarIncidencia(Incidencia x) {
+    _anotarGuardado(incidencias.where((y) => y.id == x.id).firstOrNull, x, 'incidencia', _corto(x.descripcion), x.id);
     _poner(incidencias, x, (y) => y.id == x.id);
     _cambio();
   }
@@ -859,6 +1020,9 @@ class Store extends ChangeNotifier {
       otId == null ? null : incidencias.where((x) => x.trabajoId == otId).firstOrNull;
 
   void borrarIncidencia(String id) {
+    if (incidencias.where((x) => x.id == id).firstOrNull case final x?) {
+      _anotar(Hecho.borrado, 'incidencia', _corto(x.descripcion), id);
+    }
     incidencias.removeWhere((x) => x.id == id);
     _cambio();
   }
@@ -889,11 +1053,13 @@ class Store extends ChangeNotifier {
       grupos.any((g) => g.id != salvo && g.nombre.trim().toLowerCase() == nombre.trim().toLowerCase());
 
   void guardarGrupo(GrupoTecnicos g) {
+    _anotarGuardado(grupos.where((x) => x.id == g.id).firstOrNull, g, 'grupo', g.nombre, g.id);
     _poner(grupos, g, (x) => x.id == g.id);
     _cambio();
   }
 
   void borrarGrupo(String id) {
+    if (grupos.where((g) => g.id == id).firstOrNull case final g?) _anotar(Hecho.borrado, 'grupo', g.nombre, id);
     grupos.removeWhere((g) => g.id == id);
     for (final w in trabajadores) {
       w.grupoIds.remove(id);
@@ -943,11 +1109,13 @@ class Store extends ChangeNotifier {
   }
 
   void guardarTrabajador(Trabajador w) {
+    _anotarGuardado(trabajador(w.id), w, 'tecnico', w.nombreCompleto, w.id);
     _poner(trabajadores, w, (x) => x.id == w.id);
     _cambio();
   }
 
   void borrarTrabajador(String id) {
+    if (trabajador(id) case final w?) _anotar(Hecho.borrado, 'tecnico', w.nombreCompleto, id);
     trabajadores.removeWhere((w) => w.id == id);
     for (final p in planes.where((p) => p.trabajadorId == id)) {
       p.trabajadorId = null;
@@ -1080,6 +1248,11 @@ class Store extends ChangeNotifier {
   }
 
   void guardarTarea(Tarea t) {
+    if (!t.esPlantilla && t.padreId == null) {
+      final antes = tarea(t.id);
+      // Las órdenes que salen solas de un mantenimiento no las ha creado nadie.
+      if (antes != null || t.planId == null) _anotarGuardado(antes, t, 'orden', t.nombre, t.id);
+    }
     if (t.padreId != null) {
       // El subtrabajo comparte el cliente de su padre.
       t.clienteId = tarea(t.padreId)?.clienteId;
@@ -1115,6 +1288,7 @@ class Store extends ChangeNotifier {
   }
 
   void borrarTarea(String id) {
+    if (tarea(id) case final t? when t.padreId == null && !t.esPlantilla) _anotar(Hecho.borrado, 'orden', t.nombre, id);
     for (final h in hijas(id)) {
       borrarTarea(h.id);
     }
@@ -1142,6 +1316,7 @@ class Store extends ChangeNotifier {
   }
 
   void marcarHecha(Tarea t) {
+    _anotar(Hecho.completado, 'orden', t.nombre, t.id);
     _marcarHecha(t);
     _cambio();
   }

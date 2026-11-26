@@ -13,7 +13,8 @@ import '../industrial/historicos.dart';
 import 'tabla_trabajos.dart';
 import 'grupos.dart' show gruposDe;
 
-/// Vista de un trabajador: en el centro, su trabajo (tareas asignadas); a la derecha, su ficha.
+/// Vista de un trabajador: su trabajo (tareas asignadas) a todo el ancho; su ficha, plegada, se despliega a la
+/// derecha con «Ficha».
 class TrabajadorDetalle extends StatelessWidget {
   final String trabajadorId;
   final VoidCallback onVolver;
@@ -62,112 +63,82 @@ class TrabajadorDetalle extends StatelessWidget {
       ),
     );
 
-    return SegunTamano(
-      clave: (box) => box.maxWidth > 1000,
-      builder: (context, box) {
-        // Con sitio, la ficha completa va fija a la derecha; si no, se abre con "Editar ficha".
-        final conFicha = box.maxWidth > 1000;
-        final principal = Padding(
-          padding: margenPagina,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Cabecera(
-                lider: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: m('Volver a Trabajadores'),
-                      onPressed: onVolver,
-                      icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
-                    ),
-                    const SizedBox(width: 4),
-                    Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 40),
-                  ],
+    final grupo = industrial
+        ? (store.sinGrupo(w) ? 'Sin grupo' : gruposDe(w))
+        : w.competencias.isEmpty
+        ? 'Sin competencias'
+        : w.competencias.join(' · ');
+    final disponible = w.activo && w.estadoHoy == EstadoHoy.disponible;
+
+    return Padding(
+      padding: margenPagina,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Cabecera(
+            lider: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: m('Volver a Trabajadores'),
+                  onPressed: onVolver,
+                  icon: Icon(Icons.arrow_back_rounded, size: 20, color: P.textoSuave),
                 ),
-                titulo: w.nombreCompleto,
-                subtitulo: industrial
-                    ? (store.sinGrupo(w) ? 'Sin grupo' : gruposDe(w))
-                    : w.competencias.isEmpty
-                    ? 'Sin competencias'
-                    : w.competencias.join(' · '),
-                acciones: [
-                  // Disponible, ocupado o ausente hoy: se cambia arriba a la derecha de su ficha.
-                  Tooltip(
-                    message: w.activo
-                        ? 'Disponibilidad de hoy. Se cambia en su ficha (arriba a la derecha): Disponible, Ocupado o Ausente.'
-                        : 'De baja: no recibe órdenes de trabajo.',
-                    child: w.activo
-                        ? Pill(
-                            industrial ? 'Hoy: ${w.estadoHoy.etiqueta}' : w.estadoHoy.etiqueta,
-                            w.estadoHoy.color,
-                            punto: true,
-                          )
-                        : Pill(industrial ? 'De baja' : 'Inactivo', P.gris, punto: true),
+                const SizedBox(width: 4),
+                Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 40),
+              ],
+            ),
+            titulo: w.nombreCompleto,
+            // Disponible es lo normal: se dice en una línea. Solo lo que cambia el día lleva insignia.
+            subtitulo: disponible ? '$grupo · Disponible hoy' : grupo,
+            acciones: [
+              if (!disponible)
+                Tooltip(
+                  message: w.activo
+                      ? 'Disponibilidad de hoy. Se cambia en su ficha: Disponible, Ocupado o Ausente.'
+                      : 'De baja: no recibe órdenes de trabajo.',
+                  child: w.activo
+                      ? Pill(
+                          industrial ? 'Hoy: ${w.estadoHoy.etiqueta}' : w.estadoHoy.etiqueta,
+                          w.estadoHoy.color,
+                          punto: true,
+                        )
+                      : Pill(industrial ? 'De baja' : 'Inactivo', P.gris, punto: true),
+                ),
+              if (store.nube != null) _Acceso(w, key: ValueKey('acceso-${w.id}')),
+              // Sin tareas, en Pulcón el botón está en el centro; arriba solo cuando ya hay alguna.
+              if (industrial || tareas.isNotEmpty)
+                BotonPrimario(
+                  industrial ? 'Asignar orden' : m('Asignar trabajo'),
+                  icono: Icons.add_rounded,
+                  conIcono: true,
+                  onPressed: () => abrirAsignar(context, w),
+                ),
+              // Su avatar, arriba a la derecha: abre la ventana con sus datos para editarlos.
+              Tooltip(
+                message: 'Editar datos',
+                child: Semantics(
+                  button: true,
+                  label: 'Editar datos de ${w.nombreCompleto}',
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => abrirTrabajadorForm(context, w),
+                    child: Avatar(inicialesDe(w.nombreCompleto), colorPaleta(w.color), size: 40),
                   ),
-                  if (!conFicha)
-                    OutlinedButton(onPressed: () => abrirTrabajadorForm(context, w), child: const Text('Editar ficha')),
-                  if (store.nube != null) _Acceso(w, key: ValueKey('acceso-${w.id}')),
-                  // Sin tareas, el botón está en el centro; arriba solo cuando ya hay alguna.
-                  if (tareas.isNotEmpty)
-                    BotonPrimario(
-                      m('Asignar trabajo'),
-                      icono: Icons.add_task_rounded,
-                      onPressed: () => abrirAsignar(context, w),
-                    ),
-                ],
+                ),
               ),
-              const SizedBox(height: 20),
-              // Pultec: cifras del técnico y sus órdenes en Pendientes e Histórico (con su resultado).
-              if (industrial) Expanded(child: _OrdenesTecnico(w)) else ...[titulo, Expanded(child: lista)],
             ],
           ),
-        );
-        if (!conFicha) return principal;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: principal),
-            SizedBox(
-              width: 440,
-              child: industrial ? _FichaTecnico(w) : TrabajadorForm(key: ValueKey(w.id), original: w, incrustada: true),
-            ),
-          ],
-        );
-      },
+          const SizedBox(height: 24),
+          // Pultec: sus órdenes en Pendientes e Histórico (con su resultado) y, en la misma línea, sus cifras.
+          if (industrial) Expanded(child: _OrdenesTecnico(w)) else ...[titulo, Expanded(child: lista)],
+        ],
+      ),
     );
   }
 
   /// Por día y hora; lo que no tiene fecha, al final.
   static DateTime _orden(Tarea t) => (t.proximo ?? DateTime(2100)).add(Duration(minutes: t.inicioMin ?? 0));
-}
-
-/// Consulta de los datos del técnico; la edición se abre de forma explícita.
-class _FichaTecnico extends StatelessWidget {
-  final Trabajador w;
-  const _FichaTecnico(this.w);
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: margenPagina,
-    child: Tarjeta(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const Expanded(child: TituloVista('Ficha del técnico')),
-        TextButton(onPressed: () => abrirTrabajadorForm(context, w), child: const Text('Editar')),
-      ]),
-      const SizedBox(height: 16),
-      for (final dato in [
-        ('Nombre', w.nombreCompleto), ('Teléfono', w.telefono), ('Email', w.email),
-        industrial ? ('Grupos', gruposDe(w)) : ('Competencias', w.competencias.join(', ')), ('Títulos', w.titulos),
-        ('Información', w.info), ('Salida', w.salida),
-      ]) Padding(padding: const EdgeInsets.only(bottom: 14), child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(dato.$1, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-          const SizedBox(height: 4),
-          SelectableText(dato.$2.isEmpty ? '—' : dato.$2),
-        ],
-      )),
-    ])),
-  );
 }
 
 /// «Tiene acceso» si la ficha ya está ligada a una cuenta; si no, el botón para invitarlo (DEV-020).
@@ -217,8 +188,12 @@ class _AccesoState extends State<_Acceso> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (e.invitado) ...[const Pill('Invitación pendiente', P.ambar, punto: true), const SizedBox(width: 8)],
-        OutlinedButton(onPressed: _invitar, child: Text(e.invitado ? 'Invitar de nuevo' : 'Invitar a la app')),
+        // La insignia, del mismo alto que el botón de al lado (40, como todos los de la cabecera).
+        if (e.invitado) ...[
+          const SizedBox(height: 40, child: Pill('Invitación pendiente', P.ambar, punto: true)),
+          const SizedBox(width: 8),
+        ],
+        BotonAccion(e.invitado ? 'Invitar de nuevo' : 'Invitar a la app', onPressed: _invitar),
       ],
     );
   }
@@ -464,6 +439,22 @@ class _OrdenesTecnico extends StatefulWidget {
 class _OrdenesTecnicoState extends State<_OrdenesTecnico> {
   int vista = 0;
 
+  /// Una cifra en línea: punto de su color, número y qué es. Con [destacar], el número en su color.
+  /// Una cifra del técnico: icono, número y nombre, todo en el color del texto (negro o blanco según el tema).
+  Widget _cifra(String nombre, int n, IconData icono) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icono, size: 17, color: P.texto),
+      const SizedBox(width: 6),
+      Text(
+        '$n',
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: P.texto),
+      ),
+      const SizedBox(width: 5),
+      Text(nombre, style: TextStyle(fontSize: 13, color: P.texto)),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final w = widget.w;
@@ -479,33 +470,35 @@ class _OrdenesTecnicoState extends State<_OrdenesTecnico> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Rejilla(
-          columnas: 4,
-          children: [
-            Tarjeta(child: Cifra('Pendientes', pendientes.length, nota: 'actuales', punto: P.morado)),
-            Tarjeta(
-              child: Cifra('Vencidas', vencidas, nota: 'actuales', punto: P.rojo, color: vencidas > 0 ? P.rojo : null),
-            ),
-            Tarjeta(
-              child: Cifra('Hechas en 30 días', hechas30, nota: 'últimos 30 días', punto: P.verde),
-            ),
-            Tarjeta(child: Cifra('Con incidencia', conIncidencia, nota: 'actuales', punto: P.ambar)),
-          ],
-        ),
-        const SizedBox(height: 16),
         Align(
           alignment: Alignment.centerLeft,
           child: Pestanas(
             opciones: ['Pendientes ${pendientes.length}', 'Histórico'],
+            // Como en Activos: el histórico, con el check verde.
             iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+            coloresIconos: [null, P.verde],
             seleccion: vista,
             onChanged: (i) => setState(() => vista = i),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
         Expanded(
           child: vista == 1
-              ? Historicos(tecnicoId: w.id, incrustada: true)
+              ? Historicos(
+                  tecnicoId: w.id,
+                  incrustada: true,
+                  // Sus cifras, a la derecha del título «Histórico».
+                  junto: Wrap(
+                    spacing: 22,
+                    runSpacing: 6,
+                    children: [
+                      _cifra('Hechas en 30 días', hechas30, Icons.task_alt_rounded),
+                      // El mismo icono que «Vencidos» en Órdenes de trabajo.
+                      _cifra('Vencidas', vencidas, Icons.warning_amber_rounded),
+                      _cifra('Con incidencia', conIncidencia, Icons.report_outlined),
+                    ],
+                  ),
+                )
               : pendientes.isEmpty
               ? const Vacio(icono: Icons.assignment_outlined, texto: 'No tiene órdenes de trabajo pendientes.')
               : TablaTrabajos(

@@ -25,7 +25,7 @@ Future<void> revisarPdf(
   bool conMaterial = false,
 }) => showDialog(
   context: context,
-  barrierColor: P.texto.withValues(alpha: .25),
+  barrierColor: P.velo(),
   builder: (_) => _RevisarPdf(
     titulo: titulo,
     archivo: archivo,

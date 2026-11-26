@@ -46,7 +46,7 @@ Future<void> abrirPanel(BuildContext context, Widget panel) => showGeneralDialog
   routeSettings: const RouteSettings(name: rutaPanel),
   barrierDismissible: true,
   barrierLabel: 'Cerrar',
-  barrierColor: P.texto.withValues(alpha: .25),
+  barrierColor: P.velo(),
   transitionDuration: const Duration(milliseconds: 440),
   pageBuilder: (c, a, b) => panel,
   transitionBuilder: (c, a, b, child) => SlideTransition(
@@ -2767,7 +2767,7 @@ class _PanelActivosState extends State<_PanelActivos> {
                     : [
                         _fila(
                           icono: Icon(
-                            widget.filtro ? Icons.layers_outlined : Icons.block_rounded,
+                            widget.filtro ? Marca.iconoCliente : Icons.block_rounded,
                             size: 20,
                             color: widget.valor == null ? P.morado : P.textoSuave,
                           ),

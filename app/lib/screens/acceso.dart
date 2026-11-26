@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../columnas.dart';
 import '../nube.dart';
 import '../shell.dart';
 import '../store.dart';
@@ -62,6 +63,7 @@ class _PuertaNubeState extends State<PuertaNube> {
     if (s == null) {
       _usuario = null;
       store.vaciar();
+      columnasTablas.cerrar();
       rolTrabajador.value = null;
       if (mounted) setState(() => _fase = _Fase.acceso);
     } else if (s.user.id != _usuario) {
@@ -116,6 +118,12 @@ class _PuertaNubeState extends State<PuertaNube> {
     setState(() => _fase = _Fase.cargando);
     try {
       await store.cargarDesdeNube(await Nube.abrir());
+      // Las tablas, con las columnas como las dejó esta cuenta.
+      await columnasTablas.abrir(
+        usuario,
+        leer: () => Nube.leerColumnas(usuario),
+        subir: (c) => Nube.guardarColumnas(usuario, c),
+      );
       // Un trabajador entra directo a su vista; un administrador, a la de siempre.
       rolTrabajador.value = store.nube!.esTrabajador ? store.nube!.trabajadorId : null;
       // El nombre se pide mientras la empresa siga con el de serie («Mi empresa»): así sale también si se cerró la

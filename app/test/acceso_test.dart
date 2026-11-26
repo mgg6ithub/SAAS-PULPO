@@ -73,22 +73,13 @@ void main() {
     tester.view.physicalSize = const Size(1440, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (c) => TextButton(onPressed: () => nombrarEmpresa(c, porGoogle: true), child: const Text('abrir')),
-        ),
-      ),
-    );
-    await tester.tap(find.text('abrir'));
+    // Es una pantalla propia (sale en lugar de la app). Sin nombre ya se puede empezar («Tu empresa»), y sus dos
+    // botones guardan en la base: aquí solo se comprueba lo que enseña.
+    await tester.pumpWidget(MaterialApp(home: PantallaNombrarEmpresa(porGoogle: true, onListo: () {})));
     await tester.pumpAndSettle();
     expect(find.text('¿Cómo se llama tu empresa?'), findsOneWidget);
     expect(find.textContaining('Hemos creado una empresa nueva'), findsOneWidget);
-    await tester.tap(find.text('Empezar'));
-    await tester.pumpAndSettle();
-    expect(find.text('Ponle un nombre (luego se puede cambiar).'), findsOneWidget);
-    await tester.tap(find.text('Ahora no'));
-    await tester.pumpAndSettle();
-    expect(find.text('¿Cómo se llama tu empresa?'), findsNothing);
+    expect(find.text('Empezar'), findsOneWidget);
+    expect(find.text('Ahora no'), findsOneWidget);
   });
 }

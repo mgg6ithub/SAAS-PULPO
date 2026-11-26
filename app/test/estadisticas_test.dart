@@ -21,6 +21,25 @@ void main() {
   });
 
   for (final ancho in [1400.0, 420.0]) {
+    testWidgets('Estadísticas sin ningún dato: cada apartado sale tal cual, a cero ($ancho px)', (tester) async {
+      tester.view.physicalSize = Size(ancho, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      store.trabajadores = [];
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: EstadisticasPultec())));
+      await tester.pumpAndSettle();
+      expect(find.text('Sin estadísticas'), findsNothing);
+      expect(find.text('Hechas en el periodo'), findsOneWidget);
+      for (final apartado in ['Indicadores', 'Verificaciones', 'Técnicos', 'Incidencias', 'Activo']) {
+        if (find.text(apartado).evaluate().isEmpty) continue;
+        await tester.tap(find.text(apartado).first);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: apartado);
+      }
+    });
+  }
+
+  for (final ancho in [1400.0, 420.0]) {
     testWidgets('Estadísticas e Incidencias con historial simulado ($ancho px)', (tester) async {
       tester.view.physicalSize = Size(ancho, 900);
       tester.view.devicePixelRatio = 1;

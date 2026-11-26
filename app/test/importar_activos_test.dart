@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pultec/hoja_calculo.dart';
 import 'package:pultec/industrial/uso_maquinas.dart' show usoEnTexto;
 import 'package:pultec/screens/planificacion.dart' show planificacionEnTexto;
-import 'package:pultec/screens/tabla_trabajos.dart' show columnasVisiblesOts, ordenColumnasOts, otsEnTexto;
-import 'package:pultec/industrial/activos.dart' show columnasExtraActivos, listaActivosEnTexto, ordenColumnasActivos;
+import 'package:pultec/columnas.dart';
+import 'package:pultec/screens/tabla_trabajos.dart' show otsEnTexto;
+import 'package:pultec/industrial/activos.dart' show listaActivosEnTexto;
 import 'package:pultec/informes.dart' show guiaPdf, listadoPdf;
 import 'package:pultec/importar.dart';
 import 'package:pultec/industrial/activo.dart';
@@ -266,17 +267,14 @@ void main() {
       QueImportar.activos,
       'Tag;Nombre;Padre;Fabricante;Modelo;Mantenimiento;Cada\nP;Planta;;Andritz;D-4;Rev;30\nC;Comp;P;;;Engrase;7',
     ).aplicar(store);
-    addTearDown(() {
-      columnasExtraActivos.clear();
-      ordenColumnasActivos.clear();
-    });
+    addTearDown(columnasTablas.cerrar);
     expect(listaActivosEnTexto(), [
       ['Activo', 'Tag', 'Uso', 'Horas totales', 'Mantenimientos', 'Próximo mantenimiento', 'Componentes'],
       ['Planta', 'P', '—', '—', '2', fecha(masDias(hoy(), 7)), '1'],
     ]);
     // El usuario añade «Fabricante y modelo» y pone «Tag» delante de «Activo».
-    columnasExtraActivos.add('Fabricante y modelo');
-    ordenColumnasActivos.addAll(['Tag', 'Activo']);
+    columnasTablas.poner('activos', 'Fabricante y modelo', true);
+    columnasTablas.orden('activos').addAll(['Tag', 'Activo']);
     final l = listaActivosEnTexto();
     expect(l.first.take(2), ['Tag', 'Activo']);
     expect(l.first, contains('Fabricante y modelo'));
@@ -291,13 +289,13 @@ void main() {
     ];
     expect(ots, hasLength(1));
     // Órdenes: sus columnas visibles, en el orden del usuario.
-    addTearDown(ordenColumnasOts.clear);
+    addTearDown(columnasTablas.cerrar);
     // Como la tabla: guarda todas sus columnas; el usuario ha llevado «Estado» al principio.
-    ordenColumnasOts.addAll(['Estado', 'Orden de trabajo', 'Activo', 'Origen', 'Gravedad', 'Asignado a', 'Periodicidad']);
+    columnasTablas.orden('ordenes').addAll(['Estado', 'Orden de trabajo', 'Activo', 'Origen', 'Gravedad', 'Asignado a', 'Periodicidad']);
     final o = otsEnTexto(ots);
     expect(o.first.first, 'Estado');
     expect(o.first, containsAll(['Orden de trabajo', 'Activo', 'Origen', 'Gravedad']));
-    expect(o.first.length, 2 + columnasVisiblesOts.length);
+    expect(o.first.length, 7); // sin «Fecha y hora», que de serie no sale
     expect(o[1][o.first.indexOf('Orden de trabajo')], 'Rev');
     expect(o[1][o.first.indexOf('Activo')], 'Planta - P');
     // Planificación: la de la semana que viene la incluye; la de hoy no.

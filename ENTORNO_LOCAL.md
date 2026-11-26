@@ -6,14 +6,16 @@ podman, abierto desde Windows con VS Code Remote-SSH) y qué hay que hacer para 
 ## Qué cambió en el entorno (`entorno.sh`)
 | Orden | Qué hace ahora |
 |---|---|
-| `arrancar` | Supabase en modo **ligero** (sin Studio, Edge Functions, Mailpit ni imgproxy): ~0.7 GB en vez de ~1.3 GB |
+| `arrancar` | Supabase en modo **ligero** (sin Studio, Edge Functions, Mailpit ni imgproxy): ~0.7 GB en vez de ~1.3 GB. Al terminar aplica las migraciones pendientes |
+| `migrar` | Aplica solo las migraciones pendientes a la base local, sin borrar datos |
 | `completo` | Todo, Studio incluido (localhost:54323) |
 | `funciones` | Sirve las Edge Functions con los secretos de `supabase/.env` |
 | `landing` | Landing en :8001 **+ pasarela a Supabase** (`tool/landing_local.py`) |
 | `app` | Si la landing está en marcha, la app usa `SUPABASE_URL=http://localhost:8001`; si no, `:54321` |
-| `parar` | 1) Guarda como migración `*_cambios_sin_migracion.sql` lo cambiado sin migración (revisarla y hacer commit). 2) Para y **borra la base local** |
+| `parar` | Antes aplica las pendientes. 1) Guarda como migración `*_cambios_sin_migracion.sql` lo cambiado sin migración (revisarla y hacer commit). 2) Para y **borra la base local** |
 | `plan` | Ver el plan de cada cuenta local; `./entorno.sh plan correo premium\|basico` lo cambia sin pagar |
 
+- **Tras un `git pull`:** `arrancar` aplica las migraciones nuevas. Para que se apliquen también con el entorno en marcha hay un hook de git local (`.git/hooks/post-merge` y `post-rewrite`, no se versiona) que ejecuta `./entorno.sh migrar --si-arrancada`. Si cambia una migración ya aplicada o `seed.sql`, hace falta `./entorno.sh reset` (borra los datos locales).
 - **La base local es desechable.** `parar` la borra y `arrancar` la reconstruye con migraciones + `seed.sql`. Los datos de prueba que deban quedarse van en el seed.
 - **Pasarela (:8001):** existe porque, con VS Code Remote-SSH, el `localhost:54321` del portátil era otra Supabase. Con ella, el navegador solo necesita los puertos 8000 y 8001. En el Mac no hace falta, pero funciona igual.
 - **Arreglo en `sb()` con podman:** ahora devuelve el error real de la CLI (antes devolvía el del `chown`).

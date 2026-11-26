@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../ajustes.dart';
+import '../columnas.dart';
 import '../forms.dart';
 import '../marca.dart';
 import '../models.dart';
@@ -126,7 +127,12 @@ class _ActivosState extends State<Activos> {
   @override
   Widget build(BuildContext context) => widget.onAbrir != null
       ? _contenido(context)
-      : TransicionVista(clave: abierto, child: _contenido(context));
+      // La clave solo distingue lista y ficha: moverse entre componentes lo anima la propia ficha, sin rehacerla.
+      : TransicionLateral(
+          clave: abierto == null ? 'lista' : 'ficha',
+          orden: abierto == null ? 0 : 1,
+          child: _contenido(context),
+        );
 
   Widget _contenido(BuildContext context) {
     if (abierto != null && widget.onAbrir == null)
@@ -255,11 +261,8 @@ class _TablaActivos extends StatefulWidget {
   State<_TablaActivos> createState() => _TablaActivosState();
 }
 
-/// Columnas que el usuario puede añadir a la lista de Activos (de serie no salen); las que ha añadido y el orden
-/// en que ha dejado las columnas (arrastrando sus títulos) se recuerdan mientras dure la sesión. Exportar sale igual.
+/// Columnas de la lista de Activos que de serie no salen: se añaden desde su menú de columnas.
 const columnasOpcionalesActivos = ['Fabricante y modelo', 'Número de serie', 'División'];
-final columnasExtraActivos = <String>{};
-final ordenColumnasActivos = <String>[];
 
 /// Cómo trabaja: horas al día o a la semana, o por turnos (el ritmo es siempre el del activo principal).
 String usoTexto(Activo a) {
@@ -296,11 +299,13 @@ List<List<String>> listaActivosEnTexto() {
     'Horas totales': (a) => horas(horasHoy(a)),
     'Mantenimientos': (a) => '${planesRama(a.id).length}',
     'Próximo mantenimiento': proximaFecha,
-    for (final c in columnasOpcionalesActivos)
-      if (columnasExtraActivos.contains(c)) c: (a) => opcional(a, c),
+    for (final c in columnasOpcionalesActivos) c: (a) => opcional(a, c),
     'Componentes': (a) => '${store.ramaDe(a.id).length - 1}',
   };
-  final cols = enOrdenDelUsuario(valores.keys.toList(), ordenColumnasActivos);
+  final cols = enOrdenDelUsuario([
+    for (final c in valores.keys)
+      if (c == 'Activo' || columnasTablas.ve('activos', c, porDefecto: !columnasOpcionalesActivos.contains(c))) c,
+  ], columnasTablas.orden('activos'));
   return [
     cols,
     for (final a in store.hijosDe(null)) [for (final c in cols) valores[c]!(a)],
@@ -308,9 +313,6 @@ List<List<String>> listaActivosEnTexto() {
 }
 
 class _TablaActivosState extends State<_TablaActivos> {
-  static const _opcionales = columnasOpcionalesActivos;
-  static final _visibles = columnasExtraActivos;
-
   String _uso(Activo a) => usoTexto(a);
 
   String _opcional(Activo a, String c) => switch (c) {
@@ -318,38 +320,6 @@ class _TablaActivosState extends State<_TablaActivos> {
     'Número de serie' => a.numeroSerie,
     _ => a.division,
   };
-
-  /// Último botón de la cabecera: menú para añadir o quitar columnas, como en Órdenes de trabajo.
-  Widget _menuColumnas() => MenuAnchor(
-    alignmentOffset: const Offset(-180, 4),
-    style: MenuStyle(
-      backgroundColor: WidgetStatePropertyAll(P.superficie),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-    ),
-    menuChildren: [
-      MenuItemButton(
-        onPressed: null,
-        child: Text('Columnas', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-      ),
-      for (final c in _opcionales)
-        MenuItemButton(
-          closeOnActivate: false,
-          leadingIcon: Icon(
-            _visibles.contains(c) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-            size: 20,
-            color: _visibles.contains(c) ? P.morado : P.textoSuave,
-          ),
-          onPressed: () => setState(() => _visibles.contains(c) ? _visibles.remove(c) : _visibles.add(c)),
-          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c)),
-        ),
-    ],
-    builder: (context, menu, _) => IconButton(
-      tooltip: 'Elegir columnas',
-      visualDensity: VisualDensity.compact,
-      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-      icon: Icon(Icons.view_column_outlined, size: 18, color: P.textoSuave),
-    ),
-  );
 
   @override
   Widget build(BuildContext context) => SegunTamano(
@@ -359,7 +329,7 @@ class _TablaActivosState extends State<_TablaActivos> {
       // Móvil: el activo y lo justo.
       final medio = box.maxWidth > 600;
       final activos = widget.activos, componentes = widget.componentes;
-      final extra = [for (final c in _opcionales) if (ancho && _visibles.contains(c)) c];
+      final extra = [if (ancho) ...columnasOpcionalesActivos];
       return SeleccionMultiple(
         ids: [for (final a in activos) a.id],
         singular: componentes ? 'componente' : 'activo',
@@ -369,46 +339,32 @@ class _TablaActivosState extends State<_TablaActivos> {
         builder: (context, s) => Align(
           alignment: Alignment.topCenter,
           child: Tabla(
-            // El orden que deje el usuario se recuerda (y Exportar lo sigue); los componentes llevan el suyo.
-            orden: componentes ? null : ordenColumnasActivos,
+            // Orden y columnas elegidas se guardan en la cuenta (y Exportar los sigue); los componentes, los suyos.
+            id: componentes ? 'componentes' : 'activos',
+            menuColumnas: medio,
             seleccionCabecera: s.cabecera,
             // Lo que importa: activo, tag, cómo trabaja, horas, mantenimientos y el próximo; luego lo que el
-            // usuario añada, los componentes y el menú de columnas.
+            // usuario añada y los componentes.
             columnas: [
               ...s.columna,
-              Col(componentes ? 'Componente' : 'Activo', flex: 5),
+              Col(componentes ? 'Componente' : 'Activo', flex: 5, fija: true),
               const Col('Tag', flex: 2),
               if (ancho) const Col('Uso', flex: 2),
               if (ancho) const Col('Horas totales', flex: 2, derecha: true),
               if (medio) const Col('Mantenimientos', flex: 2, derecha: true),
               if (medio) const Col('Próximo mantenimiento', flex: 3),
-              for (final c in extra) Col(c, flex: 2),
-              // La tabla ya pone su raya entre columnas: el icono, centrado; el menú, pegado a la derecha.
+              for (final c in extra) Col(c, flex: 2, oculta: true),
               if (medio)
                 Col(
                   'Componentes',
                   ancho: 56,
-                  // Icono centrado (como su número) y, a la derecha, la raya que lo separa del menú de columnas.
-                  cabecera: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Tooltip(
-                        message: 'Componentes',
-                        child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(width: 1, height: 16, color: P.borde),
-                      ),
-                    ],
+                  // Icono centrado, como su número.
+                  cabecera: Center(
+                    child: Tooltip(
+                      message: 'Componentes',
+                      child: Icon(Icons.account_tree_outlined, size: 18, color: P.textoSuave),
+                    ),
                   ),
-                ),
-              if (medio)
-                Col(
-                  'Columnas',
-                  ancho: 36,
-                  derecha: true,
-                  cabecera: Align(alignment: Alignment.centerRight, child: _menuColumnas()),
                 ),
             ],
             filas: activos.length,
@@ -465,7 +421,6 @@ class _TablaActivosState extends State<_TablaActivos> {
                   ),
                 for (final c in extra) celdaTexto(_opcional(a, c).isEmpty ? '—' : _opcional(a, c), suave: true),
                 if (medio) Center(child: celdaTexto('${store.ramaDe(a.id).length - 1}', suave: true)),
-                if (medio) const SizedBox(),
               ];
             },
             onTap: (i) => s.tocar(activos[i].id, () {
@@ -811,10 +766,25 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
   }
 
   @override
-  // Al entrar o salir de un activo (o de una orden), la vista cambia con un fundido suave, no de golpe.
+  // Entre la lista, el activo y sus componentes, deslizamiento lateral según se entra o se vuelve; al abrir o
+  // cerrar una orden, un fundido.
   @override
-  Widget build(BuildContext context) =>
-      TransicionVista(clave: '${_historial[_posicion]}|$tareaId', child: _contenido(context));
+  Widget build(BuildContext context) => TransicionLateral(
+    clave: '${_historial[_posicion]}|$tareaId',
+    // Manda la profundidad; entre dos del mismo nivel, el sitio en el historial.
+    orden: tareaId != null ? null : _nivel(_historial[_posicion]) * 10000 + _posicion,
+    child: _contenido(context),
+  );
+
+  /// Profundidad en el árbol: 0 la lista, 1 un activo, 2 su componente…
+  int _nivel(String? id) {
+    final vistos = <String>{};
+    var nodo = store.activo(id);
+    while (nodo != null && vistos.add(nodo.id)) {
+      nodo = store.activo(nodo.padreId);
+    }
+    return vistos.length;
+  }
 
   Widget _contenido(BuildContext context) {
     final a = store.activo(elegido) ?? store.activo(widget.activoId);
@@ -980,100 +950,11 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
               ],
             ),
           ),
-          // Órdenes de trabajo: encima de la tabla, Pendientes / Histórico a la izquierda y la asignación (solo en
-          // Pendientes) a la derecha, con la misma separación que entre las pestañas y la tabla.
-          if (pestana == 2) ...[
-            const SizedBox(height: 16),
-            // Lo que no se ve a primera vista: las órdenes que se repiten salen solas de los mantenimientos.
-            if (!ajustes.consejoCerrado('ot_activo_mantenimiento')) ...[
-              Consejo(
-                clave: 'ot_activo_mantenimiento',
-                '¿Se repite cada cierto tiempo? Crea un mantenimiento y Pultec creará su orden de trabajo cada vez que '
-                'toque. Aquí, crea solo las órdenes sueltas.',
-                // Va a Resumen (donde están los mantenimientos) y abre el de crear uno.
-                accion: TextButton.icon(
-                  style: TextButton.styleFrom(foregroundColor: P.morado),
-                  onPressed: () {
-                    setState(() {
-                      pestana = 0;
-                      vista = 0;
-                    });
-                    abrirPlanForm(context, activoId: a.id);
-                  },
-                  icon: const Icon(Icons.content_paste_rounded, size: 18),
-                  label: const Text('Crear mantenimiento'),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            // Si no cabe todo en una línea, la asignación baja (sin desbordar).
-            SizedBox(
-              width: double.infinity,
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                Pestanas(
-                  opciones: const ['Pendientes', 'Histórico'],
-                  iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
-                  coloresIconos: [null, P.verde],
-                  seleccion: _historicoOt ? 1 : 0,
-                  onChanged: (i) => setState(() => _historicoOt = i == 1),
-                ),
-                // Como en Órdenes de trabajo: por gravedad (también en el histórico) y, si se llega desde arriba,
-                // solo las de incidencias.
-                Pestanas(
-                  opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
-                  colores: [null, for (final t in TipoMantenimiento.values) t.color],
-                  seleccion: _criticidadOt,
-                  compactas: true,
-                  onChanged: (i) => setState(() => _criticidadOt = i),
-                ),
-                if (!_historicoOt) ...[
-                  if (_soloIncidencias) ...[
-                      InputChip(
-                      label: const Text('De incidencias'),
-                      avatar: Icon(Icons.report_outlined, size: 16, color: P.rojo),
-                      onDeleted: () => setState(() => _soloIncidencias = false),
-                      deleteButtonTooltipMessage: 'Quitar filtro',
-                    ),
-                  ],
-                ],
-                    ],
-                  ),
-                // A la derecha: la asignación en pendientes; el periodo y el técnico en el histórico.
-                if (!_historicoOt)
-                  FiltroFlujoMantenimiento(
-                    incluirSinOrden: false,
-                    seleccion: _asignacionOt,
-                    onChanged: (i) => setState(() => _asignacionOt = i),
-                  )
-                else
-                  FiltrosHistorico(
-                    periodo: _periodoOt,
-                    tecnicoId: _tecnicoOt,
-                    onPeriodo: (i) => setState(() => _periodoOt = i),
-                    onTecnico: (id) => setState(() => _tecnicoOt = id),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 16),
           Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              layoutBuilder: (actual, anteriores) => Stack(
-                fit: StackFit.expand,
-                children: [...anteriores, ?actual],
-              ),
-              child: KeyedSubtree(
-                key: ValueKey('$elegido-$pestana-$_historicoOt'),
+            child: TransicionLateral(
+              clave: '$elegido-$pestana',
+              orden: pestana,
                 child: switch (pestana) {
                   0 => Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1201,48 +1082,139 @@ class _ActivoDetalleState extends State<ActivoDetalle> {
                       onTerminar: () => setState(() => vuelta++),
                     ),
                   ),
-                  // Pendientes; con «Histórico», las hechas (abajo).
-                  2 when !_historicoOt => Column(
+                  // Órdenes de trabajo: encima de la tabla, sus filtros; debajo, las pendientes o el histórico.
+                  _ => Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(child: Builder(builder: (context) {
-                        final filtradas = ots.where(otPendiente).where((ot) => switch (_asignacionOt) {
-                          1 => ot.trabajadorIds.isEmpty,
-                          2 => ot.trabajadorIds.isNotEmpty,
-                          _ => true,
-                        }).where((ot) =>
-                          (_criticidadOt == 0 || ot.tipoMantenimiento?.index == _criticidadOt - 1) &&
-                          (!_soloIncidencias || store.incidenciaDeOt(ot.id) != null),
-                        ).toList()..sort((a, b) {
-                          if (a.proximo == null) return b.proximo == null ? 0 : 1;
-                          if (b.proximo == null) return -1;
-                          return a.proximo!.compareTo(b.proximo!);
-                        });
-                        return filtradas.isEmpty
-                            ? Vacio(
-                                icono: Icons.assignment_outlined,
-                                titulo: _asignacionOt == 0 ? 'Sin órdenes pendientes' : 'Sin órdenes con este filtro',
-                                texto: 'Las órdenes por hacer de este activo y sus componentes aparecerán aquí; las hechas, en Histórico.',
+                      // Lo que no se ve a primera vista: las órdenes que se repiten salen solas de los mantenimientos.
+                      if (!ajustes.consejoCerrado('ot_activo_mantenimiento')) ...[
+                        Consejo(
+                          clave: 'ot_activo_mantenimiento',
+                          '¿Se repite cada cierto tiempo? Crea un mantenimiento y Pultec creará su orden de trabajo cada vez que '
+                          'toque. Aquí, crea solo las órdenes sueltas.',
+                          // Va a Resumen (donde están los mantenimientos) y abre el de crear uno.
+                          accion: TextButton.icon(
+                            style: TextButton.styleFrom(foregroundColor: P.morado),
+                            onPressed: () {
+                              setState(() {
+                                pestana = 0;
+                                vista = 0;
+                              });
+                              abrirPlanForm(context, activoId: a.id);
+                            },
+                            icon: const Icon(Icons.content_paste_rounded, size: 18),
+                            label: const Text('Crear mantenimiento'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      // Si no cabe todo en una línea, la asignación baja (sin desbordar).
+                      SizedBox(
+                        width: double.infinity,
+                        child: Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          spacing: 12,
+                          runSpacing: 8,
+                          children: [
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: [
+                          Pestanas(
+                            opciones: const ['Pendientes', 'Histórico'],
+                            iconos: const [Icons.radio_button_unchecked_rounded, Icons.task_alt_rounded],
+                            coloresIconos: [null, P.verde],
+                            seleccion: _historicoOt ? 1 : 0,
+                            onChanged: (i) => setState(() => _historicoOt = i == 1),
+                          ),
+                          // Como en Órdenes de trabajo: por gravedad (también en el histórico) y, si se llega desde arriba,
+                          // solo las de incidencias.
+                          Pestanas(
+                            opciones: const ['Todos', 'Preventivo', 'No crítico', 'Crítico'],
+                            colores: [null, for (final t in TipoMantenimiento.values) t.color],
+                            seleccion: _criticidadOt,
+                            compactas: true,
+                            onChanged: (i) => setState(() => _criticidadOt = i),
+                          ),
+                          if (!_historicoOt) ...[
+                            if (_soloIncidencias) ...[
+                                InputChip(
+                                label: const Text('De incidencias'),
+                                avatar: Icon(Icons.report_outlined, size: 16, color: P.rojo),
+                                onDeleted: () => setState(() => _soloIncidencias = false),
+                                deleteButtonTooltipMessage: 'Quitar filtro',
+                              ),
+                            ],
+                          ],
+                              ],
+                            ),
+                          // A la derecha: la asignación en pendientes; el periodo y el técnico en el histórico.
+                          if (!_historicoOt)
+                            FiltroFlujoMantenimiento(
+                              incluirSinOrden: false,
+                              seleccion: _asignacionOt,
+                              onChanged: (i) => setState(() => _asignacionOt = i),
+                            )
+                          else
+                            FiltrosHistorico(
+                              periodo: _periodoOt,
+                              tecnicoId: _tecnicoOt,
+                              onPeriodo: (i) => setState(() => _periodoOt = i),
+                              onTecnico: (id) => setState(() => _tecnicoOt = id),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: TransicionLateral(
+                          clave: _historicoOt,
+                          orden: _historicoOt ? 1 : 0,
+                          child: !_historicoOt
+                              ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(child: Builder(builder: (context) {
+                                    final filtradas = ots.where(otPendiente).where((ot) => switch (_asignacionOt) {
+                                      1 => ot.trabajadorIds.isEmpty,
+                                      2 => ot.trabajadorIds.isNotEmpty,
+                                      _ => true,
+                                    }).where((ot) =>
+                                      (_criticidadOt == 0 || ot.tipoMantenimiento?.index == _criticidadOt - 1) &&
+                                      (!_soloIncidencias || store.incidenciaDeOt(ot.id) != null),
+                                    ).toList()..sort((a, b) {
+                                      if (a.proximo == null) return b.proximo == null ? 0 : 1;
+                                      if (b.proximo == null) return -1;
+                                      return a.proximo!.compareTo(b.proximo!);
+                                    });
+                                    return filtradas.isEmpty
+                                        ? Vacio(
+                                            icono: Icons.assignment_outlined,
+                                            titulo: _asignacionOt == 0 ? 'Sin órdenes pendientes' : 'Sin órdenes con este filtro',
+                                            texto: 'Las órdenes por hacer de este activo y sus componentes aparecerán aquí; las hechas, en Histórico.',
+                                          )
+                                        : TablaTrabajos(
+                                            filtradas,
+                                            conCliente: false,
+                                            nombre: 'orden de trabajo',
+                                            onAbrir: (id) => setState(() => tareaId = id),
+                                          );
+                                  })),
+                                ],
                               )
-                            : TablaTrabajos(
-                                filtradas,
-                                conCliente: false,
-                                nombre: 'orden de trabajo',
-                                onAbrir: (id) => setState(() => tareaId = id),
-                              );
-                      })),
+                              : Historicos(
+                                activoId: a.id,
+                                incrustada: true,
+                                soloTabla: true,
+                                tipo: _criticidadOt == 0 ? null : TipoMantenimiento.values[_criticidadOt - 1],
+                                periodo: _periodoOt,
+                                tecnicoId: _tecnicoOt,
+                              ),
+                        ),
+                      ),
                     ],
                   ),
-                  _ => Historicos(
-                    activoId: a.id,
-                    incrustada: true,
-                    soloTabla: true,
-                    tipo: _criticidadOt == 0 ? null : TipoMantenimiento.values[_criticidadOt - 1],
-                    periodo: _periodoOt,
-                    tecnicoId: _tecnicoOt,
-                  ),
                 },
-              ),
             ),
           ),
         ],

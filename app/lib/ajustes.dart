@@ -76,6 +76,15 @@ class Ajustes extends ChangeNotifier {
 
   void marcarIntroInicio(String usuario) => _prefs?.setBool('ajustes_intro_inicio_$usuario', true);
 
+  /// True la primera vez que se pide con este inicio de [sesion] (y lo apunta): la entrada del pulpo sale al
+  /// entrar y no al recargar la página.
+  bool estrenarEntrada(String usuario, String sesion) {
+    final clave = 'ajustes_entrada_$usuario';
+    if (_prefs?.getString(clave) == sesion) return false;
+    _prefs?.setString(clave, sesion);
+    return true;
+  }
+
   Future<void> cargar() async {
     _prefs = await SharedPreferences.getInstance();
     tema = ThemeMode.values[_prefs!.getInt('ajustes_tema') ?? ThemeMode.light.index];

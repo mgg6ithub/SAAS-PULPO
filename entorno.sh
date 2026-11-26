@@ -4,6 +4,8 @@
 #
 #   ./entorno.sh arrancar   Levanta Supabase local en modo LIGERO; si no hay base, la construye con migraciones + seed:
 #                           base de datos, login, API, fotos (storage) y en vivo (realtime). Sin Studio, funciones ni emails: ~650 MB.
+#                           Al terminar aplica las migraciones pendientes (p. ej. tras un `git pull`), sin borrar datos.
+#   ./entorno.sh migrar     Aplica solo las migraciones pendientes a la base local, sin borrar datos.
 #   ./entorno.sh completo   Reinicia Supabase con TODO (Studio en localhost:54323, Edge Functions, Mailpit): ~1.3 GB.
 #   ./entorno.sh funciones  Sirve las Edge Functions de supabase/functions sobre el modo ligero (Ctrl+C para parar).
 #   ./entorno.sh app       Arranca Pultec en http://localhost:8000 contra la Supabase local.
@@ -47,13 +49,30 @@ sql() {
   fi
 }
 
+# Aplica a la base LOCAL las migraciones que le falten, sin borrar datos. --include-all: al hacer pull pueden llegar
+# migraciones con fecha anterior a la última ya aplicada.
+migrar() { sb migration up --include-all; }
+
 case "${1:-}" in
   # Sin analíticas (vector, logflare): necesitan el socket de Docker y no hacen falta para probar.
   # Ligero: además fuera Studio + postgres-meta, Edge Functions, Mailpit e imgproxy. Las migraciones son las mismas en los dos modos.
-  arrancar) sb start -x vector,logflare,studio,postgres-meta,edge-runtime,mailpit,imgproxy ;;
-  completo) sb stop; sb start -x vector,logflare ;;
+  # `start` no aplica migraciones nuevas si la base ya existe: por eso se migra siempre después.
+  arrancar) sb start -x vector,logflare,studio,postgres-meta,edge-runtime,mailpit,imgproxy; migrar ;;
+  completo) sb stop; sb start -x vector,logflare; migrar ;;
+  migrar)
+    # --si-arrancada (lo usa el hook de git): con Supabase parada no hace nada.
+    if [ "${2:-}" = --si-arrancada ] && ! sql -c 'select 1' </dev/null >/dev/null 2>&1; then
+      echo "Supabase local parada: las migraciones se aplicarán al arrancar."
+      exit 0
+    fi
+    migrar ;;
   funciones) sb functions serve --env-file supabase/.env ;;   # secretos (STRIPE_*) en supabase/.env, fuera de git
   parar)
+    # 0. Primero las migraciones pendientes: si no, el `diff` las tomaría por cambios a deshacer.
+    if ! migrar; then
+      echo "No se pudieron aplicar las migraciones pendientes (¿Supabase no está arrancado?). No borro la base local." >&2
+      exit 1
+    fi
     # 1. Cambios de esquema sin migración → migración nueva (si no hay cambios, no crea nada).
     antes=$(ls supabase/migrations | wc -l)
     if ! sb db diff -f cambios_sin_migracion; then
@@ -103,5 +122,5 @@ SQL
     fi
     cd app && PUERTO="${PUERTO:-8000}" exec python3 tool/vivo.py --industrial ;;
   landing)  exec python3 tool/landing_local.py ;;   # landing + pasarela a Supabase en :8001
-  *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

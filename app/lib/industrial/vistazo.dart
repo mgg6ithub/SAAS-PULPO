@@ -11,6 +11,7 @@ import 'activo.dart';
 import 'iconos.dart';
 import 'gravedad.dart';
 import 'incidencia.dart';
+import 'incidencias.dart' show verIncidencia;
 import 'mantenimientos.dart' show abrirIncidenciaForm, dondeEs;
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
@@ -451,7 +452,10 @@ class _Columna extends StatelessWidget {
 /// quedan después en la sección Incidencias. Sin ninguna, no se ve.
 class IncidenciasAbiertas extends StatelessWidget {
   final ValueChanged<String> onAbrir;
-  const IncidenciasAbiertas({super.key, required this.onAbrir});
+
+  /// Hueco debajo, hasta el bloque siguiente (en la vista mejorada, el mismo que entre todos sus bloques).
+  final double abajo;
+  const IncidenciasAbiertas({super.key, required this.onAbrir, this.abajo = 32});
 
   @override
   Widget build(BuildContext context) {
@@ -459,12 +463,15 @@ class IncidenciasAbiertas extends StatelessWidget {
       ..sort((a, b) => b.creada.compareTo(a.creada));
     if (avisos.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 32),
+      padding: EdgeInsets.only(bottom: abajo),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
+              // El icono de Incidencias latiendo en rojo, para que se note que hay algo que atender.
+              const _IconoLatiendo(),
+              const SizedBox(width: 10),
               Flexible(
                 child: Text(
                   'Incidencias abiertas',
@@ -537,6 +544,33 @@ class IncidenciasAbiertas extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 12),
+                              // «Ver» lleva a Incidencias con esta marcada en rojo; «Revisar» la abre aquí mismo.
+                              Tooltip(
+                                message: 'Verla en Incidencias',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () => verIncidencia(context, aviso.id),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.visibility_outlined, size: 16, color: P.textoSuave),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          'Ver',
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            color: P.textoSuave,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
                               TextButton(
                                 onPressed: () => abrirIncidenciaForm(context, original: aviso),
                                 child: const Text('Revisar'),
@@ -555,6 +589,65 @@ class IncidenciasAbiertas extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Icono de Incidencias en rojo que late (crece un poco con un halo y vuelve) unos 30 segundos al entrar en Inicio
+/// y después se queda quieto (latiendo siempre cansa y no deja que la vista se quede en reposo). Sin animaciones
+/// (accesibilidad), quieto.
+class _IconoLatiendo extends StatefulWidget {
+  const _IconoLatiendo();
+
+  @override
+  State<_IconoLatiendo> createState() => _IconoLatiendoState();
+}
+
+class _IconoLatiendoState extends State<_IconoLatiendo> with SingleTickerProviderStateMixin {
+  late final _an = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.of(context).disableAnimations) {
+      _an.stop();
+    } else if (!_an.isAnimating && _an.value == 0) {
+      _an.repeat(count: 20);
+    }
+  }
+
+  @override
+  void dispose() {
+    _an.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 34,
+    child: AnimatedBuilder(
+      animation: _an,
+      builder: (context, child) {
+        // Un latido al principio de cada vuelta y descanso hasta la siguiente.
+        final t = Curves.easeOut.transform((_an.value / .55).clamp(0.0, 1.0));
+        final latido = _an.value < .55 ? 1 - (2 * t - 1).abs() : 0.0;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Halo que se abre y se desvanece.
+            Container(
+              width: 24 + 12 * t,
+              height: 24 + 12 * t,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: P.rojo.withValues(alpha: .22 * (1 - t)),
+              ),
+            ),
+            Transform.scale(scale: 1 + .2 * latido, child: child),
+          ],
+        );
+      },
+      child: const Icon(Icons.report_outlined, size: 24, color: P.rojo),
+    ),
+  );
 }
 
 /// Inicio de Pultec: mantenimientos con alerta previa cuya antelación ya ha llegado, para preparar a tiempo

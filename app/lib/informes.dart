@@ -20,7 +20,7 @@ import 'marca.dart';
 import 'industrial/activo.dart';
 import 'industrial/checklist.dart';
 import 'industrial/activos.dart' show contadorTexto;
-import 'industrial/estadisticas.dart' show numTexto, resumenActivo;
+import 'industrial/estadisticas.dart' show numTexto, resumenActivo, ResumenActivo;
 import 'industrial/gravedad.dart' show resultadoOt;
 import 'industrial/incidencia.dart';
 import 'industrial/mantenimientos.dart' show dondeEs;
@@ -198,7 +198,11 @@ class Informes extends ChangeNotifier {
   /// avisa: el parte ya está guardado y se puede descargar desde el Histórico.
   Future<void> _mandarParte(Nube n, Informe g) async {
     final t = store.tarea(g.trabajoId);
-    if (t == null) return;
+    // La función solo lo manda al cliente de la OT: sin cliente (Pultec, por activos) no hay a quién, y montar el
+    // PDF paraba la pantalla justo al cerrar el parte.
+    if (t == null || t.clienteId == null) return;
+    // Que la ventana termine de cerrarse antes de ponerse con el PDF.
+    await Future<void>.delayed(const Duration(seconds: 2));
     try {
       await n.enviarParte(g.id, await informePdf(g, t));
     } catch (e) {
@@ -273,7 +277,12 @@ class Informes extends ChangeNotifier {
 
   /// Guarda el informe [i] (sin id) y sube sus fotos, ya comprimidas, y la firma. Sin conexión lo guarda
   /// en el dispositivo y lo sube al volver: devuelve false.
-  Future<bool> crear(Informe i, {List<Uint8List> fotos = const [], Uint8List? firma}) async {
+  Future<bool> crear(
+    Informe i, {
+    List<Uint8List> fotos = const [],
+    Uint8List? firma,
+    void Function(int hechos, int total)? paso,
+  }) async {
     final n = store.nube;
     if (n == null) {
       _local.add(
@@ -286,7 +295,7 @@ class Informes extends ChangeNotifier {
     } else {
       final id = store.nuevoId();
       try {
-        final g = await n.crearInforme(i, fotos, firma, id: id);
+        final g = await n.crearInforme(i, fotos, firma, id: id, paso: paso);
         if (_de[i.trabajoId] != null) _de[i.trabajoId] = [g, ..._de[i.trabajoId]!];
         unawaited(_mandarParte(n, g));
       } catch (e) {
@@ -325,6 +334,8 @@ Future<Uint8List> bytesFoto(String foto) async =>
 
 /// Reduce una foto a 1280 px por el lado largo y la guarda en JPEG (calidad 75): unos 150-300 KB.
 Future<Uint8List> comprimirFoto(Uint8List bytes) async {
+  // En el navegador, con sus herramientas (mucho más rápido y sin tirones).
+  if (await reducirJpeg(bytes, 1280, .75) case final rapida?) return rapida;
   final codec = await ui.instantiateImageCodecWithSize(
     await ui.ImmutableBuffer.fromUint8List(bytes),
     getTargetSize: (w, h) {
@@ -1365,5 +1376,132 @@ Future<void> descargarResumenActivo(Activo a, DateTime desde, int dias) async {
     ),
   );
   final nombre = 'Resumen ${a.titulo} ${fecha(hoy())}'.replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
+  await descargar(await doc.save(), '$nombre.pdf', 'application/pdf');
+}
+
+/// Informe de la empresa en PDF (Estadísticas → descargar): cifras de todos los activos en los últimos [dias]
+/// días, un resumen por activo, todos los mantenimientos (cada cuánto, último, próximo y cuántos se han hecho), las
+/// órdenes hechas y las incidencias del periodo.
+Future<void> descargarInformeEmpresa(DateTime desde, int dias) async {
+  final activos = store.hijosDe(null).toList()..sort((a, b) => a.titulo.compareTo(b.titulo));
+  final resumenes = [for (final a in activos) (a, resumenActivo(a, desde))];
+  int suma(int Function(ResumenActivo r) f) => resumenes.fold(0, (s, e) => s + f(e.$2));
+  final realizadas = [for (final (_, r) in resumenes) ...r.realizadas]..sort((x, y) => y.$1.compareTo(x.$1));
+  final incidencias = [for (final (_, r) in resumenes) ...r.incidencias]..sort((x, y) => y.creada.compareTo(x.creada));
+  final empresa = store.nube?.nombre ?? '';
+  final doc = pw.Document(title: 'Informe de la empresa', author: empresa.isEmpty ? Marca.nombre : empresa);
+  pw.Widget celda(String t, {bool cab = false}) => pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+    child: pw.Text(t, style: pw.TextStyle(fontSize: cab ? 8.5 : 9.5, color: cab ? _suavePdf : _tintaPdf,
+      fontWeight: cab ? pw.FontWeight.bold : pw.FontWeight.normal)),
+  );
+  pw.Widget tabla(List<String> cab, List<List<String>> filas) => pw.Table(
+    border: pw.TableBorder(horizontalInside: pw.BorderSide(color: _bordePdf, width: .6)),
+    children: [
+      pw.TableRow(repeat: true, children: [for (final c in cab) celda(c, cab: true)]),
+      for (final f in filas) pw.TableRow(children: [for (final c in f) celda(c)]),
+    ],
+  );
+  pw.Widget seccion(String titulo, pw.Widget contenido) => pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [pw.SizedBox(height: 16), _etiquetaPdf(titulo), pw.SizedBox(height: 6), contenido],
+  );
+  final vacio = pw.Text('Nada en este periodo.', style: pw.TextStyle(fontSize: 9.5, color: _suavePdf));
+  doc.addPage(
+    _paginaPdf(
+      logo: await _logoPdf(),
+      empresa: empresa,
+      titulo: 'Informe de la empresa',
+      numero: '${activos.length} ${activos.length == 1 ? 'activo' : 'activos'}',
+      cuando: 'Últimos $dias días',
+      build: (_) => [
+        pw.Text(empresa.isEmpty ? 'Todos los activos' : empresa,
+            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: _tintaPdf)),
+        pw.SizedBox(height: 4),
+        pw.Text('Del ${fecha(desde)} al ${fecha(hoy())}', style: pw.TextStyle(fontSize: 10.5, color: _suavePdf)),
+        pw.SizedBox(height: 14),
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: _tarjetaPdf('En el periodo', [
+                _datoPdf('Órdenes hechas', '${suma((r) => r.hechas)}'),
+                _datoPdf('Partes con problema', '${suma((r) => r.conProblema)}'),
+                _datoPdf('Incidencias', '${incidencias.length}'),
+              ]),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(
+              child: _tarjetaPdf('Estado hoy', [
+                _datoPdf('Activos', '${activos.length}'),
+                _datoPdf('Órdenes pendientes', '${suma((r) => r.pendientes)}'),
+                _datoPdf('Atrasadas', '${suma((r) => r.atrasadas)}'),
+              ]),
+            ),
+          ],
+        ),
+        seccion(
+          'Por activo',
+          activos.isEmpty
+              ? vacio
+              : tabla(['Activo', 'Hechas', 'Pendientes', 'Atrasadas', 'Incidencias'], [
+                  for (final (a, r) in resumenes)
+                    [a.titulo, '${r.hechas}', '${r.pendientes}', '${r.atrasadas}', '${r.incidencias.length}'],
+                ]),
+        ),
+        seccion(
+          'Mantenimientos',
+          tabla(['Activo', 'Mantenimiento', 'Cada', 'Último', 'Próximo', 'Hechos'], [
+            for (final (a, r) in resumenes)
+              for (final (p, hechos) in r.planes)
+                [
+                  a.titulo,
+                  p.nombre,
+                  p.cada.replaceAll(' · ', ', '),
+                  p.ultimo == null ? '-' : fecha(p.ultimo!),
+                  switch ((proximoPlan(p), horasRestantesPlan(p))) {
+                    (final d?, _) => fecha(d),
+                    (null, final h?) => 'Faltan ${numTexto(h)} h',
+                    _ => '-',
+                  },
+                  '$hechos',
+                ],
+          ]),
+        ),
+        seccion(
+          'Órdenes hechas',
+          realizadas.isEmpty
+              ? vacio
+              : tabla(['Fecha', 'Orden', 'Activo', 'Técnico', 'Resultado'], [
+                  for (final (d, t) in realizadas.take(150))
+                    [
+                      fecha(d),
+                      t.nombre,
+                      dondeEs(t.activoId),
+                      store.trabajador(t.ejecutadoPor ?? t.trabajadorIds.firstOrNull ?? '')?.nombreCompleto ?? '-',
+                      resultadoOt(t).$1,
+                    ],
+                ]),
+        ),
+        seccion(
+          'Incidencias',
+          incidencias.isEmpty
+              ? vacio
+              : tabla(['Fecha', 'Incidencia', 'Activo', 'Gravedad', 'Estado'], [
+                  for (final x in incidencias)
+                    [
+                      fecha(x.creada),
+                      x.descripcion,
+                      dondeEs(x.activoId),
+                      x.gravedad.etiqueta,
+                      store.estadoIncidencia(x).etiqueta,
+                    ],
+                ]),
+        ),
+      ],
+    ),
+  );
+  final nombre = 'Informe ${empresa.isEmpty ? 'Pultec' : empresa} $dias dias ${fecha(hoy())}'
+      .replaceAll(RegExp(r'[^\w áéíóúñÁÉÍÓÚÑ-]'), '');
   await descargar(await doc.save(), '$nombre.pdf', 'application/pdf');
 }

@@ -75,10 +75,9 @@ bool pasaFechaTrabajo(Tarea t, int f) {
   if (f == 0) return true;
   if (t.esPlantilla || !t.activa) return false;
   if (f == 4) return t.ultimo != null && diasHasta(t.ultimo!) >= -30;
-  // Pultec: estado y automatizaciones (5 pendientes, 6 completadas, 7 con automatizaciones).
+  // Pultec: estado (5 pendientes, 6 completadas).
   if (f == 5) return t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso;
   if (f == 6) return t.estado == EstadoTrabajo.realizado;
-  if (f == 7) return t.automatizaciones.isNotEmpty;
   if (f == 2 && industrial) {
     return t.trabajadorIds.isEmpty && (t.estado == EstadoTrabajo.pendiente || t.estado == EstadoTrabajo.enCurso);
   }
@@ -110,7 +109,7 @@ class _TareasPaginaState extends State<TareasPagina> {
   /// Pultec, en el histórico: false las completadas (de serie), true solo las canceladas.
   bool _canceladas = false;
 
-  /// Pultec: Para hoy, Sin asignar, Vencidos y Automatizaciones se suman (una OT tiene que cumplirlos todos).
+  /// Pultec: Para hoy, Sin asignar y Vencidos se suman (una OT tiene que cumplirlos todos).
   /// Al llegar con un filtro (desde Inicio, un aviso o un técnico) se empieza solo con ese.
   late Set<int> _filtros = {if (filtroFechaTrabajos.value != 0) filtroFechaTrabajos.value};
 
@@ -197,6 +196,7 @@ class _TareasPaginaState extends State<TareasPagina> {
           if (a.esPlantilla != b.esPlantilla) return a.esPlantilla ? 1 : -1;
           return (a.proximo ?? DateTime(2100)).compareTo(b.proximo ?? DateTime(2100));
         });
+    final soloCanceladas = industrial && historicoTrabajos.value && _canceladas;
     final tiposUsados = {for (final t in store.tareas) t.tipo};
     // Sin ninguna orden de trabajo, ni buscador ni filtros: solo el título, el botón de crear y el vacío.
     final hayTrabajos = store.tareas.any((t) => !t.esPlantilla);
@@ -314,6 +314,12 @@ class _TareasPaginaState extends State<TareasPagina> {
                 ),
               ],
               // En el histórico no hacen falta los filtros de lo pendiente.
+              // Se pliegan y despliegan suave, para que la lista no dé un salto.
+              AnimatedSize(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: Column(children: [
               if (hayTrabajos && !(industrial && historicoTrabajos.value)) ...[
                 const SizedBox(height: huecoVista),
                 Row(children: [
@@ -344,7 +350,6 @@ class _TareasPaginaState extends State<TareasPagina> {
                             for (final (i, nombre, color, icono) in [
                               for (final (j, (n, c, ic)) in _filtrosFecha.indexed)
                                 if (j != 3) (j + 1, n, c, ic),
-                              (7, 'Automatizaciones', P.ambar, Icons.bolt_rounded),
                             ]) ...[
                               _ChipTipo(
                                 nombre,
@@ -400,6 +405,8 @@ class _TareasPaginaState extends State<TareasPagina> {
                   ))),
                 ]),
               ],
+                ]),
+              ),
               // Pultec: con «Vencidos», si alguna no la tiene nadie, se dice y se ofrece ver solo esas para asignarlas.
               if (industrial && !historicoTrabajos.value && _filtros.contains(3) && !_filtros.contains(2) &&
                   !_sinAvisoVencidas)
@@ -462,19 +469,27 @@ class _TareasPaginaState extends State<TareasPagina> {
               ],
               const SizedBox(height: huecoVista),
               Expanded(
+                child: TransicionLateral(
+                clave: '$pestana-${historicoTrabajos.value}-$_canceladas',
+                orden: historicoTrabajos.value ? 1 : 0,
                 child: filtradas.isEmpty
                     ? Vacio(
                         icono: Marca.iconoTrabajo,
                         titulo: store.tareas.isEmpty
                             ? (industrial ? 'Aún no tienes órdenes de trabajo' : m('Aún no hay trabajos'))
                             : null,
-                        texto: pestana == 0 && nTrabajos == 0
+                        texto: soloCanceladas
+                            // Mirando las canceladas: se dice que no hay, sin ofrecer crear una orden.
+                            ? (q.isEmpty && criticidad == 0
+                                  ? 'No hay ninguna orden cancelada'
+                                  : 'No hay ninguna orden cancelada con estos filtros')
+                            : pestana == 0 && nTrabajos == 0
                             ? (industrial
                                   ? 'Crea tu primera orden de trabajo.'
                                   : m('Crea tu primer trabajo, desde cero o a partir de una plantilla.'))
                             : m('No hay trabajos con estos filtros'),
                         // Sin búsqueda ni filtro de tipo: botón para crear (el primero, si aún no hay).
-                        accion: q.isEmpty && tipo == null && fecha == 0 && criticidad == 0
+                        accion: !soloCanceladas && q.isEmpty && tipo == null && fecha == 0 && criticidad == 0
                             ? FilledButton(
                                 onPressed: () => abrirTareaForm(context, null, plantilla: pestana == 1),
                                 child: Text(
@@ -498,6 +513,7 @@ class _TareasPaginaState extends State<TareasPagina> {
                         total: filtradas.length,
                         item: (i) => TareaCard(filtradas[i]),
                       ),
+                ),
               ),
             ],
           ),

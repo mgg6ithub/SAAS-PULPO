@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -25,11 +23,10 @@ class IntroInicio {
   /// Lo que tarda un bloque en entrar.
   static const entrada = .45;
 
-  /// Con todo ya dentro, las huellas de «Primeros pasos» salen de una en una (la del momento, más opaca y morada)
-  /// y, mientras, el borde discontinuo pasa despacio de neutro a morado y vuelve, dos veces.
+  /// Con todo ya dentro, las huellas de «Primeros pasos» salen de una en una (la del momento, más opaca y morada).
   static double get recorrido => resto + 2.1;
-  static const latidoSeg = 1.6, latidos = 9, huellasSeg = 3.2;
-  static double get fin => recorrido + latidoSeg * latidos + .3;
+  static const recorridoSeg = 14.7, huellasSeg = 3.2;
+  static double get fin => recorrido + recorridoSeg;
 
   /// Avance de las huellas en el recorrido (en huellas; null fuera de él: se ven tal cual).
   static double? huellas(double? t, int n) {
@@ -37,11 +34,14 @@ class IntroInicio {
     if (t < recorrido) return -1;
     return (t - recorrido) / (huellasSeg / n);
   }
+}
 
-  /// Cuánto morado lleva el borde discontinuo (0 = neutro, 1 = morado).
-  static double latido(double? t) {
-    if (t == null || t < recorrido || t > recorrido + latidoSeg * latidos) return 0;
-    return .5 - .5 * cos(2 * pi * (t - recorrido) / latidoSeg);
+/// La cuenta con sesión; sin Supabase arrancado (p. ej. en los tests), ninguna.
+User? _usuario() {
+  try {
+    return Supabase.instance.client.auth.currentUser;
+  } catch (_) {
+    return null;
   }
 }
 
@@ -64,7 +64,7 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    final usuario = Supabase.instance.client.auth.currentUser;
+    final usuario = _usuario();
     if (!widget.activa || usuario == null || ajustes.introInicioVista(usuario.id)) return;
     // Se marca al empezar: aunque se cambie de vista a medias, no vuelve a salir.
     ajustes.marcarIntroInicio(usuario.id);
@@ -85,7 +85,7 @@ class _IntroInicioMarcoState extends State<IntroInicioMarco> with SingleTickerPr
 
   /// Arranca (o vuelve a arrancar) la presentación desde el principio.
   void _empezar() {
-    final usuario = Supabase.instance.client.auth.currentUser;
+    final usuario = _usuario();
     if (usuario == null) return;
     final correo = usuario.email ?? '';
     _nombre.value = correo.contains('@') ? correo.substring(0, correo.indexOf('@')) : correo;

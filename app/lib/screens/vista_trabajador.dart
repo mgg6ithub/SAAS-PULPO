@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
+import 'dart:ui' show FontFeature, PointerDeviceKind;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,6 +14,7 @@ import '../ajustes.dart';
 import '../forms.dart';
 import '../industrial/activo.dart';
 import '../informes.dart';
+import '../intro_pulpo.dart' show LogoBarra;
 import '../marca.dart';
 import '../industrial/activos.dart' show colorEstado, gravedadDe;
 import '../industrial/iconos.dart';
@@ -25,6 +30,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../industrial/checklist.dart';
+import 'cuenta.dart' show BloquesAcceso;
 import 'informes.dart';
 
 /// Trabajador con el que se ve la app (null = vista de administrador). '' = el primero activo.
@@ -138,6 +144,31 @@ int _porHora(Tarea a, Tarea b) => (a.inicioMin ?? 1 << 20).compareTo(b.inicioMin
 List<Tarea> _delDia(Trabajador w, DateTime dia) =>
     store.tareasDelDia(dia).where((t) => t.trabajadorIds.contains(w.id)).toList()..sort(_porHora);
 
+/// Desplazamiento de la vista del técnico en escritorio: la barra vertical va en un hueco propio a la derecha,
+/// sin tapar las tarjetas.
+class _BarraAparte extends MaterialScrollBehavior {
+  const _BarraAparte();
+
+  static const hueco = 14.0;
+
+  // Como en el resto de la app: se arrastra también con el ratón y sin rebote.
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) => const ClampingScrollPhysics();
+
+  @override
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) =>
+      axisDirectionToAxis(details.direction) == Axis.vertical
+      ? super.buildScrollbar(context, Padding(padding: const EdgeInsets.only(right: hueco), child: child), details)
+      : super.buildScrollbar(context, child, details);
+}
+
 /// Pestañas de la app del trabajador: arriba en escritorio, abajo en el móvil (a mano del pulgar).
 const _pestanas = ['Hoy', 'Semana', 'Pendientes'];
 
@@ -224,7 +255,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
               BarraVista(
                 izquierda: tarea == null
                     ? [
-                        const LogoPultec(size: 30),
+                        const LogoBarra(size: 30),
                         if (!movil && !industrial)
                           Pestanas(
                             opciones: _pestanas,
@@ -275,6 +306,8 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
               const SizedBox(height: huecoVista),
             ],
             Expanded(
+              child: ScrollConfiguration(
+                behavior: escritorio ? const _BarraAparte() : ScrollConfiguration.of(context),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: KeyedSubtree(
@@ -324,6 +357,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                         },
                 ),
               ),
+              ),
             ),
           ],
         );
@@ -331,7 +365,8 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: escritorio ? 980 : 760),
-            child: Padding(padding: escritorio ? const EdgeInsets.fromLTRB(28, 22, 28, 12) : margenPagina, child: contenido),
+            // En escritorio, a la derecha quedan 14 px: los otros 14 son el hueco de la barra de desplazamiento.
+            child: Padding(padding: escritorio ? const EdgeInsets.fromLTRB(28, 22, 28 - _BarraAparte.hueco, 12) : margenPagina, child: contenido),
           ),
         );
       }
@@ -536,7 +571,7 @@ class _BarraTecnico extends StatelessWidget {
             Row(
               children: [
                 const SizedBox(width: 2),
-                const LogoPultec(size: 32),
+                const LogoBarra(size: 32),
                 const SizedBox(width: 10),
                 Text(
                   Marca.nombre,
@@ -882,6 +917,9 @@ class _PerfilTecnicoState extends State<_PerfilTecnico> {
   late final telefono = TextEditingController(text: widget.w.telefono);
   String? error;
 
+  /// Ha entrado con su propia cuenta de técnico.
+  bool get _conCuenta => store.nube?.esTrabajador ?? false;
+
   @override
   void dispose() {
     telefono.dispose();
@@ -912,7 +950,8 @@ class _PerfilTecnicoState extends State<_PerfilTecnico> {
     campos: [
       Bloque('Datos', primero: true, descripcion: 'Pulsa el círculo de arriba para poner tu foto. La ven el equipo y la oficina.', [
         campo('Teléfono', telefono, teclado: TextInputType.phone, error: error),
-        if (widget.w.email.isNotEmpty) ...[
+        // Con su cuenta, el correo va abajo, donde se puede cambiar.
+        if (widget.w.email.isNotEmpty && !_conCuenta) ...[
           etiqueta('Correo'),
           Text(widget.w.email, style: TextStyle(color: P.textoSuave)),
         ],
@@ -932,6 +971,18 @@ class _PerfilTecnicoState extends State<_PerfilTecnico> {
           onChanged: (i) => setState(() => ajustes.ponerTamanoLetra(i)),
         ),
       ]),
+      if (_conCuenta)
+        // ignore: prefer_const_constructors
+        BloquesAcceso()
+      // El administrador mirando como un técnico: su propia cuenta no se toca desde aquí.
+      else if (store.nube != null)
+        Bloque('Cuenta', descripcion: 'Correo y contraseña.', [
+          Text(
+            'Estás viendo la app como ${widget.w.nombre} desde la cuenta de administrador. Cuando entre con su propia '
+            'cuenta, aquí podrá cambiar su correo y su contraseña.',
+            style: TextStyle(fontSize: 13.5, height: 1.4, color: P.textoSuave),
+          ),
+        ]),
     ],
   );
 }
@@ -1153,17 +1204,6 @@ class _AccionesOtState extends State<_AccionesOt> {
             onPressed: _empezar,
           )
         else ...[
-          if (inicio != null)
-            StreamBuilder<int>(
-              stream: Stream.periodic(const Duration(seconds: 1), (n) => n),
-              builder: (context, _) {
-                final segundos = DateTime.now().difference(inicio!).inSeconds.clamp(0, 604800);
-                return Text(
-                  '${segundos ~/ 60}:${(segundos % 60).toString().padLeft(2, '0')}',
-                  semanticsLabel: '${segundos ~/ 60} minutos en esta OT',
-                );
-              },
-            ),
           BotonAccion(
             'Cerrar OT',
             icono: Icons.check_rounded,
@@ -1180,8 +1220,73 @@ class _AccionesOtState extends State<_AccionesOt> {
               ),
             ),
           ),
+          // A la derecha del botón: aparece y avanza sin moverlo de sitio.
+          if (inicio != null) _CronometroOt(inicio!),
         ],
       ],
+    );
+  }
+}
+
+/// El tiempo que lleva la OT en curso: un punto verde que late y las cifras de ancho fijo, para que no bailen.
+class _CronometroOt extends StatefulWidget {
+  final DateTime inicio;
+  const _CronometroOt(this.inicio);
+
+  @override
+  State<_CronometroOt> createState() => _CronometroOtState();
+}
+
+class _CronometroOtState extends State<_CronometroOt> {
+  late final Timer _reloj = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+
+  @override
+  void initState() {
+    super.initState();
+    _reloj; // Arranca al montarse.
+  }
+
+  @override
+  void dispose() {
+    _reloj.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = DateTime.now().difference(widget.inicio).inSeconds.clamp(0, 604800);
+    String dos(int n) => n.toString().padLeft(2, '0');
+    final horas = total ~/ 3600, minutos = total % 3600 ~/ 60;
+    final texto = '${horas > 0 ? '$horas:' : ''}${dos(minutos)}:${dos(total % 60)}';
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: P.verde.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(P.radioControl),
+        border: Border.all(color: P.verde.withValues(alpha: .3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Un segundo encendido y otro atenuado.
+          AnimatedOpacity(
+            opacity: total.isEven ? 1 : .3,
+            duration: const Duration(milliseconds: 600),
+            child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: P.verde, shape: BoxShape.circle)),
+          ),
+          const SizedBox(width: 9),
+          Text(
+            texto,
+            semanticsLabel: '${total ~/ 60} minutos en esta OT',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2020,6 +2125,657 @@ class _Semana extends StatelessWidget {
 
 // ── Detalle de un trabajo e informes ─────────────────────
 
+/// Apuntes del técnico mientras hace una OT. La tarjeta de la ficha y «Qué has hecho» del parte comparten el
+/// mismo texto, así lo escrito en un sitio está en el otro. Se guardan en el dispositivo hasta cerrar la OT.
+final _apuntes = <String, TextEditingController>{};
+
+String _claveApuntes(Tarea t, Trabajador w) => 'ot_apuntes_${store.nube?.empresaId ?? 'demo'}_${w.id}_${t.id}';
+
+TextEditingController _apuntesDe(Tarea t, Trabajador w) {
+  final clave = _claveApuntes(t, w);
+  return _apuntes.putIfAbsent(clave, () {
+    final texto = TextEditingController();
+    SharedPreferences.getInstance().then((prefs) {
+      // Si ya se ha empezado a escribir antes de leerlos, manda lo escrito.
+      if (texto.text.isEmpty) texto.text = prefs.getString(clave) ?? '';
+      texto.addListener(() {
+        // Con la OT ya cerrada, no se vuelve a guardar nada.
+        if (_apuntes[clave] == texto) prefs.setString(clave, texto.text);
+      });
+    });
+    return texto;
+  });
+}
+
+Future<void> _borrarApuntes(Tarea t, Trabajador w) async {
+  final clave = _claveApuntes(t, w);
+  // Sin cerrar el texto: el parte que se está cerrando todavía lo está enseñando.
+  _apuntes.remove(clave);
+  await (await SharedPreferences.getInstance()).remove(clave);
+}
+
+/// El cuadro grande para tomar apuntes con la OT en curso.
+class _ApuntesOt extends StatelessWidget {
+  final Tarea t;
+  final Trabajador w;
+  const _ApuntesOt(this.t, this.w, {super.key});
+
+  @override
+  Widget build(BuildContext context) => SeccionTarjeta(
+    titulo: 'Tus apuntes',
+    sinFilas: true,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _apuntesDe(t, w),
+              minLines: 7,
+              maxLines: 16,
+              keyboardType: TextInputType.multiline,
+              textCapitalization: TextCapitalization.sentences,
+              style: const TextStyle(fontSize: 15, height: 1.45),
+              decoration: const InputDecoration(
+                hintText: 'Apunta lo que vas viendo y haciendo: qué has cambiado, qué queda pendiente…',
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Se guardan solos en este dispositivo. Al cerrar la OT pasan a «Qué has hecho» del parte, donde puedes cambiarlos.',
+              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+/// Una foto tomada durante la OT, con su descripción.
+class _FotoOt {
+  /// Cambian al volver a hacer la foto (la descripción se queda).
+  Uint8List _bytes;
+  Uint8List get bytes => _bytes;
+  set bytes(Uint8List b) {
+    _bytes = b;
+    _texto = null;
+  }
+
+  /// Como se guarda en el dispositivo; se calcula una vez, no en cada guardado.
+  String? _texto;
+  String get enTexto => _texto ??= base64Encode(_bytes);
+
+  final descripcion = TextEditingController();
+  _FotoOt(this._bytes);
+}
+
+/// Las fotos de una OT en curso. Como los apuntes: las comparten la ficha y el parte de cierre, y se guardan en el
+/// dispositivo hasta cerrar la OT (las imágenes y, aparte, sus textos, para no reescribirlas a cada letra).
+class _FotosDeOt extends ChangeNotifier {
+  final String clave;
+  final fotos = <_FotoOt>[];
+  bool leyendo = false;
+
+  /// Ya no se puede guardar en el dispositivo (sin sitio): siguen aquí hasta recargar.
+  bool sinSitio = false;
+  late final Future<void> listas = _leer();
+  _FotosDeOt(this.clave) {
+    listas;
+  }
+
+  bool get _vigente => _fotos[clave] == this;
+
+  Future<void> _leer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final imagenes = prefs.getStringList(clave) ?? const <String>[];
+    final textos = prefs.getStringList('${clave}_textos') ?? const <String>[];
+    for (final (n, imagen) in imagenes.indexed) {
+      fotos.add(_nueva(base64Decode(imagen), n < textos.length ? textos[n] : ''));
+    }
+    notifyListeners();
+  }
+
+  /// Qué fotos tienen descripción («1» o «0» por cada una): para el punto de las miniaturas.
+  String _marcas = '';
+
+  _FotoOt _nueva(Uint8List bytes, [String texto = '']) {
+    final foto = _FotoOt(bytes)..descripcion.text = texto;
+    foto.descripcion.addListener(_guardarTextos);
+    return foto;
+  }
+
+  Future<void> _guardarTextos() async {
+    // El punto de las miniaturas aparece (o se va) al escribir.
+    final marcas = [for (final f in fotos) f.descripcion.text.trim().isEmpty ? '0' : '1'].join();
+    if (marcas != _marcas) {
+      _marcas = marcas;
+      notifyListeners();
+    }
+    final prefs = await SharedPreferences.getInstance();
+    if (!_vigente) return;
+    try {
+      await prefs.setStringList('${clave}_textos', [for (final f in fotos) f.descripcion.text]);
+    } catch (e) {
+      debugPrint('Pultec: no se pudieron guardar las descripciones: $e');
+    }
+  }
+
+  Future<void> _guardar() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!_vigente) return;
+    try {
+      sinSitio = !await prefs.setStringList(clave, [for (final f in fotos) f.enTexto]);
+    } catch (e) {
+      debugPrint('Pultec: no se pudieron guardar las fotos: $e');
+      sinSitio = true;
+    }
+    await _guardarTextos();
+    notifyListeners();
+  }
+
+  /// Cámara o galería (en el móvil el navegador deja elegir).
+  Future<void> anadir() async {
+    final r = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true, withData: true);
+    if (r == null) return;
+    leyendo = true;
+    notifyListeners();
+    await listas;
+    for (final f in r.files.take(maxFotosInforme - fotos.length)) {
+      try {
+        fotos.add(_nueva(await comprimirFoto(f.bytes!)));
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Pultec: no se pudo leer la foto ${f.name}: $e');
+      }
+    }
+    leyendo = false;
+    await _guardar();
+  }
+
+  /// Cambia una foto por otra nueva, en el mismo sitio y con su descripción.
+  Future<void> repetir(_FotoOt foto) async {
+    final r = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    if (r == null) return;
+    leyendo = true;
+    notifyListeners();
+    try {
+      foto.bytes = await comprimirFoto(r.files.first.bytes!);
+    } catch (e) {
+      debugPrint('Pultec: no se pudo leer la foto ${r.files.first.name}: $e');
+    }
+    leyendo = false;
+    await _guardar();
+  }
+
+  /// Pone [foto] en el sitio [destino]; las demás se corren. Se guarda al soltarla ([guardarOrden]).
+  void mover(_FotoOt foto, int destino) {
+    final de = fotos.indexOf(foto), a = destino.clamp(0, fotos.length - 1);
+    if (de < 0 || de == a) return;
+    fotos
+      ..removeAt(de)
+      ..insert(a, foto);
+    notifyListeners();
+  }
+
+  Future<void> guardarOrden() => _guardar();
+
+  Future<void> quitar(_FotoOt foto) async {
+    fotos.remove(foto);
+    notifyListeners();
+    await _guardar();
+  }
+
+  /// «Fotos:» y la descripción de cada una con su número, para el parte ('' si ninguna tiene).
+  String get resumen {
+    final lineas = [
+      for (final (n, f) in fotos.indexed)
+        if (f.descripcion.text.trim().isNotEmpty) '${n + 1}. ${f.descripcion.text.trim()}',
+    ];
+    return lineas.isEmpty ? '' : 'Fotos:\n${lineas.join('\n')}';
+  }
+}
+
+final _fotos = <String, _FotosDeOt>{};
+
+String _claveFotos(Tarea t, Trabajador w) => 'ot_fotos_${store.nube?.empresaId ?? 'demo'}_${w.id}_${t.id}';
+
+_FotosDeOt _fotosDe(Tarea t, Trabajador w) {
+  final clave = _claveFotos(t, w);
+  return _fotos.putIfAbsent(clave, () => _FotosDeOt(clave));
+}
+
+Future<void> _borrarFotos(Tarea t, Trabajador w) async {
+  final clave = _claveFotos(t, w);
+  _fotos.remove(clave);
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove(clave);
+  await prefs.remove('${clave}_textos');
+}
+
+/// Miniatura cuadrada de una foto de la OT, con su número; un punto morado si ya tiene descripción.
+class _MiniaturaOt extends StatelessWidget {
+  final _FotoOt foto;
+  final int numero;
+  final double lado;
+  final bool elegida;
+  final VoidCallback onTap;
+  const _MiniaturaOt(this.foto, this.numero, {super.key, required this.onTap, this.lado = 104, this.elegida = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final descripcion = foto.descripcion.text.trim();
+    return Semantics(
+      button: true,
+      label: 'Foto $numero${descripcion.isEmpty ? '' : ': $descripcion'}',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(P.radio),
+        onTap: onTap,
+        child: Container(
+          width: lado,
+          height: lado,
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(P.radio),
+            border: Border.all(color: elegida ? P.morado : P.borde, width: elegida ? 3 : 1),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(P.radio),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Decodificada pequeña: con varias a la vista, el móvil va suelto.
+                Image.memory(foto.bytes, fit: BoxFit.cover, cacheWidth: 320, gaplessPlayback: true),
+                Positioned(
+                  left: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: .6),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '$numero',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                if (descripcion.isNotEmpty)
+                  Positioned(
+                    right: 7,
+                    bottom: 7,
+                    child: Container(
+                      width: 11,
+                      height: 11,
+                      decoration: BoxDecoration(
+                        color: P.morado,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Las miniaturas según se van haciendo y el cuadro para hacer otra. Al tocar una, se abre en grande; arrastrándola
+/// (en el móvil, manteniéndola pulsada) se cambia de orden y las demás se apartan al momento.
+class _ListaFotosOt extends StatefulWidget {
+  final _FotosDeOt datos;
+  const _ListaFotosOt(this.datos);
+
+  @override
+  State<_ListaFotosOt> createState() => _ListaFotosOtState();
+}
+
+class _ListaFotosOtState extends State<_ListaFotosOt> {
+  static const _lado = 104.0, _hueco = 10.0;
+  static const _paso = Duration(milliseconds: 260);
+
+  _FotoOt? _arrastrada;
+
+  _FotosDeOt get datos => widget.datos;
+
+  Future<void> _ver(int n) => showDialog<void>(
+    context: context,
+    builder: (_) => Dialog.fullscreen(backgroundColor: P.fondo, child: _VisorFotosOt(datos, n)),
+  );
+
+  void _soltar() {
+    if (mounted) setState(() => _arrastrada = null);
+    datos.guardarOrden();
+  }
+
+  Widget _foto(_FotoOt f, int n) {
+    final miniatura = _MiniaturaOt(f, n + 1, onTap: () => _ver(n));
+    // La que va en la mano: algo más grande y con sombra. En su sitio queda su sombra, atenuada.
+    final enLaMano = Material(
+      color: Colors.transparent,
+      elevation: 10,
+      borderRadius: BorderRadius.circular(P.radio),
+      child: Transform.scale(scale: 1.08, child: _MiniaturaOt(f, n + 1, onTap: () {}, elegida: true)),
+    );
+    final hueco = Opacity(opacity: .25, child: miniatura);
+    void empezar() => setState(() => _arrastrada = f);
+    final tactil = switch (Theme.of(context).platform) {
+      TargetPlatform.android || TargetPlatform.iOS => true,
+      _ => false,
+    };
+    // Con el dedo hay que mantenerla pulsada, para poder desplazar la pantalla pasando por encima.
+    return tactil
+        ? LongPressDraggable<_FotoOt>(
+            data: f,
+            delay: const Duration(milliseconds: 250),
+            feedback: enLaMano,
+            childWhenDragging: hueco,
+            onDragStarted: empezar,
+            onDragEnd: (_) => _soltar(),
+            child: miniatura,
+          )
+        : Draggable<_FotoOt>(
+            data: f,
+            feedback: enLaMano,
+            childWhenDragging: hueco,
+            onDragStarted: empezar,
+            onDragEnd: (_) => _soltar(),
+            child: MouseRegion(cursor: SystemMouseCursors.grab, child: miniatura),
+          );
+  }
+
+  Widget _hacer() => InkWell(
+    borderRadius: BorderRadius.circular(P.radio),
+    onTap: () {
+      if (!datos.leyendo) datos.anadir();
+    },
+    child: CustomPaint(
+      painter: BordeDiscontinuo(P.morado.withValues(alpha: .7), BorderRadius.circular(P.radio)),
+      child: datos.leyendo
+          ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)))
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.photo_camera_outlined, size: 28, color: P.morado),
+                const SizedBox(height: 6),
+                Text('Hacer foto', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: P.morado)),
+              ],
+            ),
+    ),
+  );
+
+  /// La rejilla, con cada cosa en su sitio calculado: así, al cambiar el orden, se desliza hasta el nuevo.
+  Widget _rejilla() => LayoutBuilder(
+    builder: (context, box) {
+      final columnas = max(1, ((box.maxWidth + _hueco) / (_lado + _hueco)).floor());
+      final total = datos.fotos.length + (datos.fotos.length < maxFotosInforme ? 1 : 0);
+      final filas = (total / columnas).ceil();
+      double x(int n) => (n % columnas) * (_lado + _hueco);
+      double y(int n) => (n ~/ columnas) * (_lado + _hueco);
+      return AnimatedContainer(
+        duration: _paso,
+        curve: Curves.easeOutCubic,
+        height: filas * _lado + (filas - 1) * _hueco,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (final (n, f) in datos.fotos.indexed)
+              AnimatedPositioned(
+                key: ObjectKey(f),
+                duration: _paso,
+                curve: Curves.easeOutCubic,
+                left: x(n),
+                top: y(n),
+                width: _lado,
+                height: _lado,
+                child: _foto(f, n),
+              ),
+            if (datos.fotos.length < maxFotosInforme)
+              AnimatedPositioned(
+                key: const ValueKey('hacer'),
+                duration: _paso,
+                curve: Curves.easeOutCubic,
+                left: x(datos.fotos.length),
+                top: y(datos.fotos.length),
+                width: _lado,
+                height: _lado,
+                child: _hacer(),
+              ),
+            // Encima, un destino quieto por sitio (las fotos se mueven; ellos no, y así no hay vaivén). Dejan pasar
+            // los toques a la foto de debajo.
+            for (var n = 0; n < datos.fotos.length; n++)
+              Positioned(
+                key: ValueKey('sitio-$n'),
+                left: x(n),
+                top: y(n),
+                width: _lado,
+                height: _lado,
+                child: DragTarget<_FotoOt>(
+                  onWillAcceptWithDetails: (d) {
+                    if (!datos.fotos.contains(d.data)) return false;
+                    datos.mover(d.data, n);
+                    return true;
+                  },
+                  builder: (_, _, _) => const SizedBox.expand(),
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: datos,
+    builder: (context, _) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _rejilla(),
+        const SizedBox(height: 10),
+        Text(
+          datos.fotos.isEmpty
+              ? 'Hasta $maxFotosInforme fotos.'
+              : _arrastrada != null
+              ? 'Suéltala donde quieras.'
+              : '${datos.fotos.length} de $maxFotosInforme. Toca una para abrirla'
+                    '${datos.fotos.length > 1 ? '; arrástrala (en el móvil, mantén pulsada) para cambiar el orden' : ''}.',
+          style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+        ),
+        if (datos.sinSitio)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'No caben en este dispositivo: no cierres ni recargues la página hasta enviar el parte.',
+              style: TextStyle(fontSize: 13, color: P.ambar, fontWeight: FontWeight.w600),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// Las fotos de la OT a pantalla completa: se pasa de una a otra deslizando, con las flechas o con la tira de abajo,
+/// y de cada una se escribe qué se ve, se vuelve a hacer o se borra.
+class _VisorFotosOt extends StatefulWidget {
+  final _FotosDeOt datos;
+  final int inicio;
+  const _VisorFotosOt(this.datos, this.inicio);
+
+  @override
+  State<_VisorFotosOt> createState() => _VisorFotosOtState();
+}
+
+class _VisorFotosOtState extends State<_VisorFotosOt> {
+  late int n = widget.inicio;
+  late final _paginas = PageController(initialPage: widget.inicio);
+
+  @override
+  void dispose() {
+    _paginas.dispose();
+    super.dispose();
+  }
+
+  void _ir(int i) => _paginas.animateToPage(i, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
+
+  Future<void> _borrar(_FotoOt foto) async {
+    if (!await confirmar(context, '¿Eliminar la foto ${n + 1}?', nota: 'Se borra también su descripción.')) return;
+    await widget.datos.quitar(foto);
+    if (!mounted) return;
+    if (widget.datos.fotos.isEmpty) return Navigator.pop(context);
+    setState(() => n = n.clamp(0, widget.datos.fotos.length - 1));
+    _paginas.jumpToPage(n);
+  }
+
+  Widget _flecha(IconData icono, String texto, int destino) => IconButton.filled(
+    tooltip: texto,
+    style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: .5), foregroundColor: Colors.white),
+    onPressed: () => _ir(destino),
+    icon: Icon(icono, size: 28),
+  );
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.datos,
+    builder: (context, _) {
+      final fotos = widget.datos.fotos;
+      if (fotos.isEmpty) return const SizedBox.shrink();
+      final i = n.clamp(0, fotos.length - 1);
+      final foto = fotos[i];
+      return Scaffold(
+        backgroundColor: P.fondo,
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Foto ${i + 1} de ${fotos.length}',
+                            style: TextStyle(fontFamily: P.titulos, fontSize: 17, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        BotonAccion('Listo', color: P.morado, onPressed: () => Navigator.pop(context)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(P.radio),
+                        child: ColoredBox(
+                          color: Colors.black,
+                          child: Stack(
+                            children: [
+                              PageView.builder(
+                                controller: _paginas,
+                                itemCount: fotos.length,
+                                onPageChanged: (p) => setState(() => n = p),
+                                itemBuilder: (_, p) =>
+                                    Image.memory(fotos[p].bytes, fit: BoxFit.contain, gaplessPlayback: true),
+                              ),
+                              if (i > 0)
+                                Positioned(
+                                  left: 8,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(child: _flecha(Icons.chevron_left_rounded, 'Anterior', i - 1)),
+                                ),
+                              if (i < fotos.length - 1)
+                                Positioned(
+                                  right: 8,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(child: _flecha(Icons.chevron_right_rounded, 'Siguiente', i + 1)),
+                                ),
+                              if (widget.datos.leyendo) const Center(child: CircularProgressIndicator()),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      // Cada foto, su campo: al pasar de una a otra no se arrastra el texto.
+                      key: ObjectKey(foto),
+                      controller: foto.descripcion,
+                      minLines: 2,
+                      maxLines: 3,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: const TextStyle(fontSize: 15, height: 1.4),
+                      decoration: const InputDecoration(hintText: 'Descripción: qué se ve en esta foto'),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 64,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: fotos.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (_, p) => _MiniaturaOt(
+                          fotos[p],
+                          p + 1,
+                          key: ObjectKey(fotos[p]),
+                          lado: 64,
+                          elegida: p == i,
+                          onTap: () => _ir(p),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                if (!widget.datos.leyendo) widget.datos.repetir(foto);
+                              },
+                              icon: const Icon(Icons.photo_camera_outlined, size: 20),
+                              label: const Text('Volver a hacer'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(foregroundColor: P.rojo),
+                              onPressed: () => _borrar(foto),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                              label: const Text('Eliminar'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// La misma separación entre todos los bloques de la orden (cabecera, botones y tarjetas).
+const _huecoOt = huecoVista + 4;
+
 class _DetalleTrabajo extends StatelessWidget {
   final Tarea t;
   final Trabajador w;
@@ -2050,6 +2806,8 @@ class _DetalleTrabajo extends StatelessWidget {
     final repuestos = t.repuestos.isNotEmpty ? t.repuestos : plan?.repuestos ?? '';
     final incidencia = industrial ? store.incidenciaDeOt(t.id) : null;
     return ListView(
+      // Arriba, lo que falta para que el hueco bajo «Volver» sea el mismo [_huecoOt] que entre bloques; abajo, igual.
+      padding: const EdgeInsets.only(top: _huecoOt - huecoVista, bottom: _huecoOt),
       children: [
         Row(
           children: [
@@ -2081,9 +2839,21 @@ class _DetalleTrabajo extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: huecoVista + 4),
+        const SizedBox(height: _huecoOt),
         _AccionesTrabajo(t, w),
-        const SizedBox(height: huecoVista + 4),
+        const SizedBox(height: _huecoOt),
+        if (industrial && !hecha && t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.contains(w.id)) ...[
+          _ApuntesOt(t, w, key: ValueKey(t.id)),
+          const SizedBox(height: _huecoOt),
+          SeccionTarjeta(
+            titulo: 'Fotos',
+            sinFilas: true,
+            children: [
+              Padding(padding: const EdgeInsets.fromLTRB(18, 0, 18, 18), child: _ListaFotosOt(_fotosDe(t, w))),
+            ],
+          ),
+          const SizedBox(height: _huecoOt),
+        ],
         SeccionTarjeta(
           titulo: 'Información',
           children: [
@@ -2110,7 +2880,7 @@ class _DetalleTrabajo extends StatelessWidget {
         ),
         // Pultec: cómo se hace y qué hace falta (los de la OT o, si no tiene, los de su mantenimiento).
         if (procedimiento.isNotEmpty || repuestos.isNotEmpty) ...[
-          const SizedBox(height: huecoVista),
+          const SizedBox(height: _huecoOt),
           SeccionTarjeta(
             titulo: 'Procedimiento y repuestos',
             children: [
@@ -2121,12 +2891,12 @@ class _DetalleTrabajo extends StatelessWidget {
         ],
         // Pultec: la checklist de la orden, que el técnico marca en el momento.
         if (industrial && checklistDe(t).isNotEmpty) ...[
-          const SizedBox(height: huecoVista),
+          const SizedBox(height: _huecoOt),
           ChecklistOt(t, puedeMarcar: !hecha && t.estado.abierta, por: w.id),
         ],
         // Sale de una incidencia: lo que se comunicó, quién, cuándo y sus fotos.
         if (incidencia != null) ...[
-          const SizedBox(height: huecoVista),
+          const SizedBox(height: _huecoOt),
           SeccionTarjeta(
             titulo: 'Incidencia original',
             children: [
@@ -2153,7 +2923,7 @@ class _DetalleTrabajo extends StatelessWidget {
             ],
           ),
         ],
-        const SizedBox(height: huecoVista),
+        const SizedBox(height: _huecoOt),
         SeccionTarjeta(
           titulo: 'Informes',
           subtitulo: lista == null || lista.isEmpty ? null : '${lista.length}',
@@ -2190,9 +2960,15 @@ class FormularioInforme extends StatefulWidget {
 }
 
 class _FormularioInformeState extends State<FormularioInforme> {
-  final notas = TextEditingController(), material = TextEditingController(), minutos = TextEditingController();
+  /// Al cerrar la OT, «Qué has hecho» son los apuntes tomados mientras se hacía (se pueden cambiar aquí).
+  late final bool _conApuntes = industrial && widget.cerrarOt;
+  late final notas = _conApuntes ? _apuntesDe(widget.t, widget.w) : TextEditingController();
+  final material = TextEditingController(), minutos = TextEditingController();
   final firmante = TextEditingController();
   final fotos = <Uint8List>[];
+
+  /// Al cerrar la OT, las fotos tomadas mientras se hacía.
+  late final _FotosDeOt? deOt = _conApuntes ? _fotosDe(widget.t, widget.w) : null;
   final firma = Firma();
   int resultado = 0;
   bool intentado = false, guardando = false, leyendoFotos = false;
@@ -2217,6 +2993,8 @@ class _FormularioInformeState extends State<FormularioInforme> {
   @override
   void initState() {
     super.initState();
+    notas; // Se toma al abrir: los apuntes guardados se leen ya.
+    deOt; // Y las fotos.
     if (widget.minutosIniciales != null) minutos.text = '${widget.minutosIniciales}';
     if (raiz != null) contador.text = horasHoy(raiz!).toStringAsFixed(0);
   }
@@ -2231,7 +3009,8 @@ class _FormularioInformeState extends State<FormularioInforme> {
 
   @override
   void dispose() {
-    for (final c in [notas, material, minutos, firmante, contador, medida]) {
+    // Los apuntes son compartidos: no se cierran con el parte.
+    for (final c in [if (!_conApuntes) notas, material, minutos, firmante, contador, medida]) {
       c.dispose();
     }
     firma.dispose();
@@ -2261,17 +3040,44 @@ class _FormularioInformeState extends State<FormularioInforme> {
     if (mounted) setState(() => leyendoFotos = false);
   }
 
+  /// Por dónde va el guardado: qué se está haciendo y cuánto lleva (null = sin saber cuánto queda).
+  final _progreso = ValueNotifier<(String, double?)>(('Preparando el parte…', null));
+
+  /// El parte ya está guardado y la ventana se está cerrando.
+  bool _enviado = false;
+
   Future<void> _guardar() async {
-    if (guardando || leyendoFotos) return;
+    if (guardando || _enviado || leyendoFotos || (deOt?.leyendo ?? false)) return;
     if (notas.text.trim().isEmpty || _minutos == -1 || _contador == -1 || _faltaMedida) {
       setState(() => intentado = true);
       return;
     }
+    // Desde el primer toque: sin dobles envíos y con el progreso a la vista.
+    _progreso.value = ('Preparando el parte…', null);
     setState(() => guardando = true);
     final messenger = ScaffoldMessenger.of(context);
     void aviso(String texto) =>
         messenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
-    bool subido;
+    try {
+      await _enviar(aviso);
+    } catch (e) {
+      debugPrint('Pultec: no se pudo guardar el informe: $e');
+      aviso('No se pudo guardar el informe. Inténtalo de nuevo.');
+    } finally {
+      // Pase lo que pase, la ventana no se queda bloqueada.
+      if (mounted && !_enviado) setState(() => guardando = false);
+    }
+  }
+
+  /// Deja pintar el progreso antes de un trabajo que ocupa la pantalla.
+  Future<void> _anunciar(String texto, [double? avance]) {
+    _progreso.value = (texto, avance);
+    return Future<void>.delayed(const Duration(milliseconds: 40));
+  }
+
+  Future<void> _enviar(void Function(String) aviso) async {
+    await _anunciar('Preparando el parte…');
+    await deOt?.listas;
     // Sin minutos escritos: el tiempo desde que pulsó «Empezar OT» hasta ahora.
     var minutosOt = raiz != null ? null : _minutos;
     if (minutosOt == null && raiz == null) {
@@ -2280,37 +3086,35 @@ class _FormularioInformeState extends State<FormularioInforme> {
       );
       if (empezo != null) minutosOt = DateTime.now().difference(empezo).inMinutes.clamp(1, 10080);
     }
-    try {
-      subido = await informes.crear(
+    final subido = await informes.crear(
         Informe(
           trabajoId: widget.t.id,
           trabajadorId: widget.w.id,
           resultado: resultado,
-          notas: notas.text.trim(),
+          // Las descripciones de las fotos van al final del texto, numeradas como las fotos.
+          notas: [notas.text.trim(), if (deOt?.resumen case final r? when r.isNotEmpty) r].join('\n\n'),
           material: material.text.trim(),
           minutos: minutosOt,
           valor: plan == null || _medida == null || _medida!.isNaN ? null : _medida,
           firmante: firma.vacia || industrial ? '' : firmante.text.trim(),
         ),
-        fotos: fotos,
+        fotos: deOt == null ? fotos : [for (final f in deOt!.fotos) f.bytes],
         firma: await firma.png(),
+        paso: (hechos, total) => _progreso.value = (
+          hechos < total - 1 ? 'Subiendo fotos… ${hechos + 1} de ${total - 1}' : 'Guardando el parte…',
+          hechos / total,
+        ),
       );
-    } catch (e) {
-      debugPrint('Pultec: no se pudo guardar el informe: $e');
-      if (mounted) setState(() => guardando = false);
-      aviso('No se pudo guardar el informe. Inténtalo de nuevo.');
-      return;
-    }
+    await _anunciar(widget.cerrarOt && resultado != 2 ? 'Cerrando la orden…' : 'Terminando…', 1);
     // Pultec: el resultado queda en la OT (con incidencia o sin hacer, sale como aviso) y la lectura del
     // contador, en su activo principal.
     if (industrial) {
       // La checklist sin tocar también queda en la OT (todos los pasos «sin hacer»), para el parte y el histórico.
       if (widget.t.checklist.isEmpty && checklistDe(widget.t).isNotEmpty) {
-        try {
-          await store.marcarChecklist(widget.t, checklistDe(widget.t));
-        } catch (e) {
+        // Sin esperar a la red: ya queda puesta aquí y sube por detrás.
+        unawaited(store.marcarChecklist(widget.t, checklistDe(widget.t)).catchError((Object e) {
           debugPrint('Pultec: no se pudo guardar la checklist: $e');
-        }
+        }));
       }
       widget.t
         ..resultado = resultado
@@ -2325,12 +3129,10 @@ class _FormularioInformeState extends State<FormularioInforme> {
         store.guardarActivo(raiz!);
         // Una cuenta de técnico no sube activos con la sincronización: la lectura va por su función.
         if (store.nube?.esTrabajador ?? false) {
-          try {
-            await store.nube!.apuntarContador(raiz!.id, h);
-          } catch (e) {
+          unawaited(store.nube!.apuntarContador(raiz!.id, h).catchError((Object e) {
             debugPrint('Pultec: no se pudo apuntar el contador: $e');
             aviso('No se pudo guardar la lectura del contador.');
-          }
+          }));
         }
       }
       if (resultado == 2) store.guardarTarea(widget.t);
@@ -2352,7 +3154,10 @@ class _FormularioInformeState extends State<FormularioInforme> {
       store.marcarHecha(widget.t);
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('ot_inicio_${store.nube?.empresaId ?? 'demo'}_${widget.t.id}');
+      await _borrarApuntes(widget.t, widget.w);
+      await _borrarFotos(widget.t, widget.w);
     }
+    _enviado = true;
     if (mounted) Navigator.pop(context);
     aviso(subido ? 'Informe guardado' : 'Sin conexión: el informe se ha guardado aquí y se subirá al volver');
   }
@@ -2404,8 +3209,63 @@ class _FormularioInformeState extends State<FormularioInforme> {
     ),
   );
 
+  /// Mientras se guarda: la ventana atenuada, qué se está haciendo y la barra. No se puede cerrar ni tocar.
+  Widget _guardando() => Stack(
+    children: [
+      const ModalBarrier(dismissible: false, color: Color(0x99000000)),
+      Center(
+        child: Material(
+          color: P.superficie,
+          borderRadius: BorderRadius.circular(P.radio),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: SizedBox(
+              width: 280,
+              child: ValueListenableBuilder(
+                valueListenable: _progreso,
+                builder: (_, valor, _) {
+                  final (texto, avance) = valor;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(texto, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 14),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: avance == null
+                            ? LinearProgressIndicator(minHeight: 8, color: P.morado)
+                            // De un paso al siguiente, la barra avanza suave.
+                            : TweenAnimationBuilder<double>(
+                                tween: Tween(end: avance),
+                                duration: const Duration(milliseconds: 350),
+                                curve: Curves.easeOutCubic,
+                                builder: (_, v, _) => LinearProgressIndicator(value: v, minHeight: 8, color: P.morado),
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text('No cierres la página.', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+
   @override
-  Widget build(BuildContext context) => VentanaFormulario(
+  Widget build(BuildContext context) => PopScope(
+    canPop: !guardando,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [_ventana(context), if (guardando) _guardando()],
+    ),
+  );
+
+  Widget _ventana(BuildContext context) => VentanaFormulario(
     etiqueta: 'Informe',
     titulo: widget.t.nombre,
     onGuardar: _guardar,
@@ -2475,14 +3335,17 @@ class _FormularioInformeState extends State<FormularioInforme> {
         ],
       ),
       Bloque('Fotos', descripcion: m('Del equipo, de la avería o del trabajo terminado. Hasta $maxFotosInforme.'), [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (var n = 0; n < fotos.length; n++) _miniatura(n),
-            if (fotos.length < maxFotosInforme) _anadir(),
-          ],
-        ),
+        if (deOt case final d?)
+          _ListaFotosOt(d)
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var n = 0; n < fotos.length; n++) _miniatura(n),
+              if (fotos.length < maxFotosInforme) _anadir(),
+            ],
+          ),
       ]),
       Bloque(
         industrial ? 'Firma del responsable' : m('Firma del cliente'),

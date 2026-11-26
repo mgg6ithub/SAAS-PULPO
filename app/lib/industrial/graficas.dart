@@ -162,14 +162,15 @@ class CifraGrafica extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _conAyuda(
-              Text(etiqueta, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: P.textoSuave)),
+              // Entera, sin cortar: si no cabe en una línea, pasa a dos (la fila iguala el alto de las tarjetas).
+              Text(etiqueta, maxLines: 2, style: TextStyle(fontSize: 13, color: P.textoSuave, height: 1.3)),
               ayuda != null,
             ),
             const SizedBox(height: 8),
             SizedBox(
               height: 36,
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Flexible(
                     child: Text(
@@ -184,8 +185,12 @@ class CifraGrafica extends StatelessWidget {
                   ),
                   if (serie != null && serie!.length > 1) ...[
                     const SizedBox(width: 12),
+                    // Con su propio alto y centrada con el número (sin alto se quedaba en una raya abajo).
                     Expanded(
-                      child: CustomPaint(painter: _PintorLinea(serie!, P.morado, v, rejilla: null)),
+                      child: SizedBox(
+                        height: 30,
+                        child: CustomPaint(painter: _PintorLinea(serie!, P.morado, v, rejilla: null)),
+                      ),
                     ),
                   ],
                 ],
@@ -449,7 +454,8 @@ class Anillo extends StatelessWidget {
           AspectRatio(
             aspectRatio: 1,
             child: CustomPaint(
-              painter: _PintorAnillo([for (final p in partes) p.$2], v, [for (var i = 0; i < partes.length; i++) tonoMorado(i, partes.length)], P.hover),
+              // Un solo color: la primera parte (lo principal) en morado sobre la pista; el resto, en la leyenda.
+              painter: _PintorAnillo(total <= 0 ? 0 : partes.first.$2 / total, v, P.morado, P.hover),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -474,7 +480,10 @@ class Anillo extends StatelessWidget {
                       Container(
                         width: 14,
                         height: 4,
-                        decoration: BoxDecoration(color: tonoMorado(i, partes.length), borderRadius: BorderRadius.circular(2)),
+                        decoration: BoxDecoration(
+                          color: i == 0 ? P.morado : P.textoSuave.withValues(alpha: .35),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -497,11 +506,11 @@ class Anillo extends StatelessWidget {
 }
 
 class _PintorAnillo extends CustomPainter {
-  final List<double> valores;
+  /// Parte del anillo que se llena (0–1).
+  final double parte;
   final double v;
-  final List<Color> colores;
-  final Color pista;
-  _PintorAnillo(this.valores, this.v, this.colores, this.pista);
+  final Color color, pista;
+  _PintorAnillo(this.parte, this.v, this.color, this.pista);
 
   @override
   void paint(Canvas canvas, Size s) {
@@ -512,25 +521,13 @@ class _PintorAnillo extends CustomPainter {
       ..strokeWidth = grosor
       ..strokeCap = StrokeCap.round;
     canvas.drawArc(r, 0, 2 * pi, false, base..color = pista);
-    final total = valores.fold(0.0, (a, b) => a + b);
-    if (total <= 0) return;
-    final vivos = valores.where((x) => x > 0).length;
-    // Hueco entre partes (lo que ocupan las puntas redondeadas y un poco más).
-    final hueco = vivos > 1 ? (grosor + 6) / r.width : 0.0;
-    var a = -pi / 2;
-    final barrido = 2 * pi * v;
-    for (var i = 0; i < valores.length; i++) {
-      if (valores[i] <= 0) continue;
-      final ang = 2 * pi * valores[i] / total;
-      final ini = a + hueco / 2, largo = max(0.001, ang - hueco);
-      final visible = min(largo, barrido - (ini + pi / 2));
-      if (visible > 0) canvas.drawArc(r, ini, visible, false, base..color = colores[i]);
-      a += ang;
-    }
+    if (parte <= 0) return;
+    // Desde arriba, en el sentido del reloj; crece al entrar.
+    canvas.drawArc(r, -pi / 2, max(0.001, 2 * pi * parte.clamp(0.0, 1.0) * v), false, base..color = color);
   }
 
   @override
-  bool shouldRepaint(_PintorAnillo o) => o.v != v || o.valores != valores;
+  bool shouldRepaint(_PintorAnillo o) => o.v != v || o.parte != parte || o.color != color || o.pista != pista;
 }
 
 /// Ranking en barras horizontales: nombre (con su avatar), barra redondeada sobre su pista y el valor. Cada

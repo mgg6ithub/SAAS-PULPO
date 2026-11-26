@@ -22,10 +22,14 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: TrabajadorDetalle(trabajadorId: 'w', onVolver: () {}))));
     await tester.pumpAndSettle();
     expect(find.byType(TrabajadorForm), findsNothing);
-    expect(find.text('123456789'), findsOneWidget);
+    // La ficha llega plegada.
+    expect(find.text('123456789'), findsNothing);
     expect(find.text('Hechas en 30 días'), findsOneWidget);
-    expect(find.text('Pendientes · 0'), findsOneWidget);
+    expect(find.text('Pendientes 0'), findsOneWidget);
     expect(find.text('Histórico'), findsOneWidget);
+    await tester.tap(find.text('Ficha'));
+    await tester.pumpAndSettle();
+    expect(find.text('123456789'), findsOneWidget);
     expect(find.text('Editar'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

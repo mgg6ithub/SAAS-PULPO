@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'ajustes.dart';
+import 'columnas.dart';
 import 'models.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -676,7 +679,12 @@ class BotonPrimario extends StatelessWidget {
         )
       : FilledButton(
           // Texto, «+» y tecla siempre en blanco (en oscuro el tema los ponía oscuros).
-          style: FilledButton.styleFrom(backgroundColor: color ?? P.morado, foregroundColor: Colors.white),
+          style: FilledButton.styleFrom(
+            backgroundColor: color ?? P.morado,
+            foregroundColor: Colors.white,
+            // Con «+», menos aire a los lados (sobre todo antes del «+»): el botón queda más recogido.
+            padding: conIcono ? EdgeInsets.only(left: 10, right: tecla == null ? 13 : 9) : null,
+          ),
           onPressed: onPressed,
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -684,9 +692,9 @@ class BotonPrimario extends StatelessWidget {
               // El «+» y el nombre, separados por una raya fina que no llega a los bordes del botón.
               if (conIcono) ...[
                 Icon(icono, size: 18),
-                const SizedBox(width: 9),
+                const SizedBox(width: 6),
                 Container(width: 1, height: 16, color: Colors.white.withValues(alpha: .35)),
-                const SizedBox(width: 9),
+                const SizedBox(width: 8),
               ],
               Text(_etiqueta),
               if (tecla != null) ...[
@@ -715,7 +723,18 @@ class BotonAccion extends StatelessWidget {
 
   /// Relleno (tinta, morado…); null = blanco con borde.
   final Color? color;
-  const BotonAccion(this.texto, {super.key, required this.onPressed, this.icono, this.tooltip, this.color});
+
+  /// Solo el icono (con [texto] de tooltip) también en escritorio, no solo en el móvil.
+  final bool soloIcono;
+  const BotonAccion(
+    this.texto, {
+    super.key,
+    required this.onPressed,
+    this.icono,
+    this.tooltip,
+    this.color,
+    this.soloIcono = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -732,7 +751,7 @@ class BotonAccion extends StatelessWidget {
           overlayColor: const WidgetStatePropertyAll(Colors.transparent),
           mouseCursor: const WidgetStatePropertyAll(SystemMouseCursors.click),
         );
-    final soloIcono = icono != null && esMovil(context);
+    final soloIcono = icono != null && (this.soloIcono || esMovil(context));
     final boton = SizedBox(
       height: 40,
       width: soloIcono ? 40 : null,
@@ -1168,7 +1187,13 @@ class Pestanas extends StatelessWidget {
     final valida = seleccion >= 0 && seleccion < opciones.length;
     // Si no caben enteras en el ancho que hay, desplegable (nunca cortadas ni desbordando).
     return LayoutBuilder(
-      builder: (context, box) => total + 6 > box.maxWidth ? _desplegable(estilo) : _pestanas(anchos, valida, estilo),
+      builder: (context, box) {
+        if (total + 6 > box.maxWidth) return _desplegable(estilo);
+        // Si quien lo coloca lo estira (un campo a todo lo ancho), las opciones se reparten el sobrante: antes se
+        // quedaban a un lado, con un hueco vacío detrás.
+        final sobra = max(0.0, box.minWidth - 6 - total) / opciones.length;
+        return _pestanas([for (final a in anchos) a + sobra], valida, estilo);
+      },
     );
   }
 
@@ -1473,7 +1498,22 @@ class Col {
   /// Texto al pasar el ratón por la cabecera (por defecto, «Arrastrar para intercambiar…»); sirve para
   /// columnas con título abreviado.
   final String? ayuda;
-  const Col(this.titulo, {this.flex = 1, this.ancho, this.derecha = false, this.cabecera, this.ayuda});
+
+  /// No se puede quitar (la que dice qué es cada fila).
+  final bool fija;
+
+  /// De serie no sale: la añade el usuario desde el menú de columnas.
+  final bool oculta;
+  const Col(
+    this.titulo, {
+    this.flex = 1,
+    this.ancho,
+    this.derecha = false,
+    this.cabecera,
+    this.ayuda,
+    this.fija = false,
+    this.oculta = false,
+  });
 }
 
 /// Tabla densa: cabecera gris pequeña, filas de ~56 px, sin rejilla y con la fila resaltada al pasar
@@ -1483,9 +1523,12 @@ class Tabla extends StatefulWidget {
   final int filas;
   final Widget Function(int i, Widget fila)? envolverFila;
 
-  /// Orden de las columnas (por título) que guarda quien la usa, para recordarlo y para que otros lo lean (p. ej.
-  /// Exportar sale con las columnas en el orden en que el usuario las dejó). Sin él, la tabla lleva el suyo.
-  final List<String>? orden;
+  /// Nombre con el que se guardan para cada cuenta el orden de sus columnas y cuáles se ven ([columnasTablas]);
+  /// Exportar sale igual. Sin él, no se guarda nada y se ven todas.
+  final String? id;
+
+  /// Al final de la cabecera, el menú para quitar y añadir columnas (necesita [id]).
+  final bool menuColumnas;
   final List<Widget> Function(int i) celdas;
   final void Function(int i)? onTap;
   final Widget? pie;
@@ -1507,14 +1550,15 @@ class Tabla extends StatefulWidget {
     this.seleccionCabecera,
     this.resaltar,
     this.envolverFila,
-    this.orden,
+    this.id,
+    this.menuColumnas = false,
   });
 
   @override
   State<Tabla> createState() => _TablaState();
 }
 
-class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
+class _TablaState extends State<Tabla> with TickerProviderStateMixin {
   /// Al aparecer, las primeras filas entran escalonadas (opacidad y un poco desde abajo).
   late final _entrada = AnimationController(vsync: this, duration: const Duration(milliseconds: 520))..forward();
 
@@ -1529,9 +1573,17 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
     });
   }
 
+  /// Se ha marcado o quitado una columna (o se han cargado las de la cuenta): se vuelve a repartir el ancho.
+  void _alCambiarColumnas() => setState(() {
+    anchos.clear();
+    _desde = {};
+    _col = null;
+  });
+
   @override
   void didUpdateWidget(Tabla old) {
     super.didUpdateWidget(old);
+    if (widget.id != old.id) anchos.clear();
     if (widget.focoInicial != old.focoInicial) _marcarInicial();
   }
 
@@ -1540,7 +1592,138 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
   final _claves = <String, GlobalKey>{};
   final _lienzo = GlobalKey(), _pie = GlobalKey();
   int? _columnaArrastrando;
-  late final List<String> _orden = widget.orden ?? <String>[];
+
+  /// Columna que se lleva en la mano, las columnas tal como se ven y, tras un cambio, desde dónde (en px) llega cada
+  /// una a su sitio nuevo mientras [_deslizar] avanza.
+  String? _moviendo;
+  var _visibles = <Col>[];
+  var _desde = <String, double>{};
+  late final _deslizar = AnimationController(vsync: this, duration: const Duration(milliseconds: 240), value: 1);
+
+  /// Cuánto está la columna en la mano apartada de su sitio: la lleva el puntero.
+  final _tiron = ValueNotifier<double>(0);
+
+  /// Dónde estaban el puntero y el borde izquierdo de la columna al cogerla.
+  double _punteroInicial = 0, _izquierdaInicial = 0;
+
+  /// Las cajas de las cabeceras (null si alguna aún no está pintada).
+  Map<String, RenderBox>? _cajas() {
+    final cajas = <String, RenderBox>{};
+    for (final c in _visibles) {
+      final caja = _claves[c.titulo]?.currentContext?.findRenderObject();
+      if (caja is! RenderBox || !caja.hasSize) return null;
+      cajas[c.titulo] = caja;
+    }
+    return cajas;
+  }
+
+  /// Borde izquierdo de cada columna con las columnas en [orden] (tras el margen de la tabla).
+  static Map<String, double> _sitios(List<Col> orden, Map<String, RenderBox> cajas) {
+    final sitios = <String, double>{};
+    var x = 18.0;
+    for (final c in orden) {
+      sitios[c.titulo] = x;
+      x += cajas[c.titulo]!.size.width;
+    }
+    return sitios;
+  }
+
+  void _cogerColumna(String titulo, Offset global) {
+    final lienzo = _lienzo.currentContext?.findRenderObject() as RenderBox?;
+    final cajas = _cajas();
+    if (lienzo == null || cajas == null) return;
+    Tooltip.dismissAllToolTips();
+    _punteroInicial = lienzo.globalToLocal(global).dx;
+    _izquierdaInicial = _sitios(_visibles, cajas)[titulo]!;
+    _tiron.value = 0;
+    setState(() {
+      _moviendo = titulo;
+      _desde = {};
+    });
+  }
+
+  /// La columna sigue al puntero y, en cuanto su borde pasa de la mitad de la vecina, se cambian: la vecina se
+  /// desliza al hueco que deja.
+  void _llevarColumna(Offset global) {
+    final titulo = _moviendo;
+    final lienzo = _lienzo.currentContext?.findRenderObject() as RenderBox?;
+    final cajas = _cajas();
+    if (titulo == null || lienzo == null || cajas == null) return;
+    // Solo se intercambian las de título; las de cabecera propia (casillas, menú de columnas) no se mueven.
+    bool movible(Col c) => c.titulo.isNotEmpty && c.cabecera == null;
+    final ancho = cajas[titulo]!.size.width;
+    final total = cajas.values.fold(0.0, (a, c) => a + c.size.width);
+    final izquierda = (_izquierdaInicial + lienzo.globalToLocal(global).dx - _punteroInicial)
+        .clamp(18.0, max(18.0, 18 + total - ancho));
+    var orden = [..._visibles];
+    var cambiado = false;
+    while (true) {
+      final sitios = _sitios(orden, cajas);
+      final i = orden.indexWhere((c) => c.titulo == titulo);
+      final despues = orden.skip(i + 1).where(movible).firstOrNull;
+      final antes = orden.take(i).where(movible).lastOrNull;
+      double mitad(Col c) => sitios[c.titulo]! + cajas[c.titulo]!.size.width / 2;
+      final otra = despues != null && izquierda + ancho > mitad(despues)
+          ? despues
+          : (antes != null && izquierda < mitad(antes) ? antes : null);
+      if (otra == null) break;
+      final j = orden.indexOf(otra);
+      final nuevo = [...orden];
+      nuevo[i] = otra;
+      nuevo[j] = orden[i];
+      orden = nuevo;
+      cambiado = true;
+    }
+    final sitios = _sitios(orden, cajas);
+    _tiron.value = izquierda - sitios[titulo]!;
+    if (!cambiado) return;
+    // Desde donde se ve ahora cada una (aunque esté a medio camino) hasta su sitio nuevo.
+    final desde = <String, double>{
+      for (final c in orden)
+        if (c.titulo != titulo) c.titulo: cajas[c.titulo]!.localToGlobal(Offset.zero, ancestor: lienzo).dx - sitios[c.titulo]!,
+    };
+    setState(() {
+      // El orden guardado conserva el sitio de las columnas que ahora no se ven.
+      final titulos = [for (final c in orden) if (_orden.contains(c.titulo)) c.titulo];
+      final huecos = [for (final t in titulos) _orden.indexOf(t)]..sort();
+      for (final (n, hueco) in huecos.indexed) {
+        _orden[hueco] = titulos[n];
+      }
+      _desde = desde;
+    });
+    _deslizar.forward(from: 0);
+  }
+
+  /// Al soltarla, termina de encajar en su sitio.
+  void _soltarColumna() {
+    final titulo = _moviendo;
+    if (titulo == null || !mounted) return;
+    setState(() {
+      _moviendo = null;
+      _desde = {titulo: _tiron.value};
+    });
+    _tiron.value = 0;
+    _deslizar.forward(from: 0);
+    if (widget.id != null) columnasTablas.guardar();
+  }
+
+  /// Sitio de la columna en la mano entre las que se ven (null = ninguna).
+  int? _encima(List<Col> columnas) {
+    final i = columnas.indexWhere((c) => c.titulo == _moviendo);
+    return _moviendo == null || i < 0 ? null : i;
+  }
+
+  /// La celda de la columna [titulo], deslizándose hasta su sitio si acaba de cambiar.
+  Widget _deslizada(String titulo, Widget celda) => AnimatedBuilder(
+    animation: _deslizar,
+    child: celda,
+    builder: (_, child) => Transform.translate(
+      offset: Offset((_desde[titulo] ?? 0) * (1 - Curves.easeOutCubic.transform(_deslizar.value)), 0),
+      child: child,
+    ),
+  );
+  final _ordenPropio = <String>[];
+  List<String> get _orden => widget.id == null ? _ordenPropio : columnasTablas.orden(widget.id!);
 
   /// Teclado: ↓/↑ recorren las filas de la tabla de la vista (la última abierta), Intro abre la marcada y
   /// Esc quita la marca. No actúa al escribir en un campo ni con una ventana encima.
@@ -1560,14 +1743,18 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
     _marcarInicial();
     _abiertas.add(this);
     HardwareKeyboard.instance.addHandler(_tecla);
+    columnasTablas.addListener(_alCambiarColumnas);
   }
 
   @override
   void dispose() {
     _abiertas.remove(this);
     HardwareKeyboard.instance.removeHandler(_tecla);
+    columnasTablas.removeListener(_alCambiarColumnas);
     _scroll.dispose();
     _entrada.dispose();
+    _deslizar.dispose();
+    _tiron.dispose();
     super.dispose();
   }
 
@@ -1687,19 +1874,25 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
     final contenido = clave == null && (c.titulo.isEmpty || inicio) && widget.seleccionCabecera != null
         ? Transform.translate(offset: const Offset(-4, 0), child: w)
         : w;
-    final hijo = Align(
+    final alineada = Align(
       key: clave,
       alignment: c.derecha ? Alignment.centerRight : Alignment.centerLeft,
       child: contenido,
     );
+    final hijo = _deslizada(c.titulo, alineada);
+    // Cada columna con su clave: al cambiar de sitio se lleva sus celdas (y lo que estén haciendo).
+    final identidad = c.titulo.isEmpty ? null : ValueKey('columna-${c.titulo}');
     final fijo = anchos[c.titulo] ?? c.ancho;
-    return fijo != null ? SizedBox(width: fijo, child: hijo) : Expanded(flex: c.flex, child: hijo);
+    return fijo != null
+        ? SizedBox(key: identidad, width: fijo, child: hijo)
+        : Expanded(key: identidad, flex: c.flex, child: hijo);
   }
 
   @override
   Widget build(BuildContext context) {
+    final id = widget.id;
     for (final (i, c) in widget.columnas.indexed) {
-      if (_orden.contains(c.titulo)) continue;
+      if (c.titulo.isEmpty || _orden.contains(c.titulo)) continue;
       final siguiente = widget.columnas.skip(i + 1).where((c) => _orden.contains(c.titulo)).firstOrNull;
       if (siguiente == null) {
         _orden.add(c.titulo);
@@ -1707,13 +1900,37 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
         _orden.insert(_orden.indexOf(siguiente.titulo), c.titulo);
       }
     }
-    final columnas = [...widget.columnas]
-      ..sort((a, b) {
+    final columnas = [
+      for (final c in widget.columnas)
+        if (id == null || c.titulo.isEmpty || c.fija || columnasTablas.ve(id, c.titulo, porDefecto: !c.oculta)) c,
+    ]..sort((a, b) {
         if (a.titulo.isEmpty) return b.titulo.isEmpty ? 0 : -1;
         if (b.titulo.isEmpty) return 1;
         return _orden.indexOf(a.titulo).compareTo(_orden.indexOf(b.titulo));
       });
+    // El menú va siempre el último, separado por una raya; no es una columna que se mueva ni se guarde.
+    final menu = id != null && widget.menuColumnas
+        ? Col(
+            'Columnas',
+            ancho: 48,
+            derecha: true,
+            cabecera: Row(
+              children: [
+                Container(width: 1, height: 16, color: P.borde),
+                const Spacer(),
+                _MenuColumnas(
+                  tabla: id,
+                  columnas: [
+                    for (final t in _orden) ...widget.columnas.where((c) => c.titulo == t),
+                  ],
+                ),
+              ],
+            ),
+          )
+        : null;
+    if (menu != null) columnas.add(menu);
     _nCols = columnas.length;
+    _visibles = columnas;
     return Container(
       decoration: BoxDecoration(color: P.superficie, borderRadius: BorderRadius.circular(P.radio), boxShadow: P.sombra),
       // Borde por encima del contenido: si no, las cabeceras lo tapan en las esquinas.
@@ -1724,18 +1941,29 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
       clipBehavior: Clip.antiAlias,
       // Pocas filas: la tabla mide lo que su contenido. Muchas: ocupa el alto y solo construye las visibles.
       child: TooltipVisibility(
-        visible: _columnaArrastrando == null,
+        visible: _columnaArrastrando == null && _moviendo == null,
         child: CustomPaint(
           key: _lienzo,
-          foregroundPainter: _columnaArrastrando == null
-              ? null
-              : _GuiasColumna(
+          foregroundPainter: _columnaArrastrando != null
+              ? _GuiasColumna(
                   columna: _claves[columnas[_columnaArrastrando!].titulo]!,
                   lienzo: _lienzo,
                   pie: _pie,
                   primera: _columnaArrastrando == 0,
                   color: P.morado,
-                ),
+                )
+              : _moviendo != null
+              ? _LineasColumnas(
+                  cajas: [for (final c in columnas) _claves[c.titulo]],
+                  enLaMano: _encima(columnas),
+                  lienzo: _lienzo,
+                  pie: _pie,
+                  tiron: _tiron,
+                  repintar: Listenable.merge([_tiron, _deslizar]),
+                  linea: P.textoSuave.withValues(alpha: .35),
+                  marcada: P.morado,
+                )
+              : null,
           child: Column(
             mainAxisSize: widget.filas > 15 ? MainAxisSize.max : MainAxisSize.min,
             children: [
@@ -1745,7 +1973,10 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
                     color: P.cabeceraTabla,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     height: 42,
-                    child: Row(
+                    child: _FilaColumnas(
+                      encima: _encima(columnas),
+                      tiron: _tiron,
+                      fondo: Color.alphaBlend(P.morado.withValues(alpha: .14), P.superficie),
                       children: [
                         for (final (j, c) in columnas.indexed)
                           _celda(
@@ -1763,12 +1994,10 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
                                           titulo: c.titulo,
                                           ayuda: c.ayuda,
                                           derecha: c.derecha,
-                                          onIntercambiar: (origen) => setState(() {
-                                            final desde = _orden.indexOf(origen);
-                                            final hasta = _orden.indexOf(c.titulo);
-                                            _orden[desde] = c.titulo;
-                                            _orden[hasta] = origen;
-                                          }),
+                                          enLaMano: _moviendo == c.titulo,
+                                          onEmpezar: (global) => _cogerColumna(c.titulo, global),
+                                          onMover: _llevarColumna,
+                                          onSoltar: _soltarColumna,
                                         ),
                                       ),
                                     ),
@@ -1836,6 +2065,8 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
                   separatorBuilder: (_, _) => Divider(height: 1, color: P.borde),
                   itemBuilder: (_, i) {
                     final cs = widget.celdas(i);
+                    // Las celdas vienen en el orden de [Tabla.columnas], se vean o no; el menú no lleva.
+                    Widget celdaDe(Col c) => c == menu ? const SizedBox() : cs[widget.columnas.indexOf(c)];
                     final borde = widget.resaltar?.call(i);
                     final marcada = i == _foco;
                     // Destacada: un poco hacia dentro para que el borde se vea entero también por los lados.
@@ -1859,7 +2090,12 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
                           constraints: const BoxConstraints(minHeight: 56),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                            child: Row(
+                            child: _FilaColumnas(
+                              encima: _encima(columnas),
+                              tiron: _tiron,
+                              fondo: Color.alphaBlend(P.morado.withValues(alpha: .06), P.superficie),
+                              // Cubre también el relleno de la fila: la columna se ve entera, sin cortes.
+                              sobresale: 10,
                               children: [
                                 for (final (j, c) in columnas.indexed)
                                   _celda(
@@ -1874,9 +2110,9 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
                                               borderRadius: BorderRadius.circular(8),
                                               border: Border.all(color: P.borde),
                                             ),
-                                            child: cs[widget.columnas.indexOf(c)],
+                                            child: celdaDe(c),
                                           )
-                                        : cs[widget.columnas.indexOf(c)],
+                                        : celdaDe(c),
                                     inicio: c == columnas.first,
                                   ),
                               ],
@@ -1914,13 +2150,156 @@ class _TablaState extends State<Tabla> with SingleTickerProviderStateMixin {
   }
 }
 
+/// Último botón de la cabecera: todas las columnas de la tabla, con marcadas las que se ven, para quitar o añadir.
+class _MenuColumnas extends StatelessWidget {
+  final String tabla;
+
+  /// Las de la tabla, en el orden en que las tiene el usuario.
+  final List<Col> columnas;
+  const _MenuColumnas({required this.tabla, required this.columnas});
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    alignmentOffset: const Offset(-200, 4),
+    style: MenuStyle(
+      backgroundColor: WidgetStatePropertyAll(P.superficie),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    ),
+    menuChildren: [
+      MenuItemButton(
+        onPressed: null,
+        child: Text('Columnas', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+      ),
+      for (final c in columnas) _opcion(c),
+      const Divider(height: 8),
+      MenuItemButton(
+        closeOnActivate: false,
+        leadingIcon: Icon(Icons.restart_alt_rounded, size: 20, color: P.textoSuave),
+        onPressed: () => columnasTablas.restablecer(tabla),
+        child: const Text('Restaurar'),
+      ),
+    ],
+    builder: (context, menu, _) => IconButton(
+      tooltip: 'Elegir columnas',
+      visualDensity: VisualDensity.compact,
+      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+      icon: Icon(Icons.view_column_outlined, size: 18, color: P.textoSuave),
+    ),
+  );
+
+  Widget _opcion(Col c) {
+    final visible = c.fija || columnasTablas.ve(tabla, c.titulo, porDefecto: !c.oculta);
+    return MenuItemButton(
+      closeOnActivate: false,
+      leadingIcon: Icon(
+        visible ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+        size: 20,
+        // La fija sale marcada y apagada: está, pero no se puede quitar.
+        color: c.fija ? P.textoSuave.withValues(alpha: .55) : (visible ? P.morado : P.textoSuave),
+      ),
+      onPressed: c.fija ? null : () => columnasTablas.poner(tabla, c.titulo, !visible),
+      child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c.titulo)),
+    );
+  }
+}
+
+/// La fila de una tabla en la que una columna puede ir «en la mano»: se pinta la última (por encima de las demás),
+/// sobre su fondo y desplazada lo que diga [tiron].
+class _FilaColumnas extends Row {
+  final int? encima;
+  final ValueListenable<double> tiron;
+  final Color fondo;
+  final double sobresale;
+  const _FilaColumnas({
+    required this.encima,
+    required this.tiron,
+    required this.fondo,
+    this.sobresale = 0,
+    super.children,
+  });
+
+  @override
+  RenderFlex createRenderObject(BuildContext context) => _PintaColumnas(
+    direction: Axis.horizontal,
+    textDirection: getEffectiveTextDirection(context),
+    crossAxisAlignment: crossAxisAlignment,
+    tiron: tiron,
+  )..poner(encima, fondo, sobresale);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderFlex renderObject) {
+    super.updateRenderObject(context, renderObject);
+    (renderObject as _PintaColumnas).poner(encima, fondo, sobresale);
+  }
+}
+
+class _PintaColumnas extends RenderFlex {
+  final ValueListenable<double> tiron;
+  int? _encima;
+  Color _fondo = Colors.transparent;
+  double _sobresale = 0;
+  _PintaColumnas({required this.tiron, super.direction, super.textDirection, super.crossAxisAlignment});
+
+  void poner(int? encima, Color fondo, double sobresale) {
+    _encima = encima;
+    _fondo = fondo;
+    _sobresale = sobresale;
+    markNeedsPaint();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    tiron.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    tiron.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (_encima == null) return super.paint(context, offset);
+    RenderBox? suelta;
+    var hijo = firstChild;
+    for (var i = 0; hijo != null; i++) {
+      final datos = hijo.parentData! as FlexParentData;
+      if (i == _encima) {
+        suelta = hijo;
+      } else {
+        context.paintChild(hijo, datos.offset + offset);
+      }
+      hijo = datos.nextSibling;
+    }
+    if (suelta == null) return;
+    final sitio = (suelta.parentData! as FlexParentData).offset + offset + Offset(tiron.value, 0);
+    // Entre separador y separador (van 7 px antes del final de cada celda).
+    final caja = Rect.fromLTWH(sitio.dx - 7, offset.dy - _sobresale, suelta.size.width, size.height + _sobresale * 2);
+    context.canvas
+      ..drawShadow(Path()..addRect(caja), Colors.black, 5, false)
+      ..drawRect(caja, Paint()..color = _fondo);
+    context.paintChild(suelta, sitio);
+  }
+}
+
 /// Título arrastrable; el separador de anchura queda fuera de su zona de arrastre.
 class _TituloColumna extends StatefulWidget {
   final String titulo;
-  final bool derecha;
-  final ValueChanged<String> onIntercambiar;
+  final bool derecha, enLaMano;
+  final ValueChanged<Offset> onEmpezar, onMover;
+  final VoidCallback onSoltar;
   final String? ayuda;
-  const _TituloColumna({required this.titulo, required this.derecha, required this.onIntercambiar, this.ayuda});
+  const _TituloColumna({
+    required this.titulo,
+    required this.derecha,
+    required this.enLaMano,
+    required this.onEmpezar,
+    required this.onMover,
+    required this.onSoltar,
+    this.ayuda,
+  });
 
   @override
   State<_TituloColumna> createState() => _TituloColumnaState();
@@ -1930,41 +2309,23 @@ class _TituloColumnaState extends State<_TituloColumna> {
   bool _encima = false;
 
   @override
-  Widget build(BuildContext context) => DragTarget<String>(
-    onWillAcceptWithDetails: (d) => d.data != widget.titulo,
-    onAcceptWithDetails: (d) => widget.onIntercambiar(d.data),
-    builder: (context, candidatos, rechazados) => MouseRegion(
-      cursor: SystemMouseCursors.grab,
-      onEnter: (_) => setState(() => _encima = true),
-      onExit: (_) => setState(() => _encima = false),
-      child: Draggable<String>(
-        data: widget.titulo,
-        axis: Axis.horizontal,
-        feedback: Material(
-          color: P.superficie,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(P.radioControl),
-            side: BorderSide(color: P.morado),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Text(
-              widget.titulo,
-              style: TextStyle(color: P.morado, fontSize: 12.5, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-        childWhenDragging: Opacity(opacity: .35, child: _contenido(false)),
-        child: Tooltip(
-          message: widget.ayuda ?? 'Arrastrar para intercambiar ${widget.titulo}',
-          child: Semantics(
-            label: 'Columna ${widget.titulo}, arrastrar para intercambiar',
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              color: candidatos.isEmpty ? Colors.transparent : P.hoverFila,
-              child: _contenido(_encima || candidatos.isNotEmpty),
-            ),
-          ),
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: widget.enLaMano ? SystemMouseCursors.grabbing : SystemMouseCursors.grab,
+    onEnter: (_) => setState(() => _encima = true),
+    onExit: (_) => setState(() => _encima = false),
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      // Desde donde se pulsa: la columna no da un salto al empezar a moverse.
+      dragStartBehavior: DragStartBehavior.down,
+      onHorizontalDragStart: (d) => widget.onEmpezar(d.globalPosition),
+      onHorizontalDragUpdate: (d) => widget.onMover(d.globalPosition),
+      onHorizontalDragEnd: (_) => widget.onSoltar(),
+      onHorizontalDragCancel: widget.onSoltar,
+      child: Tooltip(
+        message: widget.ayuda ?? 'Arrastrar para intercambiar ${widget.titulo}',
+        child: Semantics(
+          label: 'Columna ${widget.titulo}, arrastrar para intercambiar',
+          child: _contenido(_encima || widget.enLaMano),
         ),
       ),
     ),
@@ -1972,7 +2333,11 @@ class _TituloColumnaState extends State<_TituloColumna> {
 
   Widget _contenido(bool mostrarAsa) => SizedBox(
     height: 42,
-    child: Row(
+    // Flex (no Row) para poder recortar: en una columna muy estrecha, lo que no cabe (el asa) se recorta en vez de
+    // desbordar.
+    child: Flex(
+      direction: Axis.horizontal,
+      clipBehavior: Clip.hardEdge,
       children: [
         Expanded(
           child: Text(
@@ -2040,6 +2405,67 @@ class _GuiasColumna extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _GuiasColumna oldDelegate) => true;
+}
+
+/// Mientras se lleva una columna: una línea vertical en cada límite, de la cabecera a la última fila, que se mueve
+/// con las columnas. Las de la que va en la mano, en morado.
+class _LineasColumnas extends CustomPainter {
+  /// Las cabeceras, en el orden en que se ven.
+  final List<GlobalKey?> cajas;
+  final int? enLaMano;
+  final GlobalKey lienzo, pie;
+  final ValueListenable<double> tiron;
+  final Color linea, marcada;
+  _LineasColumnas({
+    required this.cajas,
+    required this.enLaMano,
+    required this.lienzo,
+    required this.pie,
+    required this.tiron,
+    required Listenable repintar,
+    required this.linea,
+    required this.marcada,
+  }) : super(repaint: repintar);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final tabla = lienzo.currentContext?.findRenderObject() as RenderBox?;
+    if (tabla == null) return;
+    final cajaPie = pie.currentContext?.findRenderObject() as RenderBox?;
+    final alto = cajaPie != null && cajaPie.hasSize
+        ? cajaPie.localToGlobal(Offset.zero, ancestor: tabla).dy
+        : size.height;
+    // Dónde empieza y acaba cada columna tal como se ve ahora (a medio deslizar incluido).
+    final tramos = <(double, double)>[];
+    for (final (i, clave) in cajas.indexed) {
+      final caja = clave?.currentContext?.findRenderObject() as RenderBox?;
+      if (caja == null || !caja.hasSize) return;
+      final x = caja.localToGlobal(Offset.zero, ancestor: tabla).dx + (i == enLaMano ? tiron.value : 0);
+      tramos.add((x - 7, x + caja.size.width - 7));
+    }
+    final mano = enLaMano == null ? null : tramos[enLaMano!];
+    void raya(double x, Color color, double grosor) => canvas.drawLine(
+      Offset(x, 0),
+      Offset(x, alto),
+      Paint()
+        ..color = color
+        ..strokeWidth = grosor,
+    );
+    for (final (i, (_, fin)) in tramos.indexed) {
+      // El borde derecho de la tabla ya está; bajo la columna en la mano no se pintan las de las demás.
+      if (i == tramos.length - 1 || i == enLaMano || (mano != null && fin > mano.$1 + 1 && fin < mano.$2 - 1)) {
+        continue;
+      }
+      raya(fin, linea, 1);
+    }
+    if (mano != null) {
+      raya(mano.$1, marcada, 1.8);
+      raya(mano.$2, marcada, 1.8);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LineasColumnas old) => true;
 }
 
 /// Borde arrastrable de una columna en la cabecera: raya fina que se pone morada al pasar el ratón.
@@ -2852,7 +3278,11 @@ class Rejilla extends StatelessWidget {
   final int columnas;
   final double hueco;
   final List<Widget> children;
-  const Rejilla({super.key, required this.columnas, required this.children, this.hueco = 14});
+
+  /// Las tarjetas de cada fila, todas del alto de la más alta (p. ej. si una etiqueta ocupa dos líneas). Solo para
+  /// hijos que saben medirse solos (sin LayoutBuilder dentro).
+  final bool igualarAlto;
+  const Rejilla({super.key, required this.columnas, required this.children, this.hueco = 14, this.igualarAlto = false});
 
   @override
   Widget build(BuildContext context) => Column(
@@ -2860,18 +3290,21 @@ class Rejilla extends StatelessWidget {
     children: [
       for (var i = 0; i < children.length; i += columnas) ...[
         if (i > 0) SizedBox(height: hueco),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var j = 0; j < columnas; j++) ...[
-              if (j > 0) SizedBox(width: hueco),
-              Expanded(child: i + j < children.length ? children[i + j] : const SizedBox()),
-            ],
+        _fila([
+          for (var j = 0; j < columnas; j++) ...[
+            if (j > 0) SizedBox(width: hueco),
+            Expanded(child: i + j < children.length ? children[i + j] : const SizedBox()),
           ],
-        ),
+        ]),
       ],
     ],
   );
+
+  Widget _fila(List<Widget> hijos) => igualarAlto
+      ? IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: hijos),
+        )
+      : Row(crossAxisAlignment: CrossAxisAlignment.start, children: hijos);
 }
 
 /// Borde de rayas alrededor de un rectángulo redondeado (foto vacía de formulario, guía de Inicio).
@@ -3346,5 +3779,92 @@ class TransicionVista extends StatelessWidget {
       ),
     ),
     child: KeyedSubtree(key: ValueKey(clave), child: child),
+  );
+}
+
+/// Cambio de vista suave y con sentido: la que entra llega desde un lado mientras la anterior se aparta hacia el
+/// contrario. Empieza cuando la vista nueva ya está pintada, para que no dé un salto si tarda en construirse.
+class TransicionLateral extends StatefulWidget {
+  /// Al cambiar, se anima el paso a la vista nueva.
+  final Object clave;
+
+  /// Sitio de la vista: si sube, entra por la derecha; si baja, por la izquierda. Igual o null: fundido.
+  final int? orden;
+  final Widget child;
+  const TransicionLateral({super.key, required this.clave, this.orden, required this.child});
+
+  @override
+  State<TransicionLateral> createState() => _TransicionLateralState();
+}
+
+class _TransicionLateralState extends State<TransicionLateral> with SingleTickerProviderStateMixin {
+  late final _paso = AnimationController(vsync: this, duration: const Duration(milliseconds: 460), value: 1)
+    ..addStatusListener((e) {
+      if (e == AnimationStatus.completed && _saliente != null) setState(() => _saliente = null);
+    });
+  Widget? _saliente;
+  int _numero = 0, _sentido = 0;
+
+  @override
+  void didUpdateWidget(TransicionLateral old) {
+    super.didUpdateWidget(old);
+    if (old.clave == widget.clave) return;
+    _numero++;
+    // Con «reducir movimiento», el cambio es directo.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _saliente = null;
+      _paso.value = 1;
+      return;
+    }
+    final antes = old.orden, ahora = widget.orden;
+    _sentido = antes == null || ahora == null ? 0 : (ahora - antes).sign;
+    _saliente = old.child;
+    _paso.value = 0;
+    // Primero se pinta la vista nueva (aún invisible) y entonces arranca.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _paso.forward(from: 0);
+    });
+  }
+
+  @override
+  void dispose() {
+    _paso.dispose();
+    super.dispose();
+  }
+
+  /// La misma envoltura para la que entra y la que sale: así la que sale conserva su estado.
+  Widget _capa(int numero, Widget child, {required bool entra}) {
+    final movimiento = _paso.drive(CurveTween(curve: Curves.easeOutCubic));
+    final desde = _sentido == 0 ? const Offset(0, .012) : Offset(.07 * _sentido, 0);
+    return KeyedSubtree(
+      key: ValueKey(numero),
+      child: IgnorePointer(
+        ignoring: !entra,
+        child: FadeTransition(
+          opacity: entra
+              ? _paso.drive(CurveTween(curve: const Interval(.2, 1, curve: Curves.easeOut)))
+              : _paso.drive(Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: const Interval(0, .4)))),
+          child: SlideTransition(
+            position: movimiento.drive(
+              entra
+                  ? Tween(begin: desde, end: Offset.zero)
+                  : Tween(begin: Offset.zero, end: Offset(-.05 * _sentido, 0)),
+            ),
+            child: RepaintBoundary(child: child),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        if (_saliente case final anterior?) _capa(_numero - 1, anterior, entra: false),
+        _capa(_numero, widget.child, entra: true),
+      ],
+    ),
   );
 }

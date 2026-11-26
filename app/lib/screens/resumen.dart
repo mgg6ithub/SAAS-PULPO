@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../ajustes.dart';
 import '../estadisticas.dart';
-import '../forms.dart';
 import '../models.dart';
 import '../shell.dart';
 import '../store.dart';
@@ -183,7 +182,8 @@ class Resumen extends StatelessWidget {
                       if (hayTarea) ...[
                         AvisosPreparacion(onAbrir: onCliente ?? (_) {}),
                         const SizedBox(height: 16),
-                        IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}),
+                        // Debajo, el mismo hueco de 16 que entre todos los bloques de esta vista.
+                        IncidenciasAbiertas(onAbrir: onTarea ?? (_) {}, abajo: 16),
                       ] else
                         const SizedBox(height: 16),
                       () {
@@ -334,7 +334,7 @@ class _SinMaquinas extends StatelessWidget {
               icono: Icons.content_paste_rounded,
               titulo: store.planes.isEmpty ? 'Sin mantenimientos ni órdenes de trabajo' : 'Sin órdenes de trabajo',
               texto: store.planes.isEmpty
-                  ? 'Tus máquinas aún no tienen mantenimientos. Crea uno y Pultec generará sus órdenes de trabajo '
+                  ? 'Tus activos aún no tienen mantenimientos. Crea uno y Pultec generará sus órdenes de trabajo '
                         'para cuando toque.'
                   : 'Pultec generará las órdenes de trabajo de tus mantenimientos para cuando toque.',
               accion: BotonPrimario(
@@ -356,16 +356,21 @@ class _ComoFunciona extends StatelessWidget {
   Widget build(BuildContext context) {
     final etapas = industrial
         ? [
-            (P.azul, 'Tus activos', 'Cada máquina (camión, compresor, prensa…) con sus componentes y subcomponentes.'),
+            (
+              P.azul,
+              'Tus activos',
+              'Todo lo que necesite un mantenimiento: camiones, compresores, prensas o equipos informáticos, cada uno '
+                  'con sus componentes.',
+            ),
             (
               P.teal,
               'Sus mantenimientos',
-              'Qué mantenimiento lleva cada componente y cada cuánto: por fecha o por horas de uso.',
+              'Define qué hay que hacer en cada activo o componente y cada cuánto toca: por fecha o por horas de uso.',
             ),
             (
               P.ambar,
               'Órdenes de trabajo automáticas',
-              'Pultec las crea cuando toca cada mantenimiento y las reparte entre tus técnicos según su categoría.',
+              'Pultec crea la orden de cada mantenimiento con su fecha y se la asigna al técnico o grupo que indiques.',
             ),
           ]
         : [
@@ -447,7 +452,7 @@ class _ComoFunciona extends StatelessWidget {
       child: Icon(
         columnas ? Icons.chevron_right_rounded : Icons.expand_more_rounded,
         size: 22,
-        color: P.textoSuave,
+        color: P.morado,
       ),
     );
     Widget titulo(String texto) => Padding(
@@ -478,10 +483,15 @@ class _ComoFunciona extends StatelessWidget {
             if (i > 0) Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: flecha(i - 1))),
             t,
           ],
+        // Pultec: debajo, qué pasa al completar una orden, con su animación.
+        if (industrial) ...[
+          const SizedBox(height: 16),
+          Aparecer(retraso: 1.22, child: _CicloOrden(columnas: columnas)),
+        ],
         const SizedBox(height: 24),
         // Pultec: el color de cada orden de trabajo, que verá en Inicio en cuanto dé de alta sus activos.
         if (industrial) ...[
-          titulo('El color de cada máquina'),
+          titulo('El color de cada activo'),
           Aparecer(
             retraso: 1.3,
             child: Padding(
@@ -510,6 +520,266 @@ class _ComoFunciona extends StatelessWidget {
   }
 }
 
+/// Animaciones sin fin de la guía de Inicio (borde, huellas y ciclo de la orden). Las pruebas las apagan
+/// (test/flutter_test_config.dart): con ellas `pumpAndSettle` no terminaría.
+bool animacionesGuia = true;
+
+/// Qué pasa al completar una orden, en dos bloques animados con un mismo reloj: en el primero la orden se marca
+/// como completada y baja al histórico; entonces, en el segundo, nace la siguiente. Se repite sin parar. Con
+/// «reducir movimiento», la escena final fija.
+class _CicloOrden extends StatefulWidget {
+  final bool columnas;
+  const _CicloOrden({required this.columnas});
+
+  @override
+  State<_CicloOrden> createState() => _CicloOrdenState();
+}
+
+class _CicloOrdenState extends State<_CicloOrden> with SingleTickerProviderStateMixin {
+  /// Alto de cada escena y de sus piezas.
+  static const _alto = 132.0, _altoOrden = 58.0, _altoHistorico = 52.0;
+
+  /// Fotograma que se ve con las animaciones apagadas: orden ya archivada y la siguiente creada.
+  static const _fotoFija = .8;
+
+  late final _reloj = AnimationController(vsync: this, duration: const Duration(milliseconds: 6500));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!animacionesGuia || MediaQuery.disableAnimationsOf(context)) {
+      _reloj
+        ..stop()
+        ..value = _fotoFija;
+    } else if (!_reloj.isAnimating) {
+      _reloj.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _reloj.dispose();
+    super.dispose();
+  }
+
+  /// Avance (0 a 1, suave) entre los momentos [de] y [a] del ciclo.
+  double _tramo(double de, double a, [Curve curva = Curves.easeInOutCubic]) =>
+      curva.transform(((_reloj.value - de) / (a - de)).clamp(0.0, 1.0));
+
+  /// Una orden en miniatura: círculo que se marca, nombre, cuándo y su estado.
+  Widget _orden({required String cuando, required Widget estado, double hecha = 0, double brillo = 0}) => Container(
+    height: _altoOrden,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      color: P.superficie,
+      borderRadius: BorderRadius.circular(P.radioControl),
+      border: Border.all(color: Color.lerp(P.borde, P.morado, brillo)!, width: 1 + brillo),
+      boxShadow: [BoxShadow(color: P.morado.withValues(alpha: .18 * brillo), blurRadius: 14, spreadRadius: 1)],
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color.lerp(P.verde.withValues(alpha: 0), P.verde, hecha),
+            border: Border.all(color: Color.lerp(P.borde, P.verde, hecha)!, width: 2),
+          ),
+          child: Transform.scale(scale: hecha, child: const Icon(Icons.check_rounded, size: 15, color: Colors.white)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Cambio de aceite',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+              ),
+              Text(cuando, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: P.textoSuave)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        estado,
+      ],
+    ),
+  );
+
+  /// Escena 1: la orden se completa y cae en el histórico.
+  Widget _archivar() {
+    final entra = _tramo(0, .08), hecha = _tramo(.14, .24, Curves.easeOutBack).clamp(0.0, 1.0);
+    final baja = _tramo(.32, .48), sale = 1 - _tramo(.92, 1);
+    final llega = _tramo(.44, .52), destello = sin(pi * _tramo(.42, .66, Curves.linear)).clamp(0.0, 1.0);
+    return Opacity(
+      opacity: sale,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: _altoHistorico,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Color.lerp(P.hover, P.moradoSuave, destello),
+                borderRadius: BorderRadius.circular(P.radioControl),
+                border: Border.all(color: P.morado.withValues(alpha: .6 * destello)),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('Histórico', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  ),
+                  // Una marca por orden guardada; la nueva aparece al llegar.
+                  for (var i = 0; i < 4; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Transform.scale(
+                        scale: i < 3 ? 1 : llega,
+                        child: Container(
+                          width: 6,
+                          height: 18,
+                          decoration: BoxDecoration(color: P.verde, borderRadius: BorderRadius.circular(3)),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 4 + (_alto - _altoHistorico - 4) * baja,
+            child: Opacity(
+              opacity: entra * (1 - _tramo(.4, .48)),
+              child: Transform.scale(
+                scale: 1 - .22 * baja,
+                child: _orden(
+                  cuando: 'Hoy',
+                  hecha: hecha,
+                  estado: hecha < .5 ? const Pill('Pendiente', P.ambar) : const Pill('Completada', P.verde),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Escena 2: en el hueco aparece la orden siguiente.
+  Widget _crear() {
+    final nace = _tramo(.52, .68, Curves.easeOutBack), visible = _tramo(.52, .6);
+    final brillo = (_tramo(.56, .66) - _tramo(.78, .9)).clamp(0.0, 1.0);
+    final sale = 1 - _tramo(.92, 1);
+    const arriba = (_alto - _altoOrden) / 2;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // El hueco donde caerá: borde discontinuo mientras no está.
+        Positioned(
+          left: 0,
+          right: 0,
+          top: arriba,
+          height: _altoOrden,
+          child: Opacity(
+            opacity: 1 - visible * sale,
+            child: CustomPaint(
+              painter: BordeDiscontinuo(P.textoSuave.withValues(alpha: .5), BorderRadius.circular(P.radioControl)),
+              child: Center(
+                child: Text('Siguiente orden', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: arriba - 26 * (1 - nace),
+          child: Opacity(
+            opacity: visible * sale,
+            child: Transform.scale(
+              scale: .86 + .14 * nace,
+              child: _orden(cuando: 'Dentro de 30 días', brillo: brillo, estado: Pill('Nueva', P.morado)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _bloque(Widget Function() escena, String titulo, String texto) => Tarjeta(
+    padding: const EdgeInsets.all(18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Es un dibujo de ejemplo: lo que cuenta ya lo dice el texto.
+        ExcludeSemantics(
+          child: RepaintBoundary(
+            child: SizedBox(
+              height: _alto,
+              child: AnimatedBuilder(animation: _reloj, builder: (_, _) => escena()),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          titulo,
+          style: TextStyle(fontFamily: P.titulos, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -.2),
+        ),
+        const SizedBox(height: 4),
+        Text(texto, style: TextStyle(fontSize: 13, height: 1.4, color: P.textoSuave)),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final bloques = [
+      _bloque(
+        _archivar,
+        'Se completa y pasa al histórico',
+        'Cuando el técnico termina la orden, queda guardada en el histórico con lo que se hizo.',
+      ),
+      _bloque(
+        _crear,
+        'Y se crea la siguiente',
+        'Pultec genera sola la nueva orden con su próxima fecha. No tienes que acordarte de nada.',
+      ),
+    ];
+    Widget flecha(IconData icono) => Icon(icono, size: 22, color: P.morado);
+    return widget.columnas
+        ? IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: bloques[0]),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Center(child: flecha(Icons.chevron_right_rounded)),
+                ),
+                Expanded(child: bloques[1]),
+              ],
+            ),
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              bloques[0],
+              Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Center(child: flecha(Icons.expand_more_rounded))),
+              bloques[1],
+            ],
+          );
+  }
+}
+
 /// Guía de primeros pasos (como la de Google Play Console): índice vertical con ticks que se marcan y
 /// desmarcan solos según los datos. A la derecha de cada paso, dónde se hace en la app; solo el paso
 /// en curso lleva su botón. Desaparece al completarla.
@@ -520,53 +790,38 @@ class _PrimerosPasos extends StatelessWidget {
   const _PrimerosPasos(this.hechos, {required this.onIr});
 
   /// Pasos de Pultec: máquina, su mantenimiento (la OT se crea sola), un técnico y asignarle la orden.
-  List<(String, String, (IconData, String, String, Seccion, Future<void> Function(BuildContext))?, Widget?)>
+  List<(String, String, (IconData, String, String, Seccion)?, Widget?)>
   _pasosPultec(bool hayTrabajador) => [
     (
-      'Da de alta tu primera máquina',
+      'Da de alta tu primer activo',
       'Un camión, un compresor, una prensa… Pon su contador de horas y cuánto se usa: así Pultec sabe cuándo le '
           'toca cada mantenimiento por horas.',
-      (Marca.iconoCliente, 'Activos', 'Nuevo activo', Seccion.clientes, (c) async => abrirActivoForm(c)),
+      (Marca.iconoCliente, 'Activos', 'Nuevo activo', Seccion.clientes),
       null,
     ),
     (
       'Crea su primer mantenimiento',
       'Dentro del activo, «+ Mantenimiento»: qué hay que hacer y cada cuánto (días u horas). Pultec crea su orden '
           'de trabajo para la fecha que toca y, al completarla, la siguiente.',
-      (
-        Marca.iconoCliente,
-        'Activos',
-        'Mantenimiento',
-        Seccion.clientes,
-        (c) async {
-          final a = store.activos.where((a) => a.padreId == null).firstOrNull;
-          if (a != null) await abrirPlanForm(c, activoId: a.id);
-        },
-      ),
+      (Marca.iconoCliente, 'Activos', 'Mantenimiento', Seccion.clientes),
       null,
     ),
     (
       'Añade un técnico',
       'Quién hace los mantenimientos y de qué categoría es. Con eso Pultec le asigna sus órdenes.',
-      (
-        Marca.iconoTrabajador,
-        'Técnicos',
-        'Nuevo técnico',
-        Seccion.trabajadores,
-        (c) async => abrirTrabajadorForm(c, null, const []),
-      ),
+      (Marca.iconoTrabajador, 'Técnicos', 'Nuevo técnico', Seccion.trabajadores),
       null,
     ),
     (
       'Asigna la orden a un técnico',
       'En Órdenes de trabajo, elige quién la hace. Le llegará a su móvil con todo lo que necesita.',
-      (Marca.iconoTrabajo, 'Órdenes de trabajo', 'Asignar', Seccion.tareas, (c) async {}),
+      (Marca.iconoTrabajo, 'Órdenes de trabajo', 'Asignar', Seccion.tareas),
       null,
     ),
   ];
 
   /// Deja el itinerario en la semana del último trabajo, para organizar el día en que cae.
-  Future<void> _semanaDelTrabajo(BuildContext context) async {
+  void _semanaDelTrabajo() {
     final t = store.tareas.where((t) => !t.esPlantilla).lastOrNull;
     Planificacion.mostrarSemana(t?.proximo ?? hoy());
   }
@@ -582,32 +837,33 @@ class _PrimerosPasos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // (título, explicación, ruta en la app, botón). Los pasos de crear no se hacen aquí: la ruta es un botón
-    // que lleva a su sección y abre el formulario, para que se aprenda dónde está. Ver el itinerario: su botón.
+    // que solo lleva a su sección; el formulario lo abre el usuario con el botón de allí, para que aprenda dónde
+    // está. Ver el itinerario: su botón.
     final hayTrabajador = store.trabajadores.any((w) => w.activo);
     final pasos = industrial ? _pasosPultec(hayTrabajador) : [
       industrial
           ? (
-              'Da de alta tu primera máquina',
+              'Da de alta tu primer activo',
               'Un activo: un camión, un compresor, una prensa… Dentro, sus componentes con su tag, fabricante y modelo.',
-              (Marca.iconoCliente, 'Activos', 'Nuevo activo', Seccion.clientes, (c) => abrirActivoForm(c)),
+              (Marca.iconoCliente, 'Activos', 'Nuevo activo', Seccion.clientes),
               null,
             )
           : (
               m('Crea tu primer cliente'),
               'A quien le haces el mantenimiento: una comunidad, una empresa, un local, una instalación…',
-              (Marca.iconoCliente, m('Clientes'), m('Nuevo cliente'), Seccion.clientes, abrirClienteForm),
+              (Marca.iconoCliente, m('Clientes'), m('Nuevo cliente'), Seccion.clientes),
               null,
             ),
       (
         m('Crea un trabajo'),
         industrial
-            ? 'Un mantenimiento de una máquina o de uno de sus componentes: qué hay que hacer, cada cuánto y de qué '
+            ? 'Un mantenimiento de un activo o de uno de sus componentes: qué hay que hacer, cada cuánto y de qué '
                   'tipo (preventivo, correctivo no crítico o crítico). Pultec calcula cuándo toca.'
             : m(
                 'Un mantenimiento que se repite: qué hay que revisar y cada cuánto. Pultec calcula cuándo toca. '
                 'También puedes crearlo desde la ficha del cliente.',
               ),
-        (Marca.iconoTrabajo, m('Trabajos'), m('Nuevo trabajo'), Seccion.tareas, (c) => abrirTareaForm(c, null)),
+        (Marca.iconoTrabajo, m('Trabajos'), m('Nuevo trabajo'), Seccion.tareas),
         null,
       ),
       (
@@ -630,35 +886,14 @@ class _PrimerosPasos extends StatelessWidget {
                     : 'Ve al itinerario y pulsa Organizar. Pultec asignará el trabajo al técnico según su categoría.',
               ),
         !hayTrabajador
-            // Con las competencias de los trabajos ya creados, Organizar podrá asignar el primero.
-            ? (
-                Marca.iconoTrabajador,
-                m('Trabajadores'),
-                m('Nuevo trabajador'),
-                Seccion.trabajadores,
-                (c) => abrirTrabajadorForm(
-                  c,
-                  null,
-                  {for (final t in store.tareas.where((t) => !t.esPlantilla)) ...t.competencias}.toList(),
-                ),
-              )
-            : (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), 'Organizar', Seccion.planificacion, _semanaDelTrabajo),
+            ? (Marca.iconoTrabajador, m('Trabajadores'), m('Nuevo trabajador'), Seccion.trabajadores)
+            : (Icons.calendar_month_outlined, (industrial ? 'Planificación' : 'Itinerario'), 'Organizar', Seccion.planificacion),
         null,
       ),
     ];
     final actual = hechos.indexOf(false);
-    // Borde discontinuo: es una guía de paso, no una tarjeta de datos.
-    // En la presentación, el borde late entre neutro y morado mientras se recorren los pasos.
-    return ValueListenableBuilder<double?>(
-      valueListenable: IntroInicio.t,
-      builder: (context, t, child) => CustomPaint(
-        foregroundPainter: BordeDiscontinuo(
-          Color.lerp(P.gris.withValues(alpha: .4), P.morado, IntroInicio.latido(t))!,
-          BorderRadius.circular(P.radio + 6),
-          separacion: 6,
-        ),
-        child: child,
-      ),
+    // Borde discontinuo: es una guía de paso, no una tarjeta de datos. Parpadea en morado mientras esté la guía.
+    return _BordeParpadeante(
       // La tarjeta blanca va metida hacia dentro: el borde discontinuo queda por fuera, con aire.
       child: Padding(
         padding: const EdgeInsets.all(7),
@@ -697,16 +932,7 @@ class _PrimerosPasos extends StatelessWidget {
                 const SizedBox(width: 16),
                 // Pasitos que caminan hacia la derecha, en onda, junto al título (en móvil no caben).
                 if (!esMovil(context))
-                  ExcludeSemantics(
-                    // En la presentación, las huellas salen de una en una (la del momento, más morada).
-                    child: ValueListenableBuilder<double?>(
-                      valueListenable: IntroInicio.t,
-                      builder: (context, t, _) => CustomPaint(
-                        size: const Size(150, 30),
-                        painter: _HuellasGuia(P.morado.withValues(alpha: .4), t: t),
-                      ),
-                    ),
-                  ),
+                  const ExcludeSemantics(child: _HuellasAnimadas()),
                 const SizedBox(width: 48),
               ],
             ),
@@ -766,18 +992,10 @@ class _PrimerosPasos extends StatelessWidget {
                                   ruta.$2,
                                   ruta.$3,
                                   mas: ruta.$4 != Seccion.planificacion,
-                                  onTap: () async {
+                                  onTap: () {
                                     // Itinerario: se prepara la semana antes de entrar.
-                                    if (ruta.$4 == Seccion.planificacion) {
-                                      await ruta.$5(context);
-                                      onIr(ruta.$4);
-                                      return;
-                                    }
-                                    // Crear: primero se entra en la sección y, tras un momento para que se vea
-                                    // dónde estamos, se abre el formulario como si se hubiera pulsado allí.
+                                    if (ruta.$4 == Seccion.planificacion) _semanaDelTrabajo();
                                     onIr(ruta.$4);
-                                    await Future.delayed(const Duration(milliseconds: 900));
-                                    if (context.mounted) ruta.$5(context);
                                   },
                                 ),
                               ?boton,
@@ -842,6 +1060,53 @@ class _Ruta extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Borde discontinuo de «Primeros pasos»: pasa sin parar de neutro a morado y vuelve. Con «reducir movimiento»,
+/// morado fijo.
+class _BordeParpadeante extends StatefulWidget {
+  final Widget child;
+  const _BordeParpadeante({required this.child});
+
+  @override
+  State<_BordeParpadeante> createState() => _BordeParpadeanteState();
+}
+
+class _BordeParpadeanteState extends State<_BordeParpadeante> with SingleTickerProviderStateMixin {
+  late final _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!animacionesGuia || MediaQuery.disableAnimationsOf(context)) {
+      _latido
+        ..stop()
+        ..value = 1;
+    } else if (!_latido.isAnimating) {
+      _latido.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _latido.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _latido,
+    // La tarjeta no se vuelve a pintar en cada paso del parpadeo: solo el borde.
+    child: RepaintBoundary(child: widget.child),
+    builder: (context, child) => CustomPaint(
+      foregroundPainter: BordeDiscontinuo(
+        Color.lerp(P.gris.withValues(alpha: .4), P.morado, Curves.easeInOut.transform(_latido.value))!,
+        BorderRadius.circular(P.radio + 6),
+        separacion: 6,
+      ),
+      child: child,
+    ),
+  );
 }
 
 /// Marca de un paso: tick verde si está hecho, anillo morado si es el actual, anillo gris si falta.
@@ -1558,13 +1823,62 @@ class _NombreEmpresaState extends State<_NombreEmpresa> {
 /// Margen interior del bloque del saludo; la fecha de encima entra lo mismo para alinearse con él.
 const _sangriaHero = 22.0;
 
+/// Las huellas de «Primeros pasos» caminando sin parar: la morada recorre el camino una y otra vez, y las demás
+/// siguen a la vista. En la presentación, la primera vuelta las va sacando de una en una.
+class _HuellasAnimadas extends StatefulWidget {
+  const _HuellasAnimadas();
+
+  @override
+  State<_HuellasAnimadas> createState() => _HuellasAnimadasState();
+}
+
+class _HuellasAnimadasState extends State<_HuellasAnimadas> with SingleTickerProviderStateMixin {
+  late final _paseo = AnimationController(vsync: this, duration: const Duration(milliseconds: 4400));
+  bool _quietas = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _quietas = !animacionesGuia || MediaQuery.disableAnimationsOf(context);
+    if (_quietas) {
+      _paseo.stop();
+    } else if (!_paseo.isAnimating) {
+      _paseo.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _paseo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: AnimatedBuilder(
+      animation: Listenable.merge([_paseo, IntroInicio.t]),
+      builder: (context, _) => CustomPaint(
+        size: const Size(150, 30),
+        painter: _HuellasGuia(
+          P.morado.withValues(alpha: .4),
+          t: IntroInicio.t.value,
+          paseo: _quietas ? null : _paseo.value,
+        ),
+      ),
+    ),
+  );
+}
+
 /// Pasitos que caminan de izquierda a derecha en una onda (arriba y abajo), junto al título de la guía.
 class _HuellasGuia extends CustomPainter {
   final Color color;
 
-  /// Reloj de la presentación (null: todas las huellas tal cual).
+  /// Reloj de la presentación (null: sin presentación).
   final double? t;
-  const _HuellasGuia(this.color, {this.t});
+
+  /// Por dónde va la vuelta que se repite, de 0 a 1 (null: huellas quietas).
+  final double? paseo;
+  const _HuellasGuia(this.color, {this.t, this.paseo});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1576,14 +1890,22 @@ class _HuellasGuia extends CustomPainter {
     // Pasos cortos, como al andar: uno cada ~15 px, alternando izquierda y derecha.
     final n = max(4, (ancho / 15).floor());
     final avance = IntroInicio.huellas(t, n);
+    // Primera vuelta de la presentación: hasta que la última huella se apaga.
+    final estrenando = avance != null && avance < n + 1.6;
+    // Cuánto morado lleva una huella según lo que hace que pasó por ella (en huellas).
+    double fuerza(double d) => d < 1 ? 1.0 : (1 - (d - 1) / .6).clamp(0.0, 1.0);
     for (var i = 0; i < n; i++) {
-      // Presentación: invisible hasta su turno; al salir, opaca y morada; después, vuelve a como está siempre.
-      if (avance != null) {
+      if (estrenando) {
+        // Invisible hasta su turno; al salir, opaca y morada; después, vuelve a como está siempre.
         final d = avance - i;
         if (d <= 0) continue;
-        final fuerte = d < 1 ? 1.0 : (1 - (d - 1) / .6).clamp(0.0, 1.0);
-        final c = Color.lerp(color, P.morado, fuerte)!;
+        final c = Color.lerp(color, P.morado, fuerza(d))!;
         relleno.color = c.withValues(alpha: c.a * (d / .25).clamp(0.0, 1.0));
+      } else if (paseo != null) {
+        // Se repite sin desaparecer: solo el morado va pasando; al final, una pausa corta antes de volver.
+        final d = paseo! * (n + 4) - i;
+        final f = d <= 0 ? 0.0 : fuerza(d) * (d / .25).clamp(0.0, 1.0);
+        relleno.color = Color.lerp(color, P.morado, f)!;
       } else {
         relleno.color = color;
       }
@@ -1602,7 +1924,7 @@ class _HuellasGuia extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_HuellasGuia old) => old.t != t || old.color != color;
+  bool shouldRepaint(_HuellasGuia old) => old.t != t || old.paseo != paseo || old.color != color;
 }
 
 /// Ilustraciones vectoriales del saludo: amanecer, sol y luna con estrellas.

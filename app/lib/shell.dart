@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
 import 'ajustes.dart';
 import 'finanzas.dart';
@@ -59,15 +62,32 @@ class _ShellState extends State<Shell> {
   /// Secciones ya abiertas: se quedan montadas (ocultas) para que volver a ellas sea instantáneo.
   final _visitadas = <Seccion>{};
 
-  /// Entrada del pulpo, cada vez que se entra en la app (no en la vista de trabajador).
-  bool _intro = rolTrabajador.value == null;
+  /// Entrada del pulpo (oficina y técnico): una vez por cada inicio de sesión, no al recargar la página.
+  bool _intro = false;
+
+  bool _estrenarEntrada() {
+    final sesion = store.nube == null ? null : Supabase.instance.client.auth.currentSession;
+    // Sin sesión (versión local y pruebas): una vez por navegador.
+    if (sesion == null) return ajustes.estrenarEntrada('local', 'local');
+    // El identificador de la sesión va en su token: no cambia al recargar ni al renovarlo, sí al volver a entrar.
+    var id = sesion.user.lastSignInAt ?? '';
+    try {
+      final datos = utf8.decode(base64Url.decode(base64Url.normalize(sesion.accessToken.split('.')[1])));
+      id = (jsonDecode(datos) as Map)['session_id'] as String? ?? id;
+    } on Object catch (_) {
+      // Token ilegible: vale la hora del último inicio de sesión.
+    }
+    return ajustes.estrenarEntrada(sesion.user.id, id);
+  }
 
   @override
   void initState() {
     super.initState();
+    _intro = _estrenarEntrada();
     introPulpoActiva.value = _intro;
     HardwareKeyboard.instance.addHandler(_tecla);
     pedirOrdenes.addListener(_irAOrdenes);
+    pedirIncidencias.addListener(_irAIncidencias);
     pedirUsoActivos.addListener(_irAUso);
     // ?nuevo=tarea|cliente|trabajador abre ese formulario al entrar (útil para capturas).
     final nuevo = Uri.base.queryParameters['nuevo'];
@@ -99,6 +119,11 @@ class _ShellState extends State<Shell> {
     if (mounted) ir(Seccion.tareas);
   }
 
+  /// Una incidencia desde otra vista (Estadísticas): a Incidencias (queda marcada allí).
+  void _irAIncidencias() {
+    if (mounted) ir(Seccion.incidencias);
+  }
+
   /// «Uso de activos» desde el botón de Activos: a su sección.
   void _irAUso() {
     if (mounted) ir(Seccion.usoActivos);
@@ -107,6 +132,7 @@ class _ShellState extends State<Shell> {
   @override
   void dispose() {
     pedirOrdenes.removeListener(_irAOrdenes);
+    pedirIncidencias.removeListener(_irAIncidencias);
     pedirUsoActivos.removeListener(_irAUso);
     HardwareKeyboard.instance.removeHandler(_tecla);
     super.dispose();
@@ -200,10 +226,16 @@ class _ShellState extends State<Shell> {
   }
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<String?>(
-    valueListenable: rolTrabajador,
-    // Vista de trabajador: otra app, sin barra lateral. Esta se queda con su estado al volver.
-    builder: (context, rol, _) => rol != null ? const ShellTrabajador() : _administrador(context),
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      ValueListenableBuilder<String?>(
+        valueListenable: rolTrabajador,
+        // Vista de trabajador: otra app, sin barra lateral. Esta se queda con su estado al volver.
+        builder: (context, rol, _) => rol != null ? const ShellTrabajador() : _administrador(context),
+      ),
+      if (_intro) IntroPulpo(onFin: () => setState(() => _intro = false)),
+    ],
   );
 
   Widget _administrador(BuildContext context) {
@@ -257,6 +289,15 @@ class _ShellState extends State<Shell> {
         body: Stack(
           children: [
             Positioned.fill(child: _cuerpo(movil, compacta, pagina)),
+            // Lo recién creado, en grande, y su vuelo hasta la campana.
+            Positioned.fill(child: VueloCreado(derecha: movil ? 12 : 24, abajo: movil ? 84 : 24)),
+            // Al guardar un cambio: «Cambios guardados», efímero, abajo del todo en el centro.
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: movil ? 76 : 16,
+              child: const Center(child: AvisoGuardado()),
+            ),
             // Tras borrar algo: qué se ha borrado y «Deshacer», abajo en el centro.
             Positioned(
               left: 16,
@@ -276,7 +317,6 @@ class _ShellState extends State<Shell> {
               ),
               child: avisos,
             ),
-            if (_intro) Positioned.fill(child: IntroPulpo(onFin: () => setState(() => _intro = false))),
           ],
         ),
       ),
@@ -359,7 +399,8 @@ class _ShellState extends State<Shell> {
     Seccion.incidencias => const IncidenciasPagina(),
     // ignore: prefer_const_constructors
     Seccion.usoActivos => UsoMaquinas(),
-    Seccion.estadisticas => const EstadisticasPultec(),
+    // ignore: prefer_const_constructors
+    Seccion.estadisticas => EstadisticasPultec(),
     Seccion.finanzas => const VistaFinanzas(),
   };
 }

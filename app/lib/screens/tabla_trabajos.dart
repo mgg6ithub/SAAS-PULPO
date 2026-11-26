@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/iconos.dart';
 import '../industrial/gravedad.dart' show cancelarOts, origenOt, periodicidadOt, AnilloCiclo, cicloOt, descripcionOt;
+import '../columnas.dart';
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos, enOrdenDelUsuario;
 import '../models.dart';
@@ -103,40 +104,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
     salirSeleccion();
   }
 
-  /// Pultec: columnas opcionales de la lista de órdenes y las que se ven (se recuerdan mientras dure la sesión).
-  static const _opcionales = columnasOpcionalesOts;
-  static final _visibles = columnasVisiblesOts;
-  bool _ver(String c) => _visibles.contains(c);
-
   String _descripcion(Tarea t) => descripcionOt(t);
-
-  Widget _menuColumnas() => MenuAnchor(
-    alignmentOffset: const Offset(-180, 4),
-    style: MenuStyle(
-      backgroundColor: WidgetStatePropertyAll(P.superficie),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-    ),
-    menuChildren: [
-      MenuItemButton(onPressed: null, child: Text('Columnas', style: TextStyle(fontSize: 12.5, color: P.textoSuave))),
-      for (final c in _opcionales)
-        MenuItemButton(
-          closeOnActivate: false,
-          leadingIcon: Icon(
-            _ver(c) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-            size: 20,
-            color: _ver(c) ? P.morado : P.textoSuave,
-          ),
-          onPressed: () => setState(() => _ver(c) ? _visibles.remove(c) : _visibles.add(c)),
-          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c)),
-        ),
-    ],
-    builder: (context, menu, _) => IconButton(
-      tooltip: 'Elegir columnas',
-      visualDensity: VisualDensity.compact,
-      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-      icon: Icon(Icons.view_column_outlined, size: 18, color: P.textoSuave),
-    ),
-  );
 
   /// Cuántos subtrabajos tiene el trabajo.
   Widget _subtrabajos(Tarea t) {
@@ -333,8 +301,10 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
       return Align(
         alignment: Alignment.topCenter,
         child: Tabla(
-          // El orden que deje el usuario se recuerda (y Exportar lo sigue).
-          orden: industrial ? ordenColumnasOts : null,
+          // Pultec: orden y columnas elegidas se guardan en la cuenta (y Exportar los sigue); se eligen en el
+          // menú del final.
+          id: industrial ? 'ordenes' : null,
+          menuColumnas: industrial && medio,
           resaltar: widget.marcada == null ? null : (i) => ts[i].id == widget.marcada ? P.morado : null,
           focoInicial: widget.marcada == null ? null : ts.indexWhere((t) => t.id == widget.marcada),
           seleccionCabecera: BotonSeleccionLista(
@@ -343,17 +313,16 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
           ),
           columnas: [
             if (seleccionando) const Col('', ancho: 36, cabecera: SizedBox()),
-            Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4),
-            // Pultec: columnas a elegir con el menú del final (de serie, sin «Fecha y hora»: la fecha exacta sale al
-            // pasar el ratón por el anillo del principio).
+            Col(industrial ? 'Orden de trabajo' : m('Equipo / trabajo'), flex: 4, fija: true),
+            // Pultec: de serie, sin «Fecha y hora» (la fecha exacta sale al pasar el ratón por el anillo del principio).
             if (industrial) ...[
-              if (medio && widget.conCliente && _ver('Activo')) const Col('Activo', flex: 4),
-              if (medio && _ver('Origen')) const Col('Origen', ancho: 150),
+              if (medio && widget.conCliente) const Col('Activo', flex: 4),
+              if (medio) const Col('Origen', ancho: 150),
               // Siempre «Criticidad» con su píldora (Preventivo, No crítico, Crítico), aunque haya poco sitio.
-              if (_ver('Gravedad')) Col('Gravedad', ancho: apurado ? 128 : 170),
-              if (medio && _ver('Asignado a')) Col('Asignado a', ancho: apurado ? 72 : 96),
-              if (medio && _ver('Fecha y hora')) const Col('Fecha y hora', ancho: 160),
-              if (ancho && _ver('Periodicidad')) const Col('Periodicidad', ancho: 120),
+              Col('Gravedad', ancho: apurado ? 128 : 170),
+              if (medio) Col('Asignado a', ancho: apurado ? 72 : 96),
+              if (medio) const Col('Fecha y hora', ancho: 160, oculta: true),
+              if (ancho) const Col('Periodicidad', ancho: 120),
             ] else ...[
               if (medio && widget.conCliente) Col(m('Cliente'), flex: 3),
               if (ancho) const Col('Periodicidad', flex: 2),
@@ -364,16 +333,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
             // Pultec, en el histórico: el parte en PDF con un clic (sin título, va la primera: bajo el botón de
             // selección, como los círculos al seleccionar).
             if (industrial && conPdf) const Col('', ancho: 36, cabecera: SizedBox()),
-            // Pultec: al final, separado por una raya, el menú para elegir columnas.
-            if (industrial && medio)
-              Col(
-                'Columnas',
-                ancho: 48,
-                derecha: true,
-                cabecera: Row(
-                  children: [Container(width: 1, height: 16, color: P.borde), const Spacer(), _menuColumnas()],
-                ),
-              ),
             // Columna de automatizaciones (rayo), quitada de momento: las automatizaciones se replantean.
             // if (industrial && medio)
             //   const Col('Automatización', ancho: 30, derecha: true,
@@ -454,7 +413,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                 ],
               ),
               if (industrial) ...[
-                if (medio && widget.conCliente && _ver('Activo'))
+                if (medio && widget.conCliente)
                   Tooltip(message: store.activo(t.activoId)?.titulo ?? 'Sin activo',
                         child: Row(children: [
                           if (store.activo(t.activoId) case final activo?) ...[
@@ -464,7 +423,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                           Expanded(child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true)),
                         ])),
                 // Con el icono de su sitio: mantenimiento (portapapeles), incidencia (aviso) o a mano (una mano).
-                if (medio && _ver('Origen'))
+                if (medio)
                   Builder(builder: (_) {
                     final (origen, color) = origenOt(t);
                     final icono = origen == 'Mantenimiento'
@@ -479,19 +438,18 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       Flexible(child: celdaTexto(origen, suave: true)),
                     ]);
                   }),
-                if (_ver('Gravedad'))
                   Align(
                     alignment: Alignment.centerLeft,
                     child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),
                   ),
-                if (medio && _ver('Asignado a'))
+                if (medio)
                   t.esPlantilla ? const SizedBox() : SelectorTrabajadores(
                         t,
                         () => store.guardarTarea(t),
                         compacto: true,
                         ofrecerSubtrabajos: !industrial,
                       ),
-                if (medio && _ver('Fecha y hora'))
+                if (medio)
               t.proximo == null
                   ? celdaTexto('', suave: true)
                   : Column(
@@ -513,7 +471,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                         ),
                       ],
                     ),
-                if (ancho && _ver('Periodicidad')) celdaTexto(periodicidadOt(t)),
+                if (ancho) celdaTexto(periodicidadOt(t)),
               ] else ...[
                 // El cliente se cambia desde la lista; un subtrabajo comparte el de su trabajo.
                 if (medio && widget.conCliente)
@@ -584,7 +542,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                     // Mismo eje que el botón de selección de la cabecera (8 px del borde, la fila tiene 18 - 4).
                     ? Transform.translate(offset: const Offset(-6, 0), child: BotonPdf.orden(t, context, compacto: true))
                     : const SizedBox(),
-              if (industrial && medio) const SizedBox(),
             ];
           },
         ),
@@ -606,12 +563,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
 //   );
 // }
 
-/// Columnas que se pueden elegir en la lista de órdenes de trabajo (Pultec), las elegidas y el orden en que el
-/// usuario las ha dejado; se recuerdan mientras dure la sesión y Exportar sale igual.
-const columnasOpcionalesOts = ['Activo', 'Origen', 'Gravedad', 'Asignado a', 'Fecha y hora', 'Periodicidad'];
-final columnasVisiblesOts = {'Origen', 'Activo', 'Gravedad', 'Asignado a', 'Periodicidad'};
-final ordenColumnasOts = <String>[];
-
 /// Órdenes de trabajo [ts] en texto, tal como se ven en la lista: sus columnas en su orden. Cabecera primero.
 List<List<String>> otsEnTexto(List<Tarea> ts) {
   String asignado(Tarea t) {
@@ -622,19 +573,18 @@ List<List<String>> otsEnTexto(List<Tarea> ts) {
 
   final valores = <String, String Function(Tarea)>{
     'Orden de trabajo': (t) => t.nombre,
-    for (final c in columnasOpcionalesOts)
-      if (columnasVisiblesOts.contains(c))
-        c: switch (c) {
-          'Activo' => (t) => store.activo(t.activoId)?.titulo ?? 'Sin activo',
-          'Origen' => (t) => origenOt(t).$1,
-          'Gravedad' => (t) => t.tipoMantenimiento?.etiqueta ?? '—',
-          'Asignado a' => asignado,
-          'Fecha y hora' => (t) => t.proximo == null ? '' : [fecha(t.proximo), ?t.horario].join(' '),
-          _ => periodicidadOt,
-        },
+    'Activo': (t) => store.activo(t.activoId)?.titulo ?? 'Sin activo',
+    'Origen': (t) => origenOt(t).$1,
+    'Gravedad': (t) => t.tipoMantenimiento?.etiqueta ?? '—',
+    'Asignado a': asignado,
+    'Fecha y hora': (t) => t.proximo == null ? '' : [fecha(t.proximo), ?t.horario].join(' '),
+    'Periodicidad': periodicidadOt,
     'Estado': (t) => t.estado.etiqueta,
   };
-  final cols = enOrdenDelUsuario(valores.keys.toList(), ordenColumnasOts);
+  final cols = enOrdenDelUsuario([
+    for (final c in valores.keys)
+      if (c == 'Orden de trabajo' || columnasTablas.ve('ordenes', c, porDefecto: c != 'Fecha y hora')) c,
+  ], columnasTablas.orden('ordenes'));
   return [
     cols,
     for (final t in ts) [for (final c in cols) valores[c]!(t)],

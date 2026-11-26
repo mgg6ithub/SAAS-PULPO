@@ -103,19 +103,18 @@ class IndicadoresPultec extends StatelessWidget {
     final filas = [
       for (final a in store.hijosDe(null)) (a: a, i: indicadoresDe(store.ramaDe(a.id), desde, dias)),
     ]..sort((x, y) => x.i.disponibilidad.compareTo(y.i.disponibilidad));
-    if (filas.isEmpty) {
-      return const Vacio(icono: Icons.speed_rounded, titulo: 'Sin indicadores', texto: 'Aparecerán cuando tengas activos con órdenes e incidencias.');
-    }
     final cifras = SegunTamano(
       key: ValueKey('indicadores-$dias'),
       clave: (box) => box.maxWidth > 900 ? 5 : box.maxWidth > 560 ? 3 : 2,
       builder: (context, box) => Rejilla(
         columnas: box.maxWidth > 900 ? 5 : box.maxWidth > 560 ? 3 : 2,
         hueco: huecoVista,
+        igualarAlto: true,
         children: [
           CifraGrafica('MTBF, entre averías', texto: _dias(g.mtbfDias)),
           CifraGrafica('MTTR, en reparar', texto: _horas(g.mttrHoras)),
-          CifraGrafica('Disponibilidad', valor: (g.disponibilidad * 100).round(), sufijo: ' %'),
+          // Sin activos no hay disponibilidad que medir («—», no un 100 %).
+          CifraGrafica('Disponibilidad', valor: filas.isEmpty ? null : (g.disponibilidad * 100).round(), sufijo: ' %'),
           CifraGrafica(
             'Preventivo',
             texto: g.preventivas + g.correctivas == 0 ? '—' : _pct(g.preventivas / (g.preventivas + g.correctivas)),
@@ -167,12 +166,14 @@ class IndicadoresPultec extends StatelessWidget {
         const SizedBox(height: huecoVista),
         Expanded(
           child: SegunTamano(
-            clave: (box) => box.maxWidth > 900,
+            clave: (box) => (box.maxWidth > 900, box.maxWidth > 600),
             builder: (context, box) {
               final ancho = box.maxWidth > 900;
               return Tabla(
+                id: 'indicadores',
+                menuColumnas: box.maxWidth > 600,
                 columnas: [
-                  const Col('Activo', flex: 3),
+                  const Col('Activo', flex: 3, fija: true),
                   Col('Disponibilidad', flex: 3, ayuda: ayudaEstadisticas['Disponibilidad']),
                   const Col('Averías', ancho: 90, ayuda: 'Incidencias avisadas en el periodo, sin las desestimadas.'),
                   Col('MTBF', ancho: 120, ayuda: ayudaEstadisticas['MTBF, entre averías']),
@@ -202,7 +203,7 @@ class IndicadoresPultec extends StatelessWidget {
                     if (ancho) celdaTexto(_pct(i.cumplimiento), suave: i.cumplimiento == null),
                   ];
                 },
-                pie: pieTabla(filas.length, filas.length == 1 ? 'activo' : 'activos'),
+                pie: filas.isEmpty ? null : pieTabla(filas.length, filas.length == 1 ? 'activo' : 'activos'),
               );
             },
           ),

@@ -18,3 +18,6 @@ void irA(String url) => abrirEnlace(url);
 void ponerPestana(String icono, String titulo) {}
 
 void quitarDeLaDireccion(String parametro) {}
+
+/// Fuera del navegador no hay atajo: la foto se reduce en la app.
+Future<Uint8List?> reducirJpeg(Uint8List bytes, int lado, double calidad) async => null;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../columnas.dart';
 import '../forms.dart';
 import '../models.dart';
 import '../store.dart';
@@ -208,7 +209,7 @@ class TablaPlanes extends StatefulWidget {
 }
 
 class _TablaPlanesState extends State<TablaPlanes> {
-  /// Columnas opcionales, en su orden, y las que se ven (se recuerdan mientras dure la sesión).
+  /// Columnas de la tabla además del mantenimiento y su vigencia, en su orden de serie.
   static const _opcionales = [
     'Código',
     'Orden de trabajo',
@@ -222,20 +223,17 @@ class _TablaPlanesState extends State<TablaPlanes> {
     'Duración',
     'Repuestos',
   ];
-  static const _porDefecto = {'Código', 'Cada cuánto', 'Horas restantes', 'Fecha', 'Orden de trabajo'};
-  static final _visibles = {..._porDefecto};
-
   static const _cols = {
     'Código': Col('Código', flex: 2),
-    'Componente': Col('Componente', flex: 2),
+    'Componente': Col('Componente', flex: 2, oculta: true),
     'Prioridad': Col('Prioridad', ancho: 150),
     'Cada cuánto': Col('Cada cuánto', flex: 2),
     'Horas restantes': Col('Horas restantes', flex: 2, derecha: true),
     'Fecha': Col('Fecha', flex: 2),
-    'Último hecho': Col('Último hecho', flex: 2),
-    'Categoría': Col('Categoría', flex: 2),
-    'Duración': Col('Duración', ancho: 100),
-    'Repuestos': Col('Repuestos', flex: 3),
+    'Último hecho': Col('Último hecho', flex: 2, oculta: true),
+    'Categoría': Col('Categoría', flex: 2, oculta: true),
+    'Duración': Col('Duración', ancho: 100, oculta: true),
+    'Repuestos': Col('Repuestos', flex: 3, oculta: true),
     'Orden de trabajo': Col('Orden de trabajo', flex: 3),
   };
 
@@ -309,49 +307,6 @@ class _TablaPlanesState extends State<TablaPlanes> {
     setState(() {});
   }
 
-  /// Botón de la última columna: menú con todas las columnas para marcar o desmarcar.
-  Widget _menuColumnas() => MenuAnchor(
-    alignmentOffset: const Offset(-200, 4),
-    style: MenuStyle(
-      backgroundColor: WidgetStatePropertyAll(P.superficie),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-    ),
-    menuChildren: [
-      MenuItemButton(
-        onPressed: null,
-        child: Text('Columnas', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-      ),
-      for (final c in _opcionales)
-        MenuItemButton(
-          closeOnActivate: false,
-          leadingIcon: Icon(
-            _visibles.contains(c) ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-            size: 20,
-            color: _visibles.contains(c) ? P.morado : P.textoSuave,
-          ),
-          onPressed: () => setState(() => _visibles.contains(c) ? _visibles.remove(c) : _visibles.add(c)),
-          child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 160), child: Text(c)),
-        ),
-      const Divider(height: 8),
-      MenuItemButton(
-        closeOnActivate: false,
-        leadingIcon: Icon(Icons.restart_alt_rounded, size: 20, color: P.textoSuave),
-        onPressed: () => setState(
-          () => _visibles
-            ..clear()
-            ..addAll(_porDefecto),
-        ),
-        child: const Text('Volver a las de por defecto'),
-      ),
-    ],
-    builder: (context, menu, _) => IconButton(
-      tooltip: 'Elegir columnas',
-      visualDensity: VisualDensity.compact,
-      onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-      icon: Icon(Icons.view_column_outlined, size: 18, color: P.textoSuave),
-    ),
-  );
-
   @override
   Widget build(BuildContext context) => SegunTamano(
     clave: (box) => box.maxWidth > 600,
@@ -366,7 +321,7 @@ class _TablaPlanesState extends State<TablaPlanes> {
       final proximos = {for (final p in ps) p.id: proximoPlan(p)};
       final vistas = [
         for (final c in _opcionales)
-          if (medio ? _visibles.contains(c) : c == 'Fecha') c,
+          if (medio || c == 'Fecha') c,
       ];
       return SeleccionMultiple(
         ids: [for (final p in ps) p.id],
@@ -403,31 +358,29 @@ class _TablaPlanesState extends State<TablaPlanes> {
           ];
         },
         builder: (context, s) {
+      // En estrecho van solo el mantenimiento y la fecha, sin lo elegido.
+      final id = medio ? 'mantenimientos' : null;
       final columnas = [
         ...s.columna,
-        const Col('Mantenimiento', flex: 5),
+        const Col('Mantenimiento', flex: 5, fija: true),
         // Activo (play) o pausado (pausa); en la cabecera, pausar o reanudar todos.
         if (medio) Col('Vigencia', flex: 2, cabecera: _pausarTodos()),
         for (final c in vistas) _cols[c]!,
-        // Separado de lo anterior por una raya fina.
-        if (medio)
-          Col(
-            'Columnas',
-            ancho: 48,
-            derecha: true,
-            cabecera: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [Container(width: 1, height: 20, color: P.borde), const Spacer(), _menuColumnas()],
-            ),
-          ),
       ];
+      bool seVe(Col c) => id == null || c.titulo.isEmpty || c.fija || columnasTablas.ve(id, c.titulo, porDefecto: !c.oculta);
       // Con muchas columnas marcadas no caben: la tabla se desplaza en horizontal en vez de desbordar.
-      final necesario = 36 + columnas.fold<double>(0, (s, c) => s + (c.ancho ?? 70.0 * c.flex));
-      return DesplazarTabla(
-        ancho: necesario,
+      return ListenableBuilder(
+        listenable: columnasTablas,
+        builder: (context, tabla) => DesplazarTabla(
+          // El margen y, al final, el menú de columnas.
+          ancho: columnas.where(seVe).fold<double>(36 + (medio ? 48 : 0), (s, c) => s + (c.ancho ?? 70.0 * c.flex)),
+          child: tabla!,
+        ),
         child: Align(
           alignment: Alignment.topCenter,
           child: Tabla(
+            id: id,
+            menuColumnas: medio,
             seleccionCabecera: s.cabecera,
             columnas: columnas,
             filas: ps.length,
@@ -482,7 +435,22 @@ class _TablaPlanesState extends State<TablaPlanes> {
                   case 'Orden de trabajo':
                     // El técnico es de la orden, no del mantenimiento. La orden la crea la base sola al guardar
                     // el mantenimiento: si aún no ha llegado, se espera.
-                    if (otPendienteDe == null) return celdaTexto(p.activa ? 'Creando orden…' : '—', suave: true);
+                    if (otPendienteDe == null) {
+                      if (!p.activa) return celdaTexto('—', suave: true);
+                      // Mientras llega, ocupa lo mismo que la orden (insignia y selector de técnico, de 32 px): así
+                      // la fila no crece de golpe al aparecer.
+                      return const Padding(
+                        padding: EdgeInsets.fromLTRB(6, 6, 10, 6),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Pill('Creando orden…', P.gris, punto: true),
+                            SizedBox(height: 3 + 32),
+                          ],
+                        ),
+                      );
+                    }
                     final f = otPendienteDe.proximo;
                     final vencida = f != null && diasHasta(f) < 0;
                     return Padding(
@@ -582,8 +550,8 @@ class _TablaPlanesState extends State<TablaPlanes> {
                       ),
                     ),
                   ),
-                for (final c in vistas) celda(c),
-                if (medio) const SizedBox(),
+                // Las quitadas no se calculan (cada fila buscaría datos para nada).
+                for (final c in vistas) seVe(_cols[c]!) ? celda(c) : const SizedBox(),
               ];
             },
           ),

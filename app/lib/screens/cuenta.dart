@@ -41,7 +41,6 @@ class CuentaForm extends StatefulWidget {
 
 class _CuentaFormState extends State<CuentaForm> {
   final _nombre = TextEditingController();
-  final _correo = TextEditingController();
   String _foto = '';
   bool _cargado = false;
 
@@ -64,7 +63,6 @@ class _CuentaFormState extends State<CuentaForm> {
   @override
   void dispose() {
     _nombre.dispose();
-    _correo.dispose();
     super.dispose();
   }
 
@@ -75,6 +73,50 @@ class _CuentaFormState extends State<CuentaForm> {
     } catch (e) {
       if (mounted) _avisar(context, 'No se pudo guardar: ${_error(e)}');
     }
+  }
+
+  @override
+  Widget build(BuildContext context) => VentanaFormulario(
+    etiqueta: 'CUENTA',
+    titulo: _nombre.text.trim().isEmpty ? 'Tu cuenta' : _nombre.text.trim(),
+    subtitulo: Nube.correo,
+    lider: FotoFormulario(foto: _foto, onCambio: (f) => setState(() => _foto = f)),
+    onGuardar: _guardar,
+    campos: [
+      Bloque('Perfil', descripcion: 'Tu nombre sale en las invitaciones y en los emails.', primero: true, [
+        if (_cargado) campo('Nombre', _nombre, hint: 'Nombre y apellido') else const LinearProgressIndicator(),
+      ]),
+      // Correo, contraseña, sesiones y borrar la cuenta.
+      // ignore: prefer_const_constructors
+      BloquesAcceso(),
+    ],
+  );
+}
+
+/// Correo, contraseña, sesiones y borrar la cuenta: lo mismo en «Tu cuenta» (oficina) y en «Mi perfil» (técnico).
+class BloquesAcceso extends StatefulWidget {
+  const BloquesAcceso({super.key});
+
+  @override
+  State<BloquesAcceso> createState() => _BloquesAccesoState();
+}
+
+class _BloquesAccesoState extends State<BloquesAcceso> {
+  final _correo = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Por si el correo nuevo ya se ha confirmado en otra pestaña.
+    Nube.refrescarCuenta().then((_) {
+      if (mounted) setState(() {});
+    }, onError: (_) {});
+  }
+
+  @override
+  void dispose() {
+    _correo.dispose();
+    super.dispose();
   }
 
   Future<void> _cambiarCorreo() async {
@@ -133,16 +175,9 @@ class _CuentaFormState extends State<CuentaForm> {
   }
 
   @override
-  Widget build(BuildContext context) => VentanaFormulario(
-    etiqueta: 'CUENTA',
-    titulo: _nombre.text.trim().isEmpty ? 'Tu cuenta' : _nombre.text.trim(),
-    subtitulo: Nube.correo,
-    lider: FotoFormulario(foto: _foto, onCambio: (f) => setState(() => _foto = f)),
-    onGuardar: _guardar,
-    campos: [
-      Bloque('Perfil', descripcion: 'Tu nombre sale en las invitaciones y en los emails.', primero: true, [
-        if (_cargado) campo('Nombre', _nombre, hint: 'Nombre y apellido') else const LinearProgressIndicator(),
-      ]),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
       Bloque('Correo', descripcion: _textoCorreo, [
         if (Nube.correoPendiente case final pendiente?)
           Padding(
@@ -520,6 +555,15 @@ class _ClaveNuevaState extends State<_ClaveNueva> {
 /// Primer arranque de una cuenta sin empresa (DEV-019): se le ha creado una y aquí le pone nombre. Es una
 /// pantalla propia, que sale directamente en lugar de la app (sin verla antes). Con [porGoogle] además se explica
 /// que se ha creado, por si esperaba unirse a la de otra persona. [onListo] se llama al terminar.
+/// El correo de la sesión; sin Supabase arrancado (p. ej. en los tests), nada.
+String _correoCuenta() {
+  try {
+    return Supabase.instance.client.auth.currentUser?.email ?? '';
+  } catch (_) {
+    return '';
+  }
+}
+
 class PantallaNombrarEmpresa extends StatelessWidget {
   final bool porGoogle;
   final VoidCallback onListo;
@@ -553,7 +597,7 @@ class PantallaNombrarEmpresa extends StatelessWidget {
                     top: 14,
                     right: 18,
                     child: Text(
-                      Supabase.instance.client.auth.currentUser?.email ?? '',
+                      _correoCuenta(),
                       style: TextStyle(color: P.textoSuave, fontSize: 12.5),
                     ),
                   ),

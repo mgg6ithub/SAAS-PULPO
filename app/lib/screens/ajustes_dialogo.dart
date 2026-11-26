@@ -44,16 +44,42 @@ class _AjustesState extends State<_Ajustes> {
   int elegida = 0;
 
   List<_Seccion> get _secciones => [
-    if (store.nube != null) (Icons.person_outline_rounded, P.morado, 'Cuenta', 'Tu perfil, el correo y la contraseña, las sesiones abiertas y borrar la cuenta.'),
+    if (store.nube != null)
+      (
+        Icons.person_outline_rounded,
+        P.morado,
+        'Cuenta',
+        'Tu perfil, el correo y la contraseña, las sesiones abiertas y borrar la cuenta.',
+      ),
     if (industrial && (store.nube?.esAdmin ?? false))
-      (Icons.workspace_premium_outlined, P.morado, 'Plan', 'El plan de tu empresa, el pago con tarjeta y las facturas.'),
+      (
+        Icons.workspace_premium_outlined,
+        P.morado,
+        'Plan',
+        'El plan de tu empresa, el pago con tarjeta y las facturas.',
+      ),
     if (industrial && (store.nube?.esAdmin ?? false))
-      (Icons.bolt_rounded, P.ambar, 'Automatizaciones', 'Correos que salen solos: a quién avisar cuando hay una incidencia o se completa una orden.'),
-    (Icons.contrast_rounded, P.morado, 'Apariencia', 'Tema claro u oscuro, y el tamaño y el tipo de letra de toda la app.'),
+      (
+        Icons.bolt_rounded,
+        P.ambar,
+        'Automatizaciones',
+        'Correos que salen solos: a quién avisar cuando hay una incidencia o vence una orden.',
+      ),
+    (
+      Icons.contrast_rounded,
+      P.morado,
+      'Apariencia',
+      'Tema claro u oscuro, y el tamaño y el tipo de letra de toda la app.',
+    ),
     (Icons.business_outlined, P.morado, 'Empresa', m('Los tipos de trabajo y las competencias de tus trabajadores.')),
     (Icons.keyboard_outlined, P.morado, 'Atajos', 'Atajos de teclado para moverte por la app sin el ratón.'),
     if (!(store.nube?.esTrabajador ?? false))
-      (Icons.swap_vert_rounded, P.morado, 'Datos', m('Importar y exportar clientes, trabajadores y trabajos en CSV (Excel).')),
+      (
+        Icons.swap_vert_rounded,
+        P.morado,
+        'Datos',
+        m('Importar y exportar clientes, trabajadores y trabajos en CSV (Excel).'),
+      ),
   ];
 
   List<Widget> _contenido(String seccion) => switch (seccion) {
@@ -119,27 +145,36 @@ class _AjustesState extends State<_Ajustes> {
           child: Enlace('Editar', onTap: () => abrirTipos(context)),
         ),
         if (!industrial)
-        _Fila(
-          titulo: 'Competencias',
-          subtitulo: m('${competencias.length} competencias para trabajadores y trabajos'),
-          child: Enlace('Editar', onTap: () => abrirCompetencias(context)),
-        ),
+          _Fila(
+            titulo: 'Competencias',
+            subtitulo: m('${competencias.length} competencias para trabajadores y trabajos'),
+            child: Enlace('Editar', onTap: () => abrirCompetencias(context)),
+          ),
       ]),
     ],
     'Atajos' => [
       _Grupo('General', [
         _Atajo('Crear algo nuevo en la sección en la que estás', ['N']),
         _Atajo('Abrir o cerrar el menú Crear', ['T']),
-        _Atajo('Ir a una sección de la barra lateral (1 Inicio, 2 ${industrial ? 'Planificación' : 'Itinerario'}…)', ['1', '…', '9']),
+        _Atajo('Ir a una sección de la barra lateral (1 Inicio, 2 ${industrial ? 'Planificación' : 'Itinerario'}…)', [
+          '1',
+          '…',
+          '9',
+        ]),
         _Atajo('Cerrar una ventana o un menú', ['Esc']),
       ]),
-      _Grupo(m('Listas (${industrial ? 'activos, órdenes de trabajo, incidencias, técnicos…' : 'clientes, trabajos, trabajadores…'})'), [
-        _Atajo('Marcar la primera fila', ['Espacio']),
-        _Atajo('Bajar o subir a la fila siguiente', ['↓', '↑']),
-        _Atajo('Abrir la fila marcada', ['Espacio', 'Intro']),
-        _Atajo('Moverse por las celdas de la fila', ['←', '→']),
-        _Atajo('Quitar la marca', ['Esc']),
-      ]),
+      _Grupo(
+        m(
+          'Listas (${industrial ? 'activos, órdenes de trabajo, incidencias, técnicos…' : 'clientes, trabajos, trabajadores…'})',
+        ),
+        [
+          _Atajo('Marcar la primera fila', ['Espacio']),
+          _Atajo('Bajar o subir a la fila siguiente', ['↓', '↑']),
+          _Atajo('Abrir la fila marcada', ['Espacio', 'Intro']),
+          _Atajo('Moverse por las celdas de la fila', ['←', '→']),
+          _Atajo('Quitar la marca', ['Esc']),
+        ],
+      ),
       _Grupo(industrial ? 'Planificación' : 'Itinerario', [
         if (industrial) _Atajo('Ver el siguiente mantenimiento en el calendario', ['Espacio']),
         _Atajo('Acercar o alejar el calendario', ['Ctrl', '+', '−']),
@@ -273,7 +308,9 @@ class _AjustesState extends State<_Ajustes> {
                                     child: Row(
                                       children: [
                                         TweenAnimationBuilder<Color?>(
-                                          tween: ColorTween(end: i == elegida ? P.iconoBarraElegido : P.textoBarraSuave),
+                                          tween: ColorTween(
+                                            end: i == elegida ? P.iconoBarraElegido : P.textoBarraSuave,
+                                          ),
                                           duration: const Duration(milliseconds: 200),
                                           builder: (_, c, _) => Icon(ic, size: 20, color: c),
                                         ),
@@ -395,13 +432,13 @@ class _Grupo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (titulo != null)
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            titulo!,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              titulo!,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: P.textoSuave),
+            ),
           ),
-        ),
         Container(
           decoration: BoxDecoration(
             color: P.superficie,
@@ -493,8 +530,8 @@ class _Fila extends StatelessWidget {
   );
 }
 
-/// Automatizaciones de la empresa (solo el admin): por cada ocasión (incidencia nueva, incidencia crítica, OT
-/// completada), los correos a los que se avisa. Cada uno se puede pausar o quitar; abajo, uno nuevo.
+/// Automatizaciones de la empresa (solo el admin): por cada ocasión (incidencia nueva u OT vencida), los correos a
+/// los que se avisa. Cada uno se puede pausar o quitar; abajo, uno nuevo.
 class _Automatizaciones extends StatefulWidget {
   const _Automatizaciones();
 
@@ -504,9 +541,12 @@ class _Automatizaciones extends StatefulWidget {
 
 class _AutomatizacionesState extends State<_Automatizaciones> {
   static const _eventos = [
-    ('incidencia', 'Cuando hay una incidencia', 'Cualquier incidencia nueva, la avise un técnico o la oficina.'),
-    ('incidencia_critica', 'Cuando hay una incidencia crítica', 'Solo las que dejan el activo sin poder funcionar.'),
-    ('ot_completada', 'Cuando se completa una orden de trabajo', 'Al cerrar el técnico o la oficina una orden.'),
+    (
+      'incidencia',
+      'Cuando hay una incidencia',
+      'Cualquier incidencia nueva, de cualquier gravedad, la avise un técnico o la oficina.',
+    ),
+    ('ot_vencida', 'Cuando vence una orden de trabajo', 'Cuando pasa su fecha sin completarse. Un correo por orden.'),
   ];
 
   List<AvisoCorreo>? _avisos;
@@ -570,7 +610,8 @@ class _AutomatizacionesState extends State<_Automatizaciones> {
       await accion();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('No se pudo guardar el cambio.')));
+        ScaffoldMessenger.maybeOf(context)
+            ?.showSnackBar(const SnackBar(content: Text('No se pudo guardar el cambio.')));
       }
     }
     await _cargar();
@@ -693,9 +734,8 @@ class _PlanEmpresaState extends State<_PlanEmpresa> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _yendo = false);
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir Stripe. Vuelve a intentarlo en un momento.')),
-      );
+      ScaffoldMessenger.maybeOf(context)
+          ?.showSnackBar(const SnackBar(content: Text('No se pudo abrir Stripe. Vuelve a intentarlo en un momento.')));
     }
   }
 
@@ -744,11 +784,7 @@ class _PlanEmpresaState extends State<_PlanEmpresa> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Grupo(null, [
-            _Fila(
-              titulo: p.premium ? 'Premium' : 'Básico',
-              subtitulo: detalle,
-              child: Etiqueta(estado, color),
-            ),
+            _Fila(titulo: p.premium ? 'Premium' : 'Básico', subtitulo: detalle, child: Etiqueta(estado, color)),
           ]),
           if (!p.premium)
             _Grupo('Pasar a Premium', [

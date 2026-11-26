@@ -94,7 +94,7 @@ final filtroAgenda = FiltroAgenda();
 /// marcar como hecha, editar todo o eliminar. Los cambios se guardan al momento.
 Future<void> abrirFichaRapida(BuildContext context, Tarea t) => showDialog(
   context: context,
-  barrierColor: P.texto.withValues(alpha: .15),
+  barrierColor: P.velo(.15),
   builder: (_) => Dialog(
     child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: _FichaRapida(t.id)),
   ),

@@ -60,7 +60,11 @@ class Historicos extends StatefulWidget {
     this.soloTabla = false,
     this.tipo,
     this.periodo = 2,
+    this.junto,
   });
+
+  /// Lo que va a la derecha del título (las cifras del técnico en su ficha).
+  final Widget? junto;
 
   @override
   State<Historicos> createState() => _HistoricosState();
@@ -105,7 +109,15 @@ class _HistoricosState extends State<Historicos> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TituloVista(widget.incrustada ? 'Histórico' : 'Históricos'),
+          if (widget.junto == null)
+            TituloVista(widget.incrustada ? 'Histórico' : 'Históricos')
+          else
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 28,
+              runSpacing: 8,
+              children: [TituloVista(widget.incrustada ? 'Histórico' : 'Históricos'), widget.junto!],
+            ),
           const SizedBox(height: huecoVista),
           SegunTamano(
             clave: (box) => box.maxWidth > 1500,
@@ -201,14 +213,18 @@ class _TablaRealizadas extends StatelessWidget {
           if (r != null) borrarDelHistorico(r.$2, r.$1);
         },
         builder: (context, s) => Align(alignment: Alignment.topCenter, child: Tabla(
+        id: 'historico',
+        menuColumnas: medio,
         seleccionCabecera: s.cabecera,
         columnas: [
           ...s.columna,
           const Col('Fecha', ancho: 120),
-          const Col('Orden de trabajo', flex: 3),
+          const Col('Orden de trabajo', flex: 3, fija: true),
           if (medio) const Col('Activo', flex: 5),
           if (medio) const Col('Ejecutado por', flex: 2),
-          if (medio) const Col('Gravedad', ancho: 190),
+          // La gravedad, con su columna solo si sobra sitio; si no, es el punto de color junto al nombre (así a
+          // ~700 px Activo y Ejecutado por no se quedan sin ancho).
+          if (ancho) const Col('Gravedad', ancho: 190),
           if (conChecklist) const Col('Checklist', ancho: 110),
           const Col('Resultado', ancho: 170),
           // El PDF con un clic solo si cabe; si no, está en la ventana de la orden.
@@ -225,7 +241,7 @@ class _TablaRealizadas extends StatelessWidget {
             celdaTexto(fecha(d), suave: true),
             Row(
               children: [
-                if (!medio && t.tipoMantenimiento != null) ...[
+                if (!ancho && t.tipoMantenimiento != null) ...[
                   puntoTipo(t.tipoMantenimiento!.color),
                   const SizedBox(width: 8),
                 ],
@@ -247,7 +263,7 @@ class _TablaRealizadas extends StatelessWidget {
               ],
               Expanded(child: celdaTexto(nombres.isEmpty ? '—' : nombres.join(', '), suave: true)),
             ]),
-            if (medio)
+            if (ancho)
               Align(
                 alignment: Alignment.centerLeft,
                 child: t.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t.tipoMantenimiento!),

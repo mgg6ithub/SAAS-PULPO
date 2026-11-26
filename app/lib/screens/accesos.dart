@@ -157,7 +157,8 @@ class _AccesosState extends State<Accesos> {
                       padding: const EdgeInsets.only(right: 8),
                       child: ListView(
                         children: [
-                          _seccion('Con acceso', [for (final a in _accesos!) _filaAcceso(a)]),
+                          // «Invitar a un socio», arriba a la derecha, encima del administrador.
+                          _seccion('Con acceso', [for (final a in _accesos!) _filaAcceso(a)], accion: _invitarSocio()),
                           if (_invitaciones.isNotEmpty)
                             _seccion('Invitaciones pendientes', [..._invitaciones.map(_filaInvitacion)]),
                           if (sinCuenta.isNotEmpty)
@@ -167,29 +168,23 @@ class _AccesosState extends State<Accesos> {
                     ),
             ),
           ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: BotonAccion(
-                'Invitar a un socio',
-                icono: Icons.person_add_alt_1_rounded,
-                tooltip: 'Otra persona que lo gestiona todo contigo',
-                onPressed: () async {
-                  await invitarAdministrador(context);
-                  await _cargar();
-                },
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
+  Widget _invitarSocio() => BotonAccion(
+    'Invitar a un socio',
+    icono: Icons.person_add_alt_1_rounded,
+    tooltip: 'Otra persona que lo gestiona todo contigo',
+    onPressed: () async {
+      await invitarAdministrador(context);
+      await _cargar();
+    },
+  );
+
   /// Un bloque: título con cuántos y sus filas en una tarjeta de borde fino, separadas por líneas.
-  Widget _seccion(String titulo, List<Widget> filas) => Padding(
+  Widget _seccion(String titulo, List<Widget> filas, {Widget? accion}) => Padding(
     padding: const EdgeInsets.only(bottom: 18),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -201,6 +196,7 @@ class _AccesosState extends State<Accesos> {
               Text(titulo, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: P.texto)),
               const SizedBox(width: 6),
               Text('${filas.length}', style: TextStyle(fontSize: 13, color: P.textoSuave)),
+              if (accion != null) ...[const Spacer(), accion],
             ],
           ),
         ),
@@ -268,36 +264,60 @@ class _AccesosState extends State<Accesos> {
     final ficha = _ficha(a.trabajadorId);
     final nombre = ficha?.nombreCompleto ?? (a.nombre.isEmpty ? a.correo : a.nombre);
     final admin = a.rol == 'admin';
+    final rol = Pill(admin ? 'Administrador' : m('Técnico'), admin ? P.morado : P.gris);
     return _fila(
       lider: _cara(ficha, nombre, admin ? P.morado : P.textoSuave),
       titulo: yo ? '$nombre (tú)' : nombre,
       subtitulo: nombre == a.correo ? '' : a.correo,
-      etiqueta: Pill(admin ? 'Administrador' : m('Trabajador'), admin ? P.morado : P.gris),
-      accion: BotonMenu<String>(
-        tooltip: '¿Qué puede hacer?',
-        seleccionado: admin ? 'admin' : 'tb:${ficha?.id}',
-        onSelected: (v) => switch (v) {
-          'admin' => _hacer(() => _nube.cambiarRol(a.usuarioId, 'admin', trabajadorId: ficha?.id)),
-          'quitar' => _quitar(a, nombre),
-          _ => _hacer(() => _nube.cambiarRol(a.usuarioId, 'trabajador', trabajadorId: v.substring(3))),
-        },
-        opciones: [
-          ('admin', const Text('Administrador: ve y gestiona todo')),
-          // Para pasar a trabajador hay que ligarlo a una ficha libre (o a la suya).
-          for (final w in [?ficha, ..._sinCuenta.where((w) => w != ficha)])
-            ('tb:${w.id}', Text(m('Trabajador: ${w.nombreCompleto}'))),
-          ('quitar', Text('Quitar acceso', style: TextStyle(color: P.rojo))),
-        ],
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Icon(Icons.more_horiz_rounded, size: 20, color: P.textoSuave),
-        ),
-      ),
+      // Los demás: con cuenta es que aceptaron la invitación (check verde). Tú, solo tu rol.
+      etiqueta: yo
+          ? rol
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message: 'Ha aceptado la invitación y ya entra con su cuenta',
+                  child: Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
+                ),
+                const SizedBox(width: 8),
+                rol,
+              ],
+            ),
+      // Tu propia fila, sin menú: no hay nada útil que hacer contigo mismo desde aquí.
+      accion: yo
+          ? const SizedBox(width: 8)
+          : BotonMenu<String>(
+              tooltip: 'Opciones',
+              onSelected: (v) => switch (v) {
+                'quitar' => _quitar(a, nombre),
+                'admin' => _hacer(() => _nube.cambiarRol(a.usuarioId, 'admin', trabajadorId: ficha?.id)),
+                _ => _hacer(() => _nube.cambiarRol(a.usuarioId, 'trabajador', trabajadorId: v.substring(3))),
+              },
+              opciones: [
+                // Lo primero, revocar: deja de poder entrar.
+                ('quitar', Text('Revocar acceso', style: TextStyle(color: P.rojo))),
+                if (!admin) ('admin', const Text('Hacer administrador')),
+                // Un administrador pasa a técnico ligado a una ficha libre (o a la suya).
+                if (admin)
+                  for (final w in [?ficha, ..._sinCuenta.where((w) => w != ficha)])
+                    ('tb:${w.id}', Text(m('Pasar a técnico: ${w.nombreCompleto}'))),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(Icons.more_horiz_rounded, size: 20, color: P.textoSuave),
+              ),
+            ),
     );
   }
 
   Future<void> _quitar(Acceso a, String nombre) async {
-    if (!await confirmar(context, '¿Quitar el acceso a $nombre?', accion: 'Quitar acceso')) return;
+    if (!await confirmar(
+      context,
+      '¿Revocar el acceso a $nombre? Dejará de poder entrar en ${_nube.nombre}. Su ficha y su historial se quedan.',
+      accion: 'Revocar acceso',
+    )) {
+      return;
+    }
     await _hacer(() => _nube.quitarAcceso(a.usuarioId));
   }
 

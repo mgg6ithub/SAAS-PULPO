@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../forms.dart' show SelectorActivo;
 import '../informes.dart';
-import '../screens/informes.dart' show BotonPdf;
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -18,7 +17,9 @@ import 'gravedad.dart';
 import 'indicadores.dart';
 import 'historicos.dart';
 import 'incidencia.dart';
-import 'mantenimientos.dart' show abrirIncidenciaForm, raizDe;
+import 'mantenimientos.dart' show raizDe;
+import 'incidencias.dart' show verIncidencia;
+import 'informe_estadisticas.dart';
 import 'plan.dart';
 import 'planes.dart' show horasRestantesPlan, proximoPlan;
 
@@ -88,14 +89,8 @@ class _EstadisticasPultecState extends State<EstadisticasPultec> {
           ),
           const SizedBox(height: huecoVista),
           Expanded(
-            // Sin activos ni órdenes no hay nada que medir: un vacío en lugar de paneles a cero.
-            child: store.activos.isEmpty && !store.tareas.any((t) => !t.esPlantilla)
-                ? const Vacio(
-                    icono: Icons.insights_outlined,
-                    titulo: 'Sin estadísticas',
-                    texto: 'Aparecerán cuando tengas activos y órdenes de trabajo.',
-                  )
-                : switch (apartado) {
+            // Cada apartado se ve siempre tal cual, aunque aún no haya datos (cifras a cero).
+            child: switch (apartado) {
               0 => _PorActivo(
                 activoId: activoId ?? store.hijosDe(null).firstOrNull?.id,
                 desde: desde,
@@ -126,49 +121,56 @@ class _PorActivo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final a = store.activo(activoId);
-    if (a == null) {
-      return const Vacio(icono: Icons.insights_outlined, titulo: 'Sin activos', texto: 'Crea un activo para ver su estado.');
-    }
-    final r = resumenActivo(a, desde);
+    // Sin ningún activo, la misma vista a cero.
+    final ResumenActivo r = a == null
+        ? (hechas: 0, pendientes: 0, atrasadas: 0, conProblema: 0, incidencias: [], planes: [], realizadas: [])
+        : resumenActivo(a, desde);
     final t = tramosDe(desde, dias);
     final hechas = contarPorTramo(r.realizadas.map((x) => x.$1), t);
     final incidencias = contarPorTramo(r.incidencias.map((x) => x.creada), t);
-    return ListView(
+    // Sin ListView: este no destruye lo que sale de pantalla, así las gráficas se animan al entrar en Estadísticas
+    // y no cada vez que vuelven a verse al hacer scroll.
+    return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 40),
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 260),
-              child: SelectorActivo(a.id, onActivo, filtro: true),
+              child: SelectorActivo(a?.id, onActivo, filtro: true),
             ),
             const Spacer(),
-            BotonPdf(
-              () => descargarResumenActivo(a, desde, dias),
-              tooltip: 'Resumen del activo en PDF',
+            // Abre la ventana del informe: de cuántos días (slider) y de toda la empresa o de este activo.
+            IconButton(
+              tooltip: 'Descargar informe en PDF',
+              onPressed: () => abrirInformeEstadisticas(context, activo: a, dias: dias),
+              icon: Icon(Icons.download_rounded, size: 18, color: P.textoSuave),
             ),
           ],
         ),
         const SizedBox(height: huecoVista),
         SegunTamano(
-          key: ValueKey('cifras-${a.id}-$dias'),
+          key: ValueKey('cifras-${a?.id}-$dias'),
           clave: (box) => box.maxWidth > 900 ? 6 : box.maxWidth > 560 ? 3 : 2,
           builder: (context, box) => Rejilla(
             columnas: box.maxWidth > 900 ? 6 : box.maxWidth > 560 ? 3 : 2,
             hueco: huecoVista,
+            igualarAlto: true,
             children: [
               CifraGrafica('Hechas en el periodo', valor: r.hechas, serie: hechas),
               CifraGrafica('Pendientes', valor: r.pendientes),
               CifraGrafica('Atrasadas', valor: r.atrasadas),
               CifraGrafica('Incidencias', valor: r.incidencias.length, serie: incidencias),
               CifraGrafica('Con problema en el parte', valor: r.conProblema),
-              CifraGrafica('Contador', texto: contadorTexto(a).split(',').first),
+              CifraGrafica('Contador', texto: a == null ? '—' : contadorTexto(a).split(',').first),
             ],
           ),
         ),
         const SizedBox(height: huecoVista),
         _ParGraficas(
-          key: ValueKey('graficas-${a.id}-$dias'),
+          key: ValueKey('graficas-${a?.id}-$dias'),
           TarjetaGrafica(
             titulo: 'Órdenes hechas',
             nota: t.nombre,
@@ -211,11 +213,13 @@ class _PorActivo extends StatelessWidget {
                   titulo: x.descripcion,
                   subtitulo: fecha(x.creada),
                   derecha: Pill(store.estadoIncidencia(x).etiqueta, store.estadoIncidencia(x).color),
-                  onTap: () => abrirIncidenciaForm(context, original: x),
+                  // Lleva a Incidencias con esta marcada en rojo.
+                  onTap: () => verIncidencia(context, x.id),
                 ),
           ],
         ),
       ],
+      ),
     );
   }
 }
@@ -333,23 +337,25 @@ class _VerificacionesState extends State<_Verificaciones> {
   Widget build(BuildContext context) {
     final planes = store.planes.where((p) => p.conMedicion).toList()
       ..sort((a, b) => '${raizDe(a.activoId)?.titulo} ${a.nombre}'.compareTo('${raizDe(b.activoId)?.titulo} ${b.nombre}'));
-    if (planes.isEmpty) {
-      return const Vacio(
-        icono: Icons.show_chart_rounded,
-        titulo: 'Sin verificaciones con dato',
-        texto: 'En un mantenimiento, rellena «Medición» (qué se mide, unidad y límites) y el técnico apuntará el valor en su parte.',
-      );
-    }
-    final p = planes.firstWhere((x) => x.id == planId, orElse: () => planes.first);
+    // Sin ninguna, la misma vista a cero; la lista explica cómo se añade una.
+    final p = planes.where((x) => x.id == planId).firstOrNull ?? planes.firstOrNull;
     final lista = SeccionTarjeta(
       titulo: 'Mediciones',
       subtitulo: '${planes.length}',
       children: [
+        if (planes.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Text(
+              'En un mantenimiento, rellena «Medición» (qué se mide, unidad y límites) y el técnico apuntará el valor en su parte.',
+              style: TextStyle(color: P.textoSuave),
+            ),
+          ),
         for (final x in planes)
           Container(
-            color: x.id == p.id ? P.moradoSuave : null,
+            color: x.id == p?.id ? P.moradoSuave : null,
             child: FilaLista(
-              lider: Icon(Icons.show_chart_rounded, size: 18, color: x.id == p.id ? P.morado : P.textoSuave),
+              lider: Icon(Icons.show_chart_rounded, size: 18, color: x.id == p?.id ? P.morado : P.textoSuave),
               titulo: x.medicionNombre,
               subtitulo: '${x.nombre}, ${raizDe(x.activoId)?.titulo ?? ''}',
               onTap: () => setState(() => planId = x.id),
@@ -358,7 +364,7 @@ class _VerificacionesState extends State<_Verificaciones> {
       ],
     );
     final detalle = FutureBuilder(
-      future: _de(p.id),
+      future: p == null ? Future.value(const <(DateTime, double)>[]) : _de(p.id),
       builder: (context, snap) {
         if (!snap.hasData) {
           return snap.hasError
@@ -366,15 +372,19 @@ class _VerificacionesState extends State<_Verificaciones> {
               : const Padding(padding: EdgeInsets.all(18), child: LinearProgressIndicator());
         }
         final datos = snap.data!.where((d) => !d.$1.isBefore(widget.desde)).toList();
-        final fuera = datos.where((d) => (p.medicionMin != null && d.$2 < p.medicionMin!) || (p.medicionMax != null && d.$2 > p.medicionMax!)).length;
-        final u = p.medicionUnidad.isEmpty ? '' : ' ${p.medicionUnidad}';
+        final minimo = p?.medicionMin, maximo = p?.medicionMax;
+        bool fueraDe(double v) => (minimo != null && v < minimo) || (maximo != null && v > maximo);
+        final fuera = datos.where((d) => fueraDe(d.$2)).length;
+        final unidad = p?.medicionUnidad ?? '';
+        final u = unidad.isEmpty ? '' : ' $unidad';
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Rejilla(
-              key: ValueKey('cifras-${p.id}-${widget.desde}'),
+              key: ValueKey('cifras-${p?.id}-${widget.desde}'),
               columnas: 4,
               hueco: huecoVista,
+              igualarAlto: true,
               children: [
                 CifraGrafica('Medidas', valor: datos.length),
                 CifraGrafica('Última', texto: datos.isEmpty ? '—' : '${numTexto(datos.last.$2)}$u', serie: [for (final d in datos.reversed.take(12).toList().reversed) d.$2]),
@@ -384,18 +394,18 @@ class _VerificacionesState extends State<_Verificaciones> {
             ),
             const SizedBox(height: huecoVista),
             TarjetaGrafica(
-              titulo: '${p.medicionNombre}${u.isEmpty ? '' : ' ($u)'.replaceAll('( ', '(')}',
-              nota: p.medicionMin != null || p.medicionMax != null
-                  ? 'Admitido de ${p.medicionMin == null ? '…' : numTexto(p.medicionMin!)} a ${p.medicionMax == null ? '…' : numTexto(p.medicionMax!)}'
+              titulo: '${p?.medicionNombre ?? 'Medidas'}${u.isEmpty ? '' : ' ($u)'.replaceAll('( ', '(')}',
+              nota: minimo != null || maximo != null
+                  ? 'Admitido de ${minimo == null ? '…' : numTexto(minimo)} a ${maximo == null ? '…' : numTexto(maximo)}'
                   : null,
               alto: 280,
               child: datos.isEmpty
                   ? Center(child: Text('Sin medidas en este periodo', style: TextStyle(color: P.textoSuave)))
                   : GraficaMedidas(
-                      key: ValueKey('medidas-${p.id}-${widget.desde}'),
+                      key: ValueKey('medidas-${p?.id}-${widget.desde}'),
                       datos,
-                      minimo: p.medicionMin,
-                      maximo: p.medicionMax,
+                      minimo: minimo,
+                      maximo: maximo,
                       unidad: u,
                     ),
             ),
@@ -407,9 +417,7 @@ class _VerificacionesState extends State<_Verificaciones> {
                   FilaLista(
                     titulo: '${numTexto(v)}$u',
                     subtitulo: '${fecha(d)} ${hhmm(d.hour * 60 + d.minute)}',
-                    derecha: (p.medicionMin != null && v < p.medicionMin!) || (p.medicionMax != null && v > p.medicionMax!)
-                        ? const Pill('Fuera de límites', P.rojo)
-                        : null,
+                    derecha: fueraDe(v) ? const Pill('Fuera de límites', P.rojo) : null,
                   ),
               ],
             ),
@@ -428,7 +436,13 @@ class _VerificacionesState extends State<_Verificaciones> {
                 Expanded(child: SingleChildScrollView(padding: const EdgeInsets.only(bottom: 40), child: detalle)),
               ],
             )
-          : ListView(padding: const EdgeInsets.only(bottom: 40), children: [lista, const SizedBox(height: huecoVista), detalle]),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [lista, const SizedBox(height: huecoVista), detalle],
+              ),
+            ),
     );
   }
 }
@@ -641,10 +655,7 @@ class _PorTecnico extends StatelessWidget {
           );
         }(),
     ]..sort((a, b) => b.hechas.compareTo(a.hechas));
-    if (filas.isEmpty) {
-      return const Vacio(icono: Icons.engineering_outlined, titulo: 'Sin técnicos', texto: 'Añade técnicos para ver lo que hace cada uno.');
-    }
-    final maxHechas = filas.map((f) => f.hechas).reduce(max), maxInc = filas.map((f) => f.incidencias).reduce(max);
+    final maxHechas = filas.fold(0, (m, f) => max(m, f.hechas)), maxInc = filas.fold(0, (m, f) => max(m, f.incidencias));
     final t = tramosDe(desde, dias);
     final graficas = _ParGraficas(
       key: ValueKey('tecnicos-$dias'),
@@ -665,12 +676,14 @@ class _PorTecnico extends StatelessWidget {
       ),
     );
     final tabla = SegunTamano(
-      clave: (box) => box.maxWidth > 760,
+      clave: (box) => (box.maxWidth > 760, box.maxWidth > 600),
       builder: (context, box) {
         final ancho = box.maxWidth > 760;
         return Tabla(
+          id: 'estadisticas-tecnicos',
+          menuColumnas: box.maxWidth > 600,
           columnas: [
-            const Col('Técnico', flex: 3),
+            const Col('Técnico', flex: 3, fija: true),
             const Col('OT hechas', flex: 3),
             const Col('Incidencias detectadas', flex: 3),
             if (ancho) const Col('Partes con problema', ancho: 150),
@@ -694,7 +707,7 @@ class _PorTecnico extends StatelessWidget {
               ),
             ];
           },
-          pie: pieTabla(filas.length, filas.length == 1 ? 'técnico' : 'técnicos'),
+          pie: filas.isEmpty ? null : pieTabla(filas.length, filas.length == 1 ? 'técnico' : 'técnicos'),
         );
       },
     );
@@ -720,10 +733,7 @@ class _PorEquipo extends StatelessWidget {
       if (r != null) (porMaquina[r.id] ??= []).add(x);
     }
     final filas = porMaquina.entries.toList()..sort((a, b) => b.value.length.compareTo(a.value.length));
-    if (filas.isEmpty) {
-      return const Vacio(icono: Icons.report_outlined, color: P.rojo, titulo: 'Sin incidencias', texto: 'Ninguna máquina ha tenido incidencias en este periodo.');
-    }
-    final maximo = filas.first.value.length;
+    final maximo = filas.firstOrNull?.value.length ?? 0;
     final todas = [for (final f in filas) ...f.value];
     final estados = [for (final x in todas) store.estadoIncidencia(x)];
     final t = tramosDe(desde, dias);
@@ -741,8 +751,9 @@ class _PorEquipo extends StatelessWidget {
         alto: 190,
         child: Anillo(
           [
-            ('Abiertas', estados.where((e) => e.pendiente).length.toDouble()),
+            // Primero las resueltas: son las que llenan el anillo.
             ('Resueltas', estados.where((e) => e == EstadoIncidencia.completada).length.toDouble()),
+            ('Abiertas', estados.where((e) => e.pendiente).length.toDouble()),
             ('Desestimadas', estados.where((e) => e == EstadoIncidencia.desestimada).length.toDouble()),
           ],
           centro: '${todas.length}',
@@ -751,12 +762,14 @@ class _PorEquipo extends StatelessWidget {
       ),
     );
     final tabla = SegunTamano(
-      clave: (box) => box.maxWidth > 900,
+      clave: (box) => (box.maxWidth > 900, box.maxWidth > 600),
       builder: (context, box) {
         final ancho = box.maxWidth > 900;
         return Tabla(
+          id: 'estadisticas-incidencias',
+          menuColumnas: box.maxWidth > 600,
           columnas: [
-            const Col('Activo', flex: 3),
+            const Col('Activo', flex: 3, fija: true),
             const Col('Incidencias', flex: 3),
             if (ancho) const Col('Abiertas', ancho: 90),
             if (ancho) const Col('Resueltas', ancho: 90),
@@ -780,7 +793,7 @@ class _PorEquipo extends StatelessWidget {
               if (ancho) celdaTexto(relativo(DateUtils.dateOnly(ultima)), suave: true),
             ];
           },
-          pie: pieTabla(filas.length, filas.length == 1 ? 'activo con incidencias' : 'activos con incidencias'),
+          pie: filas.isEmpty ? null : pieTabla(filas.length, filas.length == 1 ? 'activo con incidencias' : 'activos con incidencias'),
         );
       },
     );

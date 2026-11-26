@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'columnas.dart';
 import 'en_vivo.dart';
 import 'industrial/activo.dart';
 import 'industrial/incidencia.dart';
@@ -25,8 +26,10 @@ const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https:
 final entornoLocal = supabaseUrl.contains('localhost') || supabaseUrl.contains('127.0.0.1');
 
 /// Clave publicable: está pensada para ir dentro de la app. La secreta (`service_role`) nunca.
-const supabasePublicable =
-    String.fromEnvironment('SUPABASE_PUBLICABLE', defaultValue: 'sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ');
+const supabasePublicable = String.fromEnvironment(
+  'SUPABASE_PUBLICABLE',
+  defaultValue: 'sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ',
+);
 
 /// Web pública de Pultec (la landing). En desarrollo `tool/vivo.py` pasa la local (localhost:8001).
 const landingUrl = String.fromEnvironment('LANDING_URL', defaultValue: 'https://saas-pulpo.pages.dev/landing/');
@@ -96,7 +99,7 @@ class UltimoAdministrador implements Exception {
 typedef Acceso = ({String usuarioId, String correo, String nombre, String rol, String? trabajadorId});
 
 /// Una empresa de la cuenta, para el selector de empresas: [icono] es una clave de `iconosTipo`.
-/// Automatización de la empresa: cuando pasa [evento] (`incidencia`, `incidencia_critica`, `ot_completada`), un
+/// Automatización de la empresa: cuando pasa [evento] (`incidencia` u `ot_vencida`), un
 /// correo a [correo].
 typedef AvisoCorreo = ({String id, String evento, String correo, bool activa});
 typedef EmpresaDeCuenta = ({String id, String nombre, String rol, String icono, Color color});
@@ -313,7 +316,10 @@ class Nube {
   /// Guarda la checklist de una OT al marcar un paso (el técnico asignado o la oficina).
   Future<void> marcarChecklist(String trabajoId, List<PasoChecklist> pasos) => _db.rpc(
     'marcar_checklist',
-    params: {'p_trabajo': _u(trabajoId), 'p_checklist': [for (final p in pasos) p.toJson()]},
+    params: {
+      'p_trabajo': _u(trabajoId),
+      'p_checklist': [for (final p in pasos) p.toJson()],
+    },
   );
 
   /// Asigna la OT libre al técnico y la inicia bajo bloqueo en el servidor.
@@ -450,48 +456,86 @@ class Nube {
         .order('created_at');
     return [
       for (final x in r)
-        (DateTime.parse(x['created_at'] as String).toLocal(), (x['valor'] as num).toDouble(), x['trabajo_id'] as String),
+        (
+          DateTime.parse(x['created_at'] as String).toLocal(),
+          (x['valor'] as num).toDouble(),
+          x['trabajo_id'] as String,
+        ),
     ];
   }
 
   Future<List<Informe>> historialTecnico(String tecnicoId) async {
     final filas = <Map<String, dynamic>>[];
     while (true) {
-      final lote = await _db.from('informes').select()
-        .eq('empresa_id', empresaId).eq('trabajador_id', _u(tecnicoId))
-        .order('created_at', ascending: false).order('id')
-        .range(filas.length, filas.length + 499);
+      final lote = await _db
+          .from('informes')
+          .select()
+          .eq('empresa_id', empresaId)
+          .eq('trabajador_id', _u(tecnicoId))
+          .order('created_at', ascending: false)
+          .order('id')
+          .range(filas.length, filas.length + 499);
       filas.addAll(lote);
       if (lote.length < 500) break;
     }
-    return [for (final x in filas) Informe(
-      id: x['id'], trabajoId: x['trabajo_id'], trabajadorId: x['trabajador_id'],
-      resultado: x['resultado'], notas: x['notas'], material: x['material'],
-      minutos: x['minutos'], valor: (x['valor'] as num?)?.toDouble(), fotos: List<String>.from(x['fotos'] as List),
-      firma: x['firma'], firmante: x['firmante'],
-      cuando: DateTime.parse(x['created_at'] as String).toLocal(),
-    )];
+    return [
+      for (final x in filas)
+        Informe(
+          id: x['id'],
+          trabajoId: x['trabajo_id'],
+          trabajadorId: x['trabajador_id'],
+          resultado: x['resultado'],
+          notas: x['notas'],
+          material: x['material'],
+          minutos: x['minutos'],
+          valor: (x['valor'] as num?)?.toDouble(),
+          fotos: List<String>.from(x['fotos'] as List),
+          firma: x['firma'],
+          firmante: x['firmante'],
+          cuando: DateTime.parse(x['created_at'] as String).toLocal(),
+        ),
+    ];
   }
 
   /// Sube las fotos (JPEG) y la firma (PNG) a `<empresa>/informes/<informe>/` y guarda el informe. Espera
   /// antes a que el trabajo esté guardado, porque el informe apunta a él.
-  Future<Informe> crearInforme(Informe i, List<Uint8List> fotos, Uint8List? firma, {String? id}) async {
-    await _cola;
+  /// [paso] avisa de cuánto va (archivos subidos y el parte). Con la red colgada no se espera para siempre: salta
+  /// [TimeoutException] y el parte se queda en el dispositivo para subirlo luego.
+  Future<Informe> crearInforme(
+    Informe i,
+    List<Uint8List> fotos,
+    Uint8List? firma, {
+    String? id,
+    void Function(int hechos, int total)? paso,
+  }) async {
+    await _cola.timeout(const Duration(seconds: 20));
     id ??= store.nuevoId();
+    final total = fotos.length + (firma == null ? 0 : 1) + 1;
+    var hechos = 0;
+    paso?.call(hechos, total);
     Future<String> subir(String nombre, Uint8List bytes, String tipo) async {
       final ruta = '$empresaId/informes/$id/$nombre';
       try {
-        await _db.storage.from(_bucket).uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo));
+        await _db.storage
+            .from(_bucket)
+            .uploadBinary(ruta, bytes, fileOptions: FileOptions(contentType: tipo))
+            .timeout(const Duration(seconds: 60));
       } on StorageException catch (e) {
         // Ya subida en un intento anterior que se cortó (sin conexión): vale la que hay.
         if (e.statusCode != '409' && !e.message.contains('already exists')) rethrow;
       }
       _fotos[ruta] = Future.value(bytes);
+      paso?.call(++hechos, total);
       return ruta;
     }
 
-    final rutas = [for (var n = 0; n < fotos.length; n++) await subir('$n.jpg', fotos[n], 'image/jpeg')];
-    final rutaFirma = firma == null ? null : await subir('firma.png', firma, 'image/png');
+    // Todas a la vez: tarda lo que la más lenta, no la suma.
+    final subidas = await Future.wait([
+      for (var n = 0; n < fotos.length; n++) subir('$n.jpg', fotos[n], 'image/jpeg'),
+      if (firma != null) subir('firma.png', firma, 'image/png'),
+    ]);
+    final rutas = subidas.sublist(0, fotos.length);
+    final rutaFirma = firma == null ? null : subidas.last;
     final x = await _db
         .from('informes')
         .upsert(
@@ -514,7 +558,9 @@ class Nube {
           onConflict: 'id',
           ignoreDuplicates: true,
         )
-        .select('created_at');
+        .select('created_at')
+        .timeout(const Duration(seconds: 30));
+    paso?.call(total, total);
     return i.guardado(
       id: id,
       fotos: rutas,
@@ -531,15 +577,27 @@ class Nube {
   // Reglas «cuando pase X, manda un correo a Y». Los disparadores de la base meten el correo en la cola.
 
   Future<List<AvisoCorreo>> avisosCorreo() async {
-    final r = await _db.from('avisos_correo').select('id, evento, correo, activa').eq('empresa_id', empresaId).order('created_at');
+    final r = await _db
+        .from('avisos_correo')
+        .select('id, evento, correo, activa')
+        .eq('empresa_id', empresaId)
+        .order('created_at');
     return [
       for (final x in r)
-        (id: x['id'] as String, evento: x['evento'] as String, correo: x['correo'] as String, activa: x['activa'] as bool),
+        (
+          id: x['id'] as String,
+          evento: x['evento'] as String,
+          correo: x['correo'] as String,
+          activa: x['activa'] as bool,
+        ),
     ];
   }
 
-  Future<void> crearAvisoCorreo(String evento, String correo) =>
-      _db.from('avisos_correo').insert({'empresa_id': empresaId, 'evento': evento, 'correo': correo.trim().toLowerCase()});
+  Future<void> crearAvisoCorreo(String evento, String correo) => _db.from('avisos_correo').insert({
+    'empresa_id': empresaId,
+    'evento': evento,
+    'correo': correo.trim().toLowerCase(),
+  });
 
   Future<void> activarAvisoCorreo(String id, bool activa) =>
       _db.from('avisos_correo').update({'activa': activa}).eq('id', id);
@@ -652,6 +710,7 @@ class Nube {
 
   static Future<void> cerrarSesion({bool enTodos = false}) async {
     await _abierta?._cola;
+    await columnasTablas.guardado;
     await _abierta?._enVivo?.parar();
     await _db.auth.signOut(scope: enTodos ? SignOutScope.global : SignOutScope.local);
   }
@@ -683,6 +742,15 @@ class Nube {
   /// El perfil ya existe: lo crea la base al crear la cuenta (trigger `copiar_correo`).
   static Future<void> guardarPerfil({required String nombre, String? foto}) =>
       _db.from('perfiles').update({'nombre': nombre, 'foto': foto}).eq('usuario_id', _db.auth.currentUser!.id);
+
+  /// Las columnas de las tablas tal como las dejó la cuenta (ver [ColumnasTablas]).
+  static Future<Map<String, dynamic>?> leerColumnas(String usuario) async {
+    final r = await _db.from('perfiles').select('columnas').eq('usuario_id', usuario);
+    return r.isEmpty ? null : Map<String, dynamic>.from(r.first['columnas'] as Map);
+  }
+
+  static Future<void> guardarColumnas(String usuario, Map<String, dynamic> columnas) =>
+      _db.from('perfiles').update({'columnas': columnas}).eq('usuario_id', usuario);
 
   static Future<void> cambiarClave(String nueva) => _db.auth.updateUser(UserAttributes(password: nueva));
 
@@ -1362,12 +1430,7 @@ class Nube {
         r['grupos']![_u(g.id)] = {'id': _u(g.id), 'empresa_id': e, 'nombre': g.nombre, 'area': g.area};
       }
       for (final f in s.festivos) {
-        r['festivos']![_u(f.id)] = {
-          'id': _u(f.id),
-          'empresa_id': e,
-          'fecha': _dia(f.fecha),
-          'nombre': f.nombre,
-        };
+        r['festivos']![_u(f.id)] = {'id': _u(f.id), 'empresa_id': e, 'fecha': _dia(f.fecha), 'nombre': f.nombre};
       }
     }
     if (industrial) {
@@ -1492,7 +1555,11 @@ class Nube {
         'salida_lat': w.salidaLat,
         'salida_lng': w.salidaLng,
         'color': w.color,
-        if (industrial) 'grupo_ids': [for (final g in w.grupoIds) if (grupos.contains(g)) _u(g)],
+        if (industrial)
+          'grupo_ids': [
+            for (final g in w.grupoIds)
+              if (grupos.contains(g)) _u(g),
+          ],
       };
     }
     for (final x in s.etiquetas) {

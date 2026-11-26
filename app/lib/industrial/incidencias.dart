@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../columnas.dart';
 import '../forms.dart';
 import '../informes.dart' show descargarInformeIncidencia;
 import '../screens/informes.dart' show BotonPdf;
@@ -13,6 +14,19 @@ import 'incidencia.dart';
 import 'mantenimientos.dart';
 import 'tipo_mantenimiento.dart';
 import '../screens/tareas.dart' show verOtEnOrdenes;
+
+/// Incidencia a marcar con borde rojo al llegar a Incidencias desde otra vista (p. ej. Estadísticas).
+final incidenciaMarcada = ValueNotifier<String?>(null);
+
+/// Cada aviso pide a la barra lateral que vaya a Incidencias.
+final pedirIncidencias = ValueNotifier<int>(0);
+
+/// Va a Incidencias (en Pendientes o en Histórico, donde esté, sin filtros) con [id] marcada.
+void verIncidencia(BuildContext context, String id) {
+  Navigator.of(context).popUntil((r) => r.isFirst);
+  incidenciaMarcada.value = id;
+  pedirIncidencias.value++;
+}
 
 /// Pultec: sección Incidencias. Pendientes (abiertas y con OT) e histórico (completadas y desestimadas):
 /// ninguna incidencia desaparece, quedan todas controladas en el tiempo.
@@ -30,6 +44,39 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
   /// Pendientes: 0 todas, 1 abiertas, 2 con OT. Histórico: 0 las completadas, 1 solo las desestimadas.
   int estado = 0;
   String? activoId;
+
+  /// Sube con cada incidencia marcada: rehace el buscador para vaciarlo.
+  int _marcas = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    incidenciaMarcada.addListener(_alMarcar);
+    _marcar();
+  }
+
+  @override
+  void dispose() {
+    incidenciaMarcada.removeListener(_alMarcar);
+    super.dispose();
+  }
+
+  void _alMarcar() => setState(_marcar);
+
+  /// Con una incidencia marcada: a la pestaña donde está y sin filtros, para que se vea seguro.
+  void _marcar() {
+    final x = store.incidencias.where((i) => i.id == incidenciaMarcada.value).firstOrNull;
+    if (x == null) return;
+    final est = store.estadoIncidencia(x);
+    historico = !est.pendiente;
+    estado = est == EstadoIncidencia.desestimada ? 1 : 0;
+    activoId = null;
+    q = '';
+    _marcas++;
+  }
+
+  /// Tocar la pestaña o un filtro quita la marca.
+  void _sinMarca() => incidenciaMarcada.value = null;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +122,7 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
                 onChanged: (i) => setState(() {
                   historico = i == 1;
                   estado = 0;
+                  _sinMarca();
                 }),
               ),
               // Histórico: de serie, las completadas; un botón enseña solo las desestimadas.
@@ -97,7 +145,12 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
                 ),
             ],
             derecha: [
-              Buscador(hint: 'Buscar incidencia…', width: 240, onChanged: (v) => setState(() => q = v)),
+              Buscador(
+                key: ValueKey('buscar-$_marcas'),
+                hint: 'Buscar incidencia…',
+                width: 240,
+                onChanged: (v) => setState(() => q = v),
+              ),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 210),
                 child: SelectorActivo(activoId, (id) => setState(() => activoId = id), filtro: true),
@@ -142,7 +195,7 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
                         ? 'Aquí quedan las incidencias completadas con su OT y las desestimadas.'
                         : 'Lo que comuniquen los técnicos aparece aquí para revisarlo.',
                   )
-                : _TablaIncidencias(lista, historico: historico),
+                : _TablaIncidencias(lista, historico: historico, marcada: incidenciaMarcada.value),
           ),
         ],
       ),
@@ -150,8 +203,8 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
   }
 }
 
-/// Orden en que el usuario ha dejado las columnas de la lista de incidencias; Exportar sale igual.
-final ordenColumnasIncidencias = <String>[];
+/// Nombre con el que se guardan las columnas de la lista de incidencias (la abierta y la del historial, cada una).
+String tablaIncidencias(bool historico) => historico ? 'incidencias-historial' : 'incidencias';
 
 /// Incidencias [lista] en texto, tal como se ven (con los filtros puestos). Cabecera primero.
 List<List<String>> incidenciasEnTexto(List<(Incidencia, EstadoIncidencia)> lista, {required bool historico}) {
@@ -162,7 +215,11 @@ List<List<String>> incidenciasEnTexto(List<(Incidencia, EstadoIncidencia)> lista
     historico ? 'Cerrada' : 'Fecha': (x, _) => fecha(historico ? x.cerradaEl ?? x.creada : x.creada),
     'Estado': (_, e) => e.etiqueta,
   };
-  final cols = enOrdenDelUsuario(valores.keys.toList(), ordenColumnasIncidencias);
+  final tabla = tablaIncidencias(historico);
+  final cols = enOrdenDelUsuario([
+    for (final c in valores.keys)
+      if (c == 'Incidencia' || columnasTablas.ve(tabla, c)) c,
+  ], columnasTablas.orden(tabla));
   // La gravedad, que en la lista es el punto de color, va al lado de la incidencia.
   final i = cols.indexOf('Incidencia');
   final conGravedad = [...cols]..insert(i + 1, 'Gravedad');
@@ -178,7 +235,10 @@ List<List<String>> incidenciasEnTexto(List<(Incidencia, EstadoIncidencia)> lista
 class _TablaIncidencias extends StatelessWidget {
   final List<(Incidencia, EstadoIncidencia)> lista;
   final bool historico;
-  const _TablaIncidencias(this.lista, {required this.historico});
+
+  /// La que llega marcada desde otra vista: borde rojo y a la vista.
+  final String? marcada;
+  const _TablaIncidencias(this.lista, {required this.historico, this.marcada});
 
   @override
   Widget build(BuildContext context) => SegunTamano(
@@ -191,12 +251,15 @@ class _TablaIncidencias extends StatelessWidget {
         plural: 'incidencias',
         borrar: store.borrarIncidencia,
         builder: (context, s) => Tabla(
-        // El orden que deje el usuario se recuerda (y Exportar lo sigue).
-        orden: ordenColumnasIncidencias,
+        // Orden y columnas elegidas se guardan en la cuenta (y Exportar los sigue).
+        id: tablaIncidencias(historico),
+        menuColumnas: medio,
         seleccionCabecera: s.cabecera,
+        resaltar: marcada == null ? null : (i) => lista[i].$1.id == marcada ? P.rojo : null,
+        focoInicial: marcada == null ? null : lista.indexWhere((e) => e.$1.id == marcada),
         columnas: [
           ...s.columna,
-          const Col('Incidencia', flex: 4),
+          const Col('Incidencia', flex: 4, fija: true),
           if (medio) const Col('Activo', flex: 3),
           if (ancho) const Col('Comunicada por', flex: 2),
           if (ancho) Col(historico ? 'Cerrada' : 'Fecha', ancho: 140),

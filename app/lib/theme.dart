@@ -89,6 +89,11 @@ class P {
   static Color get texto => _o ? _n(0xFFEDEDF2, 0xFFECEFF3) : _n(0xFF14121F, 0xFF121821);
   static Color get textoSuave => _o ? _n(0xFF9D9BAD, 0xFF98A1AE) : _n(0xFF5D5A6E, 0xFF5A6474);
 
+  /// Velo detrás de las ventanas. En claro, la tinta suave ([claro] = cuánto); en oscuro, negro: con el color del
+  /// texto (casi blanco) el fondo se aclaraba en vez de apagarse.
+  static Color velo([double claro = .25]) =>
+      _o ? Colors.black.withValues(alpha: claro + .35) : texto.withValues(alpha: claro);
+
   /// Tinta de la landing: botones oscuros, banners y tooltips.
   static const tinta = Color(industrial ? 0xFF121821 : 0xFF14121F);
 
