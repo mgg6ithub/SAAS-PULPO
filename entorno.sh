@@ -12,6 +12,8 @@
 #   ./entorno.sh landing    Sirve la landing en http://localhost:8001 y reenvía ahí la Supabase local (arráncala antes que la app).
 #   ./entorno.sh reset      Borra la base LOCAL y la recrea: todas las migraciones de supabase/migrations + supabase/seed.sql.
 #   ./entorno.sh estado     URLs y claves locales.
+#   ./entorno.sh probar     Prueba el núcleo de Pultec contra la local (activo → mantenimiento → OT → técnico → cierre,
+#                           incidencias): lánzala tras cualquier cambio grande. Crea y borra sus cuentas de prueba.
 #   ./entorno.sh plan       Plan (básico/premium) de cada cuenta local. Para probar sin pagar:
 #                           ./entorno.sh plan correo@x premium|basico  (cambia el plan de la empresa que administra).
 #   ./entorno.sh parar      Guarda como migración nueva los cambios de esquema hechos fuera de una migración (p. ej. desde Studio),
@@ -112,6 +114,7 @@ order by u.created_at;
 SQL
     ;;
   estado)   sb status ;;
+  probar)   cd app && exec python3 tool/probar_flujo_local.py ;;   # núcleo de Pultec contra la local, tras cambios grandes
   app)
     export PATH="${FLUTTER_BIN:-/usr/local/flutter-sdk/flutter/bin}:$PATH"
     [ -d /srv/flutter-sdk/pub-cache ] && export PUB_CACHE=/srv/flutter-sdk/pub-cache

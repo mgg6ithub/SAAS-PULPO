@@ -98,8 +98,22 @@ void main() {
         categoria: 'Mecánica',
         trabajadorId: tecnico.id,
       );
+      // Un componente con su propio mantenimiento: la base también le crea su OT.
+      final motor = Activo(id: store.nuevoId(), nombre: 'Motor', tag: 'AT-01-M', icono: 'motor', padreId: activo.id);
+      store.guardarActivo(motor);
+      final filtro = PlanMantenimiento(
+        id: store.nuevoId(),
+        activoId: motor.id,
+        nombre: 'Cambio de filtro del motor',
+        cadaDias: 90,
+        ultimo: masDias(h, -80),
+        duracionMin: 45,
+        categoria: 'Mecánica',
+        trabajadorId: tecnico.id,
+      );
       store.guardarPlan(revision);
       store.guardarPlan(engrase);
+      store.guardarPlan(filtro);
       await n.guardado;
       expect(Nube.error.value, isNull, reason: 'se guarda sin errores');
 
@@ -109,6 +123,10 @@ void main() {
       final otEngrase = _abiertas(engrase.id);
       expect(otRevision, hasLength(1), reason: 'OT automática de la revisión');
       expect(otEngrase, hasLength(1), reason: 'OT automática del engrase');
+      final otFiltro = _abiertas(filtro.id);
+      expect(otFiltro, hasLength(1), reason: 'OT automática del mantenimiento del componente');
+      expect(otFiltro.single.activoId, motor.id, reason: 'la OT del componente va al componente');
+      expect(otFiltro.single.proximo, masDias(h, 10), reason: 'último hace 80 días, cada 90 → dentro de 10');
       expect(otRevision.single.proximo, masDias(h, 7), reason: '50 h a 8 h/día → dentro de 7 días');
       expect(otEngrase.single.proximo, h, reason: 'último hace 30 días → hoy');
       for (final t in [...otRevision, ...otEngrase]) {
@@ -124,8 +142,14 @@ void main() {
       n = await _entrar(_env['SB_TECNICO']!, invitacion: codigo);
       expect(n.esTrabajador, isTrue, reason: 'entra como técnico');
       final mias = store.tareas.where((t) => t.trabajadorIds.contains(tecnico.id) && !t.esPlantilla).toList();
-      expect(mias.map((t) => t.nombre).toSet(), {'Revisión 3.000 h', 'Engrase mensual'});
-      final ot = store.tarea(otEngrase.single.id)!;
+      expect(mias.map((t) => t.nombre).toSet(), {'Revisión 3.000 h', 'Engrase mensual', 'Cambio de filtro del motor'});
+      var ot = store.tarea(otEngrase.single.id)!;
+      // La empieza (como «Empezar OT»): queda en curso, también en la base.
+      store.cambiarEstado([ot], EstadoTrabajo.enCurso);
+      await n.guardado;
+      await store.cargarDesdeNube(n);
+      ot = store.tarea(ot.id)!;
+      expect(ot.estado, EstadoTrabajo.enCurso, reason: 'el técnico empieza la OT');
       // Lo mismo que hace el parte (FormularioInforme) al cerrar la OT.
       expect(
         await informes.crear(
