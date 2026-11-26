@@ -2796,7 +2796,10 @@ class _DetalleTrabajo extends StatelessWidget {
       children: [
         Row(
           children: [
-            industrial ? _IconoActivo(t.activoId, size: 44) : TipoIcono(t.tipo, size: 44),
+            // Pultec: el icono, del color del tipo de la orden (como su píldora), no del estado del activo.
+            industrial
+                ? _IconoActivo(t.activoId, size: 44, color: t.tipoMantenimiento?.color)
+                : TipoIcono(t.tipo, size: 44),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -2816,7 +2819,11 @@ class _DetalleTrabajo extends StatelessWidget {
                     spacing: 6,
                     children: [
                       Pill(hecha ? 'Hecho' : t.estado.etiqueta, hecha ? P.verde : t.estado.color, punto: true),
-                      Pill(t.criticidad.etiqueta, t.criticidad.color),
+                      // Pultec: su tipo (preventivo, correctivo…); la criticidad «Rutinaria» no se usa.
+                      if (!industrial)
+                        Pill(t.criticidad.etiqueta, t.criticidad.color)
+                      else if (t.tipoMantenimiento != null)
+                        PillTipo(t.tipoMantenimiento!),
                     ],
                   ),
                 ],

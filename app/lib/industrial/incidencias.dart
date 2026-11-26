@@ -190,7 +190,10 @@ class _IncidenciasPaginaState extends State<IncidenciasPagina> {
                 ? Vacio(
                     icono: Icons.report_outlined,
                     color: P.rojo,
-                    titulo: historico ? 'Sin incidencias cerradas' : 'Sin incidencias pendientes',
+                    // El título dice lo que se está filtrando.
+                    titulo: historico
+                        ? (estado == 1 ? 'Sin incidencias desestimadas' : 'Sin incidencias completadas')
+                        : const ['Sin incidencias pendientes', 'Sin incidencias abiertas', 'Sin incidencias con OT'][estado],
                     texto: historico
                         ? 'Aquí quedan las incidencias completadas con su OT y las desestimadas.'
                         : 'Lo que comuniquen los técnicos aparece aquí para revisarlo.',
