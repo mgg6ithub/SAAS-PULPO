@@ -1311,7 +1311,9 @@ class Store extends ChangeNotifier {
       ..ultimo = antes.$1
       ..proximo = antes.$2
       ..estadoMaquina = antes.$3
-      ..estado = antes.$4;
+      ..estado = antes.$4
+      ..completadaEl = null
+      ..completadaPor = null;
     _cambio();
   }
 
@@ -1324,6 +1326,9 @@ class Store extends ChangeNotifier {
   void _marcarHecha(Tarea t) {
     _antesDeHecha[t.id] = (t.ultimo, t.proximo, t.estadoMaquina, t.estado);
     t.ultimo = hoy();
+    t.completadaEl = DateTime.now();
+    final yo = nube?.trabajadorId;
+    t.completadaPor = yo != null ? trabajador(yo)?.nombreCompleto : (nube == null ? null : Nube.correo);
     // Si se repite, la siguiente vez vuelve a estar pendiente; si es única, se queda realizada.
     final repite = !industrial && t.periodicidad.repite;
     t.estado = repite ? EstadoTrabajo.pendiente : EstadoTrabajo.realizado;

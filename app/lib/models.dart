@@ -422,6 +422,10 @@ class Tarea {
   /// OT industrial: mantenimiento del que sale y técnico que la cerró (lo pone la base al cerrarla).
   String? planId, ejecutadoPor;
 
+  /// OT industrial completada: cuándo (con hora) y el nombre de quien la completó. Lo escribe la base.
+  DateTime? completadaEl;
+  String? completadaPor;
+
   /// OT industrial: grupo al que se asignó (se reparte a uno de sus técnicos).
   String? grupoId;
 
@@ -478,6 +482,8 @@ class Tarea {
     this.activoId,
     this.planId,
     this.ejecutadoPor,
+    this.completadaEl,
+    this.completadaPor,
     this.grupoId,
     this.resultado,
     this.resultadoResuelto = false,
@@ -558,6 +564,8 @@ class Tarea {
     if (planId != null) 'planId': planId,
     if (grupoId != null) 'grupoId': grupoId,
     if (ejecutadoPor != null) 'ejecutadoPor': ejecutadoPor,
+    if (completadaEl != null) 'completadaEl': _f(completadaEl),
+    if (completadaPor != null) 'completadaPor': completadaPor,
     if (resultado != null) 'resultado': resultado,
     if (resultadoResuelto) 'resultadoResuelto': true,
     'plantilla': plantilla,
@@ -606,6 +614,8 @@ class Tarea {
     planId: j['planId'] as String?,
     grupoId: j['grupoId'] as String?,
     ejecutadoPor: j['ejecutadoPor'] as String?,
+    completadaEl: _d(j, 'completadaEl'),
+    completadaPor: j['completadaPor'] as String?,
     resultado: j['resultado'] as int?,
     resultadoResuelto: j['resultadoResuelto'] as bool? ?? false,
     plantilla: j['plantilla'] as bool?,

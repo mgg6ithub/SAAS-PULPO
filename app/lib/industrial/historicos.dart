@@ -4,7 +4,8 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../screens/informes.dart' show BotonPdf, InformesDelTrabajo;
+import '../screens/informes.dart' show BotonPdf, InformesDelTrabajo, textoCompletada;
+import '../informes.dart' show informes;
 import 'gravedad.dart';
 import 'iconos.dart';
 import 'planes.dart' show raizActivo;
@@ -405,6 +406,16 @@ Future<void> verOrdenHecha(BuildContext context, Tarea t) {
                   Pill(texto, color, punto: true),
                 ],
               ),
+              if (t.estado == EstadoTrabajo.realizado) ...[
+                const SizedBox(height: 10),
+                ListenableBuilder(
+                  listenable: informes,
+                  builder: (context, _) => Text(
+                    'Completada el ${textoCompletada(t)}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               Flexible(child: SingleChildScrollView(child: InformesDelTrabajo(t))),
             ],

@@ -1896,6 +1896,8 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       planId: x['plan_id'],
       grupoId: x['grupo_id'] as String?,
       ejecutadoPor: x['ejecutado_por'],
+      completadaEl: DateTime.tryParse(x['completada_el'] as String? ?? '')?.toLocal(),
+      completadaPor: x['completada_por'] as String?,
       resultado: (x['resultado'] as num?)?.toInt(),
       resultadoResuelto: x['resultado_resuelto'] as bool? ?? false,
       tipoMantenimiento: x['tipo_mantenimiento'] == null

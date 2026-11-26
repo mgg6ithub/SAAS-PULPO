@@ -61,6 +61,25 @@ class InformesDelTrabajo extends StatelessWidget {
   );
 }
 
+/// Orden completada sin parte (se marcó desde la oficina): lo que se sabe de ella, para poder sacar su PDF.
+Informe parteSinRellenar(Tarea t) => Informe(
+  trabajoId: t.id,
+  trabajadorId: t.ejecutadoPor ?? t.trabajadorIds.firstOrNull,
+  resultado: t.resultado ?? 0,
+  notas: '',
+  cuando: t.completadaEl ?? t.ultimo ?? hoy(),
+);
+
+/// «26 nov a las 15:42, Jon Etxebarria»: cuándo y quién completó la orden. Las antiguas, con lo que haya.
+String textoCompletada(Tarea t) {
+  final parte = informes.de(t.id)?.firstOrNull;
+  final d = t.completadaEl ?? parte?.cuando;
+  final quien =
+      t.completadaPor ?? store.trabajador(parte?.trabajadorId ?? t.ejecutadoPor ?? '')?.nombreCompleto;
+  final cuando = d == null ? fecha(t.ultimo) : '${fecha(d)} a las ${hhmm(d.hour * 60 + d.minute)}';
+  return [cuando, ?quien].join(', ');
+}
+
 /// El informe entero: resultado, quién y cuándo, notas, fotos y descarga en PDF.
 Future<void> verInforme(BuildContext context, Informe i, Tarea t) => showDialog(
   context: context,
@@ -509,7 +528,7 @@ class BotonPdf extends StatefulWidget {
   /// El parte más reciente de la OT; sin parte, lo avisa.
   factory BotonPdf.orden(Tarea t, BuildContext context, {bool compacto = false}) => BotonPdf(compacto: compacto, () async {
     final messenger = ScaffoldMessenger.of(context);
-    final ultimo = (await informes.cargar(t.id)).firstOrNull;
+    final ultimo = (await informes.cargar(t.id)).firstOrNull ?? (t.estado == EstadoTrabajo.realizado ? parteSinRellenar(t) : null);
     if (ultimo == null) {
       messenger.showSnackBar(
         const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('Esta orden aún no tiene parte')),

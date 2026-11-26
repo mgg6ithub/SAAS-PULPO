@@ -414,16 +414,25 @@ class _OrdenDeTrabajoState extends State<_OrdenDeTrabajo> {
                         onTap: () => abrirIncidenciaForm(context, original: incidencia),
                       )
                     else
-                      _Eslabon('Mantenimiento', plan?.nombre ?? 'Sin mantenimiento', lider: puntoTipo(color)),
+                      _Eslabon('Mantenimiento', plan?.nombre ?? 'Sin mantenimiento', lider: puntoTipo(color), tinte: color),
                     const _Flecha(),
                     _Eslabon('Orden de trabajo', t.nombre.isEmpty ? 'Sin nombre' : t.nombre, actual: true),
-                    if (incidencia != null) ...[
+                    // Completada: cuándo, a qué hora y quién.
+                    if (hecha) ...[
                       const _Flecha(),
-                      _Eslabon(
-                        'Estado',
-                        hecha ? 'Solucionada' : 'Pendiente',
-                        lider: puntoTipo(hecha ? P.verde : P.textoSuave),
+                      ListenableBuilder(
+                        listenable: informes,
+                        builder: (context, _) => _Eslabon(
+                          incidencia != null ? 'Solucionada' : 'Completada',
+                          textoCompletada(t),
+                          lider: const Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
+                          tinte: P.verde,
+                          ancho: 420,
+                        ),
                       ),
+                    ] else if (incidencia != null) ...[
+                      const _Flecha(),
+                      _Eslabon('Estado', 'Pendiente', lider: puntoTipo(P.textoSuave)),
                     ],
                   ],
                 ),
@@ -456,7 +465,11 @@ class _Eslabon extends StatelessWidget {
   final Widget? lider;
   final bool actual;
   final VoidCallback? onTap;
-  const _Eslabon(this.etiqueta, this.nombre, {this.lider, this.actual = false, this.onTap});
+
+  /// Color suave de fondo y borde (tipo de mantenimiento, completada).
+  final Color? tinte;
+  final double ancho;
+  const _Eslabon(this.etiqueta, this.nombre, {this.lider, this.actual = false, this.onTap, this.tinte, this.ancho = 320});
 
   @override
   Widget build(BuildContext context) => onTap == null
@@ -464,12 +477,12 @@ class _Eslabon extends StatelessWidget {
       : MouseRegion(cursor: SystemMouseCursors.click, child: GestureDetector(onTap: onTap, child: _caja()));
 
   Widget _caja() => Container(
-    constraints: const BoxConstraints(maxWidth: 320),
+    constraints: BoxConstraints(maxWidth: ancho),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
-      color: actual ? P.moradoSuave : P.superficie,
+      color: actual ? P.moradoSuave : tinte?.withValues(alpha: .08) ?? P.superficie,
       borderRadius: BorderRadius.circular(P.radioControl),
-      border: Border.all(color: actual ? P.morado.withValues(alpha: .35) : P.borde),
+      border: Border.all(color: actual ? P.morado.withValues(alpha: .35) : tinte?.withValues(alpha: .35) ?? P.borde),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -494,7 +507,7 @@ class _Eslabon extends StatelessWidget {
   );
 }
 
-/// «Descargar parte»: el PDF del último parte de la OT. Sin parte, no se ve.
+/// «Descargar PDF»: el del último parte de la OT, o el de la orden completada sin parte.
 class _DescargarParte extends StatefulWidget {
   final Tarea t;
   const _DescargarParte(this.t);
@@ -526,22 +539,25 @@ class _DescargarParteState extends State<_DescargarParte> {
     listenable: informes,
     builder: (context, _) {
       final ultimo = informes.de(widget.t.id)?.firstOrNull;
-      if (ultimo == null) return const SizedBox.shrink();
+      final hecha = widget.t.estado == EstadoTrabajo.realizado;
+      if (ultimo == null && !hecha) return const SizedBox.shrink();
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          BotonAccion(
-            'Ver parte',
-            icono: Icons.description_outlined,
-            tooltip: 'El parte firmado, con sus fotos',
-            onPressed: () => verInforme(context, ultimo, widget.t),
-          ),
-          const SizedBox(width: 8),
+          if (ultimo != null) ...[
+            BotonAccion(
+              'Ver parte',
+              icono: Icons.description_outlined,
+              tooltip: 'El parte firmado, con sus fotos',
+              onPressed: () => verInforme(context, ultimo, widget.t),
+            ),
+            const SizedBox(width: 8),
+          ],
           BotonAccion(
             descargando ? 'Preparando…' : 'Descargar PDF',
             icono: Icons.download_rounded,
             tooltip: 'PDF del parte, con la incidencia original si sale de una',
-            onPressed: descargando ? () {} : () => _pdf(ultimo),
+            onPressed: descargando ? () {} : () => _pdf(ultimo ?? parteSinRellenar(widget.t)),
           ),
         ],
       );
@@ -580,7 +596,7 @@ class _Flecha extends StatelessWidget {
   const _Flecha();
 
   @override
-  Widget build(BuildContext context) => Icon(Icons.arrow_forward_rounded, size: 16, color: P.textoSuave);
+  Widget build(BuildContext context) => Icon(Icons.chevron_right_rounded, size: 26, color: P.morado.withValues(alpha: .6));
 }
 
 

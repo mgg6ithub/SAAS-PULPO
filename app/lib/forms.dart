@@ -2954,7 +2954,16 @@ class SelectorEstado extends StatelessWidget {
       child: Tooltip(
         message: 'Cambiar el estado',
         child: industrial
-            ? Text(t.estado.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (t.estado == EstadoTrabajo.realizado) ...[
+                    const Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(t.estado.etiqueta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ],
+              )
             : Pill(t.estado.etiqueta, t.estado.color, punto: true),
       ),
     ),
