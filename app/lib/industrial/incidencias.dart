@@ -263,7 +263,7 @@ class _TablaIncidencias extends StatelessWidget {
           if (medio) const Col('Activo', flex: 3),
           if (ancho) const Col('Comunicada por', flex: 2),
           if (ancho) Col(historico ? 'Cerrada' : 'Fecha', ancho: 140),
-          if (medio) const Col('Estado', ancho: 140),
+          if (medio) const Col('Estado', ancho: 180),
           if (medio) const Col('', ancho: 48, cabecera: SizedBox()),
         ],
         filas: lista.length,
@@ -287,14 +287,23 @@ class _TablaIncidencias extends StatelessWidget {
             if (medio)
               Row(
                 children: [
-                  // Flexible: en columnas estrechas la píldora se recorta en lugar de desbordar con «Ver».
-                  Flexible(
-                    child: ClipRect(
-                      child: Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
+                  // La píldora se recorta en columnas estrechas; «Ver», siempre a la derecha y en todas las filas.
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: ClipRect(
+                        child: Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
+                      ),
                     ),
                   ),
-                  // Con su OT por hacer: a la derecha, en gris, «Ver» lleva a ella en Órdenes de trabajo.
-                  if (ot != null && est == EstadoIncidencia.conOt) ...[const SizedBox(width: 6), EnlaceVerOt(ot.id)],
+                  const SizedBox(width: 6),
+                  // Con su OT por hacer lleva a ella; sin ella, abre la incidencia.
+                  ot != null && est == EstadoIncidencia.conOt
+                      ? EnlaceVerOt(ot.id)
+                      : EnlaceVer('Ver la incidencia', () {
+                          store.verNuevo(x.id);
+                          abrirIncidenciaForm(context, original: x);
+                        }),
                 ],
               ),
             // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.
@@ -312,17 +321,18 @@ class _TablaIncidencias extends StatelessWidget {
   );
 }
 
-/// «👁 Ver» en tono neutro: va a Órdenes de trabajo con la OT de la incidencia marcada.
-class EnlaceVerOt extends StatelessWidget {
-  final String otId;
-  const EnlaceVerOt(this.otId, {super.key});
+/// «👁 Ver» en tono neutro, el mismo en toda la app y siempre a la derecha de su fila.
+class EnlaceVer extends StatelessWidget {
+  final String tooltip;
+  final VoidCallback onTap;
+  const EnlaceVer(this.tooltip, this.onTap, {super.key});
 
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: 'Ver la orden de trabajo',
+    message: tooltip,
     child: InkWell(
       borderRadius: BorderRadius.circular(6),
-      onTap: () => verOtEnOrdenes(context, otId),
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
         child: Row(
@@ -336,4 +346,13 @@ class EnlaceVerOt extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// «Ver» de una orden: va a Órdenes de trabajo con ella marcada.
+class EnlaceVerOt extends StatelessWidget {
+  final String otId;
+  const EnlaceVerOt(this.otId, {super.key});
+
+  @override
+  Widget build(BuildContext context) => EnlaceVer('Ver la orden de trabajo', () => verOtEnOrdenes(context, otId));
 }

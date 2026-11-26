@@ -11,7 +11,7 @@ import 'activo.dart';
 import 'iconos.dart';
 import 'gravedad.dart';
 import 'incidencia.dart';
-import 'incidencias.dart' show verIncidencia;
+import 'incidencias.dart' show EnlaceVer, verIncidencia;
 import 'mantenimientos.dart' show abrirIncidenciaForm, dondeEs;
 import 'planes.dart';
 import 'tipo_mantenimiento.dart';
@@ -544,37 +544,13 @@ class IncidenciasAbiertas extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // «Ver» lleva a Incidencias con esta marcada en rojo; «Revisar» la abre aquí mismo.
-                              Tooltip(
-                                message: 'Verla en Incidencias',
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(6),
-                                  onTap: () => verIncidencia(context, aviso.id),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.visibility_outlined, size: 16, color: P.textoSuave),
-                                        const SizedBox(width: 5),
-                                        Text(
-                                          'Ver',
-                                          style: TextStyle(
-                                            fontSize: 13.5,
-                                            color: P.textoSuave,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
+                              // «Revisar» la abre aquí mismo; «Ver» lleva a Incidencias con esta marcada en rojo.
                               TextButton(
                                 onPressed: () => abrirIncidenciaForm(context, original: aviso),
                                 child: const Text('Revisar'),
                               ),
+                              const SizedBox(width: 8),
+                              EnlaceVer('Verla en Incidencias', () => verIncidencia(context, aviso.id)),
                             ],
                           ),
                         ),
