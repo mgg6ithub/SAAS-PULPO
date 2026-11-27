@@ -18,7 +18,7 @@ import '../intro_pulpo.dart' show LogoBarra;
 import '../marca.dart';
 import '../industrial/activos.dart' show colorEstado, gravedadDe;
 import '../shell.dart' show AsaBarra;
-import '../industrial/gravedad.dart' show AnilloCiclo, cicloOt, descripcionOt, origenOt;
+import '../industrial/gravedad.dart' show EstadoEnVivo, AnilloCiclo, cicloOt, descripcionOt, origenOt;
 import '../industrial/iconos.dart';
 import '../industrial/incidencia_form.dart';
 import '../industrial/incidencia.dart';
@@ -1967,7 +1967,7 @@ Text('$etiqueta: ${t.nombre}')
                 Flexible(child: conNuevo(i.id, celdaTexto(i.descripcion, negrita: true))),
               ]),
               if (medio) celdaTexto(dondeEs(i.activoId), suave: true),
-              Align(alignment: Alignment.centerLeft, child: PillTipo(i.gravedad.tipo, neutra: true)),
+              Align(alignment: Alignment.centerLeft, child: PillTipo(i.gravedad.tipo)),
               if (ancho)
                 Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                   celdaTexto(resuelve != null && resuelve.id != origen?.id ? resuelve.nombre : origen?.nombre ?? '—'),
@@ -2025,7 +2025,7 @@ Text('$etiqueta: ${t.nombre}')
               if (medio) celdaTexto(dondeEs(t?.activoId), suave: true),
               if (ancho)
                 Align(alignment: Alignment.centerLeft,
-                  child: t?.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t!.tipoMantenimiento!, neutra: true)),
+                  child: t?.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t!.tipoMantenimiento!)),
               Align(alignment: Alignment.centerLeft,
                 child: Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], icono: iconosResultado[i.resultado])),
               if (medio) celdaTexto(i.minutos == null ? '—' : duracionTexto(i.minutos!), suave: i.minutos == null),
@@ -3733,6 +3733,8 @@ class _RespuestasOficinaState extends State<_RespuestasOficina> {
       for (final t in mias)
         if (t.pausada && !esperandoIncidencia(t) && store.incidencias.any((i) => i.origenTrabajoId == t.id))
           (t, t, 'La oficina ha respondido a tu incidencia: ya puedes reanudar «${t.nombre}».')
+        else if (t.estado == EstadoTrabajo.noRealizado && t.iniciadaEn != null && !_interrumpidasVistas.contains(t.id))
+          (t, t, 'La oficina ha cancelado «${t.nombre}», que estabas haciendo. Tu parte con lo hecho se ha enviado.')
         else if (t.estado == EstadoTrabajo.interrumpida && !_interrumpidasVistas.contains(t.id))
           (t, sigueEnOt(t) ?? t, sigueEnOt(t) == null
               ? 'La oficina ha interrumpido «${t.nombre}» por tu incidencia.'
@@ -3748,14 +3750,14 @@ class _RespuestasOficinaState extends State<_RespuestasOficina> {
             child: HoverCard(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
               onTap: () {
-                if (t.estado == EstadoTrabajo.interrumpida) _visto(t);
+                if (t.estado != EstadoTrabajo.enCurso) _visto(t);
                 widget.abrir(abrir);
               },
               child: Row(children: [
                 Pill('Nuevo', P.morado),
                 const SizedBox(width: 12),
                 Expanded(child: Text(texto, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-                if (t.estado == EstadoTrabajo.interrumpida)
+                if (t.estado != EstadoTrabajo.enCurso)
                   IconButton(
                     tooltip: 'Quitar',
                     onPressed: () => _visto(t),
@@ -3777,7 +3779,10 @@ final _partesMandando = <String>{};
 /// hasta entonces: apuntes, fotos y el tiempo trabajado sin pausas. Una vez por OT.
 void _mandarPartesInterrumpidas(Trabajador w) {
   for (final t in store.tareas) {
-    if (t.estado != EstadoTrabajo.interrumpida || !t.trabajadorIds.contains(w.id) || !_partesMandando.add(t.id)) continue;
+    // Interrumpida por una incidencia o cancelada por la oficina mientras la hacía (lo que no llegó a empezar no
+    // tiene nada que mandar: lo descarta [_mandarParteInterrumpida]).
+    final cortada = t.estado == EstadoTrabajo.interrumpida || t.estado == EstadoTrabajo.noRealizado;
+    if (!cortada || !t.trabajadorIds.contains(w.id) || !_partesMandando.add(t.id)) continue;
     unawaited(_mandarParteInterrumpida(t, w).catchError((Object e) {
       debugPrint('Pultec: no se pudo mandar el parte de la OT interrumpida: $e');
       _partesMandando.remove(t.id);
@@ -3807,7 +3812,9 @@ Future<void> _mandarParteInterrumpida(Tarea t, Trabajador w) async {
       trabajadorId: w.id,
       resultado: 1,
       notas: [
-        'OT interrumpida por una incidencia${sigue == null ? '' : '; el trabajo sigue en «${sigue.nombre}»'}.',
+        t.estado == EstadoTrabajo.noRealizado
+            ? 'OT cancelada por la oficina mientras estaba en curso.'
+            : 'OT interrumpida por una incidencia${sigue == null ? '' : '; el trabajo sigue en «${sigue.nombre}»'}.',
         if (apuntes.isNotEmpty) apuntes,
         if (deOt.resumen.isNotEmpty) deOt.resumen,
       ].join('\n\n'),
@@ -3823,12 +3830,12 @@ Future<void> _mandarParteInterrumpida(Tarea t, Trabajador w) async {
 }
 
 
-/// Estado de una OT para el técnico: pausada, en curso o pendiente (neutra, con el círculo abierto).
-Widget pillEstadoTecnico(Tarea t) => t.pausada || esperandoIncidencia(t)
-    ? Pill('Pausada', P.gris, icono: Icons.pause_rounded)
-    : t.estado == EstadoTrabajo.enCurso
-    ? Pill('En curso', P.morado, punto: true)
-    : Pill('Pendiente', P.gris, icono: Icons.radio_button_unchecked_rounded);
+/// Estado de una OT en las tablas del técnico, como en las de la oficina: en texto, y en curso con el punto que
+/// late y lo que lleva.
+Widget pillEstadoTecnico(Tarea t) => t.estado == EstadoTrabajo.enCurso && !t.pausada && !esperandoIncidencia(t)
+    ? EstadoEnVivo(t)
+    : Text(t.pausada || esperandoIncidencia(t) ? 'Pausada' : t.estado.etiqueta, maxLines: 1,
+        overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600));
 
 /// «Mis órdenes» del técnico en escritorio: las columnas de Órdenes de trabajo del administrador, sin lo que se
 /// edita (técnico, estado). A la izquierda, el anillo de cuánto le queda; en «Cuándo», la fecha y lo que falta.
@@ -3898,7 +3905,7 @@ class _TablaOrdenesTecnico extends StatelessWidget {
                 ]),
               Align(
                 alignment: Alignment.centerLeft,
-                child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo, neutra: true),
+                child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo),
               ),
               t.proximo == null
                   ? celdaTexto('Sin fecha', suave: true)

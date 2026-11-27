@@ -2909,8 +2909,29 @@ class SelectorEstado extends StatelessWidget {
   final Future<void> Function()? antesCompletar;
   const SelectorEstado(this.t, {super.key, this.antesCompletar});
 
+  /// Pultec: la OT la está haciendo un técnico ahora mismo. La cierra él con su parte; la oficina solo puede
+  /// cancelarla, avisando antes.
+  bool get _enManos => industrial && t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.isNotEmpty;
+
+  String get _quien => [for (final id in t.trabajadorIds) ?store.trabajador(id)?.nombre].join(', ');
+
   Future<void> _elegir(BuildContext context, EstadoTrabajo e) async {
     if (e == t.estado) return;
+    if (_enManos) {
+      if (e != EstadoTrabajo.noRealizado) return;
+      final desde = t.iniciadaEn;
+      if (!await confirmar(
+        context,
+        '${_quien.isEmpty ? 'El técnico' : _quien} está haciendo «${t.nombre}»'
+        '${desde == null ? '' : ' desde las ${hhmm(desde.hour * 60 + desde.minute)}'}. ¿Cancelarla igualmente?',
+        accion: 'Cancelar la OT',
+        icono: Icons.block_rounded,
+        cancelar: 'Volver',
+        nota: 'Le llegará el aviso y su parte con lo que llevaba hecho se enviará solo.',
+      )) {
+        return;
+      }
+    }
     if (e == EstadoTrabajo.realizado) {
       await antesCompletar?.call();
       store.marcarHecha(t);
@@ -2937,6 +2958,17 @@ class SelectorEstado extends StatelessWidget {
       shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
     ),
     menuChildren: [
+      if (_enManos)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 230),
+            child: Text(
+              'La está haciendo ${_quien.isEmpty ? 'el técnico' : _quien}: la cierra él con su parte.',
+              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+            ),
+          ),
+        ),
       for (final e in estadosTrabajo)
         MenuItemButton(
           leadingIcon: industrial
@@ -2963,13 +2995,18 @@ class SelectorEstado extends StatelessWidget {
               e == t.estado || (industrial && e == EstadoTrabajo.pendiente && t.estado.abierta)
               ? Icon(Icons.check_rounded, size: 18, color: P.textoSuave)
               : null,
-          // La OT de un mantenimiento vigente no se cancela: se volvería a crear sola.
-          onPressed: e == EstadoTrabajo.noRealizado && otDeMantenimientoVigente(t) ? null : () => _elegir(context, e),
+          // La OT de un mantenimiento vigente no se cancela: se volvería a crear sola. En curso, el técnico la
+          // cierra: ni completarla ni volverla a pendiente desde aquí.
+          onPressed: (e == EstadoTrabajo.noRealizado && otDeMantenimientoVigente(t)) || (_enManos && e != EstadoTrabajo.noRealizado)
+              ? null
+              : () => _elegir(context, e),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 110),
             child: Tooltip(
               message: e == EstadoTrabajo.noRealizado && otDeMantenimientoVigente(t)
                   ? 'Es de un mantenimiento vigente: pausa antes el mantenimiento'
+                  : _enManos && e != EstadoTrabajo.noRealizado
+                  ? 'La está haciendo ${_quien.isEmpty ? 'el técnico' : _quien}; la cierra él con su parte'
                   : '',
               child: Text(
                 e.etiqueta,
