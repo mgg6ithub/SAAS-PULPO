@@ -148,7 +148,9 @@ List<Tarea> _delDia(Trabajador w, DateTime dia) =>
 /// Desplazamiento de la vista del técnico en escritorio: la barra vertical va en un hueco propio a la derecha,
 /// sin tapar las tarjetas.
 class _BarraAparte extends MaterialScrollBehavior {
-  const _BarraAparte();
+  /// Sin el hueco: dentro de las tablas, para que el fondo de la fila llegue hasta el borde.
+  final bool conHueco;
+  const _BarraAparte({this.conHueco = true});
 
   static const hueco = 14.0;
 
@@ -165,7 +167,7 @@ class _BarraAparte extends MaterialScrollBehavior {
 
   @override
   Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) =>
-      axisDirectionToAxis(details.direction) == Axis.vertical
+      conHueco && axisDirectionToAxis(details.direction) == Axis.vertical
       ? super.buildScrollbar(context, Padding(padding: const EdgeInsets.only(right: hueco), child: child), details)
       : super.buildScrollbar(context, child, details);
 }
@@ -1743,8 +1745,10 @@ Text('$etiqueta: ${t.nombre}')
             Pestanas(opciones: ['Órdenes', 'Incidencias', 'Histórico'], seleccion: vista,
               onChanged: (n) { estado = null; _vista(n); })
           else
-            Text(titulos[vista], style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700,
-              letterSpacing: -.4)),
+            // Abajo en la fila (a ras de buscar y filtros), pegado a la tabla.
+            SizedBox(height: 40, child: Align(alignment: Alignment.bottomLeft, widthFactor: 1,
+              child: Text(titulos[vista], style: TextStyle(fontFamily: P.titulos, fontSize: 20, fontWeight: FontWeight.w700,
+                letterSpacing: -.4, height: 1)))),
         ],
         derecha: [
           Buscador(hint: 'Buscar…', width: 220, onChanged: (s) => setState(() => busqueda = s)),
@@ -1877,7 +1881,7 @@ Text('$etiqueta: ${t.nombre}')
       final ancho = box.maxWidth > 1000, medio = box.maxWidth > 760;
       return Align(
         alignment: Alignment.topCenter,
-        child: Tabla(
+        child: _sinHueco(Tabla(
           id: 'incidencias-tecnico',
           menuColumnas: medio,
           columnas: [
@@ -1915,7 +1919,7 @@ Text('$etiqueta: ${t.nombre}')
               Align(alignment: Alignment.centerRight, child: Pill(est.etiqueta, est.color, icono: est.icono)),
             ];
           },
-        ),
+        )),
       );
     },
   );
@@ -1927,7 +1931,7 @@ Text('$etiqueta: ${t.nombre}')
       final ancho = box.maxWidth > 1000, medio = box.maxWidth > 760;
       return Align(
         alignment: Alignment.topCenter,
-        child: Tabla(
+        child: _sinHueco(Tabla(
           id: 'historial-tecnico',
           menuColumnas: medio,
           columnas: [
@@ -1967,7 +1971,7 @@ Text('$etiqueta: ${t.nombre}')
               celdaTexto(_cuando(i.cuando), suave: true),
             ];
           },
-        ),
+        )),
       );
     },
   );
@@ -3764,7 +3768,7 @@ class _TablaOrdenesTecnico extends StatelessWidget {
       final ancho = box.maxWidth > 1000, medio = box.maxWidth > 760;
       return Align(
         alignment: Alignment.topCenter,
-        child: Tabla(
+        child: _sinHueco(Tabla(
           id: 'ordenes-tecnico',
           menuColumnas: medio,
           columnas: [
@@ -3834,8 +3838,11 @@ class _TablaOrdenesTecnico extends StatelessWidget {
               Align(alignment: Alignment.centerRight, child: pillEstadoTecnico(t)),
             ];
           },
-        ),
+        )),
       );
     },
   );
 }
+
+/// Las tablas del técnico, sin el hueco de la barra de la página (el fondo de la fila llega al borde).
+Widget _sinHueco(Widget tabla) => ScrollConfiguration(behavior: const _BarraAparte(conHueco: false), child: tabla);
