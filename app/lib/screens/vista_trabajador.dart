@@ -3772,8 +3772,8 @@ class _RespuestasOficinaState extends State<_RespuestasOficina> {
     }
   }
 
-  Future<void> _visto(Tarea t) async {
-    setState(() => _interrumpidasVistas.add(t.id));
+  Future<void> _visto(String clave) async {
+    setState(() => _interrumpidasVistas.add(clave));
     await (await SharedPreferences.getInstance()).setStringList(_claveVistas(widget.w), _interrumpidasVistas.toList());
   }
 
@@ -3781,39 +3781,44 @@ class _RespuestasOficinaState extends State<_RespuestasOficina> {
   Widget build(BuildContext context) {
     if (!industrial || !_vistasLeidas) return const SizedBox.shrink();
     final mias = store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(widget.w.id));
-    final avisos = <(Tarea, Tarea, String)>[
+    // (clave para quitarlo, o null si se va solo; la orden que abre; el texto).
+    final avisos = <(String?, Tarea, String)>[
       for (final t in mias)
-        // Respondida: su incidencia (o, si la oficina la unió a la de esta orden, esa).
+        // Respondida: su incidencia (o, si la oficina la unió a la de esta orden, esa). Se va al reanudar.
         if (t.pausada && !esperandoIncidencia(t) && store.incidencias.any((i) => i.origenTrabajoId == t.id || i.trabajoId == t.id))
-          (t, t, 'La oficina ha respondido a tu incidencia: ya puedes reanudar «${t.nombre}».')
+          (null, t, 'La oficina ha respondido a tu incidencia: ya puedes reanudar «${t.nombre}».')
         else if (t.estado == EstadoTrabajo.noRealizado && t.iniciadaEn != null && !_interrumpidasVistas.contains(t.id))
-          (t, t, 'La oficina ha cancelado «${t.nombre}», que estabas haciendo. Tu parte con lo hecho se ha enviado.')
+          (t.id, t, 'La oficina ha cancelado «${t.nombre}», que estabas haciendo. Tu parte con lo hecho se ha enviado.')
         else if (t.estado == EstadoTrabajo.interrumpida && !_interrumpidasVistas.contains(t.id))
-          (t, sigueEnOt(t) ?? t, sigueEnOt(t) == null
+          (t.id, sigueEnOt(t) ?? t, sigueEnOt(t) == null
               ? 'La oficina ha interrumpido «${t.nombre}» por tu incidencia.'
               : 'La oficina ha interrumpido «${t.nombre}»: el trabajo sigue en «${sigueEnOt(t)!.nombre}».'),
+      // Su incidencia ya tiene OT y es para él: ya puede hacerla. Se va al abrirla, al quitarla o al empezarla.
+      for (final (i, ot) in otsDeMisIncidencias(widget.w))
+        if (!_interrumpidasVistas.contains('inc-${i.id}'))
+          ('inc-${i.id}', ot, 'La oficina ha respondido a tu incidencia «${i.descripcion}»: ya puedes hacer «${ot.nombre}».'),
     ];
     if (avisos.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (final (t, abrir, texto) in avisos)
+        for (final (clave, abrir, texto) in avisos)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: HoverCard(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
               onTap: () {
-                if (t.estado != EstadoTrabajo.enCurso) _visto(t);
+                if (clave != null) _visto(clave);
                 widget.abrir(abrir);
               },
               child: Row(children: [
                 Pill('Nuevo', P.morado),
                 const SizedBox(width: 12),
                 Expanded(child: Text(texto, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-                if (t.estado != EstadoTrabajo.enCurso)
+                if (clave != null)
                   IconButton(
                     tooltip: 'Quitar',
-                    onPressed: () => _visto(t),
+                    onPressed: () => _visto(clave),
                     icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
                   )
                 else
@@ -4051,6 +4056,18 @@ class _AnchoBarraTecnicoState extends State<_AnchoBarraTecnico> {
 }
 
 
+/// Incidencias suyas a las que la oficina ha sacado una OT nueva para él que aún no ha empezado (las de una orden
+/// interrumpida ya tienen su propio aviso).
+List<(Incidencia, Tarea)> otsDeMisIncidencias(Trabajador w) => [
+  for (final i in store.incidencias)
+    if (i.tecnicoId == w.id && i.trabajoId != null && i.trabajoId != i.origenTrabajoId)
+      if (store.tarea(i.trabajoId!) case final ot?
+          when ot.trabajadorIds.contains(w.id) &&
+              ot.estado == EstadoTrabajo.pendiente &&
+              store.tarea(i.origenTrabajoId ?? '')?.estado != EstadoTrabajo.interrumpida)
+        (i, ot),
+];
+
 /// Notificaciones del técnico: lo que la oficina ha hecho con sus órdenes e incidencias (las mismas frases que
 /// salen arriba de «Mis órdenes»). Se abren en la orden.
 List<Aviso> avisosTecnico(Trabajador w) {
@@ -4099,6 +4116,17 @@ List<Aviso> avisosTecnico(Trabajador w) {
         activoId: t.activoId,
       ));
     }
+  }
+  for (final (i, ot) in otsDeMisIncidencias(w)) {
+    lista.add(Aviso(
+      id: 'ot-incidencia-${i.id}',
+      titulo: 'La oficina ha respondido a tu incidencia',
+      detalle: 'Ya puedes hacer «${ot.nombre}»',
+      color: P.morado,
+      cuando: i.creada,
+      tareaId: ot.id,
+      activoId: ot.activoId,
+    ));
   }
   return lista..sort((a, b) => b.cuando.compareTo(a.cuando));
 }
