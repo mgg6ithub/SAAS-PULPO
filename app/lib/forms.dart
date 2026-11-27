@@ -1575,9 +1575,11 @@ Future<void> abrirTareaForm(
   String? trabajadorId,
   Tarea? padre,
   Tarea? borrador,
+  bool soloLectura = false,
 }) => abrirPanel(
   context,
   TareaForm(
+    soloLectura: soloLectura,
     padre: padre,
     borrador: borrador,
     original: t,

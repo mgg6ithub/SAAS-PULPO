@@ -506,7 +506,8 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
               lider: puntoTipo(origen.tipoMantenimiento?.color ?? P.gris),
               titulo: origen.nombre,
               subtitulo: 'Orden en la que se detectó',
-              onTap: () => abrirTareaForm(context, origen),
+              // Solo para verla: la orden en la que se detectó no se cambia desde la incidencia.
+              onTap: () => abrirTareaForm(context, origen, soloLectura: true),
             ),
         ]),
         if (x.fotos.isNotEmpty)
