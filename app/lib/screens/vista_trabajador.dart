@@ -1475,6 +1475,7 @@ class _PillDia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (t.hechaEl(hoy()) || t.estado == EstadoTrabajo.realizado) return Pill('Hecha', P.verde, punto: true);
+    if (t.estado == EstadoTrabajo.interrumpida) return Pill('Interrumpida', P.gris, icono: Icons.block_rounded);
     if (industrial && (t.pausada || esperandoIncidencia(t))) return Pill('Pausada', P.gris, icono: Icons.pause_rounded);
     if (t.estado == EstadoTrabajo.enCurso) return Pill('En curso', P.azul, punto: true);
     final p = t.proximo;
@@ -2824,6 +2825,14 @@ class _DetalleTrabajo extends StatelessWidget {
     final suya = esperando
         ? store.incidencias.where((i) => i.origenTrabajoId == t.id && store.estadoIncidencia(i) == EstadoIncidencia.abierta).lastOrNull
         : null;
+    // Interrumpida: el trabajo sigue en la OT correctiva que creó la oficina.
+    final sigueEn = t.estado == EstadoTrabajo.interrumpida
+        ? store.tarea(store.incidencias.where((i) => i.origenTrabajoId == t.id && i.trabajoId != t.id).lastOrNull?.trabajoId)
+        : null;
+    // Sale de una incidencia avisada en otra OT, que se interrumpió.
+    final vieneDe = incidencia?.origenTrabajoId == null || incidencia!.origenTrabajoId == t.id
+        ? null
+        : store.tarea(incidencia.origenTrabajoId);
     Widget atenuar(Widget w) => pausada ? IgnorePointer(child: Opacity(opacity: .4, child: w)) : w;
     return ListView(
       padding: const EdgeInsets.only(top: _huecoOt, bottom: _huecoOt),
@@ -2878,6 +2887,28 @@ class _DetalleTrabajo extends StatelessWidget {
           ],
         ),
         const SizedBox(height: _huecoOt),
+        if (t.estado == EstadoTrabajo.interrumpida) ...[
+          Tarjeta(
+            padding: const EdgeInsets.all(16),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.block_rounded, size: 22, color: P.textoSuave),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('OT interrumpida', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    sigueEn == null
+                        ? 'La oficina la ha cerrado por una incidencia.'
+                        : 'La oficina la ha cerrado por una incidencia; el trabajo sigue en «${sigueEn.nombre}».',
+                    style: TextStyle(fontSize: 14, color: P.textoSuave),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+          const SizedBox(height: _huecoOt),
+        ],
         if (pausada) ...[
           Tarjeta(
             padding: const EdgeInsets.all(16),
@@ -2968,6 +2999,7 @@ class _DetalleTrabajo extends StatelessWidget {
             titulo: 'Incidencia original',
             children: [
               _dato('Qué pasa', incidencia.descripcion),
+              if (vieneDe != null) _dato('Viene de', '«${vieneDe.nombre}», interrumpida'),
               _dato('Comunicada', [
                 (incidencia.tecnicoId == null ? null : store.trabajador(incidencia.tecnicoId!))?.nombre ?? 'Oficina',
                 fecha(incidencia.creada),

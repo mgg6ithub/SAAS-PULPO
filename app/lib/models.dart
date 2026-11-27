@@ -32,8 +32,9 @@ extension CriticidadX on Criticidad {
   int get peso => const [8, 4, 2, 1][index];
 }
 
-/// En qué punto está un trabajo (se cambia a mano desde listas, bloques y la ficha).
-enum EstadoTrabajo { pendiente, enCurso, realizado, noRealizado }
+/// En qué punto está un trabajo (se cambia a mano desde listas, bloques y la ficha). [interrumpida] solo la pone
+/// la oficina al responder una incidencia avisada desde la OT: se cierra y sigue en otra OT.
+enum EstadoTrabajo { pendiente, enCurso, realizado, noRealizado, interrumpida }
 
 extension EstadoTrabajoX on EstadoTrabajo {
   String get etiqueta => industrial
@@ -41,12 +42,14 @@ extension EstadoTrabajoX on EstadoTrabajo {
             ? 'Completada'
             : this == EstadoTrabajo.noRealizado
             ? 'Cancelada'
+            : this == EstadoTrabajo.interrumpida
+            ? 'Interrumpida'
             : 'Pendiente')
-      : const ['Pendiente', 'En curso', 'Realizado', 'No realizado'][index];
+      : const ['Pendiente', 'En curso', 'Realizado', 'No realizado', 'Interrumpida'][index];
   // Pultec: completada en verde; pendiente y cancelada, neutras.
   Color get color => industrial
       ? (this == EstadoTrabajo.realizado ? P.verde : P.gris)
-      : const [P.ambar, P.azul, P.verde, P.rojo][index];
+      : const [P.ambar, P.azul, P.verde, P.rojo, P.gris][index];
 
   /// Aún por hacer (ni completada ni cancelada).
   bool get abierta => this == EstadoTrabajo.pendiente || this == EstadoTrabajo.enCurso;
@@ -56,7 +59,7 @@ extension EstadoTrabajoX on EstadoTrabajo {
 List<EstadoTrabajo> get estadosTrabajo =>
     industrial
     ? const [EstadoTrabajo.pendiente, EstadoTrabajo.realizado, EstadoTrabajo.noRealizado]
-    : EstadoTrabajo.values;
+    : EstadoTrabajo.values.where((e) => e != EstadoTrabajo.interrumpida).toList();
 
 enum EstadoMaquina { operativa, revision, averiada }
 

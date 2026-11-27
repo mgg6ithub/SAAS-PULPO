@@ -270,6 +270,40 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
     await abrirTareaForm(nav.context, ot);
   }
 
+  /// La OT en la que se avisó, si sigue abierta: la oficina decide si se sigue en ella o se interrumpe.
+  Tarea? get origen {
+    final o = store.tarea(x.origenTrabajoId);
+    return o != null && o.estado.abierta ? o : null;
+  }
+
+  /// Se resuelve en la misma OT: la incidencia se une a ella y el técnico la reanuda.
+  void seguirEnLaOt() {
+    final o = origen;
+    if (o == null || !_guardar()) return;
+    store.guardarIncidencia(
+      x
+        ..trabajoId = o.id
+        ..estado = EstadoIncidencia.conOt,
+    );
+    Navigator.pop(context);
+  }
+
+  /// Grave: la OT en la que se avisó se cierra como interrumpida y sigue en una OT correctiva nueva.
+  Future<void> interrumpirYCrearOt() async {
+    final o = origen;
+    if (o == null || !_guardar()) return;
+    if (!await confirmar(
+      context,
+      '¿Interrumpir «${o.nombre}» y crear una OT correctiva?',
+      accion: 'Interrumpir y crear OT',
+      nota: 'La orden queda cerrada como interrumpida y el trabajo sigue en la nueva.',
+    )) {
+      return;
+    }
+    store.cambiarEstado([o], EstadoTrabajo.interrumpida);
+    await crearOt();
+  }
+
   List<String> _tecnicosPorDefecto() {
     final deOrigen = [...?store.tarea(x.origenTrabajoId)?.trabajadorIds];
     if (deOrigen.isNotEmpty) return deOrigen;
@@ -500,10 +534,22 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: [
-                    BotonPrimario('Crear OT', icono: Icons.assignment_outlined, conIcono: true, onPressed: crearOt),
-                    BotonAccion('Desestimar', onPressed: desestimar, tooltip: 'Cerrarla sin hacer nada'),
-                  ],
+                  // Avisada desde una OT aún abierta: seguir en ella o, si es grave, interrumpirla y seguir en otra.
+                  children: origen == null
+                      ? [
+                          BotonPrimario('Crear OT', icono: Icons.assignment_outlined, conIcono: true, onPressed: crearOt),
+                          BotonAccion('Desestimar', onPressed: desestimar, tooltip: 'Cerrarla sin hacer nada'),
+                        ]
+                      : [
+                          if (x.gravedad == Gravedad.grave) ...[
+                            BotonPrimario('Interrumpir y crear OT', onPressed: interrumpirYCrearOt),
+                            BotonAccion('Seguir en la misma OT', tooltip: 'Se resuelve dentro de su OT: el técnico la reanuda', onPressed: seguirEnLaOt),
+                          ] else ...[
+                            BotonPrimario('Seguir en la misma OT', onPressed: seguirEnLaOt),
+                            BotonAccion('Interrumpir y crear OT', tooltip: 'Cierra su OT como interrumpida y crea una correctiva', onPressed: interrumpirYCrearOt),
+                          ],
+                          BotonAccion('Desestimar', onPressed: desestimar, tooltip: 'Cerrarla sin hacer nada; el técnico reanuda su OT'),
+                        ],
                 ),
               ),
             if (ot != null)

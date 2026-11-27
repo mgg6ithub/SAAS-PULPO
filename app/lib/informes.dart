@@ -696,7 +696,11 @@ List<(String, String)> cronologiaOt(Tarea t, Informe i) {
         'Incidencia comunicada por ${(x.tecnicoId == null ? null : store.trabajador(x.tecnicoId!))?.nombreCompleto ?? 'la oficina'}'
             ' (${x.gravedad.etiqueta.toLowerCase()}): ${x.descripcion}',
       ),
-    if (x != null)
+    if (x != null && x.origenTrabajoId == t.id)
+      ('', 'Se resuelve dentro de esta misma orden.')
+    else if (x != null && x.origenTrabajoId != null)
+      ('', 'Detectada durante «${store.tarea(x.origenTrabajoId)?.nombre ?? 'otra orden'}», que queda interrumpida. Se crea esta orden de trabajo para resolverla${t.proximo == null ? '' : ', prevista para el ${fecha(t.proximo)}'}.')
+    else if (x != null)
       ('', 'Se crea esta orden de trabajo para resolverla${t.proximo == null ? '' : ', prevista para el ${fecha(t.proximo)}'}.')
     else if (plan != null)
       ('', 'Orden creada sola por el mantenimiento «${plan.nombre}»${plan.cada.isEmpty ? '' : ' (${plan.cada})'}.')

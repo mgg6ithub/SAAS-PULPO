@@ -65,8 +65,12 @@ void main() {
     await tester.tap(find.text('Ruido raro'));
     await tester.pumpAndSettle();
     expect(find.textContaining(RegExp(r'Comunicada por .*Iker el'), findRichText: true), findsOneWidget);
-    await tester.tap(find.text('Crear OT'));
+    // Avisada desde una OT abierta: interrumpirla (con confirmación) y seguir en una nueva.
+    await tester.tap(find.text('Interrumpir y crear OT'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Interrumpir y crear OT').last);
+    await tester.pumpAndSettle();
+    expect(store.tarea('origen')!.estado, EstadoTrabajo.interrumpida);
 
     final ot = store.tareas.firstWhere((t) => t.id != 'origen');
     expect(find.text('INCIDENCIA'), findsOneWidget);
@@ -117,7 +121,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ruido raro'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Crear OT'));
+    await tester.tap(find.text('Interrumpir y crear OT'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Interrumpir y crear OT').last);
     await tester.pumpAndSettle();
     await _cerrarPanel(tester);
     final ot = store.tarea(store.incidencias.firstWhere((x) => x.id == 'i1').trabajoId)!;
@@ -130,6 +136,20 @@ void main() {
     expect(ot.estado, EstadoTrabajo.noRealizado, reason: 'la OT queda cancelada');
     expect(store.estadoIncidencia(store.incidencias.firstWhere((x) => x.id == 'i1')), EstadoIncidencia.desestimada);
     expect(find.text('Ruido raro'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('seguir en la misma OT: la incidencia se une a ella y no se crea otra', skip: !industrial, (tester) async {
+    await _pagina(tester);
+    await tester.tap(find.text('Ruido raro'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Seguir en la misma OT'));
+    await tester.pumpAndSettle();
+    final i1 = store.incidencias.firstWhere((x) => x.id == 'i1');
+    expect(i1.trabajoId, 'origen');
+    expect(store.estadoIncidencia(i1), EstadoIncidencia.conOt);
+    expect(store.tarea('origen')!.estado.abierta, isTrue);
+    expect(store.tareas.length, 1, reason: 'no se crea otra OT');
     expect(tester.takeException(), isNull);
   });
 }
