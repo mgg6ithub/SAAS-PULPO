@@ -1760,11 +1760,30 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
       Bloque('Activo', [Row(children: [
         _IconoActivo(i.activoId), const SizedBox(width: 8), Expanded(child: Text(dondeEs(i.activoId))),
       ])]),
-      Bloque('Órdenes relacionadas', [
-        for (final (id, etiqueta) in [(i.origenTrabajoId, 'Orden de origen'), (i.trabajoId, 'Orden para resolverla')])
+      // Cada orden, con su estado y para abrirla: en la que la avisó y en la que se resuelve (la misma si la
+      // oficina dijo «Seguir en la misma OT»).
+      Bloque('Órdenes', [
+        for (final (id, etiqueta) in [
+          (i.origenTrabajoId, i.trabajoId != null && i.trabajoId == i.origenTrabajoId
+              ? 'Avisada aquí; se resuelve en esta misma orden'
+              : 'Orden en la que la avisaste'),
+          if (i.trabajoId != null && i.trabajoId != i.origenTrabajoId) (i.trabajoId, 'Orden para resolverla'),
+        ])
           if (store.tarea(id ?? '') case final t?)
-Text('$etiqueta: ${t.nombre}')
-          else Text('$etiqueta: sin orden asociada'),
+            FilaLista(
+              lider: puntoTipo(t.tipoMantenimiento?.color ?? P.gris),
+              titulo: t.nombre,
+              subtitulo: etiqueta,
+              derecha: pillEstadoTecnico(t),
+              onTap: t.trabajadorIds.contains(widget.w.id)
+                  ? () {
+                      Navigator.of(context).pop();
+                      widget.abrir(t);
+                    }
+                  : null,
+            )
+          else
+            Text('$etiqueta: sin orden asociada', style: TextStyle(color: P.textoSuave)),
       ]),
       if (i.fotos.isNotEmpty) Bloque('Fotos', [Wrap(spacing: 8, runSpacing: 8, children: [
         for (final f in i.fotos) FotoGuardada(f, width: 100, height: 100),
@@ -1977,7 +1996,12 @@ Text('$etiqueta: ${t.nombre}')
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
                 ]),
               celdaTexto(_cuando(i.creada), suave: true),
-              Align(alignment: Alignment.centerRight, child: Pill(est.etiqueta, est.color, icono: est.icono)),
+              Align(
+                alignment: Alignment.centerRight,
+                child: resuelve != null && resuelve.estado == EstadoTrabajo.enCurso && !resuelve.pausada
+                    ? EstadoEnVivo(resuelve)
+                    : Pill(est.etiqueta, est.color, icono: est.icono),
+              ),
             ];
           },
         )),
