@@ -437,15 +437,10 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
         if (_guardar()) Navigator.pop(context);
       },
       avisos: [if (error != null) ('Te falta qué pasa', () {})],
-      textoBorrar: estado == EstadoIncidencia.conOt ? 'Cancelar OT y desestimar' : 'Eliminar',
-      onBorrar: !existe
-          ? null
-          : estado == EstadoIncidencia.conOt
-          ? cancelarOtYDesestimar
-          : () async {
-              store.deshacible('Has borrado una incidencia', () => store.borrarIncidencia(x.id));
-              Navigator.of(context).pop();
-            },
+      // Una incidencia no se borra (para cerrarla sin hacer nada está «Desestimar» y queda en el histórico); con
+      // OT, abajo a la izquierda, cancelar su OT y desestimarla.
+      textoBorrar: 'Cancelar OT y desestimar',
+      onBorrar: existe && estado == EstadoIncidencia.conOt ? cancelarOtYDesestimar : null,
       campos: [
         Bloque('Incidencia', primero: true, [
           conMargen(
