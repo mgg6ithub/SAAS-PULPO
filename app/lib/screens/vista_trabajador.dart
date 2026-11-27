@@ -1672,11 +1672,18 @@ class _PanelTecnico extends StatefulWidget {
   State<_PanelTecnico> createState() => _PanelTecnicoState();
 }
 
+bool _otrosDiasAbierto = false, _otrosDiasLeido = false;
+const _claveOtrosDias = 'tecnico_otros_dias_abierto';
+
 class _PanelTecnicoState extends State<_PanelTecnico> {
   int fecha = 0;
   int get vista => widget.vista;
-  /// Otros días (atrasadas y próximas) plegados bajo lo de hoy.
-  bool otrosDias = false;
+  /// Otros días plegados bajo lo de hoy. Abierto o no, se recuerda al entrar en una orden y al volver a la app.
+  bool get otrosDias => _otrosDiasAbierto;
+  set otrosDias(bool v) {
+    _otrosDiasAbierto = v;
+    SharedPreferences.getInstance().then((p) => p.setBool(_claveOtrosDias, v));
+  }
   int? estado, resultado;
   TipoMantenimiento? tipo;
   String busqueda = '';
@@ -1698,6 +1705,13 @@ class _PanelTecnicoState extends State<_PanelTecnico> {
   @override
   void initState() {
     super.initState();
+    if (!_otrosDiasLeido) {
+      _otrosDiasLeido = true;
+      SharedPreferences.getInstance().then((p) {
+        if (!mounted) return;
+        setState(() => _otrosDiasAbierto = p.getBool(_claveOtrosDias) ?? false);
+      });
+    }
     if (vista == 2) historial = informes.delTecnico(widget.w.id);
   }
 
