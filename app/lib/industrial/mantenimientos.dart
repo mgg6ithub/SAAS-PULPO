@@ -293,14 +293,33 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
   }
 
   /// Se resuelve en la misma OT: la incidencia se une a ella y el técnico la reanuda.
+  ///
+  /// Si esa OT ya resuelve otra incidencia (la que la creó), no quedan dos: la nueva se une a aquella, que sube de
+  /// nivel (gravedad y tipo de la OT, si la nueva es más grave), toma la descripción nueva y guarda la de antes
+  /// debajo, con las fotos de las dos.
   void seguirEnLaOt() {
     final o = origen;
     if (o == null || !_guardar()) return;
-    store.guardarIncidencia(
-      x
-        ..trabajoId = o.id
-        ..estado = EstadoIncidencia.conOt,
-    );
+    final previa = store.incidenciaDeOt(o.id);
+    if (previa == null || previa.id == x.id) {
+      store.guardarIncidencia(
+        x
+          ..trabajoId = o.id
+          ..estado = EstadoIncidencia.conOt,
+      );
+    } else {
+      final grave = x.gravedad.index > previa.gravedad.index ? x.gravedad : previa.gravedad;
+      store.guardarIncidencia(
+        previa.copia()
+          ..descripcion = [x.descripcion, if (previa.descripcion.isNotEmpty) 'Antes: ${previa.descripcion}'].join('\n\n')
+          ..gravedad = grave
+          ..fotos = [...previa.fotos, ...x.fotos]
+      );
+      if (o.tipoMantenimiento == null || grave.tipo.index > o.tipoMantenimiento!.index) {
+        store.guardarTarea(o..tipoMantenimiento = grave.tipo);
+      }
+      store.borrarIncidencia(x.id);
+    }
     Navigator.pop(context);
   }
 

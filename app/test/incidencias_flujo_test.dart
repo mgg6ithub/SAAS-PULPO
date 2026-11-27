@@ -152,4 +152,22 @@ void main() {
     expect(store.tareas.length, 1, reason: 'no se crea otra OT');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('seguir en la misma OT que ya resuelve otra: se une a ella y sube de nivel', skip: !industrial, (tester) async {
+    store.incidencias.add(Incidencia(id: 'i0', activoId: 'a', tecnicoId: 'iker', origenTrabajoId: 'otra',
+      trabajoId: 'origen', estado: EstadoIncidencia.conOt, gravedad: Gravedad.media, descripcion: 'Ruido leve'));
+    store.incidencias.firstWhere((x) => x.id == 'i1').gravedad = Gravedad.grave;
+    await _pagina(tester);
+    await tester.tap(find.text('Ruido raro'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Seguir en la misma OT'));
+    await tester.pumpAndSettle();
+    expect(store.incidencias.where((x) => x.id == 'i1'), isEmpty, reason: 'no quedan dos');
+    final i0 = store.incidencias.firstWhere((x) => x.id == 'i0');
+    expect(i0.gravedad, Gravedad.grave);
+    expect(i0.descripcion, startsWith('Ruido raro'));
+    expect(i0.descripcion, contains('Antes: Ruido leve'));
+    expect(store.tarea('origen')!.tipoMantenimiento, TipoMantenimiento.correctivoCritico);
+    expect(tester.takeException(), isNull);
+  });
 }

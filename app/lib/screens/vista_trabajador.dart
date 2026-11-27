@@ -3075,13 +3075,18 @@ class _DetalleTrabajo extends StatelessWidget {
     // ha dicho la oficina).
     final deEstaOt = store.incidencias.where((i) => i.origenTrabajoId == t.id).toList()
       ..sort((a, b) => a.creada.compareTo(b.creada));
-    final suya = esperando
+    final propia = esperando
         ? deEstaOt.where((i) => store.estadoIncidencia(i) == EstadoIncidencia.abierta).lastOrNull
         : t.pausadaDesde == null
         ? null
         : deEstaOt.where((i) => !i.creada.isBefore(t.pausadaDesde!.subtract(const Duration(minutes: 2)))).lastOrNull;
+    // Pausada por su aviso y la oficina lo unió a la incidencia que ya resolvía esta orden: esa, actualizada.
+    final unida = !esperando && propia == null && t.pausada && deEstaOt.isEmpty ? store.incidenciaDeOt(t.id) : null;
+    final suya = propia ?? unida;
     final respuesta = esperando || suya == null
         ? null
+        : unida != null
+        ? 'La oficina ha unido tu aviso a la incidencia de esta orden, que sube de nivel: se resuelve aquí. Reanúdala para continuar.'
         : switch (store.estadoIncidencia(suya)) {
             EstadoIncidencia.desestimada => 'La oficina ha desestimado tu incidencia: sigue con esta orden. Reanúdala para continuar.',
             _ when suya.trabajoId == t.id => 'La oficina ha respondido a tu incidencia: se resuelve en esta misma orden. Reanúdala para continuar.',
@@ -3778,7 +3783,8 @@ class _RespuestasOficinaState extends State<_RespuestasOficina> {
     final mias = store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(widget.w.id));
     final avisos = <(Tarea, Tarea, String)>[
       for (final t in mias)
-        if (t.pausada && !esperandoIncidencia(t) && store.incidencias.any((i) => i.origenTrabajoId == t.id))
+        // Respondida: su incidencia (o, si la oficina la unió a la de esta orden, esa).
+        if (t.pausada && !esperandoIncidencia(t) && store.incidencias.any((i) => i.origenTrabajoId == t.id || i.trabajoId == t.id))
           (t, t, 'La oficina ha respondido a tu incidencia: ya puedes reanudar «${t.nombre}».')
         else if (t.estado == EstadoTrabajo.noRealizado && t.iniciadaEn != null && !_interrumpidasVistas.contains(t.id))
           (t, t, 'La oficina ha cancelado «${t.nombre}», que estabas haciendo. Tu parte con lo hecho se ha enviado.')
@@ -4053,16 +4059,20 @@ List<Aviso> avisosTecnico(Trabajador w) {
   for (final t in store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(w.id))) {
     final suyas = store.incidencias.where((i) => i.origenTrabajoId == t.id).toList()
       ..sort((a, b) => a.creada.compareTo(b.creada));
-    final ultima = suyas.lastOrNull;
+    // Si la oficina unió su aviso a la incidencia que ya resolvía esta orden, la suya ya no está: cuenta esa.
+    final unida = suyas.isEmpty ? store.incidenciaDeOt(t.id) : null;
+    final ultima = suyas.lastOrNull ?? unida;
     if (t.pausada && ultima != null && !esperandoIncidencia(t)) {
       lista.add(Aviso(
         id: 'reanudar-${t.id}-${t.pausadaDesde!.millisecondsSinceEpoch}',
-        titulo: store.estadoIncidencia(ultima) == EstadoIncidencia.desestimada
+        titulo: unida != null
+            ? 'La oficina ha unido tu aviso a la incidencia de esta orden'
+            : store.estadoIncidencia(ultima) == EstadoIncidencia.desestimada
             ? 'La oficina ha desestimado tu incidencia'
             : 'La oficina ha respondido a tu incidencia',
         detalle: 'Ya puedes reanudar «${t.nombre}»',
         color: P.morado,
-        cuando: ultima.creada,
+        cuando: unida != null ? t.pausadaDesde! : ultima.creada,
         tareaId: t.id,
         activoId: t.activoId,
       ));
