@@ -28,20 +28,51 @@ class FilaInforme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final w = store.trabajadores.where((x) => x.id == i.trabajadorId).firstOrNull;
-    return FilaLista(
-      lider: puntoResultado(i.resultado),
-      titulo: resultadosInforme[i.resultado],
-      subtitulo: [
-        if (informes.sinSubir(i)) 'Sin subir',
-        if (w != null) w.nombreCompleto,
-        if (i.fotos.isNotEmpty) '${i.fotos.length} ${i.fotos.length == 1 ? 'foto' : 'fotos'}',
-        i.notas,
-      ].join(' · '),
-      derecha: Text(
-        '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
-        style: TextStyle(fontSize: 12.5, color: P.textoSuave),
-      ),
+    // Arriba el resultado; debajo quién, cuánto tardó y las fotos; y lo que escribió, en dos líneas.
+    final datos = [
+      if (w != null) w.nombreCompleto,
+      if (i.minutos != null) duracionTexto(i.minutos!),
+      if (i.fotos.isNotEmpty) '${i.fotos.length} ${i.fotos.length == 1 ? 'foto' : 'fotos'}',
+    ].join(', ');
+    return InkWell(
       onTap: () => verInforme(context, i, t),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 12, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(padding: const EdgeInsets.only(top: 5), child: puntoResultado(i.resultado)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text(resultadosInforme[i.resultado], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    if (informes.sinSubir(i)) ...[const SizedBox(width: 8), Pill('Sin subir', P.ambar)],
+                  ]),
+                  if (datos.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(datos, style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+                  ],
+                  if (i.notas.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(i.notas.trim(), maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13.5, height: 1.35)),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${fecha(i.cuando)} ${hhmm(i.cuando.hour * 60 + i.cuando.minute)}',
+              style: TextStyle(fontSize: 12.5, color: P.textoSuave),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded, size: 18, color: P.textoSuave),
+          ],
+        ),
+      ),
     );
   }
 }

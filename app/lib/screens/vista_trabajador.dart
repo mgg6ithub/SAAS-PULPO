@@ -3272,8 +3272,7 @@ class _DetalleTrabajo extends StatelessWidget {
         ],
         const SizedBox(height: _huecoOt),
         SeccionTarjeta(
-          titulo: 'Informes',
-          subtitulo: lista == null || lista.isEmpty ? null : '${lista.length}',
+          titulo: lista == null || lista.length < 2 ? 'Informes' : 'Informes (${lista.length})',
           children: [
             if (lista == null)
               const Padding(padding: EdgeInsets.all(18), child: LinearProgressIndicator())
