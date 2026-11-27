@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -85,7 +87,7 @@ void borrarDelHistorico(Tarea t, DateTime d) {
 
 /// De dónde sale la OT: de un mantenimiento (sola), de una incidencia o creada a mano.
 // Primero la incidencia: la correctiva que sigue a una preventiva interrumpida lleva también su mantenimiento.
-(String, Color) origenOt(Tarea t) => store.incidenciaDeOt(t.id) != null && store.incidenciaDeOt(t.id)!.origenTrabajoId != t.id
+(String, Color) origenOt(Tarea t) => store.incidencias.any((x) => x.trabajoId == t.id && x.origenTrabajoId != t.id)
     ? ('Incidencia', P.rojo)
     : t.planId != null
     ? ('Mantenimiento', P.morado)
@@ -246,4 +248,84 @@ String descripcionOt(Tarea t) {
   final x = store.incidenciaDeOt(t.id);
   if (x != null && x.descripcion.trim().isNotEmpty) return x.descripcion.trim();
   return t.ubicacion;
+}
+
+
+/// OT en curso ahora mismo, para la oficina: un punto morado que late con onda (sonar) y el tiempo que lleva,
+/// sin las pausas; pausada, un punto gris quieto. Nada si no está en curso.
+class EnVivoOt extends StatelessWidget {
+  final Tarea t;
+  const EnVivoOt(this.t, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (t.estado != EstadoTrabajo.enCurso) return const SizedBox.shrink();
+    return t.pausada
+        ? Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 8, height: 8, decoration: const BoxDecoration(color: P.gris, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Text('Pausada', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
+          ])
+        : _Sonar(t);
+  }
+}
+
+class _Sonar extends StatefulWidget {
+  final Tarea t;
+  const _Sonar(this.t);
+  @override
+  State<_Sonar> createState() => _SonarState();
+}
+
+class _SonarState extends State<_Sonar> with SingleTickerProviderStateMixin {
+  late final _onda = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+  // El tiempo, en minutos: basta con repintarlo cada 30 s.
+  late final _reloj = Timer.periodic(const Duration(seconds: 30), (_) => setState(() {}));
+
+  @override
+  void initState() {
+    super.initState();
+    _reloj;
+  }
+
+  @override
+  void dispose() {
+    _reloj.cancel();
+    _onda.dispose();
+    super.dispose();
+  }
+
+  String _lleva() {
+    final inicio = widget.t.iniciadaEn;
+    if (inicio == null) return 'En curso';
+    final m = widget.t.trabajado(inicio).inMinutes;
+    if (m < 1) return 'Ahora';
+    return m < 60 ? '$m min' : '${m ~/ 60} h${m % 60 == 0 ? '' : ' ${m % 60} min'}';
+  }
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: 'En curso ahora mismo${widget.t.iniciadaEn == null ? '' : ', sin contar las pausas'}',
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox.square(
+        dimension: 18,
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: _onda,
+            builder: (_, _) => Stack(alignment: Alignment.center, children: [
+              Container(
+                width: 8 + 10 * _onda.value,
+                height: 8 + 10 * _onda.value,
+                decoration: BoxDecoration(color: P.morado.withValues(alpha: .45 * (1 - _onda.value)), shape: BoxShape.circle),
+              ),
+              Container(width: 8, height: 8, decoration: BoxDecoration(color: P.morado, shape: BoxShape.circle)),
+            ]),
+          ),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Flexible(child: Text(_lleva(), maxLines: 1, overflow: TextOverflow.clip,
+        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: P.texto))),
+    ]),
+  );
 }

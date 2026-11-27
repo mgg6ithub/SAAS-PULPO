@@ -1016,8 +1016,13 @@ class Store extends ChangeNotifier {
   }
 
   /// Incidencia que resuelve esta OT (null = la OT no sale de una incidencia).
-  Incidencia? incidenciaDeOt(String? otId) =>
-      otId == null ? null : incidencias.where((x) => x.trabajoId == otId).firstOrNull;
+  /// Una incidencia avisada desde la propia OT y resuelta en ella («Seguir en la misma OT») no la origina: va
+  /// primero la que la creó.
+  Incidencia? incidenciaDeOt(String? otId) {
+    if (otId == null) return null;
+    final suyas = incidencias.where((x) => x.trabajoId == otId);
+    return suyas.where((x) => x.origenTrabajoId != otId).firstOrNull ?? suyas.firstOrNull;
+  }
 
   void borrarIncidencia(String id) {
     if (incidencias.where((x) => x.id == id).firstOrNull case final x?) {

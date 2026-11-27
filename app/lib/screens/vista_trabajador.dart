@@ -3091,6 +3091,8 @@ class _DetalleTrabajo extends StatelessWidget {
                     children: [
                       if (pausada)
                         Pill('Pausada', P.gris, icono: Icons.pause_rounded)
+                      else if (industrial && !hecha && t.estado == EstadoTrabajo.enCurso)
+                        Pill('En curso', P.morado, punto: true)
                       // Pultec: pendiente, neutra con el círculo abierto (como en Órdenes de trabajo).
                       else if (industrial && !hecha && t.estado.abierta)
                         Pill(t.estado.etiqueta, P.gris, icono: Icons.radio_button_unchecked_rounded)

@@ -44,6 +44,8 @@ extension EstadoTrabajoX on EstadoTrabajo {
             ? 'Cancelada'
             : this == EstadoTrabajo.interrumpida
             ? 'Interrumpida'
+            : this == EstadoTrabajo.enCurso
+            ? 'En curso'
             : 'Pendiente')
       : const ['Pendiente', 'En curso', 'Realizado', 'No realizado', 'Interrumpida'][index];
   // Pultec: completada en verde; pendiente y cancelada, neutras.
