@@ -539,19 +539,45 @@ class _BarraTecnico extends StatelessWidget {
     this.onAdmin,
   });
 
-  Widget _fila(IconData icono, String texto, VoidCallback onTap) => InkWell(
-    borderRadius: BorderRadius.circular(P.radioControl),
-    hoverColor: P.hoverBarra,
-    mouseCursor: SystemMouseCursors.click,
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: [
-          Icon(icono, size: 19, color: P.textoBarraSuave),
-          const SizedBox(width: 12),
-          Expanded(child: Text(texto, style: TextStyle(fontSize: 14.5, color: P.textoBarra))),
-        ],
+  /// Fila de abajo (vista de administrador, cerrar sesión); plegada, solo el icono con su nombre al pasar.
+  Widget _fila(IconData icono, String texto, VoidCallback onTap, bool iconos) => Tooltip(
+    message: iconos ? texto : '',
+    child: InkWell(
+      borderRadius: BorderRadius.circular(P.radioControl),
+      hoverColor: P.hoverBarra,
+      mouseCursor: SystemMouseCursors.click,
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: iconos ? 0 : 12, vertical: 10),
+        child: Row(
+          mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
+          children: [
+            Icon(icono, size: 19, color: P.textoBarraSuave),
+            if (!iconos) ...[
+              const SizedBox(width: 12),
+              Expanded(child: Text(texto, maxLines: 1, overflow: TextOverflow.clip,
+                style: TextStyle(fontSize: 14.5, color: P.textoBarra))),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _plegar(bool iconos) => Tooltip(
+    message: iconos ? 'Expandir' : 'Contraer',
+    child: InkWell(
+      borderRadius: BorderRadius.circular(P.radioControl),
+      hoverColor: P.hoverBarra,
+      mouseCursor: SystemMouseCursors.click,
+      onTap: ajustes.alternarContraida,
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Icon(
+          iconos ? Icons.keyboard_double_arrow_right_rounded : Icons.keyboard_double_arrow_left_rounded,
+          size: 18,
+          color: P.textoBarraSuave,
+        ),
       ),
     ),
   );
@@ -563,152 +589,197 @@ class _BarraTecnico extends StatelessWidget {
       (Icons.report_gmailerrorred_rounded, 'Incidencias', cuentas[1]),
       (Icons.history_rounded, 'Histórico', 0),
     ];
-    return Container(
-      width: 248,
-      color: P.barra,
-      padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const SizedBox(width: 2),
-                const LogoBarra(size: 32),
-                const SizedBox(width: 10),
-                Text(
-                  Marca.nombre,
-                  style: TextStyle(
-                    fontFamily: P.titulos,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.6,
-                    color: P.textoBarra,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 42,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: P.rojo,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
-                ),
-                onPressed: onIncidencia,
-                icon: const Icon(Icons.report_outlined, size: 19),
-                label: const Text('Crear incidencia', style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ),
-            const SizedBox(height: 14),
-            // Como la barra del administrador: un único fondo blanco que se desliza a la elegida; las filas, sin
-            // onda, solo cambian de color.
-            Stack(
-              children: [
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutCubic,
-                  top: vista * 44.0,
-                  left: 0,
-                  right: 0,
-                  height: 40,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: P.seleccionBarra,
-                      borderRadius: BorderRadius.circular(P.radioControl),
-                      boxShadow: P.sombraSeleccionBarra,
-                    ),
-                  ),
-                ),
-                Column(
+    // Plegada o no, con el mismo ajuste que la barra del administrador; el contenido sale del ancho real de cada
+    // fotograma, así cambia a solo iconos durante la animación y no de golpe.
+    return ValueListenableBuilder<int>(
+      valueListenable: ajustes.cambioBarra,
+      builder: (context, _, _) => AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        width: ajustes.barraContraida ? Ajustes.anchoIconos : 248,
+        color: P.barra,
+        child: ClipRect(
+          child: LayoutBuilder(builder: (context, box) {
+            final iconos = box.maxWidth < 180;
+            return Padding(
+              padding: EdgeInsets.fromLTRB(iconos ? 10 : 14, 18, iconos ? 10 : 14, 14),
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (final (i, (icono, texto, n)) in items.indexed)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(P.radioControl),
-                          splashFactory: NoSplash.splashFactory,
-                          highlightColor: Colors.transparent,
-                          hoverColor: P.hoverBarra,
-                          mouseCursor: SystemMouseCursors.click,
-                          onTap: () => onVista(i),
-                          child: SizedBox(
-                            height: 40,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: Row(
-                                children: [
-                                  TweenAnimationBuilder<Color?>(
-                                    tween: ColorTween(end: vista == i ? P.iconoBarraElegido : P.textoBarraSuave),
-                                    duration: const Duration(milliseconds: 200),
-                                    builder: (_, c, _) => Icon(icono, size: 20, color: c),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: AnimatedDefaultTextStyle(
-                                      duration: const Duration(milliseconds: 200),
-                                      style: TextStyle(
-                                        fontFamily: P.titulos,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: vista == i ? P.textoBarraElegido : P.textoBarra,
-                                      ),
-                                      child: Text(texto),
-                                    ),
-                                  ),
-                                  if (n > 0) Text('$n', style: TextStyle(fontSize: 13, color: P.textoBarraSuave)),
-                                ],
+                    if (iconos) ...[
+                      const Center(child: LogoBarra(size: 32)),
+                      const SizedBox(height: 4),
+                      Center(child: _plegar(true)),
+                    ] else
+                      Row(
+                        children: [
+                          const SizedBox(width: 2),
+                          const LogoBarra(size: 32),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              Marca.nombre,
+                              maxLines: 1,
+                              overflow: TextOverflow.clip,
+                              style: TextStyle(
+                                fontFamily: P.titulos,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -.6,
+                                color: P.textoBarra,
                               ),
                             ),
                           ),
+                          _plegar(false),
+                        ],
+                      ),
+                    const SizedBox(height: 18),
+                    Tooltip(
+                      message: iconos ? 'Crear incidencia' : '',
+                      child: SizedBox(
+                        height: 42,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: P.rojo,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(P.radioControl)),
+                          ),
+                          onPressed: onIncidencia,
+                          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                            const Icon(Icons.report_outlined, size: 19),
+                            if (!iconos) ...[
+                              const SizedBox(width: 8),
+                              const Flexible(child: Text('Crear incidencia', maxLines: 1, overflow: TextOverflow.clip,
+                                style: TextStyle(fontWeight: FontWeight.w600))),
+                            ],
+                          ]),
                         ),
                       ),
-                  ],
-                ),
-              ],
-            ),
-            const Spacer(),
-            if (onAdmin != null) _fila(Icons.swap_horiz_rounded, 'Vista de administrador', onAdmin!),
-            _fila(Icons.logout_rounded, 'Cerrar sesión', onSalir),
-            const SizedBox(height: 8),
-            Divider(height: 1, color: P.bordeBarra),
-            const SizedBox(height: 8),
-            // Su perfil: foto, nombre y, al pulsar, la ventana para cambiar su foto y sus ajustes.
-            Tooltip(
-              message: 'Mi perfil',
-              child: InkWell(
-                borderRadius: BorderRadius.circular(P.radioControl),
-                hoverColor: P.hoverBarra,
-                mouseCursor: SystemMouseCursors.click,
-                onTap: onPerfil,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    children: [
-                      FotoTecnico(w, size: 34),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              w.nombreCompleto,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: P.textoBarra),
+                    ),
+                    const SizedBox(height: 14),
+                    // Como la barra del administrador: un único fondo blanco que se desliza a la elegida. Sin ninguna
+                    // elegida (eligiendo activos) no se pinta: así no se va volando hacia arriba ni vuelve de allí.
+                    Stack(
+                      children: [
+                        if (vista >= 0)
+                          AnimatedPositioned(
+                            duration: const Duration(milliseconds: 280),
+                            curve: Curves.easeOutCubic,
+                            top: vista * 44.0,
+                            left: 0,
+                            right: 0,
+                            height: 40,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: P.seleccionBarra,
+                                borderRadius: BorderRadius.circular(P.radioControl),
+                                boxShadow: P.sombraSeleccionBarra,
+                              ),
                             ),
-                            Text('Mi perfil', style: TextStyle(fontSize: 12, color: P.textoBarraSuave)),
+                          ),
+                        Column(
+                          children: [
+                            for (final (i, (icono, texto, n)) in items.indexed)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Tooltip(
+                                  message: iconos ? texto : '',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(P.radioControl),
+                                    splashFactory: NoSplash.splashFactory,
+                                    highlightColor: Colors.transparent,
+                                    hoverColor: P.hoverBarra,
+                                    mouseCursor: SystemMouseCursors.click,
+                                    onTap: () => onVista(i),
+                                    child: SizedBox(
+                                      height: 40,
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: iconos ? 0 : 12),
+                                        child: Row(
+                                          mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
+                                          children: [
+                                            TweenAnimationBuilder<Color?>(
+                                              tween: ColorTween(end: vista == i ? P.iconoBarraElegido : P.textoBarraSuave),
+                                              duration: const Duration(milliseconds: 200),
+                                              builder: (_, c, _) => Icon(icono, size: 20, color: c),
+                                            ),
+                                            if (!iconos) ...[
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: AnimatedDefaultTextStyle(
+                                                  duration: const Duration(milliseconds: 200),
+                                                  style: TextStyle(
+                                                    fontFamily: P.titulos,
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: vista == i ? P.textoBarraElegido : P.textoBarra,
+                                                  ),
+                                                  child: Text(texto, maxLines: 1, overflow: TextOverflow.clip),
+                                                ),
+                                              ),
+                                              if (n > 0) Text('$n', style: TextStyle(fontSize: 13, color: P.textoBarraSuave)),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
+                      ],
+                    ),
+                    const Spacer(),
+                    if (onAdmin != null) _fila(Icons.swap_horiz_rounded, 'Vista de administrador', onAdmin!, iconos),
+                    _fila(Icons.logout_rounded, 'Cerrar sesión', onSalir, iconos),
+                    const SizedBox(height: 8),
+                    Divider(height: 1, color: P.bordeBarra),
+                    const SizedBox(height: 8),
+                    // Su perfil: foto, nombre y, al pulsar, la ventana para cambiar su foto y sus ajustes.
+                    Tooltip(
+                      message: 'Mi perfil',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(P.radioControl),
+                        hoverColor: P.hoverBarra,
+                        mouseCursor: SystemMouseCursors.click,
+                        onTap: onPerfil,
+                        child: Padding(
+                          padding: EdgeInsets.all(iconos ? 4 : 8),
+                          child: Row(
+                            mainAxisAlignment: iconos ? MainAxisAlignment.center : MainAxisAlignment.start,
+                            children: [
+                              FotoTecnico(w, size: 34),
+                              if (!iconos) ...[
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        w.nombreCompleto,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: P.textoBarra),
+                                      ),
+                                      Text('Mi perfil', maxLines: 1, overflow: TextOverflow.clip,
+                                        style: TextStyle(fontSize: 12, color: P.textoBarraSuave)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+            );
+          }),
         ),
       ),
     );
