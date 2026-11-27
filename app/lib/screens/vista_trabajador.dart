@@ -3039,9 +3039,22 @@ class _DetalleTrabajo extends StatelessWidget {
     // Su incidencia de esta orden aún sin respuesta: la OT queda pausada; arriba el aviso y lo demás, atenuado.
     final esperando = industrial && !hecha && esperandoIncidencia(t);
     final pausada = industrial && !hecha && (t.pausada || esperando);
+    // Su incidencia de esta orden: la que espera respuesta o, ya respondida, la de esta pausa (para explicar qué
+    // ha dicho la oficina).
+    final deEstaOt = store.incidencias.where((i) => i.origenTrabajoId == t.id).toList()
+      ..sort((a, b) => a.creada.compareTo(b.creada));
     final suya = esperando
-        ? store.incidencias.where((i) => i.origenTrabajoId == t.id && store.estadoIncidencia(i) == EstadoIncidencia.abierta).lastOrNull
-        : null;
+        ? deEstaOt.where((i) => store.estadoIncidencia(i) == EstadoIncidencia.abierta).lastOrNull
+        : t.pausadaDesde == null
+        ? null
+        : deEstaOt.where((i) => !i.creada.isBefore(t.pausadaDesde!.subtract(const Duration(minutes: 2)))).lastOrNull;
+    final respuesta = esperando || suya == null
+        ? null
+        : switch (store.estadoIncidencia(suya)) {
+            EstadoIncidencia.desestimada => 'La oficina ha desestimado tu incidencia: sigue con esta orden. Reanúdala para continuar.',
+            _ when suya.trabajoId == t.id => 'La oficina ha respondido a tu incidencia: se resuelve en esta misma orden. Reanúdala para continuar.',
+            _ => 'La oficina ha respondido a tu incidencia. Reanúdala para continuar.',
+          };
     // Interrumpida: el trabajo sigue en la OT correctiva que creó la oficina.
     final sigueEn = t.estado == EstadoTrabajo.interrumpida
         ? store.tarea(store.incidencias.where((i) => i.origenTrabajoId == t.id && i.trabajoId != t.id).lastOrNull?.trabajoId)
@@ -3139,7 +3152,7 @@ class _DetalleTrabajo extends StatelessWidget {
                   Text(
                     esperando
                         ? 'Esperando la respuesta de la oficina a tu incidencia. Cuando responda, podrás reanudarla.'
-                        : 'El tiempo no cuenta mientras está pausada. Reanúdala cuando vuelvas.',
+                        : respuesta ?? 'El tiempo no cuenta mientras está pausada. Reanúdala cuando vuelvas.',
                     style: TextStyle(fontSize: 14, color: P.textoSuave),
                   ),
                   if (suya != null && suya.descripcion.isNotEmpty) ...[
@@ -3745,7 +3758,7 @@ class _RespuestasOficinaState extends State<_RespuestasOficina> {
                 widget.abrir(abrir);
               },
               child: Row(children: [
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: P.morado, shape: BoxShape.circle)),
+                Pill('Nuevo', P.morado),
                 const SizedBox(width: 12),
                 Expanded(child: Text(texto, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
                 if (t.estado == EstadoTrabajo.interrumpida)
