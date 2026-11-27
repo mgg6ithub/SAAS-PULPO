@@ -314,8 +314,11 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
             Expanded(
               child: ScrollConfiguration(
                 behavior: escritorio ? const _BarraAparte(conHueco: false) : ScrollConfiguration.of(context),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
+              // Como al entrar en un activo en la vista del administrador: la orden entra desde la derecha mientras la
+              // lista se aparta, y al volver, al revés.
+              child: TransicionLateral(
+                clave: tarea?.id ?? (elegir ? 'maquinas' : pestana),
+                orden: tarea == null ? 0 : 1,
                 child: KeyedSubtree(
                   key: ValueKey(tarea?.id ?? (elegir ? 'maquinas' : pestana)),
                   child: tarea != null
