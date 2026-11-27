@@ -291,7 +291,7 @@ class _TablaIncidencias extends StatelessWidget {
             if (medio)
               Row(
                 children: [
-                  // La píldora se recorta en columnas estrechas; «Ver», siempre a la derecha y en todas las filas.
+                  // La píldora se recorta en columnas estrechas; «Ver» (solo con OT), a la derecha.
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerLeft,
@@ -300,14 +300,8 @@ class _TablaIncidencias extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  // Con su OT por hacer lleva a ella; sin ella, abre la incidencia.
-                  ot != null && est == EstadoIncidencia.conOt
-                      ? EnlaceVerOt(ot.id)
-                      : EnlaceVer('Ver la incidencia', () {
-                          store.verNuevo(x.id);
-                          abrirIncidenciaForm(context, original: x);
-                        }),
+                  // Con su OT por hacer, «Ver» lleva a ella; la incidencia se abre tocando la fila.
+                  if (ot != null && est == EstadoIncidencia.conOt) ...[const SizedBox(width: 6), EnlaceVerOt(ot.id)],
                 ],
               ),
             // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.
