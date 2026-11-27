@@ -471,6 +471,9 @@ class IncidenciasAbiertas extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Entre dos rayas, para que se marque: el título más cerca de sus incidencias que de lo de arriba.
+          Divider(height: 1, color: P.borde),
+          const SizedBox(height: 18),
           Row(
             children: [
               // El icono de Incidencias latiendo en rojo, para que se note que hay algo que atender.
@@ -491,7 +494,7 @@ class IncidenciasAbiertas extends StatelessWidget {
               Text('${avisos.length}', style: TextStyle(color: P.rojo, fontSize: 20, fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           Tarjeta(
             padding: EdgeInsets.zero,
             child: Column(
@@ -565,6 +568,8 @@ class IncidenciasAbiertas extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 18),
+          Divider(height: 1, color: P.borde),
         ],
       ),
     );
