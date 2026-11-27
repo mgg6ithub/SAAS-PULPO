@@ -312,7 +312,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
             ],
             Expanded(
               child: ScrollConfiguration(
-                behavior: escritorio ? const _BarraAparte() : ScrollConfiguration.of(context),
+                behavior: escritorio ? const _BarraAparte(conHueco: false) : ScrollConfiguration.of(context),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: KeyedSubtree(
@@ -369,9 +369,9 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
         contenido = Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: escritorio ? 980 : 760),
-            // En escritorio, a la derecha quedan 14 px: los otros 14 son el hueco de la barra de desplazamiento.
-            child: Padding(padding: escritorio ? const EdgeInsets.fromLTRB(28, 22, 28 - _BarraAparte.hueco, 12) : margenPagina, child: contenido),
+            // En escritorio, todo el ancho y el mismo margen que las páginas del administrador ([margenPagina]).
+            constraints: BoxConstraints(maxWidth: escritorio ? double.infinity : 760),
+            child: Padding(padding: margenPagina, child: contenido),
           ),
         );
       }
