@@ -174,7 +174,23 @@ final _vistoEn = <String, DateTime>{};
 class Notificaciones extends StatefulWidget {
   final ValueChanged<String> onTarea, onActivo;
   final VoidCallback onSinTecnico;
-  const Notificaciones({super.key, required this.onTarea, required this.onActivo, required this.onSinTecnico});
+
+  /// De dónde salen los avisos (por defecto, los de la oficina) y con qué nombre se guardan los leídos. El técnico
+  /// tiene los suyos y no tiene historial de cambios.
+  final List<Aviso> Function() fuente;
+  final String clave;
+  final bool conHistorial;
+  final String textoVacio;
+  const Notificaciones({
+    super.key,
+    required this.onTarea,
+    required this.onActivo,
+    required this.onSinTecnico,
+    this.fuente = avisosAhora,
+    this.clave = 'avisos_leidos',
+    this.conHistorial = true,
+    this.textoVacio = 'Todo al día. Aquí verás lo que hagan los técnicos y lo urgente.',
+  });
 
   @override
   State<Notificaciones> createState() => _NotificacionesState();
@@ -191,7 +207,7 @@ class _NotificacionesState extends State<Notificaciones> {
   Timer? _ocultar;
   SharedPreferences? _prefs;
 
-  String get _clave => 'avisos_leidos_${store.nube?.empresaId ?? 'local'}';
+  String get _clave => '${widget.clave}_${store.nube?.empresaId ?? 'local'}';
 
   @override
   void initState() {
@@ -204,7 +220,7 @@ class _NotificacionesState extends State<Notificaciones> {
       });
     });
     // Lo que ya había al abrir la app no es «nuevo»; lo que llegue después, sí.
-    _conocidos = {for (final a in avisosAhora()) a.id};
+    _conocidos = {for (final a in widget.fuente()) a.id};
     store.addListener(_alCambiar);
   }
 
@@ -217,7 +233,7 @@ class _NotificacionesState extends State<Notificaciones> {
 
   /// Lo que aparece ahora y no estaba: se apunta su hora y el más reciente asoma unos segundos.
   void _alCambiar() {
-    final ids = {for (final a in avisosAhora()) a.id};
+    final ids = {for (final a in widget.fuente()) a.id};
     final llegados = ids.difference(_conocidos ?? ids);
     _conocidos = ids;
     if (llegados.isEmpty || !mounted) return;
@@ -234,7 +250,7 @@ class _NotificacionesState extends State<Notificaciones> {
   }
 
   List<Aviso> _ordenados() {
-    final l = avisosAhora();
+    final l = widget.fuente();
     DateTime t(Aviso a) => _vistoEn[a.id] ?? a.cuando;
     return l..sort((a, b) => t(b).compareTo(t(a)));
   }
@@ -417,12 +433,18 @@ class _NotificacionesState extends State<Notificaciones> {
           padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
           child: Row(
             children: [
-              Pestanas(
-                opciones: const ['Notificaciones', 'Historial'],
-                seleccion: pestana,
-                compactas: true,
-                onChanged: (i) => setState(() => pestana = i),
-              ),
+              if (widget.conHistorial)
+                Pestanas(
+                  opciones: const ['Notificaciones', 'Historial'],
+                  seleccion: pestana,
+                  compactas: true,
+                  onChanged: (i) => setState(() => pestana = i),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Text('Notificaciones', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
               const Spacer(),
               IconButton(
                 tooltip: 'Cerrar',
@@ -460,7 +482,7 @@ class _NotificacionesState extends State<Notificaciones> {
                       ),
                     ),
                   if (avisos.isEmpty)
-                    _vacio('Todo al día. Aquí verás lo que hagan los técnicos y lo urgente.')
+                    _vacio(widget.textoVacio)
                   else
                     Flexible(
                       child: ListView.separated(

@@ -17,6 +17,7 @@ import '../informes.dart';
 import '../intro_pulpo.dart' show LogoBarra;
 import '../marca.dart';
 import '../industrial/activos.dart' show colorEstado, gravedadDe;
+import '../notificaciones.dart' show Aviso, Notificaciones;
 import '../shell.dart' show AsaBarra;
 import '../industrial/gravedad.dart' show EstadoEnVivo, AnilloCiclo, cicloOt, descripcionOt, origenOt;
 import '../industrial/iconos.dart';
@@ -377,6 +378,21 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
       }
       return Scaffold(
         backgroundColor: escritorio ? P.barra : P.fondo,
+        // Pultec: sus notificaciones abajo a la derecha, como la oficina (lo que le responde la oficina).
+        floatingActionButton: industrial && w != null
+            ? Notificaciones(
+                fuente: () => avisosTecnico(w),
+                clave: 'avisos_tecnico_${w.id}',
+                conHistorial: false,
+                textoVacio: 'Todo al día. Aquí verás lo que te responda la oficina.',
+                onTarea: (id) => setState(() {
+                  tareaId = id;
+                  eligiendo = false;
+                }),
+                onActivo: (_) {},
+                onSinTecnico: () {},
+              )
+            : null,
         bottomNavigationBar: !industrial && movil && w != null && tarea == null
             ? _BarraInferior(pestana, (i) => setState(() => pestana = i))
             : null,
@@ -4026,4 +4042,53 @@ class _AnchoBarraTecnicoState extends State<_AnchoBarraTecnico> {
       ),
     ),
   );
+}
+
+
+/// Notificaciones del técnico: lo que la oficina ha hecho con sus órdenes e incidencias (las mismas frases que
+/// salen arriba de «Mis órdenes»). Se abren en la orden.
+List<Aviso> avisosTecnico(Trabajador w) {
+  final lista = <Aviso>[];
+  final desde = masDias(hoy(), -14);
+  for (final t in store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(w.id))) {
+    final suyas = store.incidencias.where((i) => i.origenTrabajoId == t.id).toList()
+      ..sort((a, b) => a.creada.compareTo(b.creada));
+    final ultima = suyas.lastOrNull;
+    if (t.pausada && ultima != null && !esperandoIncidencia(t)) {
+      lista.add(Aviso(
+        id: 'reanudar-${t.id}-${t.pausadaDesde!.millisecondsSinceEpoch}',
+        titulo: store.estadoIncidencia(ultima) == EstadoIncidencia.desestimada
+            ? 'La oficina ha desestimado tu incidencia'
+            : 'La oficina ha respondido a tu incidencia',
+        detalle: 'Ya puedes reanudar «${t.nombre}»',
+        color: P.morado,
+        cuando: ultima.creada,
+        tareaId: t.id,
+        activoId: t.activoId,
+      ));
+    } else if (t.estado == EstadoTrabajo.interrumpida && (ultima?.creada.isAfter(desde) ?? false)) {
+      final sigue = sigueEnOt(t);
+      lista.add(Aviso(
+        id: 'interrumpida-${t.id}',
+        titulo: 'La oficina ha interrumpido «${t.nombre}»',
+        detalle: sigue == null ? 'Por tu incidencia' : 'El trabajo sigue en «${sigue.nombre}»',
+        color: P.ambar,
+        cuando: ultima!.creada,
+        tareaId: (sigue ?? t).id,
+        activoId: t.activoId,
+      ));
+    } else if (t.estado == EstadoTrabajo.noRealizado && t.iniciadaEn != null && t.iniciadaEn!.isAfter(desde)) {
+      lista.add(Aviso(
+        id: 'cancelada-${t.id}',
+        titulo: 'La oficina ha cancelado «${t.nombre}»',
+        detalle: 'Tu parte con lo hecho se ha enviado',
+        color: P.rojo,
+        urgente: true,
+        cuando: t.iniciadaEn!,
+        tareaId: t.id,
+        activoId: t.activoId,
+      ));
+    }
+  }
+  return lista..sort((a, b) => b.cuando.compareTo(a.cuando));
 }
