@@ -3873,3 +3873,26 @@ class _TransicionLateralState extends State<TransicionLateral> with SingleTicker
     ),
   );
 }
+
+/// Aviso breve abajo del todo, centrado y estrecho (no de lado a lado): «Incidencia enviada».
+void avisoAbajo(BuildContext context, String texto, {IconData? icono}) {
+  final ancho = MediaQuery.sizeOf(context).width;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: ancho < 460 ? ancho - 32 : 420,
+        duration: const Duration(seconds: 3),
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icono != null) ...[Icon(icono, size: 20, color: P.verde), const SizedBox(width: 10)],
+            Flexible(
+              child: Text(texto, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+}

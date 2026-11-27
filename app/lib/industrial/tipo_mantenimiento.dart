@@ -17,11 +17,15 @@ Widget puntoTipo(Color c, {double tam = 8}) => Container(
 /// Píldora del tipo de mantenimiento de una OT, con su descripción al pasar el ratón.
 class PillTipo extends StatelessWidget {
   final TipoMantenimiento tipo;
-  const PillTipo(this.tipo, {super.key});
+  /// Píldora neutra con solo el punto del color del tipo (vista del técnico).
+  final bool neutra;
+  const PillTipo(this.tipo, {super.key, this.neutra = false});
 
   @override
-  Widget build(BuildContext context) =>
-      Tooltip(message: tipo.descripcion, child: Pill(tipo.etiqueta, tipo.color, punto: true));
+  Widget build(BuildContext context) => Tooltip(
+    message: tipo.descripcion,
+    child: neutra ? Etiqueta(tipo.etiqueta, tipo.color) : Pill(tipo.etiqueta, tipo.color, punto: true),
+  );
 }
 
 /// Tipo de mantenimiento de la OT en el menú pequeño de arriba a la derecha del formulario (en Pultec

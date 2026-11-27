@@ -116,9 +116,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       store.marcarNuevo(i.id);
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Incidencia enviada. Si se te ha olvidado algo, puedes editarla mientras siga abierta.')));
+        avisoAbajo(context, 'Incidencia enviada', icono: Icons.check_circle_rounded);
       }
     } catch (_) {
       if (mounted) {

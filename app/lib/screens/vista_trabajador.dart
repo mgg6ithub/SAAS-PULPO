@@ -251,7 +251,8 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
         contenido = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (tarea != null || !escritorio) ...[
+            // Dentro de una orden no hay barra: la flecha para volver va a la izquierda del título.
+            if (tarea == null && !escritorio) ...[
               BarraVista(
                 izquierda: tarea == null
                     ? [
@@ -313,7 +314,7 @@ class _ShellTrabajadorState extends State<ShellTrabajador> {
                 child: KeyedSubtree(
                   key: ValueKey(tarea?.id ?? (elegir ? 'maquinas' : pestana)),
                   child: tarea != null
-                      ? _DetalleTrabajo(tarea, w)
+                      ? _DetalleTrabajo(tarea, w, onVolver: () => setState(() => tareaId = null))
                       : elegir && !_maquinasLeidas.contains(w.id)
                       ? const SizedBox.shrink()
                       : elegir
@@ -1171,7 +1172,7 @@ class _AccionesOtState extends State<_AccionesOt> {
     final t = widget.t;
     if (t.estado == EstadoTrabajo.realizado || t.hechaEl(hoy())) return const SizedBox.shrink();
     final enCurso = t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.contains(widget.w.id);
-    // Con una incidencia suya de esta orden aún sin respuesta: congelada (el aviso va abajo del todo).
+    // Con una incidencia suya de esta orden aún sin respuesta: pausada (el aviso va arriba, en el detalle).
     if (esperandoIncidencia(t)) return const SizedBox.shrink();
     return Wrap(
       spacing: 8,
@@ -1213,7 +1214,7 @@ class _AccionesOtState extends State<_AccionesOt> {
   }
 }
 
-/// El tiempo que lleva la OT en curso: un punto verde que late y las cifras de ancho fijo, para que no bailen.
+/// El tiempo que lleva la OT en curso, en neutro: un punto verde que late y las cifras de ancho fijo, para que no bailen.
 class _CronometroOt extends StatefulWidget {
   final DateTime inicio;
   const _CronometroOt(this.inicio);
@@ -1247,9 +1248,9 @@ class _CronometroOtState extends State<_CronometroOt> {
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: P.verde.withValues(alpha: .08),
+        color: P.superficie,
         borderRadius: BorderRadius.circular(P.radioControl),
-        border: Border.all(color: P.verde.withValues(alpha: .3)),
+        border: Border.all(color: P.borde),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1449,6 +1450,7 @@ class _PillDia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (t.hechaEl(hoy()) || t.estado == EstadoTrabajo.realizado) return Pill('Hecha', P.verde, punto: true);
+    if (industrial && esperandoIncidencia(t)) return Pill('Pausada', P.gris, icono: Icons.pause_rounded);
     if (t.estado == EstadoTrabajo.enCurso) return Pill('En curso', P.azul, punto: true);
     final p = t.proximo;
     if (p == null) return Pill('Sin fecha', P.textoSuave);
@@ -1757,8 +1759,8 @@ Text('$etiqueta: ${t.nombre}')
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _FilaTrabajo(t, widget.abrir, mostrarDia: true, dentroDeTarjeta: true),
           Padding(padding: const EdgeInsets.fromLTRB(58, 0, 12, 10), child: Wrap(spacing: 8, runSpacing: 6, children: [
-            PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo),
-            if (esperandoIncidencia(t)) Pill('Esperando respuesta a tu incidencia', P.morado, icono: Icons.schedule_rounded),
+            PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo, neutra: true),
+            if (esperandoIncidencia(t)) Pill('Esperando respuesta a tu incidencia', P.gris, icono: Icons.schedule_rounded),
           ])),
         ])),
       ),
@@ -2764,7 +2766,8 @@ const _huecoOt = huecoVista + 4;
 class _DetalleTrabajo extends StatelessWidget {
   final Tarea t;
   final Trabajador w;
-  const _DetalleTrabajo(this.t, this.w);
+  final VoidCallback onVolver;
+  const _DetalleTrabajo(this.t, this.w, {required this.onVolver});
 
   Widget _dato(String etiqueta, String valor) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -2790,12 +2793,23 @@ class _DetalleTrabajo extends StatelessWidget {
     final procedimiento = t.procedimiento.isNotEmpty ? t.procedimiento : plan?.procedimiento ?? '';
     final repuestos = t.repuestos.isNotEmpty ? t.repuestos : plan?.repuestos ?? '';
     final incidencia = industrial ? store.incidenciaDeOt(t.id) : null;
+    // Su incidencia de esta orden aún sin respuesta: la OT queda pausada; arriba el aviso y lo demás, atenuado.
+    final pausada = industrial && !hecha && esperandoIncidencia(t);
+    final suya = pausada
+        ? store.incidencias.where((i) => i.origenTrabajoId == t.id && store.estadoIncidencia(i) == EstadoIncidencia.abierta).lastOrNull
+        : null;
+    Widget atenuar(Widget w) => pausada ? IgnorePointer(child: Opacity(opacity: .4, child: w)) : w;
     return ListView(
-      // Arriba, lo que falta para que el hueco bajo «Volver» sea el mismo [_huecoOt] que entre bloques; abajo, igual.
-      padding: const EdgeInsets.only(top: _huecoOt - huecoVista, bottom: _huecoOt),
+      padding: const EdgeInsets.only(top: _huecoOt, bottom: _huecoOt),
       children: [
         Row(
           children: [
+            IconButton(
+              tooltip: 'Volver',
+              onPressed: onVolver,
+              icon: Icon(CupertinoIcons.chevron_left, size: 22, color: P.texto),
+            ),
+            const SizedBox(width: 4),
             // Pultec: el icono, del color del tipo de la orden (como su píldora), no del estado del activo.
             industrial
                 ? _IconoActivo(t.activoId, size: 44, color: t.tipoMantenimiento?.color)
@@ -2818,8 +2832,10 @@ class _DetalleTrabajo extends StatelessWidget {
                   Wrap(
                     spacing: 6,
                     children: [
+                      if (pausada)
+                        Pill('Pausada', P.gris, icono: Icons.pause_rounded)
                       // Pultec: pendiente, neutra con el círculo abierto (como en Órdenes de trabajo).
-                      if (industrial && !hecha && t.estado.abierta)
+                      else if (industrial && !hecha && t.estado.abierta)
                         Pill(t.estado.etiqueta, P.gris, icono: Icons.radio_button_unchecked_rounded)
                       else
                         Pill(hecha ? 'Hecho' : t.estado.etiqueta, hecha ? P.verde : t.estado.color, punto: true),
@@ -2827,7 +2843,7 @@ class _DetalleTrabajo extends StatelessWidget {
                       if (!industrial)
                         Pill(t.criticidad.etiqueta, t.criticidad.color)
                       else if (t.tipoMantenimiento != null)
-                        PillTipo(t.tipoMantenimiento!),
+                        PillTipo(t.tipoMantenimiento!, neutra: true),
                     ],
                   ),
                 ],
@@ -2836,8 +2852,34 @@ class _DetalleTrabajo extends StatelessWidget {
           ],
         ),
         const SizedBox(height: _huecoOt),
-        _AccionesTrabajo(t, w),
-        const SizedBox(height: _huecoOt),
+        if (pausada) ...[
+          Tarjeta(
+            padding: const EdgeInsets.all(16),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.pause_circle_outline_rounded, size: 22, color: P.textoSuave),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('OT pausada', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Esperando la respuesta de la oficina a tu incidencia. Cuando responda, podrás seguir.',
+                    style: TextStyle(fontSize: 14, color: P.textoSuave),
+                  ),
+                  if (suya != null && suya.descripcion.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text('«${suya.descripcion}»', style: TextStyle(fontSize: 14, color: P.texto)),
+                  ],
+                ]),
+              ),
+            ]),
+          ),
+          const SizedBox(height: _huecoOt),
+        ] else ...[
+          _AccionesTrabajo(t, w),
+          const SizedBox(height: _huecoOt),
+        ],
+        atenuar(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (industrial && !hecha && t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.contains(w.id)) ...[
           _ApuntesOt(t, w, key: ValueKey(t.id)),
           const SizedBox(height: _huecoOt),
@@ -2938,23 +2980,7 @@ class _DetalleTrabajo extends StatelessWidget {
               for (final i in lista) FilaInforme(i, t),
           ],
         ),
-        // Abajo del todo: su incidencia ya está enviada y la orden, congelada hasta que responda la oficina.
-        if (industrial && esperandoIncidencia(t)) ...[
-          const SizedBox(height: _huecoOt),
-          Tarjeta(
-            padding: const EdgeInsets.all(14),
-            child: Row(children: [
-              Icon(Icons.schedule_rounded, size: 20, color: P.morado),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Incidencia enviada. Esperando la respuesta de la oficina; mientras tanto no se puede empezar.',
-                  style: TextStyle(fontSize: 14, color: P.texto),
-                ),
-              ),
-            ]),
-          ),
-        ],
+        ])),
       ],
     );
   }
