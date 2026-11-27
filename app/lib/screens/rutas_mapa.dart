@@ -416,7 +416,7 @@ class _BotonPultecState extends State<BotonPultec> {
     if (!mounted) return;
     final n = plan.rutas.fold(0, (s, r) => s + r.paradas.length);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      SnackBar(duration: const Duration(seconds: 6), 
         width: 460,
         content: Text(
           asignacionTutorial

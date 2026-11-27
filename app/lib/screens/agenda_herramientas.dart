@@ -297,7 +297,7 @@ class _FichaRapida extends StatelessWidget {
                       store.marcarHecha(t);
                       Navigator.pop(context);
                       aviso.showSnackBar(
-                        SnackBar(
+                        SnackBar(duration: const Duration(seconds: 6), 
                           behavior: SnackBarBehavior.floating,
                           width: 380,
                           content: Text('«${t.nombre}» marcado como hecho'),

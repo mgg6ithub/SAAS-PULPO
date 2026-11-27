@@ -138,7 +138,7 @@ class _PlanificacionState extends State<Planificacion> {
     _ultimoVisto = t?.id;
     if (t == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('No hay mantenimientos pendientes')),
+        const SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 320, content: Text('No hay mantenimientos pendientes')),
       );
       return;
     }
@@ -705,7 +705,7 @@ class _PultecMagico extends StatelessWidget {
         onTap: () {
           final n = store.automatizar(tareas);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            SnackBar(duration: const Duration(seconds: 6), 
               behavior: SnackBarBehavior.floating,
               width: 420,
               backgroundColor: P.moradoOscuro,

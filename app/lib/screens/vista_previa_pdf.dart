@@ -129,7 +129,7 @@ class _RevisarPdfState extends State<_RevisarPdf> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo leer la foto.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(duration: const Duration(seconds: 6), content: Text('No se pudo leer la foto.')));
       }
     }
     if (!mounted) return;
@@ -154,7 +154,7 @@ class _RevisarPdfState extends State<_RevisarPdf> {
       if (mounted) {
         setState(() => descargando = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
+          const SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
         );
       }
     }

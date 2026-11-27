@@ -527,7 +527,7 @@ class _DescargarParteState extends State<_DescargarParte> {
       debugPrint('Pultec: no se pudo crear el PDF: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
+          const SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
         );
       }
     }

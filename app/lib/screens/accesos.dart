@@ -86,7 +86,7 @@ class _AccesosState extends State<Accesos> {
   }
 
   void _avisar(String texto) {
-    if (mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(texto)));
+    if (mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(duration: const Duration(seconds: 6), content: Text(texto)));
   }
 
   Trabajador? _ficha(String? idBase) => store.trabajadores.where((w) => _nube.esFicha(w.id, idBase)).firstOrNull;

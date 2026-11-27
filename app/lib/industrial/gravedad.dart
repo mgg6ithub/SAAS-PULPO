@@ -105,7 +105,7 @@ void cancelarOts(BuildContext context, Iterable<Tarea> ts) {
   }
   if (no > 0) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      SnackBar(duration: const Duration(seconds: 6), 
         behavior: SnackBarBehavior.floating,
         width: 420,
         content: Text(

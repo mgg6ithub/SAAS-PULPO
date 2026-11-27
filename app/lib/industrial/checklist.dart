@@ -281,7 +281,7 @@ class ChecklistOt extends StatelessWidget {
     } catch (e) {
       debugPrint('Pultec: no se pudo guardar la checklist: $e');
       messenger.showSnackBar(
-        const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo guardar el paso.')),
+        const SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo guardar el paso.')),
       );
     }
   }

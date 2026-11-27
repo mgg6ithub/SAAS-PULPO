@@ -1248,7 +1248,7 @@ class _AccionesOtState extends State<_AccionesOt> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo empezar. Comprueba la conexión y que la OT siga disponible.')),
+          const SnackBar(duration: const Duration(seconds: 6), content: Text('No se pudo empezar. Comprueba la conexión y que la OT siga disponible.')),
         );
       }
     } finally {

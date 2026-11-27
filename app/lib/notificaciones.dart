@@ -14,7 +14,7 @@ import 'screens/vista_trabajador.dart' show FotoTecnico;
 import 'forms.dart' show formulariosAbiertos;
 import 'store.dart';
 import 'theme.dart';
-import 'widgets.dart' show Pestanas;
+import 'widgets.dart' show Pestanas, avisosPropios;
 
 /// Un aviso para el administrador: qué ha pasado, en qué color (verde hecho, rojo urgente, ámbar pendiente),
 /// cuándo y qué abre al pulsarlo.
@@ -220,20 +220,22 @@ class _NotificacionesState extends State<Notificaciones> {
       });
     });
     // Lo que ya había al abrir la app no es «nuevo»; lo que llegue después, sí.
-    _conocidos = {for (final a in widget.fuente()) a.id};
+    _conocidos = {for (final a in _todos()) a.id};
     store.addListener(_alCambiar);
+    avisosPropios.addListener(_alCambiar);
   }
 
   @override
   void dispose() {
     store.removeListener(_alCambiar);
+    avisosPropios.removeListener(_alCambiar);
     _ocultar?.cancel();
     super.dispose();
   }
 
   /// Lo que aparece ahora y no estaba: se apunta su hora y el más reciente asoma unos segundos.
   void _alCambiar() {
-    final ids = {for (final a in widget.fuente()) a.id};
+    final ids = {for (final a in _todos()) a.id};
     final llegados = ids.difference(_conocidos ?? ids);
     _conocidos = ids;
     if (llegados.isEmpty || !mounted) return;
@@ -241,7 +243,13 @@ class _NotificacionesState extends State<Notificaciones> {
     for (final id in llegados) {
       _vistoEn[id] = ahora;
     }
-    final a = _ordenados().firstWhere((a) => llegados.contains(a.id), orElse: () => _ordenados().first);
+    // Lo propio ya se ha visto en el aviso de abajo: entra en la lista sin asomar otra vez.
+    final asoman = llegados.where((id) => !id.startsWith('propio-')).toSet();
+    if (asoman.isEmpty) {
+      setState(() {});
+      return;
+    }
+    final a = _ordenados().firstWhere((a) => asoman.contains(a.id), orElse: () => _ordenados().first);
     setState(() => nuevo = abierto ? null : a);
     _ocultar?.cancel();
     _ocultar = Timer(const Duration(seconds: 5), () {
@@ -249,8 +257,15 @@ class _NotificacionesState extends State<Notificaciones> {
     });
   }
 
+  /// Lo de la fuente y lo que ha salido en los avisos de abajo ([avisosPropios]).
+  List<Aviso> _todos() => [
+    ...widget.fuente(),
+    for (final (texto, cuando) in avisosPropios.value)
+      Aviso(id: 'propio-${cuando.microsecondsSinceEpoch}', titulo: texto, detalle: '', color: P.verde, cuando: cuando),
+  ];
+
   List<Aviso> _ordenados() {
-    final l = widget.fuente();
+    final l = _todos();
     DateTime t(Aviso a) => _vistoEn[a.id] ?? a.cuando;
     return l..sort((a, b) => t(b).compareTo(t(a)));
   }
@@ -263,6 +278,7 @@ class _NotificacionesState extends State<Notificaciones> {
       abierto = false;
     });
     _guardar();
+    if (a.id.startsWith('propio-')) return;
     if (a.incidencia != null) {
       abrirIncidenciaForm(context, original: a.incidencia);
     } else if (a.tareaId != null) {
@@ -854,7 +870,8 @@ class VueloCreado extends StatefulWidget {
 }
 
 class _VueloCreadoState extends State<VueloCreado> with SingleTickerProviderStateMixin {
-  late final _an = AnimationController(vsync: this, duration: const Duration(milliseconds: 1700));
+  // 3,7 s: entra en 0,27 s, se queda a la vista unos 2,7 s y vuela 0,7 s hasta la campana.
+  late final _an = AnimationController(vsync: this, duration: const Duration(milliseconds: 3700));
   Registro? _pendiente, _volando;
   Timer? _espera;
 
@@ -939,13 +956,13 @@ class _VueloCreadoState extends State<VueloCreado> with SingleTickerProviderStat
             animation: _an,
             builder: (context, child) {
               final t = _an.value;
-              // 0–.16 entra; .16–.58 se queda a la vista; .58–1 vuela a la campana.
-              final entrada = Curves.easeOutBack.transform((t / .16).clamp(0.0, 1.0));
-              final vuelo = Curves.easeInCubic.transform(((t - .58) / .42).clamp(0.0, 1.0));
+              // 0–.073 entra; .073–.81 se queda a la vista; .81–1 vuela a la campana.
+              final entrada = Curves.easeOutBack.transform((t / .073).clamp(0.0, 1.0));
+              final vuelo = Curves.easeInCubic.transform(((t - .81) / .19).clamp(0.0, 1.0));
               // Un poco de arco: sube algo antes de bajar hacia la esquina.
               final p = Offset.lerp(desde, hasta, vuelo)! + Offset(0, -60 * math.sin(math.pi * vuelo));
               final escala = (.86 + .14 * entrada) * (1 - vuelo * (1 - _campana / ancho));
-              final opacidad = (t / .1).clamp(0.0, 1.0) * (1 - ((vuelo - .75) / .25).clamp(0.0, 1.0));
+              final opacidad = (t / .05).clamp(0.0, 1.0) * (1 - ((vuelo - .75) / .25).clamp(0.0, 1.0));
               return Stack(
                 children: [
                   Positioned(
@@ -1051,7 +1068,7 @@ class _AvisoGuardadoState extends State<AvisoGuardado> {
       if (!mounted) return;
       setState(() => _visible = true);
       _ocultar?.cancel();
-      _ocultar = Timer(const Duration(milliseconds: 2200), () {
+      _ocultar = Timer(const Duration(milliseconds: 4200), () {
         if (mounted) setState(() => _visible = false);
       });
     });

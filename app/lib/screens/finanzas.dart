@@ -26,7 +26,7 @@ class _VistaFinanzasState extends State<VistaFinanzas> {
 
   void _aviso(String texto) =>
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
+          .showSnackBar(SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
 
   /// Crea las proformas de los trabajos con precio hechos en el mes que aún no se han cobrado.
   Future<void> _facturarLoHecho() async {
@@ -346,7 +346,7 @@ class _DocumentoFormState extends State<DocumentoForm> {
   bool get _sinLineas => _lineas.isEmpty;
 
   void _aviso(ScaffoldMessengerState m, String texto) =>
-      m.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
+      m.showSnackBar(SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
 
   Future<void> _guardar() async {
     if (guardando) return;

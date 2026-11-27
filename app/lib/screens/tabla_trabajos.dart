@@ -123,7 +123,7 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
   Widget _cambiar() {
     final sel = [for (final id in seleccion) ?store.tarea(id)];
     void aplicado() => ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      SnackBar(duration: const Duration(seconds: 6), 
         behavior: SnackBarBehavior.floating,
         width: 320,
         content: Text(m('Cambiado en ${sel.length} ${sel.length == 1 ? widget.nombre : '${widget.nombre}s'}')),

@@ -79,7 +79,7 @@ class _PuertaNubeState extends State<PuertaNube> {
   Future<void> _pago() async {
     final nube = store.nube;
     if (nube == null || !industrial) return;
-    void aviso(String texto) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(texto)));
+    void aviso(String texto) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(duration: const Duration(seconds: 6), content: Text(texto)));
 
     final vuelta = Uri.base.queryParameters['pago'];
     if (vuelta != null && !_pagoAtendido) {
@@ -145,7 +145,7 @@ class _PuertaNubeState extends State<PuertaNube> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-              const SnackBar(
+              const SnackBar(duration: const Duration(seconds: 6), 
                 content: Text('Enlace aceptado. Para cambiar el correo, pulsa también el del otro correo.'),
               ),
             );
@@ -162,7 +162,7 @@ class _PuertaNubeState extends State<PuertaNube> {
       if (mounted) {
         setState(() => _fase = _Fase.acceso);
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
+          SnackBar(duration: const Duration(seconds: 6), 
             content: Text(
               industrial
                   ? 'Esa cuenta es de Pulcón (residencial). Entra en Pultec con una cuenta industrial.'
@@ -175,7 +175,7 @@ class _PuertaNubeState extends State<PuertaNube> {
       if (mounted) {
         setState(() => _fase = _Fase.acceso);
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('En Pultec solo se entra con invitación. Pide a tu empresa que te invite.')),
+          const SnackBar(duration: const Duration(seconds: 6), content: Text('En Pultec solo se entra con invitación. Pide a tu empresa que te invite.')),
         );
       }
     } on InvitacionNoValida {

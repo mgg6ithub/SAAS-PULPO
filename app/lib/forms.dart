@@ -1437,7 +1437,7 @@ class _TrabajadorFormState extends State<TrabajadorForm> {
     if (alta) store.marcarNuevo(w.id);
     if (widget.incrustada) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('${w.nombreCompleto} guardado')),
+        SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 320, content: Text('${w.nombreCompleto} guardado')),
       );
     } else {
       Navigator.pop(context);
@@ -1902,7 +1902,7 @@ class _TareaFormState extends State<TareaForm> {
     if (widget.incrustada) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 320, content: Text('${t.nombre} guardado')));
+      ).showSnackBar(SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 320, content: Text('${t.nombre} guardado')));
     } else {
       Navigator.pop(context);
     }
@@ -2937,7 +2937,7 @@ class SelectorEstado extends StatelessWidget {
       store.marcarHecha(t);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        SnackBar(duration: const Duration(seconds: 6), 
           behavior: SnackBarBehavior.floating,
           width: 360,
           content: Text(t.periodicidad.repite ? 'Hecho · próxima vez el ${fecha(t.proximo)}' : 'Hecho · ${t.nombre}'),

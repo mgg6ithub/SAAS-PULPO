@@ -21,7 +21,7 @@ Future<void> abrirEmpresa(BuildContext context, [String? id]) => abrirPanel(cont
 Future<void> abrirNuevaEmpresa(BuildContext context) => abrirPanel(context, const EmpresaForm(nueva: true));
 
 void _avisar(BuildContext context, String texto) =>
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(texto)));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(duration: const Duration(seconds: 6), content: Text(texto)));
 
 String _error(Object e) => switch (e) {
   AuthException(:final message) when message.toLowerCase().contains('different from the old') =>

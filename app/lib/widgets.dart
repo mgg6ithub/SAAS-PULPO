@@ -3874,12 +3874,17 @@ class _TransicionLateralState extends State<TransicionLateral> with SingleTicker
   );
 }
 
+/// Lo que ha salido en [avisoAbajo] en esta sesión (lo último primero): la campana lo guarda en sus notificaciones.
+final avisosPropios = ValueNotifier<List<(String, DateTime)>>(const []);
+
 /// Aviso breve abajo del todo, centrado y estrecho (no de lado a lado): «Incidencia enviada».
 void avisoAbajo(BuildContext context, String texto, {IconData? icono}) =>
     avisoAbajoEn(ScaffoldMessenger.of(context), texto, icono: icono);
 
 /// [avisoAbajo] con el messenger ya guardado: para avisar después de cerrar la ventana que lo pide.
 void avisoAbajoEn(ScaffoldMessengerState messenger, String texto, {IconData? icono}) {
+  // Además queda en la campana (lo que sale bien; los errores, no).
+  if (icono != null) avisosPropios.value = [(texto, DateTime.now()), ...avisosPropios.value.take(30)];
   final ancho = MediaQuery.sizeOf(messenger.context).width;
   messenger
     ..hideCurrentSnackBar()
@@ -3887,7 +3892,7 @@ void avisoAbajoEn(ScaffoldMessengerState messenger, String texto, {IconData? ico
       SnackBar(
         behavior: SnackBarBehavior.floating,
         width: ancho < 460 ? ancho - 32 : 420,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 6),
         content: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

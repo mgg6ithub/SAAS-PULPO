@@ -209,7 +209,7 @@ class _InformeState extends State<_Informe> {
       debugPrint('Pultec: no se pudo crear el PDF: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
+          const SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
         );
       }
     }
@@ -562,7 +562,7 @@ class BotonPdf extends StatefulWidget {
     final ultimo = (await informes.cargar(t.id)).firstOrNull ?? (t.estado == EstadoTrabajo.realizado ? parteSinRellenar(t) : null);
     if (ultimo == null) {
       messenger.showSnackBar(
-        const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('Esta orden aún no tiene parte')),
+        const SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text('Esta orden aún no tiene parte')),
       );
       return;
     }
@@ -584,7 +584,7 @@ class _BotonPdfState extends State<BotonPdf> {
       debugPrint('Pultec: no se pudo crear el PDF: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
+          const SnackBar(duration: const Duration(seconds: 6), behavior: SnackBarBehavior.floating, width: 360, content: Text('No se pudo crear el PDF')),
         );
       }
     }

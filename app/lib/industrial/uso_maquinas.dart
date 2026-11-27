@@ -245,7 +245,7 @@ void _avisarOts(BuildContext context, Map<String, DateTime?> antes, {double abaj
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(
-      SnackBar(
+      SnackBar(duration: const Duration(seconds: 6), 
         margin: EdgeInsets.fromLTRB(16, 0, 16, abajo),
         content: Text(
           cambios.length <= 3 ? cambios.join('\n') : '${cambios.take(3).join('\n')}\ny ${cambios.length - 3} más',

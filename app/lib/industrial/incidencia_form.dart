@@ -76,7 +76,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo leer la foto.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(duration: const Duration(seconds: 6), content: Text('No se pudo leer la foto.')));
       }
     } finally {
       if (mounted) setState(() => leyendo = false);
@@ -129,7 +129,7 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       if (mounted) {
         setState(() => ocupada = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          const SnackBar(duration: const Duration(seconds: 6), 
             content: Text('No se pudo guardar la incidencia. Comprueba la conexión e inténtalo de nuevo.'),
           ),
         );
@@ -152,13 +152,13 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
       }
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incidencia actualizada')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(duration: const Duration(seconds: 6), content: Text('Incidencia actualizada')));
       }
     } catch (_) {
       if (mounted) {
         setState(() => ocupada = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo guardar. Si ya la están revisando, ya no se puede cambiar.')),
+          const SnackBar(duration: const Duration(seconds: 6), content: Text('No se pudo guardar. Si ya la están revisando, ya no se puede cambiar.')),
         );
       }
     }

@@ -181,7 +181,7 @@ class _ImportarExportarState extends State<ImportarExportar> {
     if (!mounted) return;
     _ubicar([...imp.clientes]);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      SnackBar(duration: const Duration(seconds: 6), 
         content: Text(
           que == QueImportar.activos
               ? '${_resumen(imp)} importados${imp.planes.isEmpty ? '' : '; sus órdenes de trabajo se crean solas'}'

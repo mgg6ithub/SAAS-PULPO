@@ -156,7 +156,7 @@ class _EquipoFormState extends State<EquipoForm> {
     if (guardado != null) store.guardarEquipo(guardado..documentos = [...docs]);
   }
 
-  void avisar(String texto) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  void avisar(String texto) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(duration: const Duration(seconds: 6), content: Text(texto)));
 
   @override
   Widget build(BuildContext context) {

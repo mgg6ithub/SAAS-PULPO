@@ -611,7 +611,7 @@ class _AutomatizacionesState extends State<_Automatizaciones> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)
-            ?.showSnackBar(const SnackBar(content: Text('No se pudo guardar el cambio.')));
+            ?.showSnackBar(const SnackBar(duration: const Duration(seconds: 6), content: Text('No se pudo guardar el cambio.')));
       }
     }
     await _cargar();
@@ -735,7 +735,7 @@ class _PlanEmpresaState extends State<_PlanEmpresa> {
       if (!mounted) return;
       setState(() => _yendo = false);
       ScaffoldMessenger.maybeOf(context)
-          ?.showSnackBar(const SnackBar(content: Text('No se pudo abrir Stripe. Vuelve a intentarlo en un momento.')));
+          ?.showSnackBar(const SnackBar(duration: const Duration(seconds: 6), content: Text('No se pudo abrir Stripe. Vuelve a intentarlo en un momento.')));
     }
   }
 
