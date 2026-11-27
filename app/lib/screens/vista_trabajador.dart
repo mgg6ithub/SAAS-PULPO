@@ -1719,6 +1719,7 @@ Text('$etiqueta: ${t.nombre}')
       (i.tecnicoId == null && (store.nube?.esTrabajador ?? false))) && _enMaquinas(i.activoId, sel)).toList()
       ..sort((a, b) => b.creada.compareTo(a.creada));
     final titulos = ['Mis órdenes', 'Incidencias', 'Histórico'];
+    if (industrial) _mandarPartesInterrumpidas(widget.w);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       // En el histórico no hacen falta las cifras de lo pendiente (para hoy, atrasadas, esta semana).
       if (vista != 2)
@@ -1733,6 +1734,7 @@ Text('$etiqueta: ${t.nombre}')
           fecha = fecha == f ? 0 : f;
         })),
       if (vista != 2) const SizedBox(height: 18),
+      if (vista == 0) _RespuestasOficina(widget.w, widget.abrir),
       // Una sola fila: el apartado (o las pestañas en el móvil), y a la derecha buscar y filtrar.
       BarraVista(
         izquierda: [
@@ -3458,4 +3460,142 @@ class _FormularioInformeState extends State<FormularioInforme> {
       ),
     ],
   );
+}
+
+
+// ── Respuestas de la oficina y parte de las OT interrumpidas ─────────
+
+/// OT interrumpidas cuyo aviso ya ha visto el técnico (en el dispositivo).
+final _interrumpidasVistas = <String>{};
+bool _vistasLeidas = false;
+String _claveVistas(Trabajador w) => 'ot_interrumpidas_vistas_${store.nube?.empresaId ?? 'demo'}_${w.id}';
+
+/// Donde sigue el trabajo de una OT interrumpida: la OT de la incidencia que se avisó desde ella.
+Tarea? sigueEnOt(Tarea t) => store.tarea(
+  store.incidencias.where((i) => i.origenTrabajoId == t.id && i.trabajoId != null && i.trabajoId != t.id).lastOrNull?.trabajoId,
+);
+
+/// Arriba de «Mis órdenes»: lo que ha respondido la oficina a sus incidencias. Pausada con la incidencia ya
+/// respondida → puede reanudar; interrumpida → dónde sigue el trabajo (hasta que la abre o lo cierra).
+class _RespuestasOficina extends StatefulWidget {
+  final Trabajador w;
+  final void Function(Tarea) abrir;
+  const _RespuestasOficina(this.w, this.abrir);
+  @override
+  State<_RespuestasOficina> createState() => _RespuestasOficinaState();
+}
+
+class _RespuestasOficinaState extends State<_RespuestasOficina> {
+  @override
+  void initState() {
+    super.initState();
+    if (!_vistasLeidas) {
+      SharedPreferences.getInstance().then((prefs) {
+        _interrumpidasVistas.addAll(prefs.getStringList(_claveVistas(widget.w)) ?? const []);
+        _vistasLeidas = true;
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  Future<void> _visto(Tarea t) async {
+    setState(() => _interrumpidasVistas.add(t.id));
+    await (await SharedPreferences.getInstance()).setStringList(_claveVistas(widget.w), _interrumpidasVistas.toList());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!industrial || !_vistasLeidas) return const SizedBox.shrink();
+    final mias = store.tareas.where((t) => !t.esPlantilla && t.trabajadorIds.contains(widget.w.id));
+    final avisos = <(Tarea, Tarea, String)>[
+      for (final t in mias)
+        if (t.pausada && !esperandoIncidencia(t) && store.incidencias.any((i) => i.origenTrabajoId == t.id))
+          (t, t, 'La oficina ha respondido a tu incidencia: ya puedes reanudar «${t.nombre}».')
+        else if (t.estado == EstadoTrabajo.interrumpida && !_interrumpidasVistas.contains(t.id))
+          (t, sigueEnOt(t) ?? t, sigueEnOt(t) == null
+              ? 'La oficina ha interrumpido «${t.nombre}» por tu incidencia.'
+              : 'La oficina ha interrumpido «${t.nombre}»: el trabajo sigue en «${sigueEnOt(t)!.nombre}».'),
+    ];
+    if (avisos.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        for (final (t, abrir, texto) in avisos)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: HoverCard(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+              onTap: () {
+                if (t.estado == EstadoTrabajo.interrumpida) _visto(t);
+                widget.abrir(abrir);
+              },
+              child: Row(children: [
+                Container(width: 8, height: 8, decoration: BoxDecoration(color: P.morado, shape: BoxShape.circle)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(texto, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
+                if (t.estado == EstadoTrabajo.interrumpida)
+                  IconButton(
+                    tooltip: 'Quitar',
+                    onPressed: () => _visto(t),
+                    icon: Icon(Icons.close_rounded, size: 18, color: P.textoSuave),
+                  )
+                else
+                  const SizedBox(width: 8),
+              ]),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+final _partesMandando = <String>{};
+
+/// Al interrumpirse una OT suya, su dispositivo (donde están sus apuntes y fotos) manda solo el parte con lo hecho
+/// hasta entonces: apuntes, fotos y el tiempo trabajado sin pausas. Una vez por OT.
+void _mandarPartesInterrumpidas(Trabajador w) {
+  for (final t in store.tareas) {
+    if (t.estado != EstadoTrabajo.interrumpida || !t.trabajadorIds.contains(w.id) || !_partesMandando.add(t.id)) continue;
+    unawaited(_mandarParteInterrumpida(t, w).catchError((Object e) {
+      debugPrint('Pultec: no se pudo mandar el parte de la OT interrumpida: $e');
+      _partesMandando.remove(t.id);
+    }));
+  }
+}
+
+Future<void> _mandarParteInterrumpida(Tarea t, Trabajador w) async {
+  final prefs = await SharedPreferences.getInstance();
+  final empresa = store.nube?.empresaId ?? 'demo';
+  final hecho = 'ot_parte_interrumpida_${empresa}_${t.id}';
+  if (prefs.getBool(hecho) ?? false) return;
+  final claveInicio = 'ot_inicio_${empresa}_${t.id}';
+  final inicio = t.iniciadaEn ?? DateTime.tryParse(prefs.getString(claveInicio) ?? '');
+  final apuntes = (prefs.getString(_claveApuntes(t, w)) ?? '').trim();
+  final deOt = _fotosDe(t, w);
+  await deOt.listas;
+  // Nunca empezada y sin nada apuntado: no hay parte que mandar.
+  if (inicio == null && apuntes.isEmpty && deOt.fotos.isEmpty) {
+    await prefs.setBool(hecho, true);
+    return;
+  }
+  final sigue = sigueEnOt(t);
+  await informes.crear(
+    Informe(
+      trabajoId: t.id,
+      trabajadorId: w.id,
+      resultado: 1,
+      notas: [
+        'OT interrumpida por una incidencia${sigue == null ? '' : '; el trabajo sigue en «${sigue.nombre}»'}.',
+        if (apuntes.isNotEmpty) apuntes,
+        if (deOt.resumen.isNotEmpty) deOt.resumen,
+      ].join('\n\n'),
+      // Hasta la pausa de la incidencia (la pausa no cuenta).
+      minutos: inicio == null ? null : (t.trabajado(inicio).inSeconds / 60).ceil().clamp(1, 10080),
+    ),
+    fotos: [for (final f in deOt.fotos) f.bytes],
+  );
+  await prefs.setBool(hecho, true);
+  await prefs.remove(claveInicio);
+  await _borrarApuntes(t, w);
+  await _borrarFotos(t, w);
 }
