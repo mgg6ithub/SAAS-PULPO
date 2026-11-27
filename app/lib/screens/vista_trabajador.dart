@@ -17,6 +17,7 @@ import '../informes.dart';
 import '../intro_pulpo.dart' show LogoBarra;
 import '../marca.dart';
 import '../industrial/activos.dart' show colorEstado, gravedadDe;
+import '../shell.dart' show AsaBarra;
 import '../industrial/gravedad.dart' show AnilloCiclo, cicloOt, descripcionOt, origenOt;
 import '../industrial/iconos.dart';
 import '../industrial/incidencia_form.dart';
@@ -591,16 +592,13 @@ class _BarraTecnico extends StatelessWidget {
     ];
     // Plegada o no, con el mismo ajuste que la barra del administrador; el contenido sale del ancho real de cada
     // fotograma, así cambia a solo iconos durante la animación y no de golpe.
-    return ValueListenableBuilder<int>(
-      valueListenable: ajustes.cambioBarra,
-      builder: (context, _, _) => AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        width: ajustes.barraContraida ? Ajustes.anchoIconos : 248,
+    return _AnchoBarraTecnico(
+      child: ColoredBox(
         color: P.barra,
         child: ClipRect(
           child: LayoutBuilder(builder: (context, box) {
-            final iconos = box.maxWidth < 180;
+            // Como en la del administrador: por debajo de 120 px, solo iconos.
+            final iconos = box.maxWidth < 120;
             return Padding(
               padding: EdgeInsets.fromLTRB(iconos ? 10 : 14, 18, iconos ? 10 : 14, 14),
               child: Material(
@@ -3917,3 +3915,70 @@ class _TablaOrdenesTecnico extends StatelessWidget {
 
 /// Las tablas del técnico, sin el hueco de la barra de la página (el fondo de la fila llega al borde).
 Widget _sinHueco(Widget tabla) => ScrollConfiguration(behavior: const _BarraAparte(conHueco: false), child: tabla);
+
+/// Ancho de la barra del técnico: el mismo que la del administrador (se guarda en [ajustes]), con su borde
+/// arrastrable (raya morada al pasar el ratón). Más estrecha que el mínimo con textos, se pliega a solo iconos.
+class _AnchoBarraTecnico extends StatefulWidget {
+  final Widget child;
+  const _AnchoBarraTecnico({required this.child});
+  @override
+  State<_AnchoBarraTecnico> createState() => _AnchoBarraTecnicoState();
+}
+
+class _AnchoBarraTecnicoState extends State<_AnchoBarraTecnico> {
+  final _arrastre = ValueNotifier<double?>(null);
+  double _inicioX = 0, _inicioAncho = 0;
+
+  @override
+  void dispose() {
+    _arrastre.dispose();
+    super.dispose();
+  }
+
+  /// Como mucho, un 25 % de la ventana (como la del administrador).
+  double get maximo => (MediaQuery.sizeOf(context).width * .25).clamp(Ajustes.anchoTextos + 40, 2000);
+
+  double _ancho(double? arrastrando) {
+    if (arrastrando != null) return arrastrando;
+    final a = ajustes.anchoBarra;
+    return a <= Ajustes.anchoIconos ? Ajustes.anchoIconos : a.clamp(Ajustes.anchoTextos, maximo);
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    valueListenable: ajustes.cambioBarra,
+    builder: (context, _, _) => ValueListenableBuilder<double?>(
+      valueListenable: _arrastre,
+      builder: (context, arrastrando, child) => AnimatedContainer(
+        duration: arrastrando == null ? const Duration(milliseconds: 260) : Duration.zero,
+        curve: Curves.easeOutQuart,
+        width: _ancho(arrastrando),
+        child: child,
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(child: widget.child),
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: 10,
+            child: AsaBarra(
+              derecha: false,
+              onInicio: (x) {
+                _inicioX = x;
+                _inicioAncho = _ancho(null);
+                _arrastre.value = _inicioAncho;
+              },
+              onMover: (x) => _arrastre.value = (_inicioAncho + x - _inicioX).clamp(Ajustes.anchoIconos, maximo),
+              onFin: () {
+                if (_arrastre.value != null) ajustes.ponerAnchoBarra(_arrastre.value!, max: maximo);
+                _arrastre.value = null;
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}

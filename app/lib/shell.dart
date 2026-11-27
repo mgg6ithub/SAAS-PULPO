@@ -865,7 +865,7 @@ class _BarraState extends State<_Barra> {
               left: ajustes.barraDerecha ? 0 : null,
               right: ajustes.barraDerecha ? null : 0,
               width: 10,
-              child: _AsaBarra(
+              child: AsaBarra(
                 derecha: ajustes.barraDerecha,
                 onInicio: (x) {
                   _inicioX = x;
@@ -1427,17 +1427,17 @@ class _BarraInferior extends StatelessWidget {
 
 /// Borde arrastrable de la barra: raya morada al pasar el ratón o arrastrar. Lleva su propio estado,
 /// así el hover no reconstruye la barra. Eventos de puntero directos: responde al primer píxel.
-class _AsaBarra extends StatefulWidget {
+class AsaBarra extends StatefulWidget {
   final bool derecha;
   final ValueChanged<double> onInicio, onMover;
   final VoidCallback onFin;
-  const _AsaBarra({required this.derecha, required this.onInicio, required this.onMover, required this.onFin});
+  const AsaBarra({required this.derecha, required this.onInicio, required this.onMover, required this.onFin});
 
   @override
-  State<_AsaBarra> createState() => _AsaBarraState();
+  State<AsaBarra> createState() => _AsaBarraState();
 }
 
-class _AsaBarraState extends State<_AsaBarra> {
+class _AsaBarraState extends State<AsaBarra> {
   bool encima = false, arrastrando = false;
 
   @override
