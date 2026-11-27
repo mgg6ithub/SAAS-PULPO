@@ -84,10 +84,11 @@ void borrarDelHistorico(Tarea t, DateTime d) {
 }
 
 /// De dónde sale la OT: de un mantenimiento (sola), de una incidencia o creada a mano.
-(String, Color) origenOt(Tarea t) => t.planId != null
-    ? ('Mantenimiento', P.morado)
-    : store.incidenciaDeOt(t.id) != null
+// Primero la incidencia: la correctiva que sigue a una preventiva interrumpida lleva también su mantenimiento.
+(String, Color) origenOt(Tarea t) => store.incidenciaDeOt(t.id) != null && store.incidenciaDeOt(t.id)!.origenTrabajoId != t.id
     ? ('Incidencia', P.rojo)
+    : t.planId != null
+    ? ('Mantenimiento', P.morado)
     : ('Manual', P.gris);
 
 /// Cancela las OT que se pueden (quedan en el histórico como «Canceladas») y avisa de las que no.

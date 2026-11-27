@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../forms.dart';
@@ -8,6 +10,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'activo.dart';
 import 'activos.dart';
+import 'checklist.dart';
 import 'gravedad.dart';
 import 'incidencia.dart';
 import 'tipo_mantenimiento.dart';
@@ -237,7 +240,9 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
 
   /// Guarda la incidencia y abre su OT ya rellena: lo comunicado va a la descripción (no al título) y se
   /// pueden poner repuestos y procedimiento. Al guardarla, la incidencia pasa a «Con OT».
-  Future<void> crearOt() async {
+  /// [interrumpida]: la OT que se acaba de interrumpir. La nueva sigue su mantenimiento (cuenta como hecho al
+  /// cerrarla y no se genera otra preventiva mientras tanto) y su checklist, con lo ya marcado.
+  Future<void> crearOt({Tarea? interrumpida}) async {
     // Una sola OT por incidencia: si ya tiene una abierta, no se crea otra.
     final yaTiene = store.tarea(x.trabajoId);
     if (yaTiene != null && yaTiene.estado.abierta) return;
@@ -257,10 +262,21 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       // Por defecto, quien se encarga de la orden en la que se detectó; si no, quien la comunicó.
       trabajadorIds: _tecnicosPorDefecto(),
       grupoId: store.tarea(x.origenTrabajoId)?.grupoId,
+      planId: interrumpida?.planId,
     );
     // Se crea ya y se enlaza a la incidencia (pasa a «Con OT» al momento, también en la lista); luego se abre
     // para ajustarla. Así no se puede crear dos veces.
     store.guardarTarea(ot);
+    final pasos = interrumpida == null
+        ? const <PasoChecklist>[]
+        : [for (final p in checklistDe(interrumpida)) PasoChecklist.fromJson(p.toJson())];
+    if (pasos.isNotEmpty) {
+      // La checklist va por su función de la base: cuando ya esté guardada la OT.
+      unawaited(() async {
+        await store.nube?.guardado;
+        await store.marcarChecklist(ot, pasos);
+      }().catchError((Object e) => debugPrint('Pultec: no se pudo copiar la checklist: $e')));
+    }
     store.guardarIncidencia(
       x
         ..trabajoId = ot.id
@@ -301,7 +317,7 @@ class _IncidenciaFormState extends State<IncidenciaForm> {
       return;
     }
     store.cambiarEstado([o], EstadoTrabajo.interrumpida);
-    await crearOt();
+    await crearOt(interrumpida: o);
   }
 
   List<String> _tecnicosPorDefecto() {

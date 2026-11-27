@@ -656,6 +656,10 @@ class _PorTecnico extends StatelessWidget {
             atrasadas: [...store.tareas, ...store.subtareas]
                 .where((t) => otPendiente(t) && t.trabajadorIds.contains(w.id) && t.proximo != null && diasHasta(t.proximo!) < 0)
                 .length,
+            // Lo que han estado pausadas sus OT empezadas en el periodo (esperas de la oficina, comidas…).
+            pausa: store.tareas
+                .where((t) => t.trabajadorIds.contains(w.id) && t.iniciadaEn != null && !t.iniciadaEn!.isBefore(desde))
+                .fold(0, (s, t) => s + t.segundosPausados) ~/ 60,
           );
         }(),
     ]..sort((a, b) => b.hechas.compareTo(a.hechas));
@@ -691,6 +695,7 @@ class _PorTecnico extends StatelessWidget {
             const Col('OT hechas', flex: 3),
             const Col('Incidencias detectadas', flex: 3),
             if (ancho) const Col('Partes con problema', ancho: 150),
+            if (ancho) const Col('Tiempo en pausa', ancho: 140),
             const Col('Atrasadas ahora', ancho: 130),
           ],
           filas: filas.length,
@@ -705,6 +710,7 @@ class _PorTecnico extends StatelessWidget {
               Padding(padding: const EdgeInsets.only(right: 16), child: CeldaBarra(f.hechas, maxHechas)),
               Padding(padding: const EdgeInsets.only(right: 16), child: CeldaBarra(f.incidencias, maxInc, color: tonoMorado(2, 4))),
               if (ancho) celdaTexto('${f.conProblema}', suave: f.conProblema == 0),
+              if (ancho) celdaTexto(f.pausa == 0 ? '—' : duracionTexto(f.pausa), suave: f.pausa == 0),
               Align(
                 alignment: Alignment.centerLeft,
                 child: f.atrasadas == 0 ? celdaTexto('0', suave: true) : Pill('${f.atrasadas}', P.rojo),
