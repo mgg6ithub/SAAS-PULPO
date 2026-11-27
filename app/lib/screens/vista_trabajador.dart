@@ -17,6 +17,7 @@ import '../informes.dart';
 import '../intro_pulpo.dart' show LogoBarra;
 import '../marca.dart';
 import '../industrial/activos.dart' show colorEstado, gravedadDe;
+import '../industrial/gravedad.dart' show AnilloCiclo, cicloOt, descripcionOt, origenOt;
 import '../industrial/iconos.dart';
 import '../industrial/incidencia_form.dart';
 import '../industrial/incidencia.dart';
@@ -1763,6 +1764,8 @@ Text('$etiqueta: ${t.nombre}')
     final lista = pendientes.where((t) => _coincide(t.nombre, t.activoId, t.tipoMantenimiento, t.proximo)
       && (estado == null || (estado == 0 ? t.estado == EstadoTrabajo.pendiente : t.estado == EstadoTrabajo.enCurso))).toList();
     if (lista.isEmpty) return _vacio('No tienes órdenes pendientes con estos filtros');
+    // En escritorio, en tabla con columnas, como Órdenes de trabajo del administrador; en el móvil, tarjetas.
+    if (industrial && !widget.pestanas) return _TablaOrdenesTecnico(lista, widget.abrir);
     // Con un filtro de fecha (o al pulsar una cifra) se ve la lista tal cual. Sin él: primero lo atrasado,
     // luego lo de hoy y el resto de días plegado debajo («Otros días»).
     final filas = <Object>[...lista];
@@ -3598,4 +3601,104 @@ Future<void> _mandarParteInterrumpida(Tarea t, Trabajador w) async {
   await prefs.remove(claveInicio);
   await _borrarApuntes(t, w);
   await _borrarFotos(t, w);
+}
+
+
+/// Estado de una OT para el técnico: pausada, en curso o pendiente (neutra, con el círculo abierto).
+Widget pillEstadoTecnico(Tarea t) => t.pausada || esperandoIncidencia(t)
+    ? Pill('Pausada', P.gris, icono: Icons.pause_rounded)
+    : t.estado == EstadoTrabajo.enCurso
+    ? Pill('En curso', P.morado, punto: true)
+    : Pill('Pendiente', P.gris, icono: Icons.radio_button_unchecked_rounded);
+
+/// «Mis órdenes» del técnico en escritorio: las columnas de Órdenes de trabajo del administrador, sin lo que se
+/// edita (técnico, estado). A la izquierda, el anillo de cuánto le queda; en «Cuándo», la fecha y lo que falta.
+class _TablaOrdenesTecnico extends StatelessWidget {
+  final List<Tarea> ts;
+  final void Function(Tarea) abrir;
+  const _TablaOrdenesTecnico(this.ts, this.abrir);
+
+  @override
+  Widget build(BuildContext context) => SegunTamano(
+    clave: (box) => (box.maxWidth > 1000, box.maxWidth > 760),
+    builder: (context, box) {
+      final ancho = box.maxWidth > 1000, medio = box.maxWidth > 760;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Tabla(
+          id: 'ordenes-tecnico',
+          menuColumnas: medio,
+          columnas: [
+            const Col('Orden de trabajo', flex: 4, fija: true),
+            if (medio) const Col('Activo', flex: 3),
+            if (ancho) const Col('Origen', ancho: 150),
+            const Col('Gravedad', ancho: 170),
+            const Col('Cuándo', ancho: 170),
+            const Col('Estado', ancho: 130, derecha: true),
+          ],
+          filas: ts.length,
+          onTap: (i) {
+            store.verNuevo(ts[i].id);
+            abrir(ts[i]);
+          },
+          pie: pieTabla(ts.length, ts.length == 1 ? 'orden de trabajo' : 'órdenes de trabajo'),
+          celdas: (i) {
+            final t = ts[i];
+            final ciclo = cicloOt(t);
+            final vencida = t.proximo != null && diasHasta(t.proximo!) < 0;
+            final (origen, colorOrigen) = origenOt(t);
+            return [
+              Row(children: [
+                AnilloCiclo(ciclo),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    conNuevo(t.id, celdaTexto(t.nombre, negrita: true)),
+                    if (descripcionOt(t).isNotEmpty)
+                      Text(descripcionOt(t), maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: P.textoSuave)),
+                  ]),
+                ),
+              ]),
+              if (medio)
+                Row(children: [
+                  if (store.activo(t.activoId) case final a?) ...[
+                    IconoActivo(a.icono, size: 22, color: P.textoSuave),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(child: celdaTexto(store.activo(t.activoId)?.titulo ?? 'Sin activo', suave: true)),
+                ]),
+              if (ancho)
+                Row(children: [
+                  Icon(
+                    origen == 'Mantenimiento' ? Icons.content_paste_rounded
+                        : origen == 'Incidencia' ? Icons.report_outlined : Icons.back_hand_outlined,
+                    size: 18,
+                    color: origen == 'Incidencia' ? colorOrigen : origen == 'Manual' ? P.azul : P.textoSuave,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(child: celdaTexto(origen, suave: true)),
+                ]),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: PillTipo(t.tipoMantenimiento ?? TipoMantenimiento.preventivo, neutra: true),
+              ),
+              t.proximo == null
+                  ? celdaTexto('Sin fecha', suave: true)
+                  : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                      Text([fecha(t.proximo), ?t.horario].join(', '), maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13)),
+                      // Lo que le queda (o cuánto lleva vencida), como en el anillo.
+                      Text(ciclo == null ? relativo(t.proximo!) : ciclo.$2.split(',').first,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11.5, color: vencida ? P.rojo : P.textoSuave,
+                          fontWeight: vencida ? FontWeight.w600 : FontWeight.w400)),
+                    ]),
+              Align(alignment: Alignment.centerRight, child: pillEstadoTecnico(t)),
+            ];
+          },
+        ),
+      );
+    },
+  );
 }
