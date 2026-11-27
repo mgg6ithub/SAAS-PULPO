@@ -3875,9 +3875,13 @@ class _TransicionLateralState extends State<TransicionLateral> with SingleTicker
 }
 
 /// Aviso breve abajo del todo, centrado y estrecho (no de lado a lado): «Incidencia enviada».
-void avisoAbajo(BuildContext context, String texto, {IconData? icono}) {
-  final ancho = MediaQuery.sizeOf(context).width;
-  ScaffoldMessenger.of(context)
+void avisoAbajo(BuildContext context, String texto, {IconData? icono}) =>
+    avisoAbajoEn(ScaffoldMessenger.of(context), texto, icono: icono);
+
+/// [avisoAbajo] con el messenger ya guardado: para avisar después de cerrar la ventana que lo pide.
+void avisoAbajoEn(ScaffoldMessengerState messenger, String texto, {IconData? icono}) {
+  final ancho = MediaQuery.sizeOf(messenger.context).width;
+  messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(

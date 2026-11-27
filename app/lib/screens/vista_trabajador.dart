@@ -3404,8 +3404,9 @@ class _FormularioInformeState extends State<FormularioInforme> {
     _progreso.value = ('Preparando el parte…', null);
     setState(() => guardando = true);
     final messenger = ScaffoldMessenger.of(context);
-    void aviso(String texto) =>
-        messenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, width: 360, content: Text(texto)));
+    // Abajo y centrado, como el de «Incidencia enviada»; lo que sale bien, con su check verde.
+    void aviso(String texto, {bool bien = false}) =>
+        avisoAbajoEn(messenger, texto, icono: bien ? Icons.check_circle_rounded : null);
     try {
       await _enviar(aviso);
     } catch (e) {
@@ -3423,7 +3424,7 @@ class _FormularioInformeState extends State<FormularioInforme> {
     return Future<void>.delayed(const Duration(milliseconds: 40));
   }
 
-  Future<void> _enviar(void Function(String) aviso) async {
+  Future<void> _enviar(void Function(String, {bool bien}) aviso) async {
     await _anunciar('Preparando el parte…');
     await deOt?.listas;
     // Sin minutos escritos: el tiempo desde que pulsó «Empezar OT» hasta ahora.
@@ -3507,7 +3508,14 @@ class _FormularioInformeState extends State<FormularioInforme> {
     }
     _enviado = true;
     if (mounted) Navigator.pop(context);
-    aviso(subido ? 'Informe guardado' : 'Sin conexión: el informe se ha guardado aquí y se subirá al volver');
+    aviso(
+      !subido
+          ? 'Sin conexión: el informe se ha guardado aquí y se subirá al volver'
+          : widget.cerrarOt && resultado != 2
+          ? 'Orden cerrada y parte enviado'
+          : 'Informe guardado',
+      bien: subido,
+    );
   }
 
   static String? _n(double? v) => v == null ? null : (v == v.roundToDouble() ? '${v.toInt()}' : '$v');
