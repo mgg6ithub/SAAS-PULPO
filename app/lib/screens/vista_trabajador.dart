@@ -1308,7 +1308,7 @@ class _AccionesOtState extends State<_AccionesOt> {
   }
 }
 
-/// El tiempo que lleva la OT en curso, en neutro: un punto verde que late y las cifras de ancho fijo, para que no bailen.
+/// El tiempo que lleva la OT en curso, en neutro y sin punto y las cifras de ancho fijo, para que no bailen.
 class _CronometroOt extends StatefulWidget {
   final Tarea t;
   final DateTime inicio;
@@ -1335,9 +1335,8 @@ class _CronometroOtState extends State<_CronometroOt> {
 
   @override
   Widget build(BuildContext context) {
-    // Sin las pausas; pausada, el tiempo se queda parado y el punto, gris y quieto.
+    // Sin las pausas: pausada, el tiempo se queda parado.
     final total = widget.t.trabajado(widget.inicio).inSeconds.clamp(0, 604800);
-    final parada = widget.t.pausada;
     String dos(int n) => n.toString().padLeft(2, '0');
     final horas = total ~/ 3600, minutos = total % 3600 ~/ 60;
     final texto = '${horas > 0 ? '$horas:' : ''}${dos(minutos)}:${dos(total % 60)}';
@@ -1352,13 +1351,6 @@ class _CronometroOtState extends State<_CronometroOt> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Un segundo encendido y otro atenuado.
-          AnimatedOpacity(
-            opacity: parada || total.isEven ? 1 : .3,
-            duration: const Duration(milliseconds: 600),
-            child: Container(width: 8, height: 8, decoration: BoxDecoration(color: parada ? P.gris : P.verde, shape: BoxShape.circle)),
-          ),
-          const SizedBox(width: 9),
           Text(
             texto,
             semanticsLabel: '${total ~/ 60} minutos en esta OT',
