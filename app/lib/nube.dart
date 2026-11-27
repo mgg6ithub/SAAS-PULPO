@@ -329,6 +329,13 @@ class Nube {
     await _recargar();
   }
 
+  /// Pausa o reanuda una OT en curso; el servidor lleva la cuenta del tiempo pausado.
+  Future<void> pausarOt(String trabajoId, bool pausar) async {
+    await _cola;
+    await _db.rpc('pausar_ot', params: {'p_trabajo': _u(trabajoId), 'p_pausar': pausar});
+    await _recargar();
+  }
+
   /// Las fotos se suben primero; el servidor registra la incidencia abierta y avisa al responsable, sin crear OT.
   Future<void> crearIncidencia(Incidencia i, String categoria, List<Uint8List> fotos) async {
     await _cola;
@@ -1936,4 +1943,8 @@ Tarea _tarea(Map x, List<String> trabajadorIds, List<DateTime> historial, List<A
       historial: historial,
       automatizaciones: automatizaciones,
       checklist: [for (final p in (x['checklist'] as List?) ?? []) PasoChecklist.fromJson(p as Map)],
+      iniciadaEn: DateTime.tryParse(x['iniciada_en'] as String? ?? '')?.toLocal(),
+      pausadaDesde: DateTime.tryParse(x['pausada_desde'] as String? ?? '')?.toLocal(),
+      segundosPausa: x['segundos_pausa'] as int? ?? 0,
+      pausas: x['pausas'] as int? ?? 0,
     );

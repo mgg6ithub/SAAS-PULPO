@@ -1232,12 +1232,40 @@ class Store extends ChangeNotifier {
     await nube?.marcarChecklist(t.id, pasos);
   }
 
+  /// Pausa o reanuda una OT en curso: con sesión, por su función de la base; sin sesión, aquí.
+  Future<void> pausarOt(Tarea t, bool pausar) async {
+    final n = nube;
+    if (n != null) return n.pausarOt(t.id, pausar);
+    if (t.estado != EstadoTrabajo.enCurso) return;
+    if (pausar && t.pausadaDesde == null) {
+      t
+        ..pausadaDesde = DateTime.now()
+        ..pausas += 1;
+    } else if (!pausar && t.pausadaDesde != null) {
+      t
+        ..segundosPausa += DateTime.now().difference(t.pausadaDesde!).inSeconds
+        ..pausadaDesde = null;
+    }
+    _cambio();
+  }
+
   /// Pone las checklists de las OT leídas de la base (no van en la sincronización: las escribe su función), para
   /// ver al momento lo que marca o cambia otra persona.
   void ponerChecklists(List<Tarea> deLaNube) {
     var cambio = false;
     for (final x in deLaNube) {
       final t = tarea(x.id);
+      // Inicio y pausas: tampoco se sincronizan (los escriben `tomar_ot` y `pausar_ot`).
+      if (t != null &&
+          (t.iniciadaEn != x.iniciadaEn || t.pausadaDesde != x.pausadaDesde ||
+              t.segundosPausa != x.segundosPausa || t.pausas != x.pausas)) {
+        t
+          ..iniciadaEn = x.iniciadaEn
+          ..pausadaDesde = x.pausadaDesde
+          ..segundosPausa = x.segundosPausa
+          ..pausas = x.pausas;
+        cambio = true;
+      }
       if (t == null || jsonEncode([for (final p in t.checklist) p.toJson()]) == jsonEncode([for (final p in x.checklist) p.toJson()])) {
         continue;
       }

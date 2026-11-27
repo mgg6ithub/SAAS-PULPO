@@ -114,6 +114,13 @@ class _AvisoIncidenciaFormState extends State<AvisoIncidenciaForm> {
         store.guardarIncidencia(i);
       }
       store.marcarNuevo(i.id);
+      // Avisada desde una OT en curso: se pausa hasta que responda la oficina (el tiempo pausado no cuenta).
+      final ot = store.tarea(origenTrabajoId ?? '');
+      if (ot != null && ot.estado == EstadoTrabajo.enCurso && !ot.pausada) {
+        try {
+          await store.pausarOt(ot, true);
+        } catch (_) {}
+      }
       if (mounted) {
         Navigator.pop(context);
         avisoAbajo(context, 'Incidencia enviada', icono: Icons.check_circle_rounded);

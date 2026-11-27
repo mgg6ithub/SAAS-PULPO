@@ -1149,6 +1149,7 @@ class _AccionesOtState extends State<_AccionesOt> {
           throw StateError('La OT ya no está disponible para este técnico');
         }
         if (t.trabajadorIds.isEmpty) t.trabajadorIds = [widget.w.id];
+        t.iniciadaEn ??= DateTime.now();
         store.cambiarEstado([t], EstadoTrabajo.enCurso);
         if (nube != null) await nube.guardado;
       }
@@ -1167,13 +1168,35 @@ class _AccionesOtState extends State<_AccionesOt> {
     }
   }
 
+  Future<void> _pausar(bool pausar) async {
+    if (ocupada) return;
+    setState(() => ocupada = true);
+    try {
+      await store.pausarOt(widget.t, pausar);
+    } catch (_) {
+      if (mounted) avisoAbajo(context, 'No se pudo ${pausar ? 'pausar' : 'reanudar'}. Comprueba la conexión.');
+    } finally {
+      if (mounted) setState(() => ocupada = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.t;
     if (t.estado == EstadoTrabajo.realizado || t.hechaEl(hoy())) return const SizedBox.shrink();
     final enCurso = t.estado == EstadoTrabajo.enCurso && t.trabajadorIds.contains(widget.w.id);
-    // Con una incidencia suya de esta orden aún sin respuesta: pausada (el aviso va arriba, en el detalle).
+    // Con una incidencia suya de esta orden aún sin respuesta: sin botones (el aviso va arriba, en el detalle).
     if (esperandoIncidencia(t)) return const SizedBox.shrink();
+    // El inicio lo guarda la base; el del dispositivo queda para las OT empezadas antes de guardarlo.
+    final desde = t.iniciadaEn ?? inicio;
+    // Pausada: solo reanudar, con el tiempo parado al lado.
+    if (enCurso && t.pausada) {
+      return Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        BotonAccion(ocupada ? 'Reanudando…' : 'Reanudar', icono: Icons.play_arrow_rounded, color: P.morado,
+          onPressed: () => _pausar(false)),
+        if (desde != null) _CronometroOt(t, desde),
+      ]);
+    }
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -1200,14 +1223,13 @@ class _AccionesOtState extends State<_AccionesOt> {
                 t,
                 widget.w,
                 cerrarOt: true,
-                minutosIniciales: inicio == null
-                    ? null
-                    : (DateTime.now().difference(inicio!).inSeconds / 60).ceil().clamp(1, 10080),
+                minutosIniciales: desde == null ? null : (t.trabajado(desde).inSeconds / 60).ceil().clamp(1, 10080),
               ),
             ),
           ),
-          // A la derecha del botón: aparece y avanza sin moverlo de sitio.
-          if (inicio != null) _CronometroOt(inicio!),
+          BotonAccion(ocupada ? 'Pausando…' : 'Pausar', icono: Icons.pause_rounded, onPressed: () => _pausar(true)),
+          // A la derecha de los botones: aparece y avanza sin moverlos de sitio.
+          if (desde != null) _CronometroOt(t, desde),
         ],
       ],
     );
@@ -1216,8 +1238,9 @@ class _AccionesOtState extends State<_AccionesOt> {
 
 /// El tiempo que lleva la OT en curso, en neutro: un punto verde que late y las cifras de ancho fijo, para que no bailen.
 class _CronometroOt extends StatefulWidget {
+  final Tarea t;
   final DateTime inicio;
-  const _CronometroOt(this.inicio);
+  const _CronometroOt(this.t, this.inicio);
 
   @override
   State<_CronometroOt> createState() => _CronometroOtState();
@@ -1240,7 +1263,9 @@ class _CronometroOtState extends State<_CronometroOt> {
 
   @override
   Widget build(BuildContext context) {
-    final total = DateTime.now().difference(widget.inicio).inSeconds.clamp(0, 604800);
+    // Sin las pausas; pausada, el tiempo se queda parado y el punto, gris y quieto.
+    final total = widget.t.trabajado(widget.inicio).inSeconds.clamp(0, 604800);
+    final parada = widget.t.pausada;
     String dos(int n) => n.toString().padLeft(2, '0');
     final horas = total ~/ 3600, minutos = total % 3600 ~/ 60;
     final texto = '${horas > 0 ? '$horas:' : ''}${dos(minutos)}:${dos(total % 60)}';
@@ -1257,9 +1282,9 @@ class _CronometroOtState extends State<_CronometroOt> {
         children: [
           // Un segundo encendido y otro atenuado.
           AnimatedOpacity(
-            opacity: total.isEven ? 1 : .3,
+            opacity: parada || total.isEven ? 1 : .3,
             duration: const Duration(milliseconds: 600),
-            child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: P.verde, shape: BoxShape.circle)),
+            child: Container(width: 8, height: 8, decoration: BoxDecoration(color: parada ? P.gris : P.verde, shape: BoxShape.circle)),
           ),
           const SizedBox(width: 9),
           Text(
@@ -1450,7 +1475,7 @@ class _PillDia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (t.hechaEl(hoy()) || t.estado == EstadoTrabajo.realizado) return Pill('Hecha', P.verde, punto: true);
-    if (industrial && esperandoIncidencia(t)) return Pill('Pausada', P.gris, icono: Icons.pause_rounded);
+    if (industrial && (t.pausada || esperandoIncidencia(t))) return Pill('Pausada', P.gris, icono: Icons.pause_rounded);
     if (t.estado == EstadoTrabajo.enCurso) return Pill('En curso', P.azul, punto: true);
     final p = t.proximo;
     if (p == null) return Pill('Sin fecha', P.textoSuave);
@@ -2794,8 +2819,9 @@ class _DetalleTrabajo extends StatelessWidget {
     final repuestos = t.repuestos.isNotEmpty ? t.repuestos : plan?.repuestos ?? '';
     final incidencia = industrial ? store.incidenciaDeOt(t.id) : null;
     // Su incidencia de esta orden aún sin respuesta: la OT queda pausada; arriba el aviso y lo demás, atenuado.
-    final pausada = industrial && !hecha && esperandoIncidencia(t);
-    final suya = pausada
+    final esperando = industrial && !hecha && esperandoIncidencia(t);
+    final pausada = industrial && !hecha && (t.pausada || esperando);
+    final suya = esperando
         ? store.incidencias.where((i) => i.origenTrabajoId == t.id && store.estadoIncidencia(i) == EstadoIncidencia.abierta).lastOrNull
         : null;
     Widget atenuar(Widget w) => pausada ? IgnorePointer(child: Opacity(opacity: .4, child: w)) : w;
@@ -2863,7 +2889,9 @@ class _DetalleTrabajo extends StatelessWidget {
                   const Text('OT pausada', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
                   Text(
-                    'Esperando la respuesta de la oficina a tu incidencia. Cuando responda, podrás seguir.',
+                    esperando
+                        ? 'Esperando la respuesta de la oficina a tu incidencia. Cuando responda, podrás reanudarla.'
+                        : 'El tiempo no cuenta mientras está pausada. Reanúdala cuando vuelvas.',
                     style: TextStyle(fontSize: 14, color: P.textoSuave),
                   ),
                   if (suya != null && suya.descripcion.isNotEmpty) ...[
@@ -2875,7 +2903,8 @@ class _DetalleTrabajo extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: _huecoOt),
-        ] else ...[
+        ],
+        if (!esperando) ...[
           _AccionesTrabajo(t, w),
           const SizedBox(height: _huecoOt),
         ],

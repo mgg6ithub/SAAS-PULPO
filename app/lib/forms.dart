@@ -2996,7 +2996,7 @@ class SelectorEstado extends StatelessWidget {
                   // En columnas estrechas, «Completada» se recorta en lugar de desbordar.
                   Flexible(
                     child: Text(
-                      t.estado.etiqueta,
+                      t.estadoTexto,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),

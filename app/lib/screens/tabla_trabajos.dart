@@ -579,7 +579,7 @@ List<List<String>> otsEnTexto(List<Tarea> ts) {
     'Asignado a': asignado,
     'Fecha y hora': (t) => t.proximo == null ? '' : [fecha(t.proximo), ?t.horario].join(' '),
     'Periodicidad': periodicidadOt,
-    'Estado': (t) => t.estado.etiqueta,
+    'Estado': (t) => t.estadoTexto,
   };
   final cols = enOrdenDelUsuario([
     for (final c in valores.keys)

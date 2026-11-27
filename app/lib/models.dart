@@ -470,6 +470,27 @@ class Tarea {
   /// Lo que se cobra cada vez que se hace, sin IVA (0 = sin precio), y su % de IVA. Solo lo ve el administrador.
   double precio, iva;
 
+  /// Pultec: cuándo se empezó, desde cuándo está pausada (null = no lo está), lo que lleva pausada ya reanudada y
+  /// cuántas veces se ha pausado. Los escribe la función `pausar_ot` de la base.
+  DateTime? iniciadaEn, pausadaDesde;
+  int segundosPausa, pausas;
+
+  bool get pausada => pausadaDesde != null && estado == EstadoTrabajo.enCurso;
+
+  /// Tiempo de trabajo desde [inicio] sin contar las pausas (la de ahora incluida).
+  Duration trabajado(DateTime inicio, [DateTime? ahora]) {
+    final fin = ahora ?? DateTime.now();
+    final pausa = segundosPausa + (pausadaDesde == null ? 0 : fin.difference(pausadaDesde!).inSeconds);
+    return Duration(seconds: (fin.difference(inicio).inSeconds - pausa).clamp(0, 1 << 30));
+  }
+
+  /// Total pausada, la pausa en marcha incluida.
+  int get segundosPausados =>
+      segundosPausa + (pausadaDesde == null ? 0 : DateTime.now().difference(pausadaDesde!).inSeconds);
+
+  /// La etiqueta del estado, con «Pausada» si lo está.
+  String get estadoTexto => pausada ? 'Pausada' : estado.etiqueta;
+
   Tarea({
     required this.id,
     this.clienteId,
@@ -518,6 +539,10 @@ class Tarea {
     List<PasoChecklist>? checklist,
     this.precio = 0,
     this.iva = 21,
+    this.iniciadaEn,
+    this.pausadaDesde,
+    this.segundosPausa = 0,
+    this.pausas = 0,
   }) : plantilla = plantilla ?? clienteId == null,
        checklist = checklist ?? [],
        competencias = competencias ?? [],
@@ -599,6 +624,10 @@ class Tarea {
     if (checklist.isNotEmpty) 'checklist': [for (final x in checklist) x.toJson()],
     'precio': precio,
     'iva': iva,
+    if (iniciadaEn != null) 'iniciadaEn': iniciadaEn!.toIso8601String(),
+    if (pausadaDesde != null) 'pausadaDesde': pausadaDesde!.toIso8601String(),
+    if (segundosPausa != 0) 'segundosPausa': segundosPausa,
+    if (pausas != 0) 'pausas': pausas,
   };
 
   factory Tarea.fromJson(Map<String, dynamic> j) => Tarea(
@@ -649,6 +678,10 @@ class Tarea {
     checklist: [for (final x in j['checklist'] as List? ?? []) PasoChecklist.fromJson(x as Map)],
     precio: (j['precio'] as num? ?? 0).toDouble(),
     iva: (j['iva'] as num? ?? 21).toDouble(),
+    iniciadaEn: DateTime.tryParse(j['iniciadaEn'] as String? ?? ''),
+    pausadaDesde: DateTime.tryParse(j['pausadaDesde'] as String? ?? ''),
+    segundosPausa: j['segundosPausa'] as int? ?? 0,
+    pausas: j['pausas'] as int? ?? 0,
   );
 
   Tarea copia() => Tarea.fromJson(toJson());

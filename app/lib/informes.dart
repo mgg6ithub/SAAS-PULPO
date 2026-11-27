@@ -703,6 +703,9 @@ List<(String, String)> cronologiaOt(Tarea t, Informe i) {
     else
       ('', 'Orden creada a mano${t.proximo == null ? '' : ', prevista para el ${fecha(t.proximo)}'}.'),
     if (tecnicos.isNotEmpty) ('', 'Asignada a ${tecnicos.join(', ')}.'),
+    if (t.iniciadaEn != null) (cuando(t.iniciadaEn!), 'Empieza la orden.'),
+    if (t.pausas > 0)
+      ('', 'Pausada ${t.pausas == 1 ? 'una vez' : '${t.pausas} veces'} (${duracionTexto((t.segundosPausa / 60).ceil())} en total, que no cuentan en el tiempo).'),
     (
       cuando(i.cuando),
       'Realizada por ${w?.nombreCompleto ?? 'el técnico'}${i.minutos == null ? '' : ' en ${duracionTexto(i.minutos!)}'}'
