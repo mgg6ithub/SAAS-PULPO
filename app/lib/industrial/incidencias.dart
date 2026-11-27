@@ -10,7 +10,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'activos.dart' show enOrdenDelUsuario;
-import 'gravedad.dart' show EnVivoOt;
+import 'gravedad.dart' show EstadoEnVivo;
 import 'incidencia.dart';
 import 'mantenimientos.dart';
 import 'tipo_mantenimiento.dart';
@@ -268,9 +268,6 @@ class _TablaIncidencias extends StatelessWidget {
           if (ancho) const Col('Comunicada por', flex: 2),
           if (ancho) Col(historico ? 'Cerrada' : 'Fecha', ancho: 140),
           if (medio) const Col('Estado', ancho: 180),
-          // Su OT en curso ahora mismo (o pausada), como en Órdenes de trabajo.
-          if (medio && lista.any((e) => store.tarea(e.$1.trabajoId)?.estado == EstadoTrabajo.enCurso))
-            const Col('En vivo', ancho: 110),
           if (medio) const Col('', ancho: 48, cabecera: SizedBox()),
         ],
         filas: lista.length,
@@ -300,7 +297,10 @@ class _TablaIncidencias extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: ClipRect(
-                        child: Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
+                        // Con su OT en curso ahora mismo, en lugar de «Con OT»: el punto que late y lo que lleva.
+                        child: ot != null && ot.estado == EstadoTrabajo.enCurso && !ot.pausada
+                            ? EstadoEnVivo(ot)
+                            : Tooltip(message: ot == null ? '' : 'OT: ${ot.nombre}', child: Pill(est.etiqueta, est.color, icono: est.icono)),
                       ),
                     ),
                   ),
@@ -308,8 +308,6 @@ class _TablaIncidencias extends StatelessWidget {
                   if (ot != null && est == EstadoIncidencia.conOt) ...[const SizedBox(width: 6), EnlaceVerOt(ot.id)],
                 ],
               ),
-            if (medio && lista.any((e) => store.tarea(e.$1.trabajoId)?.estado == EstadoTrabajo.enCurso))
-              ot == null ? const SizedBox() : EnVivoOt(ot),
             // Informe de la incidencia (con el parte de su OT si ya lo tiene) con un clic.
             if (medio) BotonPdf(() => descargarInformeIncidencia(context, x), tooltip: 'Descargar el informe en PDF'),
           ];

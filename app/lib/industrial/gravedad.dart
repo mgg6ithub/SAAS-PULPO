@@ -251,23 +251,14 @@ String descripcionOt(Tarea t) {
 }
 
 
-/// OT en curso ahora mismo, para la oficina: un punto morado que late con onda (sonar) y el tiempo que lleva,
-/// sin las pausas; pausada, un punto gris quieto. Nada si no está en curso.
-class EnVivoOt extends StatelessWidget {
+/// Estado de una OT en curso ahora mismo, para la oficina: un punto morado que late con onda (sonar), «En curso»
+/// y el tiempo que lleva, sin las pausas.
+class EstadoEnVivo extends StatelessWidget {
   final Tarea t;
-  const EnVivoOt(this.t, {super.key});
+  const EstadoEnVivo(this.t, {super.key});
 
   @override
-  Widget build(BuildContext context) {
-    if (t.estado != EstadoTrabajo.enCurso) return const SizedBox.shrink();
-    return t.pausada
-        ? Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 8, height: 8, decoration: const BoxDecoration(color: P.gris, shape: BoxShape.circle)),
-            const SizedBox(width: 8),
-            Text('Pausada', style: TextStyle(fontSize: 12.5, color: P.textoSuave)),
-          ])
-        : _Sonar(t);
-  }
+  Widget build(BuildContext context) => _Sonar(t);
 }
 
 class _Sonar extends StatefulWidget {
@@ -295,11 +286,11 @@ class _SonarState extends State<_Sonar> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  String _lleva() {
+  String? _lleva() {
     final inicio = widget.t.iniciadaEn;
-    if (inicio == null) return 'En curso';
+    if (inicio == null) return null;
     final m = widget.t.trabajado(inicio).inMinutes;
-    if (m < 1) return 'Ahora';
+    if (m < 1) return 'ahora';
     return m < 60 ? '$m min' : '${m ~/ 60} h${m % 60 == 0 ? '' : ' ${m % 60} min'}';
   }
 
@@ -324,8 +315,12 @@ class _SonarState extends State<_Sonar> with SingleTickerProviderStateMixin {
         ),
       ),
       const SizedBox(width: 6),
-      Flexible(child: Text(_lleva(), maxLines: 1, overflow: TextOverflow.clip,
-        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: P.texto))),
+      const Text('En curso', maxLines: 1, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      if (_lleva() case final lleva?) ...[
+        const SizedBox(width: 6),
+        Flexible(child: Text(lleva, maxLines: 1, overflow: TextOverflow.clip,
+          style: TextStyle(fontSize: 12, color: P.textoSuave))),
+      ],
     ]),
   );
 }

@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 
 import 'geo.dart';
 import 'industrial/activo.dart';
-import 'industrial/gravedad.dart' show otDeMantenimientoVigente, cancelarOts;
+import 'industrial/gravedad.dart' show EstadoEnVivo, otDeMantenimientoVigente, cancelarOts;
 import 'industrial/iconos.dart';
 import 'informes.dart';
 import 'marca.dart';
@@ -2995,6 +2995,10 @@ class SelectorEstado extends StatelessWidget {
                     const Icon(Icons.check_circle_rounded, size: 18, color: P.verde),
                     const SizedBox(width: 6),
                   ],
+                  // En curso ahora mismo: el punto que late, «En curso» y lo que lleva.
+                  if (t.estado == EstadoTrabajo.enCurso && !t.pausada)
+                    Flexible(child: EstadoEnVivo(t))
+                  else
                   // En columnas estrechas, «Completada» se recorta en lugar de desbordar.
                   Flexible(
                     child: Text(

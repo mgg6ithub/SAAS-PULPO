@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../industrial/tipo_mantenimiento.dart';
 import '../industrial/iconos.dart';
-import '../industrial/gravedad.dart' show EnVivoOt, cancelarOts, origenOt, periodicidadOt, AnilloCiclo, cicloOt, descripcionOt;
+import '../industrial/gravedad.dart' show cancelarOts, origenOt, periodicidadOt, AnilloCiclo, cicloOt, descripcionOt;
 import '../columnas.dart';
 import '../forms.dart';
 import '../industrial/activos.dart' show arbolActivos, enOrdenDelUsuario;
@@ -293,8 +293,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
       final conPdf = !seleccionando && box.maxWidth > 980 && ts.any((t) => t.estado == EstadoTrabajo.realizado);
       // El anillo del ciclo solo si alguna orden lo tiene (las hechas no): si no, el nombre va al principio.
       final conAnillo = industrial && ts.any((t) => cicloOt(t) != null);
-      // Al final, «En vivo» solo si alguna orden está en curso ahora mismo.
-      final conVivo = industrial && box.maxWidth > 600 && ts.any((t) => t.estado == EstadoTrabajo.enCurso);
       final ancho = box.maxWidth > widget.umbralAncho;
       // Poco sitio (p. ej. media pantalla): columnas más estrechas y criticidad solo con su punto.
       final apurado = box.maxWidth <= 1100;
@@ -332,7 +330,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
               if (medio) const Col('Asignado a', ancho: 96),
             ],
             Col('Estado', ancho: industrial && apurado ? 116 : 140, derecha: true),
-            if (conVivo) const Col('En vivo', ancho: 110),
             // Pultec, en el histórico: el parte en PDF con un clic (sin título, va la primera: bajo el botón de
             // selección, como los círculos al seleccionar).
             if (industrial && conPdf) const Col('', ancho: 36, cabecera: SizedBox()),
@@ -525,7 +522,6 @@ class _TablaTrabajosState extends State<TablaTrabajos> {
                       ),
               ],
               t.esPlantilla ? pillEstado(t) : SelectorEstado(t, antesCompletar: industrial ? () => _animarCompletada(t.id) : null),
-              if (conVivo) Padding(padding: const EdgeInsets.only(left: 12), child: EnVivoOt(t)),
               // Celda del rayo (automatizaciones), quitada con su columna.
 //               if (industrial && medio)
 //                 Tooltip(
