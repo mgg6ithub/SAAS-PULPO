@@ -1764,8 +1764,34 @@ Text('$etiqueta: ${t.nombre}')
     final lista = pendientes.where((t) => _coincide(t.nombre, t.activoId, t.tipoMantenimiento, t.proximo)
       && (estado == null || (estado == 0 ? t.estado == EstadoTrabajo.pendiente : t.estado == EstadoTrabajo.enCurso))).toList();
     if (lista.isEmpty) return _vacio('No tienes órdenes pendientes con estos filtros');
-    // En escritorio, en tabla con columnas, como Órdenes de trabajo del administrador; en el móvil, tarjetas.
-    if (industrial && !widget.pestanas) return _TablaOrdenesTecnico(lista, widget.abrir);
+    // En escritorio, en tablas con columnas como Órdenes de trabajo del administrador, por secciones (atrasadas,
+    // hoy y el resto de días plegado); con un filtro de fecha, una sola. En el móvil, tarjetas.
+    if (industrial && !widget.pestanas) {
+      if (fecha != 0) return _TablaOrdenesTecnico(lista, widget.abrir);
+      final atrasadas = lista.where((t) => t.proximo != null && diasHasta(t.proximo!) < 0).toList();
+      final deHoy = lista.where((t) => t.proximo != null && diasHasta(t.proximo!) == 0).toList();
+      final otros = lista.where((t) => !atrasadas.contains(t) && !deHoy.contains(t)).toList();
+      Widget tabla(List<Tarea> ts) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        // Con muchas filas la tabla ocupa el alto que se le da y se desplaza por dentro.
+        child: ts.length > 15
+            ? SizedBox(height: 640, child: _TablaOrdenesTecnico(ts, widget.abrir))
+            : _TablaOrdenesTecnico(ts, widget.abrir),
+      );
+      return ListView(children: [
+        if (atrasadas.isNotEmpty) ...[_TituloSeccion('Atrasadas', atrasadas.length, P.rojo), tabla(atrasadas)],
+        _TituloSeccion('Hoy', deHoy.length, P.morado),
+        if (deHoy.isEmpty)
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: Tarjeta(child: Text('Hoy no tienes órdenes.',
+            style: TextStyle(color: P.textoSuave, fontSize: 15))))
+        else
+          tabla(deHoy),
+        if (otros.isNotEmpty) ...[
+          _Plegable('Otros días', otros.length, abierto: otrosDias, onTap: () => setState(() => otrosDias = !otrosDias)),
+          if (otrosDias) tabla(otros),
+        ],
+      ]);
+    }
     // Con un filtro de fecha (o al pulsar una cifra) se ve la lista tal cual. Sin él: primero lo atrasado,
     // luego lo de hoy y el resto de días plegado debajo («Otros días»).
     final filas = <Object>[...lista];
@@ -1809,6 +1835,16 @@ Text('$etiqueta: ${t.nombre}')
     if (lista.isEmpty) return _vacio('No tienes incidencias enviadas con estos filtros');
     // Con alguna abierta, arriba el consejo de que aún se puede corregir.
     final consejo = lista.any((i) => store.estadoIncidencia(i) == EstadoIncidencia.abierta);
+    if (industrial && !widget.pestanas) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (consejo)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Consejo('¿Se te ha olvidado algo? Toca una incidencia abierta para cambiarla. Cuando le asignen una OT ya no se podrá editar.'),
+          ),
+        Expanded(child: _tablaIncidencias(lista)),
+      ]);
+    }
     return ListView.builder(itemCount: lista.length + (consejo ? 1 : 0), itemBuilder: (_, n) {
       if (consejo && n == 0) {
         return const Padding(
@@ -1834,6 +1870,108 @@ Text('$etiqueta: ${t.nombre}')
     });
   }
 
+  /// Incidencias del técnico en escritorio, en tabla como la de Incidencias de la oficina.
+  Widget _tablaIncidencias(List<Incidencia> lista) => SegunTamano(
+    clave: (box) => (box.maxWidth > 1000, box.maxWidth > 760),
+    builder: (context, box) {
+      final ancho = box.maxWidth > 1000, medio = box.maxWidth > 760;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Tabla(
+          id: 'incidencias-tecnico',
+          menuColumnas: medio,
+          columnas: [
+            const Col('Incidencia', flex: 4, fija: true),
+            if (medio) const Col('Activo', flex: 3),
+            const Col('Gravedad', ancho: 170),
+            if (ancho) const Col('Orden', flex: 3),
+            const Col('Comunicada', ancho: 150),
+            const Col('Estado', ancho: 120, derecha: true),
+          ],
+          filas: lista.length,
+          onTap: (n) => _verIncidencia(lista[n]),
+          pie: pieTabla(lista.length, lista.length == 1 ? 'incidencia' : 'incidencias'),
+          celdas: (n) {
+            final i = lista[n];
+            final est = store.estadoIncidencia(i);
+            final origen = store.tarea(i.origenTrabajoId ?? ''), resuelve = store.tarea(i.trabajoId ?? '');
+            return [
+              Row(children: [
+                Container(width: 8, height: 8, decoration: BoxDecoration(color: i.gravedad.color, shape: BoxShape.circle)),
+                const SizedBox(width: 10),
+                Flexible(child: conNuevo(i.id, celdaTexto(i.descripcion, negrita: true))),
+              ]),
+              if (medio) celdaTexto(dondeEs(i.activoId), suave: true),
+              Align(alignment: Alignment.centerLeft, child: PillTipo(i.gravedad.tipo, neutra: true)),
+              if (ancho)
+                Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  celdaTexto(resuelve != null && resuelve.id != origen?.id ? resuelve.nombre : origen?.nombre ?? '—'),
+                  Text(
+                    resuelve == null ? (origen == null ? 'Sin orden' : 'Avisada en esta orden')
+                        : resuelve.id == origen?.id ? 'Se resuelve en esta orden' : 'Orden para resolverla',
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: P.textoSuave)),
+                ]),
+              celdaTexto(_cuando(i.creada), suave: true),
+              Align(alignment: Alignment.centerRight, child: Pill(est.etiqueta, est.color, icono: est.icono)),
+            ];
+          },
+        ),
+      );
+    },
+  );
+
+  /// Partes del técnico en escritorio, en tabla: lo último primero.
+  Widget _tablaHistorial(List<Informe> lista) => SegunTamano(
+    clave: (box) => (box.maxWidth > 1000, box.maxWidth > 760),
+    builder: (context, box) {
+      final ancho = box.maxWidth > 1000, medio = box.maxWidth > 760;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Tabla(
+          id: 'historial-tecnico',
+          menuColumnas: medio,
+          columnas: [
+            const Col('Orden de trabajo', flex: 4, fija: true),
+            if (medio) const Col('Activo', flex: 3),
+            if (ancho) const Col('Gravedad', ancho: 170),
+            const Col('Resultado', ancho: 160),
+            if (medio) const Col('Tiempo', ancho: 90),
+            const Col('Fecha', ancho: 150, derecha: true),
+          ],
+          filas: lista.length,
+          onTap: (n) {
+            final t = store.tarea(lista[n].trabajoId);
+            if (t != null) verInforme(context, lista[n], t);
+          },
+          pie: pieTabla(lista.length, lista.length == 1 ? 'parte' : 'partes'),
+          celdas: (n) {
+            final i = lista[n], t = store.tarea(i.trabajoId);
+            return [
+              Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                celdaTexto(t?.nombre ?? 'Orden no disponible', negrita: true),
+                if (i.notas.isNotEmpty || i.fotos.isNotEmpty)
+                  Text(
+                    [
+                      if (i.notas.isNotEmpty) i.notas.split('\n').first,
+                      if (i.fotos.isNotEmpty) '${i.fotos.length} ${i.fotos.length == 1 ? 'foto' : 'fotos'}',
+                    ].join(', '),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: P.textoSuave)),
+              ]),
+              if (medio) celdaTexto(dondeEs(t?.activoId), suave: true),
+              if (ancho)
+                Align(alignment: Alignment.centerLeft,
+                  child: t?.tipoMantenimiento == null ? celdaTexto('—', suave: true) : PillTipo(t!.tipoMantenimiento!, neutra: true)),
+              Align(alignment: Alignment.centerLeft,
+                child: Pill(resultadosInforme[i.resultado], coloresResultado[i.resultado], icono: iconosResultado[i.resultado])),
+              if (medio) celdaTexto(i.minutos == null ? '—' : duracionTexto(i.minutos!), suave: i.minutos == null),
+              celdaTexto(_cuando(i.cuando), suave: true),
+            ];
+          },
+        ),
+      );
+    },
+  );
+
   Widget _historial() => FutureBuilder<List<Informe>>(future: historial, builder: (context, snap) {
     if (snap.hasError) {
       return Column(children: [const Text('No se pudo cargar el histórico.'),
@@ -1848,6 +1986,7 @@ Text('$etiqueta: ${t.nombre}')
     if (lista.isEmpty) return _vacio('No tienes partes registrados con estos filtros');
     // Por días, de lo último a lo primero: una cabecera por día y debajo lo que se hizo.
     lista.sort((a, b) => b.cuando.compareTo(a.cuando));
+    if (industrial && !widget.pestanas) return _tablaHistorial(lista);
     final filas = <Object>[];
     DateTime? dia;
     for (final i in lista) {
@@ -3629,6 +3768,9 @@ class _TablaOrdenesTecnico extends StatelessWidget {
           id: 'ordenes-tecnico',
           menuColumnas: medio,
           columnas: [
+            // El anillo, en su columna sin título (como las casillas del administrador): así «Orden de trabajo»
+            // queda encima de los nombres.
+            const Col('', ancho: 30, cabecera: SizedBox()),
             const Col('Orden de trabajo', flex: 4, fija: true),
             if (medio) const Col('Activo', flex: 3),
             if (ancho) const Col('Origen', ancho: 150),
@@ -3648,17 +3790,12 @@ class _TablaOrdenesTecnico extends StatelessWidget {
             final vencida = t.proximo != null && diasHasta(t.proximo!) < 0;
             final (origen, colorOrigen) = origenOt(t);
             return [
-              Row(children: [
-                AnilloCiclo(ciclo),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    conNuevo(t.id, celdaTexto(t.nombre, negrita: true)),
-                    if (descripcionOt(t).isNotEmpty)
-                      Text(descripcionOt(t), maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: P.textoSuave)),
-                  ]),
-                ),
+              Align(alignment: Alignment.centerLeft, child: AnilloCiclo(ciclo)),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                conNuevo(t.id, celdaTexto(t.nombre, negrita: true)),
+                if (descripcionOt(t).isNotEmpty)
+                  Text(descripcionOt(t), maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: P.textoSuave)),
               ]),
               if (medio)
                 Row(children: [
