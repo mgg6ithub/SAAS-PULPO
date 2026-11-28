@@ -26,7 +26,7 @@ struct CerrarOTView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ListaRelieve {
                 Section {} header: {
                     Picker("Resultado", selection: $resultado) {
                         Text("Correcto").tag(Resultado.correcto)

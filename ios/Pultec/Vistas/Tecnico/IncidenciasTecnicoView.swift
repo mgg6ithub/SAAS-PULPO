@@ -24,7 +24,7 @@ struct CrearIncidenciaView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ListaRelieve {
                 Section {
                     SelectorFotos(fotos: $fotos)
                     if !i.fotos.isEmpty { GaleriaFotos(rutas: i.fotos) }
@@ -97,7 +97,7 @@ struct MisIncidenciasView: View {
         let yo = almacen.tecnicoActivo ?? ""
         let mias = almacen.incidencias.filter { $0.tecnicoId == yo }
         NavigationStack {
-            List {
+            ListaRelieve {
                 Section {} header: {
                     Consejo("¿Se te ha olvidado algo? Toca una incidencia abierta para cambiarla. Cuando le asignen una OT ya no se podrá editar.", clave: "tec-incidencias")
                 }
@@ -128,7 +128,7 @@ struct MisIncidenciasView: View {
             .sheet(item: $editar) { CrearIncidenciaView(incidencia: $0, editar: true) }
             .sheet(item: $ver) { i in
                 NavigationStack {
-                    List {
+                    ListaRelieve {
                         Section { FilaIncidencia(incidencia: i) }
                         if !i.fotos.isEmpty { Section("Fotos") { GaleriaFotos(rutas: i.fotos) } }
                         if let ot = almacen.orden(i.trabajoId) { Section("Su orden de trabajo") { FilaOT(ot: ot) } }
@@ -159,7 +159,7 @@ struct HistoricoTecnicoView: View {
         }
         let dias = Dictionary(grouping: lista) { Calendar.current.startOfDay(for: $0.cuando) }.sorted { $0.key > $1.key }
         NavigationStack {
-            List {
+            ListaRelieve {
                 ForEach(dias, id: \.key) { dia, l in
                     Section(Fechas.frase(Fechas.larga(dia))) {
                         ForEach(l) { inf in
@@ -227,7 +227,7 @@ struct InformeDetalleView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            ListaRelieve {
                 Section {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(ot?.nombre ?? "").font(.app(.title3, .semibold))
@@ -308,7 +308,7 @@ struct PerfilTecnicoView: View {
         @Bindable var estado = estado
         let w = almacen.tecnico(almacen.tecnicoActivo)
         NavigationStack {
-            Form {
+            ListaRelieve {
                 Section {
                     HStack(spacing: 14) {
                         Avatar(tecnico: w, tamano: 56, conEstado: true)

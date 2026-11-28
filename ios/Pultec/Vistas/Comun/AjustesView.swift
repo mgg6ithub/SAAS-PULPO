@@ -10,7 +10,7 @@ struct AjustesView: View {
     var body: some View {
         @Bindable var estado = estado
         Pila {
-            List {
+            ListaRelieve {
                 Section {
                     HStack(spacing: 12) {
                         Image("Logo").resizable().scaledToFit().frame(width: 44, height: 44)
@@ -64,7 +64,7 @@ struct VerComoView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            ListaRelieve {
                 Section {
                     ForEach(almacen.tecnicos.filter(\.activo)) { w in
                         Button {
@@ -99,7 +99,7 @@ private struct EmpresaAjustes: View {
     @State private var nombre = ""
 
     var body: some View {
-        Form {
+        ListaRelieve {
             Section("Nombre de la empresa") {
                 TextField("Nombre", text: $nombre).onSubmit { Task { await almacen.renombrarEmpresa(nombre) } }
             }
@@ -127,7 +127,7 @@ private struct PlanAjustes: View {
     @State private var plan: (nombre: String, estado: String?, fin: Date?)?
 
     var body: some View {
-        List {
+        ListaRelieve {
             Section {
                 if let plan {
                     HStack {
@@ -161,7 +161,7 @@ private struct AutomatizacionesAjustes: View {
     ]
 
     var body: some View {
-        List {
+        ListaRelieve {
             ForEach(eventos, id: \.0) { evento, titulo, detalle in
                 Section {
                     ForEach(avisos.filter { $0.evento == evento }) { a in

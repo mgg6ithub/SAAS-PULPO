@@ -43,7 +43,7 @@ struct OrdenesView: View {
 
     var body: some View {
         NavigationStack(path: $ruta) {
-            List {
+            ListaRelieve {
                 Section {} header: { cabecera }
                 if vista == .pendientes {
                     Section {} header: {

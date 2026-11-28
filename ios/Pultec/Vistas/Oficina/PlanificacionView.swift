@@ -24,7 +24,7 @@ struct PlanificacionView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            ListaRelieve {
                 Section {} header: { cabecera }
                 switch modo {
                 case 0: mes
@@ -246,7 +246,7 @@ struct ResumenOT: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            ListaRelieve {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(almacen.activo(ot.activoId)?.nombreCompleto ?? "").font(.app(.caption)).foregroundStyle(.secondary)

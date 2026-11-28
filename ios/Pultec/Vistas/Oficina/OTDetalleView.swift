@@ -47,7 +47,7 @@ struct OTEditor: View {
     }
 
     var body: some View {
-        Form {
+        ListaRelieve {
             if !nueva { Section {} header: { cadena } }
             Section {
                 TextField("Revisión del motor, cambio de filtro…", text: $ot.nombre)

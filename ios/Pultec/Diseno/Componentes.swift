@@ -69,7 +69,7 @@ struct Tarjeta<Contenido: View>: View {
         contenido
             .padding(relleno)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(paleta.superficie, in: .rect(cornerRadius: 16, style: .continuous))
+            .relieve()
     }
 }
 
@@ -112,11 +112,70 @@ struct TarjetaCifra: View {
             Text(subtitulo).font(.app(.caption)).foregroundStyle(.secondary).lineLimit(1)
         }
         .padding(14)
+        .padding(.bottom, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(paleta.superficie, in: .rect(cornerRadius: 16, style: .continuous))
-        .overlay(alignment: .bottom) {
-            Capsule().fill(color).frame(height: 3).padding(.horizontal, 14)
+        // Canto de color abajo de lado a lado, recortado por la tarjeta (como el borde inferior de la web).
+        .overlay(alignment: .bottom) { color.frame(height: 3) }
+        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+        .relieve()
+    }
+}
+
+/// Píldora con cifra (Inicio: activos, órdenes, técnicos, incidencias), con relieve.
+struct PildoraCifra: View {
+    let icono: String
+    let valor: Int?
+    let texto: LocalizedStringKey
+    var color: Color = .secondary
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Simbolo(nombre: icono)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(color == .secondary ? Color.pMorado : color)
+            if let valor { Text("\(valor)").font(.app(.subheadline, .semibold)).foregroundStyle(color == .secondary ? Color.primary : color) }
+            Text(texto).font(.app(.subheadline)).foregroundStyle(.secondary)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(FondoRelieve(forma: Capsule()))
+    }
+}
+
+/// Selector como las pastillas de la web: punto de color, nombre y cifra; la elegida, en relieve.
+struct SelectorPastillas<Valor: Hashable>: View {
+    @Binding var seleccion: Valor
+    let opciones: [(valor: Valor, texto: LocalizedStringKey, color: Color, cifra: Int?)]
+    @Namespace private var marca
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(opciones.enumerated()), id: \.offset) { _, o in
+                let elegida = o.valor == seleccion
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { seleccion = o.valor }
+                } label: {
+                    HStack(spacing: 5) {
+                        Punto(color: o.color, tamano: 7)
+                        Text(o.texto).font(.app(.footnote, elegida ? .semibold : .regular)).lineLimit(1)
+                        if let c = o.cifra { Text("\(c)").font(.app(.footnote)).foregroundStyle(.secondary) }
+                    }
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(elegida ? Color.primary : .secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background {
+                        if elegida { FondoRelieve(forma: Capsule()).matchedGeometryEffect(id: "marca", in: marca) }
+                    }
+                    .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.selection, trigger: elegida)
+            }
+        }
+        .padding(4)
+        .background(Color.gray.opacity(0.1), in: .capsule)
     }
 }
 
@@ -498,5 +557,85 @@ struct Simbolo: View {
     let nombre: String
     var body: some View {
         if UIImage(named: nombre) != nil { Image(nombre).renderingMode(.template) } else { Image(systemName: nombre) }
+    }
+}
+
+// MARK: Relieve (el de Andrea Reader: ficha del libro, temas blanco y negro puros)
+
+/// Relieve con cualquier forma: color del fondo, canto de luz y sombra suave. Copia de `FondoRelieve`
+/// de Andrea Reader (`ColoresTema.swift`).
+struct FondoRelieve<Forma: InsettableShape>: View {
+    @Environment(\.colorScheme) private var esquema
+    let forma: Forma
+
+    var body: some View {
+        let oscuro = esquema == .dark
+        forma
+            .fill(oscuro ? Color.black : Color.white)
+            .overlay(
+                forma.strokeBorder(
+                    LinearGradient(colors: oscuro ? [.white.opacity(0.18), .white.opacity(0.09)] : [.white, .black.opacity(0.06)],
+                                   startPoint: .top, endPoint: .bottom),
+                    lineWidth: oscuro ? 0.8 : 1)
+            )
+            .shadow(color: .black.opacity(oscuro ? 0.9 : 0.045), radius: oscuro ? 12 : 8, x: 0, y: oscuro ? 6 : 3)
+            .shadow(color: .black.opacity(oscuro ? 0.6 : 0.03), radius: 1.5, x: 0, y: 1)
+    }
+}
+
+extension View {
+    /// Tarjeta con relieve de radio fijo.
+    func relieve(_ radio: CGFloat = 16) -> some View {
+        background(FondoRelieve(forma: RoundedRectangle(cornerRadius: radio, style: .continuous)))
+    }
+}
+
+/// Fondo de una fila de lista agrupada con relieve: esquinas redondeadas solo arriba en la primera y abajo en la última,
+/// como las secciones nativas (receta de Andrea: «filas agrupadas con esquinas distintas»).
+struct FondoFilaRelieve: View {
+    let primera: Bool
+    let ultima: Bool
+    var radio: CGFloat = 26
+
+    var body: some View {
+        // La forma se alarga por encima y por debajo (fuera de la fila) y se recorta en vertical: así solo se ve
+        // el canto de los lados y, en la primera y la última, el de arriba y abajo. La sección parece una tarjeta.
+        let extra: CGFloat = 40
+        FondoRelieve(forma: UnevenRoundedRectangle(
+            topLeadingRadius: primera ? radio : 0, bottomLeadingRadius: ultima ? radio : 0,
+            bottomTrailingRadius: ultima ? radio : 0, topTrailingRadius: primera ? radio : 0, style: .continuous))
+            .padding(.top, primera ? 0 : -extra)
+            .padding(.bottom, ultima ? 0 : -extra)
+            .mask(Rectangle().padding(.horizontal, -30).padding(.top, primera ? -30 : 0).padding(.bottom, ultima ? -30 : 0))
+    }
+}
+
+extension View {
+    /// Fila de lista con relieve según su posición en la sección.
+    func filaRelieve(_ i: Int, de n: Int) -> some View {
+        listRowBackground(FondoFilaRelieve(primera: i == 0, ultima: i == n - 1))
+    }
+}
+
+/// Lista agrupada con relieve en todas sus secciones (sustituye a `List` y `Form` en toda la app):
+/// cada sección se ve como una tarjeta de Andrea, en blanco o negro puros.
+struct ListaRelieve<Contenido: View>: View {
+    @ViewBuilder let contenido: Contenido
+
+    var body: some View {
+        List {
+            ForEach(sections: contenido) { seccion in
+                Section {
+                    let filas = seccion.content
+                    ForEach(Array(filas.enumerated()), id: \.element.id) { i, fila in
+                        fila.filaRelieve(i, de: filas.count)
+                    }
+                } header: {
+                    seccion.header
+                } footer: {
+                    seccion.footer
+                }
+            }
+        }
     }
 }

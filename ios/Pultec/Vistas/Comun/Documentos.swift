@@ -167,7 +167,7 @@ struct ExportarView: View {
     @Environment(Almacen.self) private var almacen
 
     var body: some View {
-        List {
+        ListaRelieve {
             Section {
                 ShareLink(item: Documentos.csvActivos(almacen)) { Label("Activos", image: "IconoActivos") }
                 ShareLink(item: Documentos.csvOrdenes(almacen)) { Label("Órdenes de trabajo", systemImage: "list.clipboard") }

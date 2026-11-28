@@ -25,7 +25,7 @@ struct AvisosView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            ListaRelieve {
                 if almacen.avisos.isEmpty {
                     Section {} header: {
                         EstadoVacio(icono: "bell", titulo: "Sin avisos", mensaje: "Aquí llegan las incidencias, las órdenes cerradas y lo que te asignen.")

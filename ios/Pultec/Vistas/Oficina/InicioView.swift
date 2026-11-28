@@ -41,15 +41,20 @@ struct InicioView: View {
             Text(almacen.empresaNombre).font(.system(size: 30, weight: .bold))
             Text(fraseDelDia).font(.app(.subheadline)).foregroundStyle(.secondary)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    contador("IconoActivos", almacen.raices.count, "activos")
-                    contador("list.clipboard", almacen.pendientes.count, "órdenes de trabajo")
-                    contador("person.2", almacen.tecnicos.count, "técnicos")
-                    contador("exclamationmark.circle", almacen.incidenciasAbiertas.count,
-                             almacen.incidenciasAbiertas.isEmpty ? "Sin incidencias" : "incidencias")
+                HStack(spacing: 10) {
+                    PildoraCifra(icono: "IconoActivos", valor: almacen.raices.count, texto: "activos")
+                    PildoraCifra(icono: "list.clipboard", valor: almacen.pendientes.count, texto: "órdenes de trabajo")
+                    PildoraCifra(icono: "person.2", valor: almacen.tecnicos.count, texto: "técnicos")
+                    let n = almacen.incidenciasAbiertas.count
+                    PildoraCifra(icono: "exclamationmark.circle", valor: n == 0 ? nil : n,
+                                 texto: n == 0 ? "Sin incidencias" : (n == 1 ? "incidencia" : "incidencias"),
+                                 color: n == 0 ? .secondary : .pRojo)
                 }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 16)
             }
-            .padding(.top, 6)
+            .padding(.horizontal, -16)
+            .scrollClipDisabled()
         }
     }
 
@@ -59,16 +64,6 @@ struct InicioView: View {
         if hoy == 0 && vencidas > 0 { return "Hoy no hay nada programado: buen momento para ponerte al día con lo vencido." }
         if hoy == 0 { return "Hoy no hay nada programado." }
         return hoy == 1 ? "Hoy toca una orden de trabajo." : "Hoy tocan \(hoy) órdenes de trabajo."
-    }
-
-    private func contador(_ icono: String, _ n: Int, _ texto: LocalizedStringKey) -> some View {
-        HStack(spacing: 6) {
-            Simbolo(nombre: icono).font(.caption)
-            if n > 0 || icono != "exclamationmark.circle" { Text("\(n)").font(.app(.subheadline, .semibold)) }
-            Text(texto).font(.app(.subheadline)).foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(.background.secondary, in: .capsule)
     }
 
     private var incidenciasAbiertas: some View {
@@ -119,12 +114,9 @@ struct InicioView: View {
         let lista = almacen.pendientes.filter { $0.criticidad == criticidad }
         return VStack(alignment: .leading, spacing: 12) {
             EncabezadoBloque(titulo: "Órdenes de trabajo")
-            Picker("Criticidad", selection: $criticidad) {
-                ForEach(Criticidad.allCases) { c in
-                    Text("\(Text(c.corta)) \(almacen.pendientes.filter { $0.criticidad == c }.count)").tag(c)
-                }
-            }
-            .pickerStyle(.segmented)
+            SelectorPastillas(seleccion: $criticidad, opciones: Criticidad.allCases.map { c in
+                (valor: c, texto: c.corta, color: c.color, cifra: almacen.pendientes.filter { $0.criticidad == c }.count)
+            })
             Tarjeta(relleno: 4) {
                 if lista.isEmpty {
                     Text("Ninguna pendiente").font(.app(.subheadline)).foregroundStyle(.secondary).padding(12)

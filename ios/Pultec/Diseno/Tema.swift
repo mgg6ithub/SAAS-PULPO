@@ -17,11 +17,11 @@ struct Paleta: Equatable {
     }
 
     /// Claro y oscuro usan el color de acento de la app (AccentColor en Assets).
-    static let clara = Paleta(fondo: Color(hex: 0xF2F2F7), fondoFin: Color(hex: 0xEDECF2),
+    static let clara = Paleta(fondo: .white, fondoFin: .white,
                               superficie: .white, texto: .black, secundario: Color(hex: 0x6C6C70),
                               acento: .accentColor, esOscuro: false)
-    static let oscura = Paleta(fondo: Color(hex: 0x121119), fondoFin: Color(hex: 0x0B0A10),
-                               superficie: Color(hex: 0x1C1B24), texto: .white, secundario: Color(hex: 0x98989F),
+    static let oscura = Paleta(fondo: .black, fondoFin: .black,
+                               superficie: .black, texto: .white, secundario: Color(hex: 0x98989F),
                                acento: .accentColor, esOscuro: true)
 
     /// Temas de color: fondo, fin del degradado, superficie, texto, secundario, acento.

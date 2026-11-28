@@ -91,7 +91,9 @@ struct MisOrdenesView: View {
             grupo("Hoy", hoy, color: .pMorado, vacio: "Hoy no tienes órdenes.")
             if !otros.isEmpty {
                 Section(isExpanded: $otrosAbierto) {
-                    ForEach(otros) { o in NavigationLink(value: o.id) { FilaOT(ot: o, mostrarTecnico: false) } }
+                    ForEach(Array(otros.enumerated()), id: \.element.id) { i, o in
+                        NavigationLink(value: o.id) { FilaOT(ot: o, mostrarTecnico: false) }.filaRelieve(i, de: otros.count)
+                    }
                 } header: {
                     HStack(spacing: 6) { Punto(color: .gray); Text("Otros días \(otros.count)") }
                 }
@@ -119,15 +121,17 @@ struct MisOrdenesView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background, in: .rect(cornerRadius: 14, style: .continuous))
+        .relieve(14)
     }
 
     @ViewBuilder
     private func grupo(_ titulo: LocalizedStringKey, _ l: [OrdenTrabajo], color: Color, vacio: LocalizedStringKey?) -> some View {
         if !l.isEmpty || vacio != nil {
             Section {
-                ForEach(l) { o in NavigationLink(value: o.id) { FilaOT(ot: o, mostrarTecnico: false) } }
-                if l.isEmpty, let vacio { Text(vacio).font(.app(.subheadline)).foregroundStyle(.secondary) }
+                ForEach(Array(l.enumerated()), id: \.element.id) { i, o in
+                    NavigationLink(value: o.id) { FilaOT(ot: o, mostrarTecnico: false) }.filaRelieve(i, de: l.count)
+                }
+                if l.isEmpty, let vacio { Text(vacio).font(.app(.subheadline)).foregroundStyle(.secondary).filaRelieve(0, de: 1) }
             } header: {
                 HStack(spacing: 6) { Punto(color: color); Text(titulo); Text("\(l.count)").foregroundStyle(.secondary) }
             }
@@ -149,7 +153,7 @@ struct ElegirActivosView: View {
     }
 
     var body: some View {
-        List {
+        ListaRelieve {
             Section {} header: {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(Fechas.larga(Date())).font(.app(.subheadline, .medium)).foregroundStyle(Color.pMorado)

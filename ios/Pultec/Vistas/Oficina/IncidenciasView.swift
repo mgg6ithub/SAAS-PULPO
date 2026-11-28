@@ -21,7 +21,7 @@ struct IncidenciasView: View {
 
     var body: some View {
         Pila {
-            List {
+            ListaRelieve {
                 Section {} header: {
                     VStack(spacing: 10) {
                         Picker("Vista", selection: $historico) {
@@ -107,7 +107,7 @@ struct IncidenciaView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ListaRelieve {
                 if !nueva {
                     Section {} header: {
                         HStack(spacing: 8) {

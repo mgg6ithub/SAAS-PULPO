@@ -14,7 +14,7 @@ struct ActivosView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            ListaRelieve {
                 Section {
                     ForEach(lista) { a in
                         NavigationLink { ActivoDetalleView(activoId: a.id) } label: { FilaActivo(activo: a) }
@@ -77,7 +77,7 @@ struct ActivoDetalleView: View {
     }
 
     private func contenido(_ a: Activo) -> some View {
-        List {
+        ListaRelieve {
             Section {} header: { cabecera(a) }
             switch pestana {
             case 0: vistaGeneral(a)

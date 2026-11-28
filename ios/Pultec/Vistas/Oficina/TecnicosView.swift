@@ -17,7 +17,7 @@ struct TecnicosView: View {
 
     var body: some View {
         Pila {
-            List {
+            ListaRelieve {
                 Section {} header: {
                     Picker("Estado", selection: $filtro) {
                         Text("Todos").tag(EstadoHoy?.none)
@@ -107,7 +107,7 @@ struct TecnicoDetalleView: View {
         if let w = almacen.tecnico(tecnicoId) {
             let todas = almacen.ordenesDe(tecnico: w.id)
             let lista = historico ? todas.filter { !$0.estado.abierta } : todas.filter(\.estado.abierta).sorted(by: Almacen.porFecha)
-            List {
+            ListaRelieve {
                 Section {} header: {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack(spacing: 14) {
@@ -182,7 +182,7 @@ struct AsignarOrdenView: View {
     var body: some View {
         NavigationStack {
             let libres = almacen.pendientes.filter { $0.tecnicoIds.isEmpty }
-            List {
+            ListaRelieve {
                 Section {
                     ForEach(libres.prefix(200)) { o in
                         Button { Task { await almacen.asignar(o, a: [tecnico.id]); dismiss() } } label: { FilaOT(ot: o, mostrarTecnico: false) }
@@ -213,7 +213,7 @@ struct TecnicoForm: View {
     }
 
     var body: some View {
-        Form {
+        ListaRelieve {
             Section {
                 TextField("Nombre", text: $w.nombre)
                 TextField("Apellidos", text: $w.apellidos)
@@ -275,7 +275,7 @@ struct GrupoForm: View {
     }
 
     var body: some View {
-        Form {
+        ListaRelieve {
             Section("Grupo") { TextField("Nombre (Hidráulica A)", text: $nombre) }
             Section {
                 ForEach(almacen.tecnicos.filter(\.activo)) { w in
@@ -314,7 +314,7 @@ struct AccesosView: View {
     @State private var enlaces: [String: URL] = [:]
 
     var body: some View {
-        List {
+        ListaRelieve {
             Section("Con acceso") {
                 Label(almacen.correo, systemImage: "person.crop.circle.badge.checkmark")
                     .badge(Text("Administrador"))

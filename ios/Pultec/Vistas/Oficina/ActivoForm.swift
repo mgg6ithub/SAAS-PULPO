@@ -17,7 +17,7 @@ struct ActivoForm: View {
     private var puede: Bool { !a.nombre.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
-        Form {
+        ListaRelieve {
             CamposActivo(a: $a)
             if !puede { Section {} footer: { AvisoFalta(texto: "Te falta el nombre") } }
         }
@@ -170,7 +170,7 @@ struct PlanForm: View {
     }
 
     var body: some View {
-        Form {
+        ListaRelieve {
             Section("Mantenimiento") {
                 TextField("Nombre (cambio de aceite)", text: $p.nombre)
                 TextField("Breve descripción (vaciar, cambiar filtro y rellenar)", text: $p.descripcion, axis: .vertical).lineLimit(1...3)

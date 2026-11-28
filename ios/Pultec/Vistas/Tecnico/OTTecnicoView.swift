@@ -28,7 +28,7 @@ struct OTTecnicoView: View {
     private func contenido(_ ot: OrdenTrabajo) -> some View {
         let espera = almacen.esperando(ot)
         let enCurso = ot.estado == .enCurso
-        return List {
+        return ListaRelieve {
             Section {} header: { cabecera(ot) }
             if let espera {
                 Section {} header: {
