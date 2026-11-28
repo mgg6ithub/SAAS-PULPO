@@ -1,9 +1,11 @@
 import SwiftUI
+import AuthenticationServices
 
 /// «Entra en Pultec»: correo y contraseña, crear cuenta y recuperar contraseña.
 struct EntrarView: View {
     @Environment(Almacen.self) private var almacen
     @Environment(\.paleta) private var paleta
+    @Environment(\.webAuthenticationSession) private var webAuth
     @State private var correo = ""
     @State private var contrasena = ""
     @State private var ver = false
@@ -26,6 +28,16 @@ struct EntrarView: View {
                 VStack(spacing: 6) {
                     Text(creando ? "Crea tu cuenta" : "Entra en Pultec").font(.system(size: 28, weight: .bold))
                     Text("Tus mantenimientos, en piloto automático.").font(.app(.subheadline)).foregroundStyle(.secondary)
+                }
+                VStack(spacing: 10) {
+                    botonProveedor("apple", "Continuar con Apple", "apple.logo")
+                    botonProveedor("google", "Continuar con Google", "g.circle")
+                    HStack {
+                        Rectangle().frame(height: 1).foregroundStyle(.quaternary)
+                        Text("o con tu correo").font(.app(.caption)).foregroundStyle(.secondary).fixedSize()
+                        Rectangle().frame(height: 1).foregroundStyle(.quaternary)
+                    }
+                    .padding(.vertical, 6)
                 }
                 VStack(spacing: 12) {
                     TextField("Correo", text: $correo)
@@ -87,6 +99,27 @@ struct EntrarView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .fondoTema()
+    }
+
+    private func botonProveedor(_ proveedor: String, _ titulo: LocalizedStringKey, _ icono: String) -> some View {
+        Button {
+            Task {
+                error = nil
+                do {
+                    let vuelta = try await webAuth.authenticate(using: Nube.urlOAuth(proveedor), callbackURLScheme: "pultec",
+                                                                preferredBrowserSession: .ephemeral)
+                    try await almacen.entrarConVuelta(vuelta)
+                } catch let e as ASWebAuthenticationSessionError where e.code == .canceledLogin {
+                    // Lo cerró el usuario: nada.
+                } catch {
+                    self.error = error.localizedDescription
+                }
+            }
+        } label: {
+            Label(titulo, systemImage: icono).font(.app(.body, .semibold)).frame(maxWidth: .infinity, minHeight: 30)
+        }
+        .buttonStyle(.glass)
+        .controlSize(.large)
     }
 
     private func entrar() {

@@ -35,11 +35,17 @@ actor Nube {
     private let claveSesion = "pultec.sesion"
 
     init() {
-        if let d = UserDefaults.standard.data(forKey: claveSesion),
-           let s = try? JSONDecoder().decode(Sesion.self, from: d) {
+        // Antes se guardaba en UserDefaults: se pasa al Llavero una vez.
+        if let viejo = UserDefaults.standard.data(forKey: claveSesion) {
+            Llavero.guardar(viejo, claveSesion)
+            UserDefaults.standard.removeObject(forKey: claveSesion)
+        }
+        if let d = Llavero.leer(claveSesion), let s = try? JSONDecoder().decode(Sesion.self, from: d) {
             sesion = s
         }
     }
+
+    var token: String? { sesion?.accessToken }
 
     var usuarioId: String? { sesion?.usuarioId }
     var correo: String? { sesion?.correo }
@@ -68,7 +74,7 @@ actor Nube {
 
     func salir() {
         sesion = nil
-        UserDefaults.standard.removeObject(forKey: claveSesion)
+        Llavero.borrar(claveSesion)
     }
 
     private func guardarSesion(_ datos: Data) throws {
@@ -84,7 +90,36 @@ actor Nube {
                        caduca: Date().addingTimeInterval(segundos - 60),
                        usuarioId: id, correo: usuario["email"] as? String ?? "")
         sesion = s
-        UserDefaults.standard.set(try JSONEncoder().encode(s), forKey: claveSesion)
+        Llavero.guardar(try JSONEncoder().encode(s), claveSesion)
+    }
+
+    /// Entrar con Google o Apple (OAuth de Supabase): la web de Supabase vuelve a `pultec://auth#access_token=…`.
+    static func urlOAuth(_ proveedor: String) -> URL {
+        var c = URLComponents(url: Configuracion.url.appendingPathComponent("auth/v1/authorize"), resolvingAgainstBaseURL: false)!
+        c.queryItems = [URLQueryItem(name: "provider", value: proveedor), URLQueryItem(name: "redirect_to", value: "pultec://auth")]
+        return c.url!
+    }
+
+    /// Guarda la sesión que trae la vuelta del OAuth (fragmento con access_token y refresh_token).
+    func entrarConVuelta(_ url: URL) async throws {
+        let texto = url.fragment ?? url.query ?? ""
+        var p: [String: String] = [:]
+        for par in texto.split(separator: "&") {
+            let kv = par.split(separator: "=", maxSplits: 1).map(String.init)
+            if kv.count == 2 { p[kv[0]] = kv[1].removingPercentEncoding ?? kv[1] }
+        }
+        if let e = p["error_description"] { throw ErrorNube(mensaje: e.replacingOccurrences(of: "+", with: " ")) }
+        guard let token = p["access_token"], let refresh = p["refresh_token"] else {
+            throw ErrorNube(mensaje: "No se pudo iniciar sesión.")
+        }
+        var r = try await solicitud("GET", "/auth/v1/user", conSesion: false)
+        r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (datos, respuesta) = try await URLSession.shared.data(for: r)
+        try comprobar(respuesta, datos)
+        let usuario = (try JSONSerialization.jsonObject(with: datos) as? [String: Any]) ?? [:]
+        let j: [String: Any] = ["access_token": token, "refresh_token": refresh,
+                                "expires_in": Double(p["expires_in"] ?? "3600") ?? 3600, "user": usuario]
+        try guardarSesion(try JSONSerialization.data(withJSONObject: j))
     }
 
     private func refrescarSiHaceFalta() async throws {

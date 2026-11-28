@@ -25,6 +25,7 @@ struct AjustesView: View {
                     NavigationLink { EmpresaAjustes() } label: { Label("Empresa", systemImage: "building.2") }
                     NavigationLink { PlanAjustes() } label: { Label("Plan", systemImage: "rosette") }
                     NavigationLink { AutomatizacionesAjustes() } label: { Label("Automatizaciones", systemImage: "bolt") }
+                    NavigationLink { ExportarView() } label: { Label("Datos", systemImage: "arrow.up.arrow.down") }
                 }
                 Section {
                     Picker(selection: $estado.tema) {

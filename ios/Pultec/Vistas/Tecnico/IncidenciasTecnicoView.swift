@@ -223,6 +223,7 @@ struct InformeDetalleView: View {
     @Environment(Almacen.self) private var almacen
     let ot: OrdenTrabajo?
     let informe: Informe
+    @State private var pdf: URL?
 
     var body: some View {
         NavigationStack {
@@ -259,7 +260,25 @@ struct InformeDetalleView: View {
             }
             .fondoTema()
             .hojaConsulta(String(localized: "Parte de orden de trabajo"))
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if let pdf {
+                        ShareLink(item: pdf) { Image(systemName: "arrow.down.doc") }.accessibilityLabel(Text("Descargar PDF"))
+                    } else {
+                        ProgressView()
+                    }
+                }
+            }
+            .task { await prepararPDF() }
         }
+    }
+
+    private func prepararPDF() async {
+        var fotos: [UIImage] = []
+        for r in informe.fotos.prefix(4) { if let d = await almacen.foto(r), let i = UIImage(data: d) { fotos.append(i) } }
+        var firma: UIImage?
+        if let f = informe.firma, let d = await almacen.foto(f) { firma = UIImage(data: d) }
+        pdf = Documentos.pdfParte(almacen, ot: ot, informe: informe, fotos: fotos, firma: firma)
     }
 }
 

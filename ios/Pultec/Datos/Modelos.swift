@@ -528,3 +528,11 @@ extension Color {
         self.init(hex: UInt32(truncatingIfNeeded: argb & 0xFFFFFF))
     }
 }
+
+// Textos como String (para CSV y PDF, donde no vale LocalizedStringKey).
+extension Criticidad { var texto: String { [String(localized: "Preventivo"), String(localized: "Correctivo no crítico"), String(localized: "Correctivo crítico")][rawValue] } }
+extension EstadoOT { var texto: String { [String(localized: "Pendiente"), String(localized: "En curso"), String(localized: "Completada"), String(localized: "Cancelada"), String(localized: "Interrumpida")][rawValue] } }
+extension Gravedad { var texto: String { self == .grave ? String(localized: "Correctivo crítico") : String(localized: "Correctivo no crítico") } }
+extension EstadoIncidencia { var texto: String { [String(localized: "Abierta"), String(localized: "Con OT"), String(localized: "Completada"), String(localized: "Desestimada")][rawValue] } }
+extension EstadoHoy { var texto: String { [String(localized: "Disponible"), String(localized: "Ocupado"), String(localized: "Ausente")][rawValue] } }
+extension Resultado { var texto: String { [String(localized: "Todo correcto"), String(localized: "Con incidencias"), String(localized: "No se pudo hacer")][rawValue] } }

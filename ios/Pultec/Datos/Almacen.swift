@@ -34,6 +34,7 @@ final class Almacen {
 
     private let nube = Nube.compartida
     private var refresco: Task<Void, Never>?
+    private var enVivo: EnVivo?
 
     // MARK: Sesión
 
@@ -64,8 +65,14 @@ final class Almacen {
 
     func recuperar(correo: String) async throws { try await nube.recuperar(correo: correo) }
 
+    func entrarConVuelta(_ url: URL) async throws {
+        try await nube.entrarConVuelta(url)
+        await abrirEmpresa()
+    }
+
     func salir() async {
         refresco?.cancel()
+        enVivo?.parar()
         await nube.salir()
         activos = []; planes = []; ordenes = []; incidencias = []; tecnicos = []; grupos = []
         viendoComo = nil
@@ -127,18 +134,28 @@ final class Almacen {
         tecnicos = fw.map(Tecnico.init)
         grupos = fg.map(Grupo.init)
         ultimaCarga = Date()
+        if !pendientesDeSubir.isEmpty { Task { await subirPendientes() } }
     }
 
     func recargar() async {
         do { try await cargar() } catch { avisar(error.localizedDescription, error: true) }
     }
 
-    /// Avisos «en vivo»: vuelve a leer cada 20 s mientras la app está abierta.
+    /// Avisos en vivo: Supabase Realtime y, por si se corta, una lectura de seguridad cada 2 min.
     private func empezarRefresco() {
         refresco?.cancel()
+        enVivo?.parar()
+        Task {
+            guard let token = await nube.token else { return }
+            let e = EnVivo(empresaId: empresaId, token: token) { [weak self] in
+                Task { @MainActor in try? await self?.cargar() }
+            }
+            enVivo = e
+            e.empezar()
+        }
         refresco = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(20))
+                try? await Task.sleep(for: .seconds(120))
                 guard let self, self.fase == .dentro else { continue }
                 try? await self.cargar()
             }
@@ -234,6 +251,11 @@ final class Almacen {
         }
         if t.planId != nil { return ("Mantenimiento", "doc.text", .secondary) }
         return ("Manual", "hand.raised", .pAzul)
+    }
+
+    func origenTexto(_ t: OrdenTrabajo) -> String {
+        if incidencias.contains(where: { $0.trabajoId == t.id && $0.origenTrabajoId != t.id }) { return String(localized: "Incidencia") }
+        return t.planId != nil ? String(localized: "Mantenimiento") : String(localized: "Manual")
     }
 
     func incidenciaDe(ot id: String) -> Incidencia? {
@@ -583,25 +605,9 @@ final class Almacen {
     }
 
     func crearIncidencia(_ i: Incidencia, fotos: [Data]) async -> Bool {
-        do {
-            var rutas: [String] = []
-            for (n, f) in fotos.enumerated() {
-                let ruta = "\(empresaId)/incidencias/\(i.id)/\(n).jpg"
-                try await nube.subir(ruta, f, tipo: "image/jpeg")
-                rutas.append(ruta)
-            }
-            try await nube.rpc("crear_incidencia", [
-                "p_id": i.id, "p_activo": i.activoId, "p_descripcion": i.descripcion,
-                "p_gravedad": i.gravedad.rawValue, "p_categoria": "", "p_fotos": rutas,
-                "p_tecnico": i.tecnicoId as Any? ?? NSNull(), "p_origen": i.origenTrabajoId as Any? ?? NSNull(),
-            ])
-            try? await cargar()
-            avisar(String(localized: "Incidencia enviada"))
-            return true
-        } catch {
-            avisar(error.localizedDescription, error: true)
-            return false
-        }
+        let p = Pendiente(id: i.id, tipo: .incidencia, cuando: Date(), fotos: fotos, activo: i.activoId,
+                          descripcion: i.descripcion, gravedad: i.gravedad.rawValue, tecnico: i.tecnicoId, origen: i.origenTrabajoId)
+        return await enviarOGuardar(p, ok: String(localized: "Incidencia enviada"))
     }
 
     func editarIncidencia(_ i: Incidencia) async {
@@ -615,44 +621,141 @@ final class Almacen {
 
     /// Parte del técnico: sube fotos y firma, guarda el informe, apunta el contador y cierra la OT
     /// (salvo «No se pudo hacer», que deja la OT abierta: la base abre la incidencia).
+    /// Sin conexión, el parte se guarda en el iPhone y se sube solo al volver.
     func cerrar(_ t: OrdenTrabajo, tecnico w: String?, resultado: Resultado, notas: String, material: String,
                 contador: Double?, valor: Double?, fotos: [Data], firma: Data?) async -> Bool {
-        let id = UUID().uuidString.lowercased()
+        let p = Pendiente(id: UUID().uuidString.lowercased(), tipo: .parte, cuando: Date(), fotos: fotos, firma: firma,
+                          ot: t.id, tecnico: w, resultado: resultado.rawValue, notas: notas, material: material,
+                          minutos: minutos(t), valor: valor, contador: contador, contadorActivo: raiz(t.activoId)?.id)
+        return await enviarOGuardar(p, ok: String(localized: resultado == .noSePudo ? "Parte enviado" : "Orden cerrada y parte enviado"))
+    }
+
+    // MARK: Sin conexión
+
+    /// Parte o incidencia pendiente de subir (con sus fotos), guardado en el iPhone.
+    struct Pendiente: Codable, Identifiable {
+        enum Tipo: String, Codable { case parte, incidencia }
+        var id: String
+        var tipo: Tipo
+        var cuando: Date
+        var fotos: [Data] = []
+        var firma: Data?
+        var ot: String?
+        var activo: String?
+        var descripcion: String?
+        var gravedad: Int?
+        var tecnico: String?
+        var origen: String?
+        var resultado: Int = 0
+        var notas = ""
+        var material = ""
+        var minutos: Int?
+        var valor: Double?
+        var contador: Double?
+        var contadorActivo: String?
+    }
+
+    var pendientesDeSubir: [Pendiente] = Almacen.leerPendientes()
+    private var subiendo = false
+
+    private static var archivoPendientes: URL {
+        let d = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d.appendingPathComponent("pendientes.json")
+    }
+
+    private static func leerPendientes() -> [Pendiente] {
+        guard let d = try? Data(contentsOf: archivoPendientes) else { return [] }
+        return (try? JSONDecoder().decode([Pendiente].self, from: d)) ?? []
+    }
+
+    private func guardarPendientes() {
+        if let d = try? JSONEncoder().encode(pendientesDeSubir) {
+            try? d.write(to: Almacen.archivoPendientes, options: [.atomic, .completeFileProtection])
+        }
+    }
+
+    private func enviarOGuardar(_ p: Pendiente, ok: String) async -> Bool {
         do {
-            var rutas: [String] = []
-            for (n, f) in fotos.enumerated() {
-                let ruta = "\(empresaId)/informes/\(id)/\(n).jpg"
-                try await nube.subir(ruta, f, tipo: "image/jpeg")
-                rutas.append(ruta)
-            }
-            var rutaFirma: Any = NSNull()
-            if let firma {
-                let ruta = "\(empresaId)/informes/\(id)/firma.png"
-                try await nube.subir(ruta, firma, tipo: "image/png")
-                rutaFirma = ruta
-            }
-            var informe: [String: Any] = [
-                "id": id, "empresa_id": empresaId, "trabajo_id": t.id, "trabajador_id": w as Any? ?? NSNull(),
-                "resultado": resultado.rawValue, "notas": notas, "material": material,
-                "minutos": minutos(t) as Any? ?? NSNull(), "fotos": rutas, "firma": rutaFirma, "firmante": "",
-                "created_at": Fechas.iso(Date()),
-            ]
-            if let valor { informe["valor"] = valor }
-            try await nube.insertar("informes", informe)
-            if let contador, let r = raiz(t.activoId) {
-                try? await nube.rpc("apuntar_contador", ["p_activo": r.id, "p_horas": contador])
-            }
-            if resultado != .noSePudo {
-                try await nube.actualizar("trabajos", id: t.id, [
-                    "estado": EstadoOT.completada.rawValue, "ultimo": Fechas.texto(Fechas.hoy), "proximo": NSNull(),
-                ])
-            }
+            try await subir(p)
             try? await cargar()
-            avisar(String(localized: resultado == .noSePudo ? "Parte enviado" : "Orden cerrada y parte enviado"))
+            avisar(ok)
+            return true
+        } catch let e as URLError where [.notConnectedToInternet, .networkConnectionLost, .timedOut, .cannotConnectToHost, .cannotFindHost].contains(e.code) {
+            pendientesDeSubir.append(p)
+            guardarPendientes()
+            avisar(String(localized: "Sin conexión: se ha guardado aquí y se subirá al volver"))
             return true
         } catch {
             avisar(error.localizedDescription, error: true)
             return false
+        }
+    }
+
+    /// Sube lo pendiente (al recargar con conexión).
+    func subirPendientes() async {
+        guard !subiendo, !pendientesDeSubir.isEmpty else { return }
+        subiendo = true
+        defer { subiendo = false }
+        var subidos = 0
+        for p in pendientesDeSubir {
+            do {
+                try await subir(p)
+                pendientesDeSubir.removeAll { $0.id == p.id }
+                guardarPendientes()
+                subidos += 1
+            } catch { break }
+        }
+        if subidos > 0 {
+            try? await cargar()
+            avisar(subidos == 1 ? String(localized: "Se ha subido lo que quedaba pendiente") : String(localized: "Se han subido \(subidos) envíos pendientes"))
+        }
+    }
+
+    private func subir(_ p: Pendiente) async throws {
+        switch p.tipo {
+        case .incidencia:
+            var rutas: [String] = []
+            for (n, f) in p.fotos.enumerated() {
+                let ruta = "\(empresaId)/incidencias/\(p.id)/\(n).jpg"
+                try await nube.subir(ruta, f, tipo: "image/jpeg")
+                rutas.append(ruta)
+            }
+            try await nube.rpc("crear_incidencia", [
+                "p_id": p.id, "p_activo": p.activo ?? "", "p_descripcion": p.descripcion ?? "",
+                "p_gravedad": p.gravedad ?? 1, "p_categoria": "", "p_fotos": rutas,
+                "p_tecnico": p.tecnico as Any? ?? NSNull(), "p_origen": p.origen as Any? ?? NSNull(),
+            ])
+        case .parte:
+            var rutas: [String] = []
+            for (n, f) in p.fotos.enumerated() {
+                let ruta = "\(empresaId)/informes/\(p.id)/\(n).jpg"
+                try await nube.subir(ruta, f, tipo: "image/jpeg")
+                rutas.append(ruta)
+            }
+            var rutaFirma: Any = NSNull()
+            if let firma = p.firma {
+                let ruta = "\(empresaId)/informes/\(p.id)/firma.png"
+                try await nube.subir(ruta, firma, tipo: "image/png")
+                rutaFirma = ruta
+            }
+            var informe: [String: Any] = [
+                "id": p.id, "empresa_id": empresaId, "trabajo_id": p.ot ?? "", "trabajador_id": p.tecnico as Any? ?? NSNull(),
+                "resultado": p.resultado, "notas": p.notas, "material": p.material,
+                "minutos": p.minutos as Any? ?? NSNull(), "fotos": rutas, "firma": rutaFirma, "firmante": "",
+                // La hora en que se hizo el parte (sin conexión puede subirse más tarde).
+                "created_at": Fechas.iso(p.cuando),
+            ]
+            if let v = p.valor { informe["valor"] = v }
+            try await nube.insertar("informes", informe, upsert: true)
+            if let c = p.contador, let a = p.contadorActivo {
+                try? await nube.rpc("apuntar_contador", ["p_activo": a, "p_horas": c])
+            }
+            if p.resultado != Resultado.noSePudo.rawValue, let ot = p.ot {
+                try await nube.actualizar("trabajos", id: ot, [
+                    "estado": EstadoOT.completada.rawValue, "ultimo": Fechas.texto(Calendar.current.startOfDay(for: p.cuando)), "proximo": NSNull(),
+                ])
+            }
         }
     }
 
