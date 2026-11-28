@@ -1,0 +1,64 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "extended-gray:1.00000,1.00000",
+      "display-p3:0.93000,0.91000,1.00000,1.00000"
+    ]
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "ojos.svg",
+          "name": "ojos",
+          "glass": true
+        },
+        {
+          "image-name": "pulpo.svg",
+          "name": "pulpo",
+          "fill": {
+            "linear-gradient": [
+              "display-p3:0.62000,0.45000,1.00000,1.00000",
+              "display-p3:0.30000,0.10000,0.75000,1.00000"
+            ]
+          },
+          "glass": true
+        }
+      ],
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.6
+      },
+      "position": {
+        "scale": 0.86,
+        "translation-in-points": [
+          0,
+          10
+        ]
+      },
+      "translucency-specializations": [
+        {
+          "value": {
+            "enabled": true,
+            "value": 0.15
+          }
+        },
+        {
+          "appearance": "dark",
+          "value": {
+            "enabled": true,
+            "value": 0.4
+          }
+        }
+      ],
+      "specular": true,
+      "lighting": "individual"
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}
