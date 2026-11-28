@@ -42,7 +42,7 @@ struct InicioView: View {
             Text(fraseDelDia).font(.app(.subheadline)).foregroundStyle(.secondary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    contador("gearshape.2", almacen.activos.count, "activos")
+                    contador("gearshape.2", almacen.raices.count, "activos")
                     contador("list.clipboard", almacen.pendientes.count, "órdenes de trabajo")
                     contador("person.2", almacen.tecnicos.count, "técnicos")
                     contador("exclamationmark.circle", almacen.incidenciasAbiertas.count,

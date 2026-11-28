@@ -15,7 +15,7 @@ struct EstadisticasView: View {
     private let columnas = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
     var body: some View {
-        NavigationStack {
+        Pila {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Picker("Apartado", selection: $apartado.animation()) {

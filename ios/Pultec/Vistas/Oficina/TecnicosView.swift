@@ -16,7 +16,7 @@ struct TecnicosView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        Pila {
             List {
                 Section {} header: {
                     Picker("Estado", selection: $filtro) {
@@ -220,8 +220,8 @@ struct TecnicoForm: View {
                 TextField("Teléfono", text: $w.telefono).keyboardType(.phonePad)
                 TextField("Email", text: $w.email).keyboardType(.emailAddress).textInputAutocapitalization(.never)
                 HStack(spacing: 10) {
-                    ForEach(Tecnico.colores, id: \.self) { c in
-                        Circle().fill(Color(argb: c)).frame(width: 28, height: 28)
+                    ForEach(Tecnico.colores.indices, id: \.self) { c in
+                        Circle().fill(Color(hex: Tecnico.colores[c])).frame(width: 28, height: 28)
                             .overlay { if w.color == c { Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.white) } }
                             .onTapGesture { w.color = c }
                     }

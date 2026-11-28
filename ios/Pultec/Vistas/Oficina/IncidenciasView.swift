@@ -20,7 +20,7 @@ struct IncidenciasView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        Pila {
             List {
                 Section {} header: {
                     VStack(spacing: 10) {

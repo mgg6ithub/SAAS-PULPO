@@ -3,7 +3,7 @@ import Observation
 
 enum Pestana: String, Hashable {
     // Oficina
-    case inicio, planificacion, activos, ordenes, incidencias, tecnicos, estadisticas, ajustes
+    case inicio, planificacion, activos, ordenes, incidencias, tecnicos, estadisticas, ajustes, mas
     // Técnico
     case misOrdenes, misIncidencias, historico
 }
@@ -21,6 +21,8 @@ final class AppEstado {
     var abrirIncidencia: String?
     /// Filtro que Inicio pasa a Órdenes («Para hoy», «Sin asignar», «Vencidos», Histórico).
     var filtroOrdenes: FiltroRapido?
+    /// Destino dentro de «Más» (iPhone).
+    var masDestino: Pestana?
 
     init() {
         tema = Tema(rawValue: UserDefaults.standard.string(forKey: "tema") ?? "") ?? .sistema

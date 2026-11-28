@@ -161,7 +161,7 @@ struct HistoricoTecnicoView: View {
         NavigationStack {
             List {
                 ForEach(dias, id: \.key) { dia, l in
-                    Section(Fechas.larga(dia).capitalized) {
+                    Section(Fechas.frase(Fechas.larga(dia))) {
                         ForEach(l) { inf in
                             Button { abierto = inf } label: { fila(inf) }.buttonStyle(.plain)
                         }

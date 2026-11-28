@@ -56,7 +56,7 @@ struct OTTecnicoView: View {
             Section("Información") {
                 LabeledContent("Activo", value: almacen.activo(ot.activoId)?.nombreCompleto ?? "—")
                 if let f = ot.proximo {
-                    LabeledContent("Cuándo", value: [Fechas.relativo(f).capitalized, ot.franja].compactMap { $0 }.joined(separator: ", "))
+                    LabeledContent("Cuándo", value: [Fechas.frase(Fechas.relativo(f)), ot.franja].compactMap { $0 }.joined(separator: ", "))
                 }
                 if !ot.descripcion.isEmpty { LabeledContent("Descripción") { Text(ot.descripcion).multilineTextAlignment(.trailing) } }
                 if !ot.procedimiento.isEmpty { LabeledContent("Procedimiento") { Text(ot.procedimiento).multilineTextAlignment(.trailing) } }

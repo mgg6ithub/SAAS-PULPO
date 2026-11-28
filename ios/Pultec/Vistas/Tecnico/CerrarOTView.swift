@@ -29,9 +29,12 @@ struct CerrarOTView: View {
             Form {
                 Section {} header: {
                     Picker("Resultado", selection: $resultado) {
-                        ForEach(Resultado.allCases) { Text($0.etiqueta).tag($0) }
+                        Text("Correcto").tag(Resultado.correcto)
+                        Text("Incidencias").tag(Resultado.conIncidencias)
+                        Text("No se hizo").tag(Resultado.noSePudo)
                     }
                     .pickerStyle(.segmented)
+                    .accessibilityLabel(Text("Resultado: todo correcto, con incidencias o no se pudo hacer"))
                     .onChange(of: resultado) { _, r in if r == .conIncidencias { incidencia = true } }
                 }
                 Section {
@@ -41,7 +44,7 @@ struct CerrarOTView: View {
                     TextField("Ej.: 1 correa, 2 l de aceite", text: $material, axis: .vertical).lineLimit(1...4)
                     if let raiz {
                         LabeledContent("Contador (h)") {
-                            TextField("\(Int(raiz.horas))", value: $contador, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                            TextField("\(Int(raiz.horasHoy))", value: $contador, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                         }
                     }
                 } header: { Text("Repuestos y contador") } footer: {
@@ -72,7 +75,7 @@ struct CerrarOTView: View {
             .hojaFormulario(ot.nombre, puedeGuardar: !enviando, guardar: enviar)
             .onAppear {
                 notas = apuntes
-                contador = raiz?.horas
+                contador = raiz.map { ($0.horasHoy).rounded() }
             }
             .sheet(isPresented: $incidencia) {
                 CrearIncidenciaView(incidencia: .nueva(activo: ot.activoId ?? "", tecnico: almacen.tecnicoActivo, origen: ot.id))

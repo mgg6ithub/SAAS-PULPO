@@ -29,6 +29,7 @@ final class Almacen {
 
     /// Mensaje breve abajo («Incidencia enviada», «Cambios guardados»…).
     var toast: String?
+    var toastError = false
     var leidos: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "pultec.leidos") ?? [])
 
     private let nube = Nube.compartida
@@ -37,6 +38,13 @@ final class Almacen {
     // MARK: Sesión
 
     func arrancar() async {
+        #if DEBUG
+        // Pruebas en el simulador: PULTEC_ENTRAR="correo:contraseña" entra solo con una cuenta de prueba local.
+        if let e = ProcessInfo.processInfo.environment["PULTEC_ENTRAR"], let dos = e.firstIndex(of: ":") {
+            await nube.salir()
+            try? await nube.entrar(correo: String(e[..<dos]), contrasena: String(e[e.index(after: dos)...]))
+        }
+        #endif
         if await nube.sesion != nil {
             await abrirEmpresa()
         } else {
@@ -84,6 +92,12 @@ final class Almacen {
             empresaNombre = (m["empresas"] as? [String: Any])?["nombre"] as? String ?? "Pultec"
             try await cargar()
             fase = .dentro
+            #if DEBUG
+            // Pruebas: PULTEC_COMO="Ana" abre la vista de técnico de esa persona.
+            if let n = ProcessInfo.processInfo.environment["PULTEC_COMO"] {
+                viendoComo = tecnicos.first { $0.nombre == n }?.id
+            }
+            #endif
             empezarRefresco()
         } catch {
             fase = .error(error.localizedDescription)
@@ -116,7 +130,7 @@ final class Almacen {
     }
 
     func recargar() async {
-        do { try await cargar() } catch { avisar(error.localizedDescription) }
+        do { try await cargar() } catch { avisar(error.localizedDescription, error: true) }
     }
 
     /// Avisos «en vivo»: vuelve a leer cada 20 s mientras la app está abierta.
@@ -131,8 +145,8 @@ final class Almacen {
         }
     }
 
-    func avisar(_ texto: String) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { toast = texto }
+    func avisar(_ texto: String, error: Bool = false) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { toast = texto; toastError = error }
         Task {
             try? await Task.sleep(for: .seconds(3.5))
             if toast == texto { withAnimation { toast = nil } }
@@ -145,7 +159,7 @@ final class Almacen {
             try? await cargar()
             if let ok { avisar(ok) }
         } catch {
-            avisar(error.localizedDescription)
+            avisar(error.localizedDescription, error: true)
         }
     }
 
@@ -161,6 +175,11 @@ final class Almacen {
     var raices: [Activo] { activos.filter { $0.padreId == nil }.sorted { $0.nombreCompleto < $1.nombreCompleto } }
     func hijos(_ id: String) -> [Activo] { activos.filter { $0.padreId == id } }
     func planesDe(_ activoId: String) -> [PlanMantenimiento] { planes.filter { $0.activoId == activoId } }
+    /// Mantenimientos del activo y de sus componentes (Vista general del activo, como la web).
+    func planesConComponentes(_ activoId: String) -> [PlanMantenimiento] {
+        let ids = Set(arbol(activoId))
+        return planes.filter { ids.contains($0.activoId) }
+    }
 
     /// El activo y todos sus componentes, a cualquier profundidad.
     func arbol(_ id: String) -> [String] {
@@ -186,7 +205,7 @@ final class Almacen {
         ordenes.filter { $0.estado.abierta && $0.activa }.sorted(by: Almacen.porFecha)
     }
     var historico: [OrdenTrabajo] {
-        ordenes.filter { $0.estado == .completada || $0.estado == .interrumpida }
+        ordenes.filter { $0.estado == .completada }
             .sorted { ($0.completadaEl ?? $0.ultimo ?? .distantPast) > ($1.completadaEl ?? $1.ultimo ?? .distantPast) }
     }
     var canceladas: [OrdenTrabajo] { ordenes.filter { $0.estado == .cancelada } }
@@ -394,7 +413,7 @@ final class Almacen {
             avisar(String(localized: "Orden de trabajo creada"))
             return orden(t.id)
         } catch {
-            avisar(error.localizedDescription)
+            avisar(error.localizedDescription, error: true)
             return nil
         }
     }
@@ -472,7 +491,7 @@ final class Almacen {
             guard let codigo = r.first?["codigo"] as? String else { return nil }
             return URL(string: "\(Configuracion.web)?invitacion=\(codigo)")
         } catch {
-            avisar(error.localizedDescription)
+            avisar(error.localizedDescription, error: true)
             return nil
         }
     }
@@ -533,7 +552,17 @@ final class Almacen {
     }
 
     func empezar(_ t: OrdenTrabajo) async {
-        await intentar("Orden empezada") { try await nube.rpc("tomar_ot", ["p_trabajo": t.id]) }
+        await intentar("Orden empezada") {
+            if viendoComo != nil {
+                // La oficina viendo la app como un técnico: `tomar_ot` es solo para cuentas de técnico;
+                // como la web, se empieza escribiendo la OT.
+                var cambios: [String: Any] = ["estado": EstadoOT.enCurso.rawValue]
+                if t.iniciadaEn == nil { cambios["iniciada_en"] = Fechas.iso(Date()) }
+                try await nube.actualizar("trabajos", id: t.id, cambios)
+            } else {
+                try await nube.rpc("tomar_ot", ["p_trabajo": t.id])
+            }
+        }
     }
 
     func pausar(_ t: OrdenTrabajo, _ pausar: Bool) async {
@@ -570,7 +599,7 @@ final class Almacen {
             avisar(String(localized: "Incidencia enviada"))
             return true
         } catch {
-            avisar(error.localizedDescription)
+            avisar(error.localizedDescription, error: true)
             return false
         }
     }
@@ -622,7 +651,7 @@ final class Almacen {
             avisar(String(localized: resultado == .noSePudo ? "Parte enviado" : "Orden cerrada y parte enviado"))
             return true
         } catch {
-            avisar(error.localizedDescription)
+            avisar(error.localizedDescription, error: true)
             return false
         }
     }

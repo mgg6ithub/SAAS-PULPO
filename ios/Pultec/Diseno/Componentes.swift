@@ -29,7 +29,6 @@ extension View {
     /// Hoja con el tema de la app (paleta, colores de texto y acento).
     func conTema(_ paleta: Paleta) -> some View {
         environment(\.paleta, paleta)
-            .foregroundStyle(paleta.texto, paleta.secundario, paleta.secundario.opacity(0.7))
             .tint(paleta.acento)
     }
 }
@@ -269,8 +268,8 @@ struct FilaOT: View {
                     Insignia(texto: ot.criticidad.corta, color: ot.criticidad.color)
                     if ot.estado == .enCurso {
                         Insignia(texto: ot.pausada ? "Pausada" : "En curso", color: .pAzul)
-                    } else if ot.vencida, let p = ot.proximo {
-                        Insignia(texto: "Vencida \(Fechas.relativo(p))", color: .pRojo, icono: "exclamationmark.triangle")
+                    } else if ot.vencida {
+                        Insignia(texto: "Vencida", color: .pRojo, icono: "exclamationmark.triangle")
                     }
                 }
             }
@@ -339,7 +338,7 @@ struct FilaActivo: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 3) {
-                Text("\(Int(activo.horas)) h").font(.app(.subheadline, .medium))
+                Text("\(Int(activo.horasHoy)) h").font(.app(.subheadline, .medium))
                 let c = almacen.hijos(activo.id).count
                 if c > 0 {
                     Label("\(c)", systemImage: "square.stack.3d.up").font(.app(.caption)).foregroundStyle(.secondary)
@@ -378,17 +377,19 @@ struct EstadoVacio: View {
 /// Aviso breve abajo («Incidencia enviada»).
 struct Toast: View {
     let texto: String
+    var error = false
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.pVerde)
+            Image(systemName: error ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                .foregroundStyle(error ? Color.pRojo : Color.pVerde)
             Text(texto).font(.app(.subheadline, .medium)).foregroundStyle(.white)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.black.opacity(0.85), in: .capsule)
-        .padding(.bottom, 70)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .padding(.top, 8)
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
 
@@ -472,5 +473,22 @@ struct AvisoFalta: View {
             .font(.app(.footnote, .medium))
             .foregroundStyle(Color.pRojo)
             .textCase(nil)
+    }
+}
+
+// MARK: Pila de navegación
+
+extension EnvironmentValues {
+    /// La vista ya está dentro de una pila (p. ej. «Más» en iPhone): no abre otra.
+    @Entry var dentroDePila = false
+}
+
+/// NavigationStack salvo que ya haya una por encima.
+struct Pila<Contenido: View>: View {
+    @Environment(\.dentroDePila) private var dentro
+    @ViewBuilder let contenido: Contenido
+
+    var body: some View {
+        if dentro { contenido } else { NavigationStack { contenido } }
     }
 }

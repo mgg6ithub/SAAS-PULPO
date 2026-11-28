@@ -113,7 +113,7 @@ struct ActivoDetalleView: View {
 
     private func cabecera(_ a: Activo) -> some View {
         let ruta = almacen.ruta(a.id)
-        let planes = almacen.planesDe(a.id)
+        let planes = almacen.planesConComponentes(a.id)
         let proximo = planes.compactMap { p in almacen.otAbierta(de: p).map { (p, $0) } }.min { ($0.1.proximo ?? .distantFuture) < ($1.1.proximo ?? .distantFuture) }
         let abiertas = almacen.incidencias.filter { $0.estado == .abierta && almacen.arbol(a.id).contains($0.activoId) }.count
         return VStack(alignment: .leading, spacing: 12) {
@@ -133,7 +133,7 @@ struct ActivoDetalleView: View {
                     Text("Próximo \(Fechas.relativo(f)): \(p.nombre), \(Fechas.corta(f))").foregroundStyle(f < Fechas.hoy ? Color.pRojo : Color.secondary)
                 }
                 let raiz = almacen.raiz(a.id) ?? a
-                Text("Contador \(Int(raiz.horas)) h, +\(Int(raiz.usoHoras)) h al día")
+                Text("Contador \(Int(raiz.horasHoy)) h, +\(Int(raiz.usoHoras)) h al día")
                 Text("Órdenes pendientes \(almacen.ordenesDe(activo: a.id).filter(\.estado.abierta).count)")
             }
             .font(.app(.subheadline)).foregroundStyle(.secondary)
@@ -153,7 +153,7 @@ struct ActivoDetalleView: View {
 
     @ViewBuilder
     private func vistaGeneral(_ a: Activo) -> some View {
-        let planes = almacen.planesDe(a.id)
+        let planes = almacen.planesConComponentes(a.id)
         let hijos = almacen.hijos(a.id)
         Section {} header: {
             Picker("Parte", selection: $parte) {
@@ -221,13 +221,16 @@ struct FilaPlan: View {
             AnilloCiclo(valor: almacen.ciclo(plan)).padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
                 Text(plan.nombre).font(.app(.body, .semibold))
+                if let a = almacen.activo(plan.activoId), a.padreId != nil {
+                    Text(a.nombreCompleto).font(.app(.caption)).foregroundStyle(.secondary).lineLimit(1)
+                }
                 if !plan.descripcion.isEmpty { Text(plan.descripcion).font(.app(.caption)).foregroundStyle(.secondary).lineLimit(1) }
                 HStack(spacing: 6) {
                     Insignia(texto: plan.activa ? "Activo" : "Pausado", color: plan.activa ? .pVerde : .secondary,
                              icono: plan.activa ? "play.fill" : "pause.fill")
                     if let ot, let f = ot.proximo {
-                        Insignia(texto: ot.vencida ? "Vencida \(Fechas.corta(f))" : "Pendiente \(Fechas.corta(f))",
-                                 color: ot.vencida ? .pRojo : .pMorado)
+                        Insignia(texto: "\(Fechas.dm(f))", color: ot.vencida ? .pRojo : .pMorado,
+                                 icono: ot.vencida ? "exclamationmark.triangle" : "calendar")
                     }
                 }
             }

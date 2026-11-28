@@ -77,6 +77,11 @@ enum Fechas {
         }
     }
 
+    /// Primera letra en mayúscula («En 27 días»).
+    static func frase(_ s: String) -> String { s.prefix(1).uppercased() + s.dropFirst() }
+
+    /// «4 may».
+    static func dm(_ d: Date) -> String { d.formatted(.dateTime.day().month(.abbreviated)) }
     static func corta(_ d: Date) -> String { d.formatted(.dateTime.day().month(.twoDigits).year()) }
     static func larga(_ d: Date) -> String { d.formatted(.dateTime.weekday(.wide).day().month(.wide)) }
 }

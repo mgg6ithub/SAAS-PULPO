@@ -172,6 +172,12 @@ struct Activo: Identifiable, Hashable {
     var lecturaFecha: Date?
     var checklist: [String]
 
+    /// Horas de hoy: la lectura más el ritmo de uso desde entonces (como `horas_hoy` de la base).
+    var horasHoy: Double {
+        guard let f = lecturaFecha else { return horas }
+        return horas + usoHoras * Double(max(0, Fechas.dias(desde: f, hasta: Fechas.hoy)))
+    }
+
     /// «Bomba 1 - IMP-001», como en toda la web.
     var nombreCompleto: String { tag.isEmpty ? nombre : "\(nombre) - \(tag)" }
 
@@ -430,7 +436,7 @@ struct Tecnico: Identifiable, Hashable {
         telefono = x["telefono"] as? String ?? ""
         email = x["email"] as? String ?? ""
         info = x["info"] as? String ?? ""
-        color = (x["color"] as? NSNumber)?.intValue ?? 0xFF5B3BE6
+        color = (x["color"] as? NSNumber)?.intValue ?? 0
         estadoHoy = EstadoHoy(rawValue: (x["estado_hoy"] as? NSNumber)?.intValue ?? 0) ?? .disponible
         grupoIds = x["grupo_ids"] as? [String] ?? []
         activosElegidos = x["activos_elegidos"] as? [String] ?? []
@@ -439,18 +445,19 @@ struct Tecnico: Identifiable, Hashable {
 
     static func nuevo() -> Tecnico {
         var t = Tecnico([:])
-        t.color = Tecnico.colores.randomElement() ?? 0xFF5B3BE6
+        t.color = Int.random(in: 0..<Tecnico.colores.count)
         return t
     }
 
-    static let colores: [Int] = [0xFF5B3BE6, 0xFF0F9F8F, 0xFF2563EB, 0xFF16A34A, 0xFFD97706, 0xFFE5484D, 0xFFDB2777, 0xFF0891B2]
+    /// Paleta de la web (`paleta` en theme.dart): `trabajadores.color` es el índice.
+    static let colores: [UInt32] = [0x5B3BE6, 0x0F9F8F, 0x2563EB, 0x16A34A, 0xEA580C, 0xDB2777, 0x0891B2, 0xCA8A04]
 
     var nombreCompleto: String { [nombre, apellidos].filter { !$0.isEmpty }.joined(separator: " ") }
     var iniciales: String {
         let partes = [nombre, apellidos].compactMap { $0.first.map(String.init) }
         return partes.joined().uppercased()
     }
-    var colorSwift: Color { Color(argb: color) }
+    var colorSwift: Color { Color(hex: Tecnico.colores[((color % Tecnico.colores.count) + Tecnico.colores.count) % Tecnico.colores.count]) }
 
     var fila: [String: Any] {
         [

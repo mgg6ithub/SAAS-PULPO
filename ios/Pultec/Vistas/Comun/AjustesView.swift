@@ -9,7 +9,7 @@ struct AjustesView: View {
 
     var body: some View {
         @Bindable var estado = estado
-        NavigationStack {
+        Pila {
             List {
                 Section {
                     HStack(spacing: 12) {

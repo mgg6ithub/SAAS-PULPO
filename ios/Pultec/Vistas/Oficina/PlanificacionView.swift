@@ -82,7 +82,7 @@ struct PlanificacionView: View {
         case 1:
             let i = inicioSemana(dia)
             return String(localized: "Semana del \(i.formatted(.dateTime.day()))–\(Fechas.mas(i, dias: 6).formatted(.dateTime.day().month()))")
-        default: return Fechas.larga(dia).capitalized
+        default: return Fechas.frase(Fechas.larga(dia))
         }
     }
 
@@ -155,7 +155,7 @@ struct PlanificacionView: View {
         Section {
             ForEach(lista) { o in fila(o) }
         } header: {
-            Text(Fechas.larga(d).capitalized)
+            Text(Fechas.frase(Fechas.larga(d)))
         } footer: {
             if lista.isEmpty { Text("Sin órdenes este día.") }
         }
@@ -174,7 +174,7 @@ struct PlanificacionView: View {
                 if lista.isEmpty { Text("Sin órdenes").font(.app(.subheadline)).foregroundStyle(.tertiary) }
             } header: {
                 HStack {
-                    Text(Fechas.larga(d).capitalized)
+                    Text(Fechas.frase(Fechas.larga(d)))
                     if cal.isDateInToday(d) { Insignia(texto: "Hoy", color: .pMorado) }
                 }
             }
