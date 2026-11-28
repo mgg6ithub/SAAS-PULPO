@@ -61,8 +61,8 @@ private struct ErrorEntrada: View {
     }
 }
 
-/// Oficina. Barra principal: Inicio · Planificación · Estadísticas · Activos · Ajustes.
-/// «Activos» transforma la barra en la de activos: ‹ · Activos · Órdenes · Incidencias (en rojo) · Técnicos;
+/// Oficina. Barra principal: Inicio · Planificación · Estadísticas · Ajustes · Más (›).
+/// «Más» transforma la barra en la de activos: ‹ · Activos · Órdenes · Incidencias (en rojo) · Técnicos;
 /// la flecha vuelve a la principal (a la pestaña en la que estaba).
 struct OficinaRaiz: View {
     @Environment(AppEstado.self) private var estado
@@ -92,9 +92,9 @@ struct OficinaRaiz: View {
                 Tab("Planificación", systemImage: "calendar", value: Pestana.planificacion) { PlanificacionView() }
                     .badge(almacen.pendientes.filter(\.vencida).count)
                 Tab("Estadísticas", systemImage: "chart.xyaxis.line", value: Pestana.estadisticas) { EstadisticasView() }
-                Tab(value: Pestana.entrarActivos) { Color.clear } label: { Label("Activos", image: "IconoActivos") }
-                    .badge(almacen.incidenciasAbiertas.count)
                 Tab("Ajustes", systemImage: "gearshape", value: Pestana.ajustes) { AjustesView() }
+                Tab("Más", systemImage: "chevron.forward", value: Pestana.entrarActivos) { Color.clear }
+                    .badge(almacen.incidenciasAbiertas.count)
             }
         }
         .tabViewStyle(.sidebarAdaptable)
