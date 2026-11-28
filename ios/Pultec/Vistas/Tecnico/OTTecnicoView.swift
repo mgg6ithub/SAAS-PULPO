@@ -38,6 +38,7 @@ struct OTTecnicoView: View {
                         Text("«\(espera.descripcion)»").font(.app(.subheadline)).italic().foregroundStyle(.secondary)
                     }
                     .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.pAmbar.opacity(0.1), in: .rect(cornerRadius: 14, style: .continuous))
                     .textCase(nil)
                 }
