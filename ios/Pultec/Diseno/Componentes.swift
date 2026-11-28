@@ -35,6 +35,7 @@ extension View {
 
 struct TituloPantalla: ViewModifier {
     @Environment(\.paleta) private var paleta
+    @Environment(AppEstado.self) private var estado
     let titulo: Text
     let icono: String
 
@@ -44,12 +45,19 @@ struct TituloPantalla: ViewModifier {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 6) {
-                        Simbolo(nombre: icono).font(.system(size: 14, weight: .semibold))
-                        titulo.font(.system(size: 15, weight: .semibold))
+                    if icono == "logo" {
+                        // Inicio: el pulpo de Pultec, sin texto. Es donde acaba encajado el de la entrada.
+                        LogoPulpo(ancho: 34)
+                            .opacity(estado.introActiva ? 0 : 1)
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { estado.marcoLogo = $0 }
+                    } else {
+                        HStack(spacing: 6) {
+                            Simbolo(nombre: icono).font(.system(size: 14, weight: .semibold))
+                            titulo.font(.system(size: 15, weight: .semibold))
+                        }
+                        .foregroundStyle(paleta.texto)
+                        .fixedSize()
                     }
-                    .foregroundStyle(paleta.texto)
-                    .fixedSize()
                 }
                 .sharedBackgroundVisibility(.hidden)
             }
@@ -207,40 +215,125 @@ struct Insignia: View {
     }
 }
 
-/// Anillo de ciclo del mantenimiento: lleno = recién hecho; ámbar < 20 %; rojo < 10 %.
-struct AnilloCiclo: View {
+/// Anillo de progreso moderno (ciclo del mantenimiento, estado de la OT): pista suave, arco en degradado angular
+/// con punta redondeada y brillo, relleno tenue dentro y, si hace falta, un símbolo pequeño en el centro.
+/// Lleno = recién hecho; ámbar < 20 %; rojo < 10 %.
+struct AnilloProgreso: View {
     let valor: Double
-    var tamano: CGFloat = 18
+    var color: Color? = nil
+    var simbolo: String? = nil
+    var tamano: CGFloat = 26
+    var girando = false
+    @State private var mostrado = 0.0
+    @State private var giro = 0.0
 
-    private var color: Color { valor < 0.1 ? .pRojo : valor < 0.2 ? .pAmbar : .pVerde }
+    private var tinta: Color { color ?? (valor < 0.1 ? .pRojo : valor < 0.2 ? .pAmbar : .pVerde) }
 
     var body: some View {
+        let grosor = tamano * 0.15
         ZStack {
-            Circle().stroke(color.opacity(0.2), lineWidth: 3)
-            Circle().trim(from: 0, to: max(0.02, valor))
-                .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .rotationEffect(.degrees(-90))
+            Circle().fill(tinta.opacity(0.08))
+            Circle().stroke(tinta.opacity(0.16), lineWidth: grosor)
+            Circle()
+                .trim(from: 0, to: max(0.001, mostrado))
+                .stroke(AngularGradient(colors: [tinta.opacity(0.45), tinta], center: .center,
+                                        startAngle: .degrees(0), endAngle: .degrees(360 * max(0.001, mostrado))),
+                        style: StrokeStyle(lineWidth: grosor, lineCap: .round))
+                .rotationEffect(.degrees(-90 + giro))
+                .shadow(color: tinta.opacity(0.35), radius: 2.5)
+            if let simbolo {
+                Image(systemName: simbolo)
+                    .font(.system(size: tamano * 0.36, weight: .bold))
+                    .foregroundStyle(tinta)
+                    .contentTransition(.symbolEffect(.replace))
+            }
         }
+        .padding(grosor / 2)
         .frame(width: tamano, height: tamano)
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) { mostrado = valor }
+            if girando { withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) { giro = 360 } }
+        }
+        .onChange(of: valor) { _, v in withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) { mostrado = v } }
         .accessibilityHidden(true)
     }
 }
 
-/// Círculo de estado de la OT: vacío pendiente, azul en curso, verde hecha.
+/// El anillo de ciclo de los mantenimientos.
+struct AnilloCiclo: View {
+    let valor: Double
+    var tamano: CGFloat = 26
+    var body: some View { AnilloProgreso(valor: valor, tamano: tamano) }
+}
+
+/// Estado de la OT en anillo: pendiente = cuánto queda de su ciclo; vencida = rojo con «!»; en curso = azul girando
+/// (pausa si está pausada); hecha = verde lleno con ✓; cancelada o interrumpida = rojo con ✕.
 struct CirculoEstado: View {
+    @Environment(Almacen.self) private var almacen
     let ot: OrdenTrabajo
+    var tamano: CGFloat = 26
 
     var body: some View {
         switch ot.estado {
         case .completada:
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.pVerde)
+            AnilloProgreso(valor: 1, color: .pVerde, simbolo: "checkmark", tamano: tamano)
         case .cancelada, .interrumpida:
-            Image(systemName: "xmark.circle").foregroundStyle(Color.pRojo)
+            AnilloProgreso(valor: 1, color: .pRojo, simbolo: "xmark", tamano: tamano)
         case .enCurso:
-            Image(systemName: ot.pausada ? "pause.circle.fill" : "circle.dotted.circle").foregroundStyle(Color.pAzul)
+            AnilloProgreso(valor: ot.pausada ? 1 : 0.7, color: .pAzul, simbolo: ot.pausada ? "pause.fill" : nil, tamano: tamano,
+                           girando: !ot.pausada)
         case .pendiente:
-            Image(systemName: "circle").foregroundStyle(ot.vencida ? Color.pRojo : Color.secondary)
+            if ot.vencida {
+                AnilloProgreso(valor: 0.06, color: .pRojo, simbolo: "exclamationmark", tamano: tamano)
+            } else {
+                AnilloProgreso(valor: ciclo, tamano: tamano)
+            }
         }
+    }
+
+    /// Cuánto queda hasta la fecha, sobre la periodicidad de su mantenimiento (o 30 días si es suelta).
+    private var ciclo: Double {
+        guard let f = ot.proximo else { return 1 }
+        let plan = almacen.plan(ot.planId)
+        let total = Double(plan?.cadaDias ?? max(1, (plan?.cadaHoras ?? 360) / 12))
+        return min(1, max(0, Double(Fechas.dias(desde: Fechas.hoy, hasta: f)) / max(total, 1)))
+    }
+}
+
+/// Técnico de la OT con chevrons: menú para asignar otro, el más adecuado o quitarlo (como en la web).
+struct MenuTecnicoOT: View {
+    @Environment(Almacen.self) private var almacen
+    let ot: OrdenTrabajo
+    var tamano: CGFloat = 24
+
+    var body: some View {
+        Menu {
+            Button {
+                if let w = almacen.masAdecuado(grupo: ot.grupoId) { Task { await almacen.asignar(ot, a: [w.id]) } }
+            } label: { Label("El más adecuado", systemImage: "sparkles") }
+            Divider()
+            ForEach(almacen.tecnicos.filter(\.activo)) { w in
+                Button { Task { await almacen.asignar(ot, a: [w.id]) } } label: {
+                    Label(w.nombreCompleto, systemImage: ot.tecnicoIds.contains(w.id) ? "checkmark" : "person")
+                }
+            }
+            if !ot.tecnicoIds.isEmpty {
+                Divider()
+                Button(role: .destructive) { Task { await almacen.asignar(ot, a: []) } } label: {
+                    Label("Quitar técnico", systemImage: "person.crop.circle.badge.xmark")
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Avatar(tecnico: almacen.tecnico(ot.tecnicoIds.first), tamano: tamano)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(Text("Técnico: \(almacen.tecnico(ot.tecnicoIds.first)?.nombreCompleto ?? String(localized: "sin asignar"))"))
     }
 }
 
@@ -317,7 +410,7 @@ struct FilaOT: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            CirculoEstado(ot: ot).font(.system(size: 18)).padding(.top, 1)
+            CirculoEstado(ot: ot).padding(.top, 1)
             VStack(alignment: .leading, spacing: 4) {
                 Text(ot.nombre).font(.app(.body, .semibold)).lineLimit(1)
                 if let a = almacen.activo(ot.activoId) {
@@ -338,7 +431,10 @@ struct FilaOT: View {
                     Text(Fechas.corta(p)).font(.app(.caption)).foregroundStyle(.secondary)
                 }
                 if let f = ot.franja { Text(f).font(.app(.caption2)).foregroundStyle(.tertiary) }
-                if mostrarTecnico { Avatar(tecnico: almacen.tecnico(ot.tecnicoIds.first), tamano: 24) }
+                if mostrarTecnico {
+                    if ot.estado.abierta && almacen.tecnicoActivo == nil { MenuTecnicoOT(ot: ot) }
+                    else { Avatar(tecnico: almacen.tecnico(ot.tecnicoIds.first), tamano: 24) }
+                }
             }
         }
         .padding(.vertical, 2)

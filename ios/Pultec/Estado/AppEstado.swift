@@ -26,6 +26,10 @@ final class AppEstado {
     var abrirIncidencia: String?
     /// Filtro que Inicio pasa a Órdenes («Para hoy», «Sin asignar», «Vencidos», Histórico).
     var filtroOrdenes: FiltroRapido?
+    /// Marco del logo de arriba a la izquierda (destino del vuelo del pulpo de la entrada).
+    var marcoLogo: CGRect?
+    /// Mientras sale la entrada, el logo se oculta (el pulpo vuela a su sitio).
+    var introActiva = true
     /// Barra de abajo de la oficina: la principal o la de activos.
     var barraActivos = false
     /// Pestaña de la barra principal a la que vuelve «←».

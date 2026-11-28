@@ -237,7 +237,7 @@ struct FilaPlan: View {
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 6) {
                 Text(plan.cadaCuanto).font(.app(.caption)).foregroundStyle(.secondary)
-                if let ot { Avatar(tecnico: almacen.tecnico(ot.tecnicoIds.first), tamano: 24) }
+                if let ot { MenuTecnicoOT(ot: ot) }
             }
         }
         .contentShape(.rect)

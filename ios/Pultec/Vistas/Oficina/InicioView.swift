@@ -28,7 +28,7 @@ struct InicioView: View {
             }
             .refreshable { await almacen.recargar() }
             .fondoTema()
-            .tituloPantalla("Inicio", icono: "house")
+            .tituloPantalla("Inicio", icono: "logo")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { BotonAvisos() } }
             .sheet(item: $incidencia) { IncidenciaView(incidencia: $0) }
             .sheet(item: $ot) { o in NavigationStack { OTDetalleView(otId: o.id) } }
@@ -50,10 +50,11 @@ struct InicioView: View {
                                  texto: n == 0 ? "Sin incidencias" : (n == 1 ? "incidencia" : "incidencias"),
                                  color: n == 0 ? .secondary : .pRojo)
                 }
-                .padding(.vertical, 14)
+                .padding(.vertical, 6)
                 .padding(.horizontal, 16)
             }
             .padding(.horizontal, -16)
+            .padding(.bottom, -10)
             .scrollClipDisabled()
         }
     }
@@ -123,7 +124,7 @@ struct InicioView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(lista.prefix(5)) { o in
-                            Button { ot = o } label: { FilaOT(ot: o).padding(12) }.buttonStyle(.plain)
+                            FilaOT(ot: o).padding(12).contentShape(.rect).onTapGesture { ot = o }
                             if o.id != lista.prefix(5).last?.id { Divider().padding(.leading, 42) }
                         }
                         if lista.count > 5 {

@@ -5,6 +5,8 @@ import SwiftUI
 /// se desvanece. Un toque la salta; con «Reducir movimiento» no sale. Misma geometría (SVG de la landing,
 /// viewBox 126 136 772 758) y mismos tiempos (2,81 s).
 struct IntroPulpo: View {
+    /// Dónde está el logo de arriba a la izquierda (destino del vuelo), en coordenadas de pantalla.
+    let destino: CGRect?
     let alTerminar: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reducir
     @Environment(\.colorScheme) private var esquema
@@ -18,8 +20,8 @@ struct IntroPulpo: View {
             TimelineView(.animation) { tl in
                 let t = tl.date.timeIntervalSince(inicio) * 1000
                 Canvas { ctx, size in
-                    PintorPulpo.pintar(&ctx, size: size, t: t, arriba: g.safeAreaInsets.top,
-                                       fondo: esquema == .dark ? Color(hex: 0x1C1B24) : .white)
+                    PintorPulpo.pintar(&ctx, size: size, t: t, destino: destino ?? CGRect(x: 16, y: g.safeAreaInsets.top + 6, width: 34, height: 33),
+                                       fondo: esquema == .dark ? .black : .white)
                 }
                 .onChange(of: t >= Self.total * 1000) { _, fin in if fin { terminar() } }
             }
@@ -42,7 +44,20 @@ struct IntroPulpo: View {
 }
 
 /// Dibujo del pulpo en cada fotograma.
-private enum PintorPulpo {
+/// El pulpo quieto (forma final de la entrada), sin fondo: el logo de arriba a la izquierda.
+struct LogoPulpo: View {
+    var ancho: CGFloat = 34
+
+    var body: some View {
+        Canvas { ctx, size in
+            PintorPulpo.pintar(&ctx, size: size, t: 5000, destino: nil, fondo: nil, ancho: size.width)
+        }
+        .frame(width: ancho, height: ancho * PintorPulpo.caja.height / PintorPulpo.caja.width)
+        .accessibilityLabel(Text("Pultec"))
+    }
+}
+
+enum PintorPulpo {
     static let caja = CGRect(x: 126, y: 136, width: 772, height: 758)
 
     static let cabeza: Path = {
@@ -100,22 +115,24 @@ private enum PintorPulpo {
         return Array(kf.last!.dropFirst())
     }
 
-    static func pintar(_ ctx: inout GraphicsContext, size: CGSize, t: Double, arriba: CGFloat, fondo: Color) {
+    /// `destino` nil = sin vuelo (logo quieto); `fondo` nil = sin fondo; `ancho` = ancho del pulpo.
+    static func pintar(_ ctx: inout GraphicsContext, size: CGSize, t: Double, destino: CGRect?, fondo: Color?, ancho anchoFijo: CGFloat? = nil) {
         // Fondo: se desvanece durante el vuelo.
-        let alfa = 1 - salida.y(tramo(t, 2300, 500))
-        ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(fondo.opacity(alfa)))
+        if let fondo {
+            let alfa = 1 - salida.y(tramo(t, 2300, 500))
+            ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(fondo.opacity(alfa)))
+        }
 
-        let ancho = min(260, size.width * 0.52)
+        let ancho = anchoFijo ?? min(260, size.width * 0.52)
         let k = ancho / caja.width
         let alto = caja.height * k
         let centro = CGPoint(x: size.width / 2, y: size.height / 2)
 
-        // 4. Vuelo arriba a la izquierda (donde va el título de cada pantalla).
+        // 4. Vuelo al logo de arriba a la izquierda: acaba encajado en él (mismo tamaño y sitio).
         var tx = 0.0, ty = 0.0, s = 1.0
-        if t >= 2050 {
-            let d = CGRect(x: 16, y: arriba + 6, width: 34, height: 34)
+        if t >= 2050, let d = destino {
             let dx = d.midX - centro.x, dy = d.midY - centro.y
-            let v = fotogramas([[0, 0, 0, 1], [0.2, dx * 0.15, dy * 0.05 - 20, 1.05], [1, dx, dy, d.width * 0.92 / ancho]],
+            let v = fotogramas([[0, 0, 0, 1], [0.2, dx * 0.15, dy * 0.05 - 20, 1.05], [1, dx, dy, d.width / ancho]],
                                viaje.y(tramo(t, 2050, 750)))
             tx = v[0]; ty = v[1]; s = v[2]
         }
