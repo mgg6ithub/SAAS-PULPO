@@ -61,12 +61,19 @@ private struct ErrorEntrada: View {
     }
 }
 
-/// Oficina. Barra principal: Inicio · Planificación · Órdenes · Activos · Ajustes.
-/// «Activos» cambia la barra a la de activos: ← · Activos · Incidencias · Técnicos · Estadísticas;
+/// Oficina. Barra principal: Inicio · Planificación · Estadísticas · Activos · Ajustes.
+/// «Activos» transforma la barra en la de activos: ‹ · Activos · Órdenes · Incidencias (en rojo) · Técnicos;
 /// la flecha vuelve a la principal (a la pestaña en la que estaba).
 struct OficinaRaiz: View {
     @Environment(AppEstado.self) private var estado
     @Environment(Almacen.self) private var almacen
+
+    /// Icono de Incidencias en rojo también en la barra (el sistema pinta los demás con el acento).
+    private static let iconoIncidencias: UIImage = {
+        let conf = UIImage.SymbolConfiguration(weight: .regular)
+        return (UIImage(systemName: "exclamationmark.circle.fill", withConfiguration: conf) ?? UIImage())
+            .withTintColor(UIColor(red: 0.898, green: 0.282, blue: 0.302, alpha: 1), renderingMode: .alwaysOriginal)
+    }()
 
     var body: some View {
         @Bindable var estado = estado
@@ -74,15 +81,17 @@ struct OficinaRaiz: View {
             if estado.barraActivos {
                 Tab("Atrás", systemImage: "chevron.backward", value: Pestana.volver) { Color.clear }
                 Tab(value: Pestana.activos) { ActivosView() } label: { Label("Activos", image: "IconoActivos") }
-                Tab("Incidencias", systemImage: "exclamationmark.circle", value: Pestana.incidencias) { IncidenciasView() }
-                    .badge(almacen.incidenciasAbiertas.count)
+                Tab("Órdenes", systemImage: "list.clipboard", value: Pestana.ordenes) { OrdenesView() }
+                Tab(value: Pestana.incidencias) { IncidenciasView() } label: {
+                    Label { Text("Incidencias") } icon: { Image(uiImage: Self.iconoIncidencias) }
+                }
+                .badge(almacen.incidenciasAbiertas.count)
                 Tab("Técnicos", systemImage: "person.2", value: Pestana.tecnicos) { TecnicosView() }
-                Tab("Estadísticas", systemImage: "chart.xyaxis.line", value: Pestana.estadisticas) { EstadisticasView() }
             } else {
                 Tab("Inicio", systemImage: "house", value: Pestana.inicio) { InicioView() }
                 Tab("Planificación", systemImage: "calendar", value: Pestana.planificacion) { PlanificacionView() }
                     .badge(almacen.pendientes.filter(\.vencida).count)
-                Tab("Órdenes", systemImage: "list.clipboard", value: Pestana.ordenes) { OrdenesView() }
+                Tab("Estadísticas", systemImage: "chart.xyaxis.line", value: Pestana.estadisticas) { EstadisticasView() }
                 Tab(value: Pestana.entrarActivos) { Color.clear } label: { Label("Activos", image: "IconoActivos") }
                     .badge(almacen.incidenciasAbiertas.count)
                 Tab("Ajustes", systemImage: "gearshape", value: Pestana.ajustes) { AjustesView() }
@@ -95,15 +104,15 @@ struct OficinaRaiz: View {
             switch ahora {
             case .entrarActivos:
                 if !Pestana.deActivos.contains(antes) { estado.antesDeActivos = antes }
-                withAnimation(.snappy) { estado.barraActivos = true; estado.pestana = .activos }
+                withAnimation(.smooth(duration: 0.35)) { estado.barraActivos = true; estado.pestana = .activos }
             case .volver:
-                withAnimation(.snappy) { estado.barraActivos = false; estado.pestana = estado.antesDeActivos }
+                withAnimation(.smooth(duration: 0.35)) { estado.barraActivos = false; estado.pestana = estado.antesDeActivos }
             default:
                 // Un aviso o una tarjeta pide una pestaña de la otra barra: se cambia de barra.
                 let deActivos = Pestana.deActivos.contains(ahora)
                 if deActivos != estado.barraActivos {
                     if deActivos { estado.antesDeActivos = antes }
-                    withAnimation(.snappy) { estado.barraActivos = deActivos }
+                    withAnimation(.smooth(duration: 0.35)) { estado.barraActivos = deActivos }
                 }
             }
         }

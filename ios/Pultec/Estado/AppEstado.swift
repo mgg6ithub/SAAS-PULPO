@@ -10,7 +10,7 @@ enum Pestana: String, Hashable {
     case misOrdenes, misIncidencias, historico
 
     /// Pestañas de la barra de activos.
-    static let deActivos: Set<Pestana> = [.activos, .incidencias, .tecnicos, .estadisticas]
+    static let deActivos: Set<Pestana> = [.activos, .ordenes, .incidencias, .tecnicos]
 }
 
 /// Estado de la interfaz: tema, pestaña y destinos pedidos desde avisos.
