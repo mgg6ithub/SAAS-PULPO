@@ -61,7 +61,7 @@ struct MisOrdenesView: View {
                         Text("Hola, \(almacen.tecnico(yo)?.nombre ?? "")").font(.system(size: 30, weight: .bold)).foregroundStyle(Color.primary)
                         Spacer()
                         Button { withAnimation { eligiendo = true } } label: {
-                            Label("\(almacen.tecnico(yo)?.activosElegidos.count ?? 0) activos", systemImage: "gearshape.2")
+                            Label("\(almacen.tecnico(yo)?.activosElegidos.count ?? 0) activos", image: "IconoActivos")
                         }
                         .buttonStyle(.glass).controlSize(.small)
                     }

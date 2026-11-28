@@ -169,7 +169,7 @@ struct ExportarView: View {
     var body: some View {
         List {
             Section {
-                ShareLink(item: Documentos.csvActivos(almacen)) { Label("Activos", systemImage: "gearshape.2") }
+                ShareLink(item: Documentos.csvActivos(almacen)) { Label("Activos", image: "IconoActivos") }
                 ShareLink(item: Documentos.csvOrdenes(almacen)) { Label("Órdenes de trabajo", systemImage: "list.clipboard") }
                 ShareLink(item: Documentos.csvTecnicos(almacen)) { Label("Técnicos", systemImage: "person.2") }
                 ShareLink(item: Documentos.csvIncidencias(almacen)) { Label("Incidencias", systemImage: "exclamationmark.circle") }

@@ -3,9 +3,14 @@ import Observation
 
 enum Pestana: String, Hashable {
     // Oficina
-    case inicio, planificacion, activos, ordenes, incidencias, tecnicos, estadisticas, ajustes, mas
+    case inicio, planificacion, activos, ordenes, incidencias, tecnicos, estadisticas, ajustes
+    /// Botones que solo cambian de barra: «Activos» (entra en la barra de activos) y «←» (vuelve).
+    case entrarActivos, volver
     // Técnico
     case misOrdenes, misIncidencias, historico
+
+    /// Pestañas de la barra de activos.
+    static let deActivos: Set<Pestana> = [.activos, .incidencias, .tecnicos, .estadisticas]
 }
 
 /// Estado de la interfaz: tema, pestaña y destinos pedidos desde avisos.
@@ -21,8 +26,10 @@ final class AppEstado {
     var abrirIncidencia: String?
     /// Filtro que Inicio pasa a Órdenes («Para hoy», «Sin asignar», «Vencidos», Histórico).
     var filtroOrdenes: FiltroRapido?
-    /// Destino dentro de «Más» (iPhone).
-    var masDestino: Pestana?
+    /// Barra de abajo de la oficina: la principal o la de activos.
+    var barraActivos = false
+    /// Pestaña de la barra principal a la que vuelve «←».
+    var antesDeActivos: Pestana = .inicio
 
     init() {
         tema = Tema(rawValue: UserDefaults.standard.string(forKey: "tema") ?? "") ?? .sistema

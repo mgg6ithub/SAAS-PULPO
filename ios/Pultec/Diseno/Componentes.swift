@@ -45,7 +45,7 @@ struct TituloPantalla: ViewModifier {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 6) {
-                        Image(systemName: icono).font(.system(size: 14, weight: .semibold))
+                        Simbolo(nombre: icono).font(.system(size: 14, weight: .semibold))
                         titulo.font(.system(size: 15, weight: .semibold))
                     }
                     .foregroundStyle(paleta.texto)
@@ -221,7 +221,7 @@ struct IconoActivo: View {
     var tamano: CGFloat = 34
 
     static let catalogo: [(String, LocalizedStringKey, String)] = [
-        ("brazo", "Brazo industrial", "gearshape.2"),
+        ("brazo", "Brazo industrial", "IconoActivos"),
         ("camion", "Camión", "truck.box"),
         ("fabrica", "Máquina industrial", "building.2"),
         ("motor", "Motor", "gearshape"),
@@ -236,11 +236,11 @@ struct IconoActivo: View {
     ]
 
     static func simbolo(_ clave: String) -> String {
-        catalogo.first { $0.0 == clave }?.2 ?? "gearshape.2"
+        catalogo.first { $0.0 == clave }?.2 ?? "IconoActivos"
     }
 
     var body: some View {
-        Image(systemName: Self.simbolo(clave))
+        Simbolo(nombre: Self.simbolo(clave))
             .font(.system(size: tamano * 0.45, weight: .medium))
             .foregroundStyle(.secondary)
             .frame(width: tamano, height: tamano)
@@ -359,7 +359,7 @@ struct EstadoVacio: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: icono)
+            Simbolo(nombre: icono)
                 .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(.secondary)
                 .frame(width: 56, height: 56)
@@ -490,5 +490,13 @@ struct Pila<Contenido: View>: View {
 
     var body: some View {
         if dentro { contenido } else { NavigationStack { contenido } }
+    }
+}
+
+/// Símbolo del sistema o imagen propia de Assets (p. ej. «IconoActivos», el brazo de la web).
+struct Simbolo: View {
+    let nombre: String
+    var body: some View {
+        if UIImage(named: nombre) != nil { Image(nombre).renderingMode(.template) } else { Image(systemName: nombre) }
     }
 }

@@ -27,14 +27,14 @@ struct ActivosView: View {
                 }
                 if almacen.activos.isEmpty {
                     Section {} header: {
-                        EstadoVacio(icono: "gearshape.2", titulo: "Aún no hay activos", mensaje: "Crea tu primera máquina con el botón +.").textCase(nil)
+                        EstadoVacio(icono: "IconoActivos", titulo: "Aún no hay activos", mensaje: "Crea tu primera máquina con el botón +.").textCase(nil)
                     }
                 }
             }
             .searchable(text: $buscar, prompt: "Buscar activo…")
             .refreshable { await almacen.recargar() }
             .fondoTema()
-            .tituloPantalla("Activos", icono: "gearshape.2")
+            .tituloPantalla("Activos", icono: "IconoActivos")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { nuevo = true } label: { Image(systemName: "plus") }
@@ -72,7 +72,7 @@ struct ActivoDetalleView: View {
         if let a = almacen.activo(activoId) {
             contenido(a)
         } else {
-            EstadoVacio(icono: "gearshape.2", titulo: "Este activo ya no existe").fondoTema()
+            EstadoVacio(icono: "IconoActivos", titulo: "Este activo ya no existe").fondoTema()
         }
     }
 

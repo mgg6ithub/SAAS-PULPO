@@ -61,82 +61,51 @@ private struct ErrorEntrada: View {
     }
 }
 
-/// Oficina: Inicio · Planificación · Activos · Órdenes · Incidencias · Técnicos · Estadísticas.
-/// En iPhone la barra enseña las cinco primeras y el resto va en «Más» (lo gestiona el sistema).
+/// Oficina. Barra principal: Inicio · Planificación · Órdenes · Activos · Ajustes.
+/// «Activos» cambia la barra a la de activos: ← · Activos · Incidencias · Técnicos · Estadísticas;
+/// la flecha vuelve a la principal (a la pestaña en la que estaba).
 struct OficinaRaiz: View {
     @Environment(AppEstado.self) private var estado
     @Environment(Almacen.self) private var almacen
-    @Environment(\.horizontalSizeClass) private var ancho
 
     var body: some View {
         @Bindable var estado = estado
         TabView(selection: $estado.pestana) {
-            Tab("Inicio", systemImage: "house", value: Pestana.inicio) { InicioView() }
-            Tab("Planificación", systemImage: "calendar", value: Pestana.planificacion) { PlanificacionView() }
-                .badge(almacen.pendientes.filter(\.vencida).count)
-            Tab("Activos", systemImage: "gearshape.2", value: Pestana.activos) { ActivosView() }
-            Tab("Órdenes", systemImage: "list.clipboard", value: Pestana.ordenes) { OrdenesView() }
-            if ancho == .compact {
-                // iPhone: el resto en «Más», con su propia pila (la del sistema duplica la barra).
-                Tab("Más", systemImage: "ellipsis", value: Pestana.mas) { MasView() }
-                    .badge(almacen.incidenciasAbiertas.count)
-            } else {
+            if estado.barraActivos {
+                Tab("Atrás", systemImage: "chevron.backward", value: Pestana.volver) { Color.clear }
+                Tab(value: Pestana.activos) { ActivosView() } label: { Label("Activos", image: "IconoActivos") }
                 Tab("Incidencias", systemImage: "exclamationmark.circle", value: Pestana.incidencias) { IncidenciasView() }
                     .badge(almacen.incidenciasAbiertas.count)
                 Tab("Técnicos", systemImage: "person.2", value: Pestana.tecnicos) { TecnicosView() }
                 Tab("Estadísticas", systemImage: "chart.xyaxis.line", value: Pestana.estadisticas) { EstadisticasView() }
+            } else {
+                Tab("Inicio", systemImage: "house", value: Pestana.inicio) { InicioView() }
+                Tab("Planificación", systemImage: "calendar", value: Pestana.planificacion) { PlanificacionView() }
+                    .badge(almacen.pendientes.filter(\.vencida).count)
+                Tab("Órdenes", systemImage: "list.clipboard", value: Pestana.ordenes) { OrdenesView() }
+                Tab(value: Pestana.entrarActivos) { Color.clear } label: { Label("Activos", image: "IconoActivos") }
+                    .badge(almacen.incidenciasAbiertas.count)
                 Tab("Ajustes", systemImage: "gearshape", value: Pestana.ajustes) { AjustesView() }
             }
         }
         .tabViewStyle(.sidebarAdaptable)
         .tabBarMinimizeBehavior(.onScrollDown)
-        .onChange(of: estado.pestana) { _, p in
-            // Un aviso pide Incidencias en iPhone: se abre dentro de «Más».
-            if ancho == .compact, p == .incidencias { estado.pestana = .mas; estado.masDestino = .incidencias }
-        }
-    }
-}
-
-/// «Más» en iPhone: Incidencias, Técnicos, Estadísticas y Ajustes.
-struct MasView: View {
-    @Environment(Almacen.self) private var almacen
-    @Environment(AppEstado.self) private var estado
-    @State private var ruta: [Pestana] = []
-
-    var body: some View {
-        NavigationStack(path: $ruta) {
-            List {
-                fila(.incidencias, "Incidencias", "exclamationmark.circle", almacen.incidenciasAbiertas.count, .pRojo)
-                fila(.tecnicos, "Técnicos", "person.2", 0, .pMorado)
-                fila(.estadisticas, "Estadísticas", "chart.xyaxis.line", 0, .pMorado)
-                fila(.ajustes, "Ajustes", "gearshape", 0, .pMorado)
-            }
-            .fondoTema()
-            .tituloPantalla("Más", icono: "ellipsis")
-            .navigationDestination(for: Pestana.self) { p in
-                Group {
-                    switch p {
-                    case .incidencias: IncidenciasView()
-                    case .tecnicos: TecnicosView()
-                    case .estadisticas: EstadisticasView()
-                    default: AjustesView()
-                    }
+        .sensoryFeedback(.selection, trigger: estado.barraActivos)
+        .onChange(of: estado.pestana) { antes, ahora in
+            switch ahora {
+            case .entrarActivos:
+                if !Pestana.deActivos.contains(antes) { estado.antesDeActivos = antes }
+                withAnimation(.snappy) { estado.barraActivos = true; estado.pestana = .activos }
+            case .volver:
+                withAnimation(.snappy) { estado.barraActivos = false; estado.pestana = estado.antesDeActivos }
+            default:
+                // Un aviso o una tarjeta pide una pestaña de la otra barra: se cambia de barra.
+                let deActivos = Pestana.deActivos.contains(ahora)
+                if deActivos != estado.barraActivos {
+                    if deActivos { estado.antesDeActivos = antes }
+                    withAnimation(.snappy) { estado.barraActivos = deActivos }
                 }
-                .environment(\.dentroDePila, true)
             }
-            .onAppear(perform: ir)
-            .onChange(of: estado.masDestino) { ir() }
-        }
-    }
-
-    private func ir() {
-        if let d = estado.masDestino { estado.masDestino = nil; ruta = [d] }
-    }
-
-    private func fila(_ p: Pestana, _ t: LocalizedStringKey, _ i: String, _ n: Int, _ c: Color) -> some View {
-        NavigationLink(value: p) {
-            Label { Text(t) } icon: { Image(systemName: i).foregroundStyle(c) }
-                .badge(n)
         }
     }
 }

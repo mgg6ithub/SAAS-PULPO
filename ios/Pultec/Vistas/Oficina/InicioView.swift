@@ -42,7 +42,7 @@ struct InicioView: View {
             Text(fraseDelDia).font(.app(.subheadline)).foregroundStyle(.secondary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    contador("gearshape.2", almacen.raices.count, "activos")
+                    contador("IconoActivos", almacen.raices.count, "activos")
                     contador("list.clipboard", almacen.pendientes.count, "órdenes de trabajo")
                     contador("person.2", almacen.tecnicos.count, "técnicos")
                     contador("exclamationmark.circle", almacen.incidenciasAbiertas.count,
@@ -63,7 +63,7 @@ struct InicioView: View {
 
     private func contador(_ icono: String, _ n: Int, _ texto: LocalizedStringKey) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icono).font(.caption)
+            Simbolo(nombre: icono).font(.caption)
             if n > 0 || icono != "exclamationmark.circle" { Text("\(n)").font(.app(.subheadline, .semibold)) }
             Text(texto).font(.app(.subheadline)).foregroundStyle(.secondary)
         }
