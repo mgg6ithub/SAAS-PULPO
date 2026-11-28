@@ -6,6 +6,8 @@ struct RaizView: View {
     @Environment(AppEstado.self) private var estado
     @Environment(Almacen.self) private var almacen
     @Environment(\.colorScheme) private var esquemaSistema
+    /// La entrada del pulpo sale cada vez que se abre la app (como en la web).
+    @State private var intro = true
 
     var body: some View {
         let paleta = estado.tema.paleta(esquemaSistema)
@@ -27,6 +29,11 @@ struct RaizView: View {
                 }
             }
             if let t = almacen.toast { Toast(texto: t, error: almacen.toastError).zIndex(2) }
+            if intro {
+                IntroPulpo { withAnimation(.easeOut(duration: 0.2)) { intro = false } }
+                    .zIndex(3)
+                    .transition(.opacity)
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: almacen.tecnicoActivo)
         .conTema(paleta)
