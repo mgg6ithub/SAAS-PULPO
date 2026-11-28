@@ -10,7 +10,7 @@ const STRIPE_VERSION = '2025-03-31.basil'
 
 // Direcciones de la app a las que se puede volver tras pagar (nada de redirigir a sitios ajenos).
 const ORIGENES = (Deno.env.get('APP_ORIGENES') ??
-  'http://localhost:8000,http://127.0.0.1:8000,https://saas-pulpo.pages.dev').split(',')
+  'http://localhost:8000,http://127.0.0.1:8000,https://saas-pulpo.pages.dev,https://app.pultec.io').split(',')
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',

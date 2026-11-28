@@ -20,6 +20,12 @@ void abrirEnlace(String url) => web.window.open(url, '_blank');
 /// Va a otra web en esta misma pestaña (p. ej. volver a la landing).
 void irA(String url) => web.window.location.href = url;
 
+/// Avisa a la landing (pultec.io) de que hay sesión para que ponga «Ir a Pultec». Solo un 1, sin datos de la cuenta.
+void marcarSesion(bool hay) {
+  if (!web.window.location.hostname.endsWith('pultec.io')) return;
+  web.document.cookie = 'pultec_sesion=1; Domain=.pultec.io; Path=/; SameSite=Lax; Secure; Max-Age=${hay ? 31536000 : 0}';
+}
+
 /// Cambia el icono y el título de la pestaña (Pultec compila con el `web/` de Pultec).
 void ponerPestana(String icono, String titulo) {
   (web.document.querySelector('link[rel="icon"]') as web.HTMLLinkElement?)?.href = icono;

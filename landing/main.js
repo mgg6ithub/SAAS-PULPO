@@ -15,8 +15,8 @@ const conTema = (url) => {
 
   // En local, «Probar» y «Entrar» llevan a la app de Pultec en local (python3 tool/vivo.py --industrial, puerto 8000).
   if (["localhost", "127.0.0.1"].includes(location.hostname)) {
-    document.querySelectorAll('a[href^="https://saas-pulpo.pages.dev/industrial/"]').forEach((a) => {
-      a.href = a.href.replace("https://saas-pulpo.pages.dev/industrial/", "http://localhost:8000/");
+    document.querySelectorAll('a[href^="https://app.pultec.io/"]').forEach((a) => {
+      a.href = a.href.replace("https://app.pultec.io/", "http://localhost:8000/");
     });
   }
 
@@ -141,7 +141,7 @@ const conTema = (url) => {
   const CFG = local
     // En local, Supabase va por la misma dirección que la landing (tool/landing_local.py la reenvía por dentro).
     ? { api: location.origin, clave: "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH", app: `${location.protocol}//${location.hostname}:8000/` }
-    : { api: "https://gvasthxiqckmekwvhtrg.supabase.co", clave: "sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ", app: "https://saas-pulpo.pages.dev/industrial/" };
+    : { api: "https://gvasthxiqckmekwvhtrg.supabase.co", clave: "sb_publishable_jGH8ZqhOiUZOttnNh8AOSg_BHvqppBQ", app: "https://app.pultec.io/" };
 
   const $ = (id) => document.getElementById(id);
   const form = $("acceso-form"), correo = $("acceso-correo"), clave = $("acceso-clave"), enviar = $("acceso-enviar");
@@ -312,11 +312,19 @@ const conTema = (url) => {
   dlg.querySelector("[data-cerrar]").addEventListener("click", cerrar);
   dlg.addEventListener("click", (e) => { if (e.target === dlg) cerrar(); }); // clic fuera de la tarjeta
 
+  // Con sesión abierta en la app (cookie `pultec_sesion` que deja app.pultec.io), «Entrar» pasa a «Ir a Pultec» y
+  // sobra «Probar gratis» de la barra; todos los botones llevan directos a la app.
+  const conSesion = document.cookie.split("; ").includes("pultec_sesion=1");
+  if (conSesion) {
+    document.querySelectorAll('#nav [data-acceso="entrar"]').forEach((a) => { a.textContent = "Ir a Pultec"; });
+    document.querySelectorAll('#nav [data-acceso="registro"]').forEach((a) => { a.style.display = "none"; });
+  }
+
   document.querySelectorAll("[data-acceso]").forEach((a) => a.addEventListener("click", (e) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; // abrir en otra pestaña: enlace normal
     e.preventDefault();
     // «Entrar» va directo a la pantalla de acceso de la app (correo y contraseña allí); crear cuenta sigue aquí.
-    if (a.dataset.acceso === "entrar") { location.href = conTema(CFG.app); return; }
+    if (a.dataset.acceso === "entrar" || conSesion) { location.href = conTema(CFG.app); return; }
     const q = new URL(a.href).searchParams;
     modo = a.dataset.acceso;
     plan = q.get("plan");

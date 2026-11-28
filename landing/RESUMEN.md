@@ -1,7 +1,7 @@
 # Landing de Pultec (industrial)
 
 ## Qué es
-Landing de Pultec industrial: HTML, CSS y JS nativos, sin compilación. Todos los «Probar» y «Entrar» llevan a `https://saas-pulpo.pages.dev/industrial/` (hoy detrás de Cloudflare Access). Probar en local: configuración «landing» de `.claude/launch.json` (localhost:8099).
+Landing de Pultec industrial: HTML, CSS y JS nativos, sin compilación. Todos los «Probar» y «Entrar» llevan a `https://app.pultec.io/` (hoy detrás de Cloudflare Access). Probar en local: configuración «landing» de `.claude/launch.json` (localhost:8099).
 
 ## Estilo
 - Tokens en `tokens.css` (claro y oscuro, OKLCH; tinta + morado del logo, Geist) y reglas base en `base.css`; `styles.css` solo la página. Ningún color suelto fuera de los tokens.

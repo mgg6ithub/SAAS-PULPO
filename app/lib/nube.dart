@@ -32,7 +32,7 @@ const supabasePublicable = String.fromEnvironment(
 );
 
 /// Web pública de Pultec (la landing). En desarrollo `tool/vivo.py` pasa la local (localhost:8001).
-const landingUrl = String.fromEnvironment('LANDING_URL', defaultValue: 'https://saas-pulpo.pages.dev/landing/');
+const landingUrl = String.fromEnvironment('LANDING_URL', defaultValue: 'https://pultec.io/');
 
 /// El enlace de invitación ya se usó, caducó o no existe.
 class InvitacionNoValida implements Exception {

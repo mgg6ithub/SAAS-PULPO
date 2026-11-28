@@ -60,6 +60,7 @@ class _PuertaNubeState extends State<PuertaNube> {
   }
 
   void _sesion(Session? s) {
+    marcarSesion(s != null);
     if (s == null) {
       _usuario = null;
       store.vaciar();

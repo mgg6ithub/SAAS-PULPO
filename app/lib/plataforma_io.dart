@@ -15,6 +15,8 @@ void abrirEnlace(String url) =>
 
 void irA(String url) => abrirEnlace(url);
 
+void marcarSesion(bool hay) {}
+
 void ponerPestana(String icono, String titulo) {}
 
 void quitarDeLaDireccion(String parametro) {}
